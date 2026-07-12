@@ -1,0 +1,50 @@
+# Maintainer: Paolo86cripple
+# Build automatico da upstream scummvm/scummvm (master), tutti i motori,
+# release mode, ottimizzato AVX2, con supporto shader OpenGL.
+pkgname=scummvm-git
+pkgver=r0
+pkgrel=1
+pkgdesc="ScummVM (build da master, tutti i motori, AVX2, shader OpenGL)"
+arch=('x86_64')
+url="https://www.scummvm.org/"
+license=('GPL')
+depends=(
+  sdl2 sdl2_net freetype2 libpng libjpeg-turbo giflib
+  libtheora faad2 libmad libvorbis libogg flac libmpeg2
+  fluidsynth speex speexdsp libvpx curl glew mesa gtk3
+  zlib bzip2 utf8proc
+)
+makedepends=(git nasm pkgconf)
+provides=('scummvm')
+conflicts=('scummvm')
+source=("scummvm::git+https://github.com/scummvm/scummvm.git#branch=master")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd scummvm
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+  cd scummvm
+
+  export CFLAGS="-O3 -msse4.2 -mpopcnt -mavx -mavx2 -mfma -mbmi -mbmi2 -mmovbe ${CFLAGS}"
+  export CXXFLAGS="-O3 -msse4.2 -mpopcnt -mavx -mavx2 -mfma -mbmi -mbmi2 -mmovbe ${CXXFLAGS}"
+
+  ./configure \
+    --enable-release \
+    --enable-optimizations \
+    --enable-all-engines \
+    --enable-opengl \
+    --enable-opengl-game-shaders \
+    --enable-ext-sse2 \
+    --enable-ext-avx2 \
+    --prefix=/usr
+
+  make -j"$(nproc)"
+}
+
+package() {
+  cd scummvm
+  make install DESTDIR="$pkgdir"
+}
