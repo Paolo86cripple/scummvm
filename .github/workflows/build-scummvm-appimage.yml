@@ -103,7 +103,6 @@ jobs:
             --enable-release \
             --enable-optimizations \
             --enable-all-engines \
-            --enable-opengl \
             --enable-opengl-game-shaders \
             ${{ matrix.configure_extra }} \
             --prefix=/usr
