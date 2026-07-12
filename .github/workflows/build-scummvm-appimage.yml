@@ -71,7 +71,7 @@ jobs:
             libsdl2-dev libsdl2-net-dev \
             libfreetype6-dev \
             libpng-dev libjpeg62-turbo-dev libgif-dev \
-            libtheora-dev libfaad-dev libmad-dev \
+            libtheora-dev libfaad-dev libmad0-dev \
             libvorbis-dev libogg-dev libflac-dev \
             libmpeg2-4-dev \
             libfluidsynth-dev \
@@ -173,7 +173,7 @@ jobs:
             sdl2 sdl2_net freetype2 libpng libjpeg-turbo giflib \
             libtheora faad2 libmad libvorbis libogg flac libmpeg2 \
             fluidsynth speex speexdsp libvpx curl glew mesa gtk3 \
-            zlib bzip2 utf8proc
+            zlib bzip2 libutf8proc
 
       - name: Crea utente non privilegiato per makepkg
         run: |
