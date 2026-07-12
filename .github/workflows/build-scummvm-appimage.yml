@@ -102,7 +102,7 @@ jobs:
           ./configure \
             --enable-release \
             --enable-optimizations \
-            --enable-all-engines \ 
+            --enable-all-engines \
             ${{ matrix.configure_extra }} \
             --prefix=/usr
 
