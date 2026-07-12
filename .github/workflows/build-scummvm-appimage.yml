@@ -1,0 +1,233 @@
+name: Build ScummVM (AppImage + Arch pkg, all engines, release, shaders)
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+  push:
+    branches: [master]
+
+env:
+  UPSTREAM_REPO: scummvm/scummvm
+  UPSTREAM_BRANCH: master
+  RELEASE_TAG: continuous
+
+jobs:
+  # ---------------------------------------------------------------------
+  # 1) Controlla se c'è un nuovo commit upstream rispetto all'ultima release
+  # ---------------------------------------------------------------------
+  check-updates:
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      upstream_sha: ${{ steps.check.outputs.upstream_sha }}
+      short_sha: ${{ steps.check.outputs.short_sha }}
+    steps:
+      - name: Get latest upstream commit
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          UPSTREAM_SHA=$(git ls-remote https://github.com/${UPSTREAM_REPO}.git refs/heads/${UPSTREAM_BRANCH} | cut -f1)
+          LAST_SHA=$(gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" --json body -q .body 2>/dev/null | grep -oE '[0-9a-f]{40}' | head -n1 || true)
+
+          if [ "$UPSTREAM_SHA" != "$LAST_SHA" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "upstream_sha=$UPSTREAM_SHA" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${UPSTREAM_SHA:0:7}" >> "$GITHUB_OUTPUT"
+
+  # ---------------------------------------------------------------------
+  # 2) AppImage: due varianti, generic (SSE4.2) e avx2 (AVX2+FMA)
+  # ---------------------------------------------------------------------
+  build-appimage:
+    needs: check-updates
+    if: needs.check-updates.outputs.should_build == 'true'
+    runs-on: ubuntu-22.04
+    container:
+      image: debian:bullseye
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: generic
+            cflags: "-O3 -msse4.2 -mpopcnt"
+            configure_extra: "--enable-ext-sse2"
+          - variant: avx2
+            cflags: "-O3 -msse4.2 -mpopcnt -mavx -mavx2 -mfma -mbmi -mbmi2 -mmovbe"
+            configure_extra: "--enable-ext-sse2 --enable-ext-avx2"
+    steps:
+      - name: Abilita repo contrib/non-free
+        run: |
+          sed -i 's/main$/main contrib non-free/' /etc/apt/sources.list
+          apt-get update
+
+      - name: Installa dipendenze di build
+        run: |
+          apt-get install -y --no-install-recommends \
+            build-essential git ca-certificates pkg-config nasm wget file \
+            libsdl2-dev libsdl2-net-dev \
+            libfreetype6-dev \
+            libpng-dev libjpeg62-turbo-dev libgif-dev \
+            libtheora-dev libfaad-dev libmad-dev \
+            libvorbis-dev libogg-dev libflac-dev \
+            libmpeg2-4-dev \
+            libfluidsynth-dev \
+            libspeex-dev libspeexdsp-dev \
+            libvpx-dev \
+            libcurl4-openssl-dev \
+            libglew-dev \
+            libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libglu1-mesa-dev \
+            libgtk-3-dev \
+            zlib1g-dev libbz2-dev \
+            libutf8proc-dev \
+            liba52-0.7.4-dev \
+            desktop-file-utils appstream
+
+      - name: Checkout ScummVM upstream
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.UPSTREAM_REPO }}
+          ref: ${{ needs.check-updates.outputs.upstream_sha }}
+          path: scummvm
+
+      - name: Configure (release, tutti i motori, shader, CPU ${{ matrix.variant }})
+        working-directory: scummvm
+        env:
+          CFLAGS: ${{ matrix.cflags }}
+          CXXFLAGS: ${{ matrix.cflags }}
+        run: |
+          ./configure \
+            --enable-release \
+            --enable-optimizations \
+            --enable-all-engines \
+            --enable-opengl \
+            --enable-opengl-game-shaders \
+            ${{ matrix.configure_extra }} \
+            --prefix=/usr
+
+      - name: Build
+        working-directory: scummvm
+        run: make -j"$(nproc)"
+
+      - name: Install in AppDir
+        working-directory: scummvm
+        run: make install DESTDIR="$GITHUB_WORKSPACE/AppDir"
+
+      - name: Scarica linuxdeploy
+        run: |
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-appimage-x86_64.AppImage
+          ./linuxdeploy-x86_64.AppImage --appimage-extract >/dev/null
+          ./linuxdeploy-plugin-appimage-x86_64.AppImage --appimage-extract >/dev/null
+
+      - name: Individua .desktop e icona
+        working-directory: scummvm
+        run: |
+          DESKTOP_FILE=$(find dists -iname "*.desktop" | head -n1)
+          ICON_FILE=$(find icons dists gui -iname "scummvm.svg" -o -iname "scummvm.png" 2>/dev/null | head -n1)
+          echo "DESKTOP_FILE=$(realpath "$DESKTOP_FILE")" >> "$GITHUB_ENV"
+          echo "ICON_FILE=$(realpath "$ICON_FILE")" >> "$GITHUB_ENV"
+
+      - name: Costruisci AppImage
+        run: |
+          ./squashfs-root/AppRun \
+            --appdir AppDir \
+            -e AppDir/usr/bin/scummvm \
+            -d "$DESKTOP_FILE" \
+            -i "$ICON_FILE" \
+            --plugin appimage \
+            --output appimage
+          mv ScummVM*.AppImage "ScummVM-x86_64-${{ matrix.variant }}-${{ needs.check-updates.outputs.short_sha }}.AppImage"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: appimage-${{ matrix.variant }}
+          path: ScummVM-*.AppImage
+
+  # ---------------------------------------------------------------------
+  # 3) Pacchetto Arch/CachyOS (.pkg.tar.zst), mirato AVX2 dato che CachyOS
+  #    assume già hardware moderno (coerente coi repo v3 di CachyOS stessi)
+  # ---------------------------------------------------------------------
+  build-arch-pkg:
+    needs: check-updates
+    if: needs.check-updates.outputs.should_build == 'true'
+    runs-on: ubuntu-22.04
+    container:
+      image: archlinux:base-devel
+    steps:
+      - name: Checkout repo (per il PKGBUILD)
+        uses: actions/checkout@v4
+        with:
+          path: repo
+
+      - name: Installa dipendenze
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm --needed \
+            git nasm sudo \
+            sdl2 sdl2_net freetype2 libpng libjpeg-turbo giflib \
+            libtheora faad2 libmad libvorbis libogg flac libmpeg2 \
+            fluidsynth speex speexdsp libvpx curl glew mesa gtk3 \
+            zlib bzip2 utf8proc
+
+      - name: Crea utente non privilegiato per makepkg
+        run: |
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          mkdir -p /build
+          cp repo/packaging/arch/PKGBUILD /build/
+          chown -R builder:builder /build
+
+      - name: Build pacchetto (makepkg)
+        run: su builder -c "cd /build && makepkg -s --noconfirm --skippgpcheck"
+
+      - name: Rinomina e prepara artifact
+        run: |
+          PKG=$(find /build -maxdepth 1 -name "*.pkg.tar.zst" | head -n1)
+          cp "$PKG" "$GITHUB_WORKSPACE/scummvm-${{ needs.check-updates.outputs.short_sha }}-x86_64.pkg.tar.zst"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: arch-package
+          path: scummvm-*.pkg.tar.zst
+
+  # ---------------------------------------------------------------------
+  # 4) Pubblica tutto in un'unica release "continuous"
+  # ---------------------------------------------------------------------
+  publish:
+    needs: [check-updates, build-appimage, build-arch-pkg]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scarica tutti gli artifact
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Pubblica/aggiorna release "continuous"
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ env.RELEASE_TAG }}
+          name: "ScummVM (build automatica)"
+          body: |
+            Build automatica di ScummVM da upstream master.
+            Tutti i motori, release mode, shader OpenGL abilitati.
+
+            Varianti AppImage:
+            - generic: compatibile con qualsiasi CPU x86_64 (baseline SSE4.2)
+            - avx2: ottimizzato per CPU moderne (AVX2 + FMA)
+
+            Pacchetto Arch/CachyOS: ottimizzato AVX2.
+
+            Commit sorgente: ${{ needs.check-updates.outputs.upstream_sha }}
+          allowUpdates: true
+          removeArtifacts: true
+          prerelease: true
+          artifacts: "dist/*"
+          token: ${{ secrets.GITHUB_TOKEN }}
