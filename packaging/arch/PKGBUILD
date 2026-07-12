@@ -35,7 +35,6 @@ build() {
     --enable-release \
     --enable-optimizations \
     --enable-all-engines \
-    --enable-opengl \
     --enable-opengl-game-shaders \
     --enable-ext-sse2 \
     --enable-ext-avx2 \
