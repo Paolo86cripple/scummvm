@@ -34,8 +34,7 @@ build() {
   ./configure \
     --enable-release \
     --enable-optimizations \
-    --enable-all-engines \
-    --enable-opengl-game-shaders \
+    --enable-all-engines \ \
     --enable-ext-sse2 \
     --enable-ext-avx2 \
     --prefix=/usr
