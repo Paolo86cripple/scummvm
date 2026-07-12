@@ -1,4 +1,4 @@
-# Maintainer: Paolo86cripple
+# Maintainer: Paolo
 # Build automatico da upstream scummvm/scummvm (master), tutti i motori,
 # release mode, ottimizzato AVX2, con supporto shader OpenGL.
 pkgname=scummvm-git
@@ -12,7 +12,7 @@ depends=(
   sdl2 sdl2_net freetype2 libpng libjpeg-turbo giflib
   libtheora faad2 libmad libvorbis libogg flac libmpeg2
   fluidsynth speex speexdsp libvpx curl glew mesa gtk3
-  zlib bzip2 utf8proc
+  zlib bzip2 libutf8proc
 )
 makedepends=(git nasm pkgconf)
 provides=('scummvm')
