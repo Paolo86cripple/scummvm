@@ -117,10 +117,8 @@ jobs:
       - name: Scarica linuxdeploy
         run: |
           curl -fL -o linuxdeploy-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          curl -fL -o linuxdeploy-plugin-appimage-x86_64.AppImage https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage
-          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-appimage-x86_64.AppImage
-          ./linuxdeploy-x86_64.AppImage --appimage-extract >/dev/null
-          ./linuxdeploy-plugin-appimage-x86_64.AppImage --appimage-extract >/dev/null
+          curl -fL -o linuxdeploy-plugin-appimage https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-appimage
 
       - name: Individua .desktop e icona
         working-directory: scummvm
@@ -131,8 +129,11 @@ jobs:
           echo "ICON_FILE=$(realpath "$ICON_FILE")" >> "$GITHUB_ENV"
 
       - name: Costruisci AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
         run: |
-          ./squashfs-root/AppRun \
+          export PATH="$PWD:$PATH"
+          ./linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
             -e AppDir/usr/bin/scummvm \
             -d "$DESKTOP_FILE" \
