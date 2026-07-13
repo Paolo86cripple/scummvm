@@ -217,9 +217,6 @@ jobs:
 
       - name: Pubblica/aggiorna release "continuous"
         uses: ncipollo/release-action@v1 
-        permissions:
-      contents: write
-          with:
           tag: ${{ env.RELEASE_TAG }}
           name: "ScummVM (build automatica)"
           body: |
