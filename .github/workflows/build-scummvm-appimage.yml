@@ -123,7 +123,12 @@ jobs:
       - name: Individua .desktop e icona
         working-directory: scummvm
         run: |
-          DESKTOP_FILE=$(find dists -iname "*.desktop" | head -n1)
+          if [ -f "dists/scummvm.desktop" ]; then
+            DESKTOP_FILE="dists/scummvm.desktop"
+          else
+            # Fallback: cerca un .desktop valido escludendo varianti per handheld/console
+            DESKTOP_FILE=$(find dists -maxdepth 1 -iname "*.desktop" | head -n1)
+          fi
           ICON_FILE=$(find icons dists gui -iname "scummvm.svg" -o -iname "scummvm.png" 2>/dev/null | head -n1)
           echo "DESKTOP_FILE=$(realpath "$DESKTOP_FILE")" >> "$GITHUB_ENV"
           echo "ICON_FILE=$(realpath "$ICON_FILE")" >> "$GITHUB_ENV"
