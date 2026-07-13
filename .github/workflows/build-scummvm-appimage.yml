@@ -138,7 +138,6 @@ jobs:
             -e AppDir/usr/bin/scummvm \
             -d "$DESKTOP_FILE" \
             -i "$ICON_FILE" \
-            --plugin appimage \
             --output appimage
           mv ScummVM*.AppImage "ScummVM-x86_64-${{ matrix.variant }}-${{ needs.check-updates.outputs.short_sha }}.AppImage"
 
@@ -227,6 +226,5 @@ jobs:
             Commit sorgente: ${{ needs.check-updates.outputs.upstream_sha }}
           allowUpdates: true
           removeArtifacts: true
-          prerelease: false
           artifacts: "dist/*"
           token: ${{ secrets.GITHUB_TOKEN }}
