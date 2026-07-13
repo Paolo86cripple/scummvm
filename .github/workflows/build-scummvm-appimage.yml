@@ -206,6 +206,8 @@ jobs:
   publish:
     needs: [check-updates, build-appimage, build-arch-pkg]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Scarica tutti gli artifact
         uses: actions/download-artifact@v4
@@ -214,8 +216,10 @@ jobs:
           merge-multiple: true
 
       - name: Pubblica/aggiorna release "continuous"
-        uses: ncipollo/release-action@v1
-        with:
+        uses: ncipollo/release-action@v1 
+        permissions:
+      contents: write
+          with:
           tag: ${{ env.RELEASE_TAG }}
           name: "ScummVM (build automatica)"
           body: |
