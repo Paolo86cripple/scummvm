@@ -31,15 +31,17 @@ build() {
   export CFLAGS="-O3 -msse4.2 -mpopcnt -mavx -mavx2 -mfma -mbmi -mbmi2 -mmovbe ${CFLAGS}"
   export CXXFLAGS="-O3 -msse4.2 -mpopcnt -mavx -mavx2 -mfma -mbmi -mbmi2 -mmovbe ${CXXFLAGS}"
 
-  ./configure \
-    --enable-release \
-    --enable-optimizations \
-    --enable-all-engines \ \
-	--disable-debug \ 
-    --enable-ext-sse2 \ \
-    --enable-ext-avx2 \
+  CONFIGURE_ARGS=(
+    --enable-release
+    --enable-optimizations
+    --enable-all-engines
+    --disable-debug
+    --enable-ext-sse2
+    --enable-ext-avx2
     --prefix=/usr
+  )
 
+  ./configure "${CONFIGURE_ARGS[@]}"
   make -j"$(nproc)"
 }
 
