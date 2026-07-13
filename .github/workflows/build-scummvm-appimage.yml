@@ -67,7 +67,7 @@ jobs:
       - name: Installa dipendenze di build
         run: |
           apt-get install -y --no-install-recommends \
-            build-essential git ca-certificates pkg-config nasm wget file \
+            build-essential git ca-certificates pkg-config nasm wget curl file \
             libsdl2-dev libsdl2-net-dev \
             libfreetype6-dev \
             libpng-dev libjpeg62-turbo-dev libgif-dev \
