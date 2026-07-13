@@ -35,6 +35,7 @@ build() {
     --enable-release \
     --enable-optimizations \
     --enable-all-engines \ \
+	--disable-debug \ 
     --enable-ext-sse2 \
     --enable-ext-avx2 \
     --prefix=/usr
