@@ -227,6 +227,6 @@ jobs:
             Commit sorgente: ${{ needs.check-updates.outputs.upstream_sha }}
           allowUpdates: true
           removeArtifacts: true
-          prerelease: true
+          prerelease: false
           artifacts: "dist/*"
           token: ${{ secrets.GITHUB_TOKEN }}
