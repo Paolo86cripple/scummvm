@@ -57,10 +57,10 @@ jobs:
         include:
           - variant: generic
             cflags: "-O3 -msse4.2 -mpopcnt"
-            configure_extra: "--enable-ext-sse2"
+            configure_extra: "--enable-ext-sse2 --disable-debug"
           - variant: avx2
             cflags: "-O3 -msse4.2 -mpopcnt -mavx -mavx2 -mfma -mbmi -mbmi2 -mmovbe"
-            configure_extra: "--enable-ext-sse2 --enable-ext-avx2"
+            configure_extra: "--enable-ext-sse2 --enable-ext-avx2 --disable-debug"
     steps:
       - name: Abilita repo contrib/non-free
         run: |
@@ -107,7 +107,6 @@ jobs:
             --enable-release \
             --enable-optimizations \
             --enable-all-engines \
-            --disable-debug \
             ${{ matrix.configure_extra }} \
             --prefix=/usr
 
