@@ -1,56 +1,64 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+#ifndef __AC_ROUTE_FINDER_IMPL_LEGACY
+#define __AC_ROUTE_FINDER_IMPL_LEGACY
 
-#ifndef AGS_ENGINE_AC_ROUTE_FINDER_IMPL_LEGACY
-#define AGS_ENGINE_AC_ROUTE_FINDER_IMPL_LEGACY
-
-namespace AGS3 {
+#include "ac/route_finder.h"
 
 // Forward declaration
-namespace AGS {
-namespace Shared {
-class Bitmap;
-} // namespace Shared
-} // namespace AGS
+namespace AGS { namespace Common { class Bitmap; }}
 
-struct MoveList;
+namespace AGS
+{
+namespace Engine
+{
 
-namespace AGS {
-namespace Engine {
-namespace RouteFinderLegacy {
+// LegacyRouteFinder: a flood-fill search pathfinder.
+class LegacyRouteFinder : public MaskRouteFinder
+{
+public:
+    LegacyRouteFinder();
+    ~LegacyRouteFinder();
 
-void init_pathfinder();
-void shutdown_pathfinder();
+    void Configure(GameDataVersion game_ver) override;
 
-void set_wallscreen(AGS::Shared::Bitmap *wallscreen);
+    // Configuration for the pathfinder
+    struct PathfinderConfig
+    {
+        const int MaxGranularity = 3;
 
-int can_see_from(int x1, int y1, int x2, int y2);
-void get_lastcpos(int &lastcx, int &lastcy);
+        // Short sweep is performed in certain radius around requested destination,
+        // when searching for a nearest walkable area in the vicinity
+        const int ShortSweepRadius = 50;
+        int ShortSweepGranularity = 3; // variable, depending on loaded game version
+        // Full sweep is performed over a whole walkable area
+        const int FullSweepGranularity = 5;
+    };
 
-int find_route(short srcx, short srcy, short xx, short yy, int move_speed_x, int move_speed_y, AGS::Shared::Bitmap *onscreen, int movlst, int nocross = 0, int ignore_walls = 0);
-bool add_waypoint_direct(MoveList *mlsp, short x, short y, int move_speed_x, int move_speed_y);
+private:
+    // Update the implementation after a new walkable area is set
+    void OnSetWalkableArea() override;
+    // CanSeeFrom implementation
+    bool CanSeeFromImpl(int srcx, int srcy, int dstx, int dsty, int *lastcx = nullptr, int *lastcy = nullptr)  override;
+    // FindRoute implementation
+    bool FindRouteImpl(std::vector<Point> &path, int srcx, int srcy, int dstx, int dsty,
+        bool exact_dest, bool ignore_walls)  override;
 
-} // namespace RouteFinderLegacy
+    PathfinderConfig _pfc;
+};
+
 } // namespace Engine
 } // namespace AGS
-} // namespace AGS3
 
-#endif
+#endif // __AC_ROUTE_FINDER_IMPL_LEGACY

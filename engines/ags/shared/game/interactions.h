@@ -1,35 +1,35 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
 //=============================================================================
 //
-// Interaction structs.
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+//
+// Interaction structs: they define engine's reaction to player interaction
+// with various game objects.
+//
+// There are two kinds of interaction systems: the modern and legacy ones.
+// The new one, represented by InteractionEvents struct, is very simple:
+// it is defined as a indexed list of script function names, where index is a
+// internal index of a interaction type or event (object-specific),
+// and function name tells which function to run, either in a global script
+// or room script (again, object-specific).
 //
 //-----------------------------------------------------------------------------
 //
-// Most of the interaction types here were used before the script and have
-// very limited capabilities. They were removed from AGS completely in
-// generation 3.0. The code is left for backwards compatibility.
+// Legacy system was used prior the proper scripting was introduced in AGS.
+// This sytem was removed from AGS Editor completely in generation 3.0,
+// so it's here strictly for backwards compatibility.
 //
-//-----------------------------------------------------------------------------
+// Legacy system is represented by Interaction struct, and is defined by a
+// tree-like collection of events, conditions and actions.
 //
 /* THE WAY THIS WORKS:
 *
@@ -44,48 +44,104 @@
 */
 //
 //=============================================================================
+#ifndef __AGS_CN_GAME__INTEREACTIONS_H
+#define __AGS_CN_GAME__INTEREACTIONS_H
 
-#ifndef AGS_SHARED_GAME_INTEREACTIONS_H
-#define AGS_SHARED_GAME_INTEREACTIONS_H
+#include <memory>
+#include <vector>
+#include "util/error.h"
+#include "util/string.h"
 
-#include "common/std/memory.h"
-#include "ags/shared/util/string_types.h"
+namespace AGS
+{
+namespace Common
+{
 
-namespace AGS3 {
+class Stream;
 
-#define LOCAL_VARIABLE_OFFSET       10000
-#define MAX_GLOBAL_VARIABLES        100
+//-----------------------------------------------------------------------------
+//
+// InteractionEvents (modern interaction system).
+// A indexed list of script functions for all the supported events.
+// Indexes are object-specific.
+//
+//-----------------------------------------------------------------------------
+
+enum InteractionEventsVersion
+{
+    kInterEvents_Initial = 0,
+    kInterEvents_v362    = 3060200,
+};
+
+// A indexed list of function links for all the supported events.
+struct InteractionEvents
+{
+    // An optional name of a script module to run functions in
+    String ScriptModule;
+    // Script function names, corresponding to the event's index,
+    // paired with Enabled flag to tell if this event handler has to be processed
+    struct EventHandler
+    {
+        String FunctionName;
+        // At runtime we may want to receive function's call result and update
+        // Enabled status, but result may be delayed, so we have to use a shared memory object for safety.
+        // TODO: have this in runtime-only struct, when we have a clear separation
+        std::shared_ptr<bool> Enabled;
+
+        inline bool IsEnabled() const { return Enabled && *Enabled; }
+
+        EventHandler(const String &fn_name)
+            : FunctionName(fn_name), Enabled(new bool(!fn_name.IsEmpty())) {}
+    };
+    std::vector<EventHandler> Events;
+
+    // Read and create pre-3.6.2 version of the InteractionEvents
+    static std::unique_ptr<InteractionEvents> CreateFromStream_v361(Stream *in);
+    // Read and create 3.6.2+ version of the InteractionEvents
+    static std::unique_ptr<InteractionEvents> CreateFromStream_v362(Stream *in);
+    void Read_v361(Stream *in);
+    HError Read_v362(Stream *in);
+    void Write_v361(Stream *out) const;
+    void Write_v362(Stream *out) const;
+};
+
+typedef std::unique_ptr<InteractionEvents> UInteractionEvents;
+
+
+//-----------------------------------------------------------------------------
+//
+// Interactions (legacy interaction system).
+//
+//-----------------------------------------------------------------------------
+
 #define MAX_ACTION_ARGS             5
 #define MAX_NEWINTERACTION_EVENTS   30
 #define MAX_COMMANDS_PER_LIST       40
 
-namespace AGS {
-namespace Shared {
-
-enum InterValType : int8_t {
-	kInterValInvalid = 0,
-	kInterValLiteralInt = 1,
-	kInterValVariable = 2,
-	kInterValBoolean = 3,
-	kInterValCharnum = 4
+enum InterValType : int8_t
+{
+    kInterValLiteralInt = 1,
+    kInterValVariable   = 2,
+    kInterValBoolean    = 3,
+    kInterValCharnum    = 4
 };
 
-enum InteractionVersion {
-	kInteractionVersion_Initial = 1
+enum InteractionVersion
+{
+    kInteractionVersion_Initial = 1
 };
 
 // InteractionValue represents an argument of interaction command
-struct InteractionValue {
-	InterValType Type;  // value type
-	int          Value; // value definition
-	int          Extra;
+struct InteractionValue
+{
+    InterValType Type;  // value type
+    int          Value; // value definition
+    int          Extra;
 
-	InteractionValue();
+    InteractionValue();
 
-	void clear();
-
-	void Read(Stream *in);
-	void Write(Stream *out) const;
+    void Read(Stream *in);
+    void Write(Stream *out) const;
 };
 
 
@@ -93,121 +149,106 @@ struct InteractionCommandList;
 typedef std::unique_ptr<InteractionCommandList> UInterCmdList;
 
 // InteractionCommand represents a single command (action), an item of Command List
-struct InteractionCommand {
-	int                     Type;       // type of action
-	InteractionValue        Data[MAX_ACTION_ARGS]; // action arguments
-	UInterCmdList           Children;   // list of sub-actions
-	InteractionCommandList *Parent;     // action parent (optional)
+struct InteractionCommand
+{
+    int                     Type;       // type of action
+    InteractionValue        Data[MAX_ACTION_ARGS]; // action arguments
+    UInterCmdList           Children;   // list of sub-actions
+    InteractionCommandList *Parent;     // action parent (optional)
 
-	InteractionCommand();
-	InteractionCommand(const InteractionCommand &ic);
+    InteractionCommand();
+    InteractionCommand(const InteractionCommand &ic);
 
-	void Assign(const InteractionCommand &ic, InteractionCommandList *parent);
-	void Reset();
+    void Assign(const InteractionCommand &ic, InteractionCommandList *parent);
+    void Reset();
 
-	void Read(Stream *in, bool &has_children);
-	void Write(Stream *out) const;
+    void Read(Stream *in, bool &has_children);
+    void Write(Stream *out) const;
 
-	InteractionCommand &operator = (const InteractionCommand &ic);
+    InteractionCommand &operator = (const InteractionCommand &ic);
 
-	private:
-	void ReadValues(Stream *in);
-	void WriteValues(Stream *out) const;
+private:
+    void ReadValues(Stream *in);
+    void WriteValues(Stream *out) const;
 };
 
 
 typedef std::vector<InteractionCommand> InterCmdVector;
 // InteractionCommandList represents a list of commands (actions) that need to be
 // performed on particular game event
-struct InteractionCommandList {
-	InterCmdVector  Cmds;     // actions to run
-	int             TimesRun; // used by engine to track score changes
+struct InteractionCommandList
+{
+    InterCmdVector  Cmds;     // actions to run
+    int             TimesRun; // used by engine to track score changes
 
-	InteractionCommandList();
-	InteractionCommandList(const InteractionCommandList &icmd_list);
+    InteractionCommandList();
+    InteractionCommandList(const InteractionCommandList &icmd_list);
 
-	void Reset();
+    void Reset();
 
-	void Read(Stream *in);
-	void Write(Stream *out) const;
+    void Read(Stream *in);
+    void Write(Stream *out) const;
 
 protected:
-	void ReadCommands(Shared::Stream *in, std::vector<bool> &cmd_children);
-	void WriteCommands(Shared::Stream *out) const;
+    void ReadCommands(Common::Stream *in, std::vector<bool> &cmd_children);
+    void WriteCommands(Common::Stream *out) const;
 };
 
 
 // InteractionEvent is a single event with a list of commands to performed
-struct InteractionEvent {
-	int           Type;     // type of event
-	int           TimesRun; // used by engine to track score changes
-	UInterCmdList Response; // list of commands to run
+struct InteractionEvent
+{
+    int           Type;     // type of event
+    int           TimesRun; // used by engine to track score changes
+    UInterCmdList Response; // list of commands to run
 
-	InteractionEvent();
-	InteractionEvent(const InteractionEvent &ie);
+    InteractionEvent();
+    InteractionEvent(const InteractionEvent &ie);
 
-	InteractionEvent &operator = (const InteractionEvent &ic);
+    InteractionEvent &operator = (const InteractionEvent &ic);
 };
 
 typedef std::vector<InteractionEvent> InterEvtVector;
 // Interaction is the list of events and responses for a game or game object
-struct Interaction {
-	// The first few event types depend on the item - ID's of 100+ are
-	// custom events (used for subroutines)
-	InterEvtVector Events;
+struct Interaction
+{
+    // The first few event types depend on the item - ID's of 100+ are
+    // custom events (used for subroutines)
+    InterEvtVector Events;
 
-	Interaction();
-	Interaction(const Interaction &inter);
+    Interaction();
+    Interaction(const Interaction &inter);
 
-	// Copy information on number of times events of this interaction were fired
-	void CopyTimesRun(const Interaction &inter);
-	void Reset();
+    // Copy information on number of times events of this interaction were fired
+    void CopyTimesRun(const Interaction &inter);
+    void Reset();
 
-	// Game static data (de)serialization
-	static Interaction *CreateFromStream(Stream *in);
-	void                Write(Stream *out) const;
+    // Game static data (de)serialization
+    static std::unique_ptr<Interaction> CreateFromStream(Stream *in);
+    void Write(Stream *out) const;
 
-	// Reading and writing runtime data from/to savedgame;
-	// NOTE: these are backwards-compatible methods, that do not always
-	// have practical sense
-	void ReadFromSavedgame_v321(Stream *in);
-	void WriteToSavedgame_v321(Stream *out) const;
-	void ReadTimesRunFromSave_v321(Stream *in);
-	void WriteTimesRunToSave_v321(Stream *out) const;
-
-	Interaction &operator =(const Interaction &inter);
+    Interaction &operator =(const Interaction &inter);
 };
-
-typedef std::shared_ptr<Interaction> PInteraction;
 
 
 // Legacy pre-3.0 kind of global and local room variables
-struct InteractionVariable {
-	String Name{};
-	char   Type{ '\0' };
-	int    Value{ 0 };
+struct InteractionVariable
+{
+    String Name {};
+    char   Type {'\0'};
+    int    Value {0};
 
-	InteractionVariable();
-	InteractionVariable(const String &name, char type, int val);
+    InteractionVariable();
+    InteractionVariable(const String &name, char type, int val);
 
-	void Read(Stream *in);
-	void Write(Stream *out) const;
+    void Read(Stream *in);
+    void Write(Stream *out) const;
 };
 
-typedef std::vector<InteractionVariable> InterVarVector;
 
+typedef std::unique_ptr<Interaction> UInteraction;
 
-// A list of script function names for all supported events
-struct InteractionScripts {
-	StringV ScriptFuncNames;
-
-	static InteractionScripts *CreateFromStream(Stream *in);
-};
-
-typedef std::shared_ptr<InteractionScripts> PInteractionScripts;
-
-} // namespace Shared
+} // namespace Common
 } // namespace AGS
-} // namespace AGS3
 
-#endif
+#endif // __AGS_CN_GAME__INTEREACTIONS_H

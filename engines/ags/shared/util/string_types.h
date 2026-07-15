@@ -1,116 +1,136 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+#ifndef __AGS_CN_UTIL__STRINGTYPES_H
+#define __AGS_CN_UTIL__STRINGTYPES_H
 
-#ifndef AGS_SHARED_UTIL_STRING_TYPES_H
-#define AGS_SHARED_UTIL_STRING_TYPES_H
+#include <cctype>
+#include <functional>
+#include <unordered_map>
 
-#include "common/std/map.h"
-#include "common/std/vector.h"
-#include "ags/shared/util/string.h"
-#include "common/hash-str.h"
+#include <vector>
+#include "util/string.h"
 
-namespace AGS3 {
-namespace FNV {
+namespace FNV
+{
 
 const uint32_t PRIME_NUMBER = 2166136261U;
 const uint32_t SECONDARY_NUMBER = 16777619U;
 
-inline size_t Hash(const char *data, const size_t len) {
-	uint32_t hash = PRIME_NUMBER;
-	for (size_t i = 0; i < len; ++i)
-		hash = (SECONDARY_NUMBER * hash) ^ (uint8_t)(data[i]);
-	return hash;
+inline size_t Hash(const char *data, const size_t len)
+{
+    uint32_t hash = PRIME_NUMBER;
+    for (size_t i = 0; i < len; ++i)
+        hash = (SECONDARY_NUMBER * hash) ^ (uint8_t)(data[i]);
+    return hash;
 }
 
-inline size_t Hash_LowerCase(const char *data, const size_t len) {
-	uint32_t hash = PRIME_NUMBER;
-	for (size_t i = 0; i < len; ++i)
-		hash = (SECONDARY_NUMBER * hash) ^ (uint8_t)(tolower(data[i]));
-	return hash;
+inline size_t Hash_LowerCase(const char *data, const size_t len)
+{
+    uint32_t hash = PRIME_NUMBER;
+    for (size_t i = 0; i < len; ++i)
+        hash = (SECONDARY_NUMBER * hash) ^ (uint8_t)(tolower(data[i]));
+    return hash;
 }
 
 } // namespace FNV
-} // namespace AGS3
 
-namespace AGS3 {
 
-struct CaseSensitiveString_EqualTo {
-	bool operator()(const ::AGS3::AGS::Shared::String &x, const ::AGS3::AGS::Shared::String &y) const {
-		return x.Compare(y) == 0;
-	}
-};
-
-struct CaseSensitiveString_Hash {
-	uint operator()(const ::AGS3::AGS::Shared::String &x) const {
-		return Common::hashit(x.GetCStr());
-	}
-};
-
-struct IgnoreCase_EqualTo {
-	bool operator()(const ::AGS3::AGS::Shared::String &x, const ::AGS3::AGS::Shared::String &y) const {
-		return x.CompareNoCase(y) == 0;
-	}
-};
-
-struct IgnoreCase_Hash {
-	uint operator()(const ::AGS3::AGS::Shared::String &x) const {
-		return Common::hashit_lower(x.GetCStr());
-	}
-};
-
-struct IgnoreCase_LessThan {
-	bool operator()(const ::AGS3::AGS::Shared::String &x, const ::AGS3::AGS::Shared::String &y) const {
-		return x.CompareNoCase(y) < 0;
-	}
-};
-
-} // namespace AGS3
-
-namespace Common {
-
-// Specalization of the Hash functor for String objects.
-// We do case sensitve hashing here, because that is what
-// the default EqualTo is compatible with. If one wants to use
-// case insensitve hashing, then only because one wants to use
-// IgnoreCase_EqualTo, and then one has to specify a custom
-// hash anyway.
+// A std::hash specialization for AGS String
+namespace std
+{
+// std::hash for String object
 template<>
-struct Hash<AGS3::AGS::Shared::String> {
-	uint operator()(const AGS3::AGS::Shared::String &s) const {
-		return Common::hashit(s.GetCStr());
-	}
+struct hash<AGS::Common::String>
+{
+    size_t operator ()(const AGS::Common::String &key) const
+    {
+        return FNV::Hash(key.GetCStr(), key.GetLength());
+    }
 };
+}
+
+
+namespace AGS
+{
+namespace Common
+{
+
+//
+// Various comparison functors
+//
+
+// Test case-sensitive String equality
+struct StrEq
+{
+    bool operator()(const String &s1, const String &s2) const
+    {
+        return s1 == s2;
+    }
+};
+
+// Test case-insensitive String equality
+struct StrEqNoCase
+{
+    bool operator()(const String &s1, const String &s2) const
+    {
+        return s1.CompareNoCase(s2) == 0;
+    }
+};
+
+// Test case-insensitive String equality as a pre-defined unary predicate
+struct StrEqNoCasePred
+{
+    StrEqNoCasePred(const String &look_for)
+        : _lookFor(look_for) {}
+
+    bool operator()(const String &s) const
+    {
+        return _lookFor.CompareNoCase(s) == 0;
+    }
+
+private:
+    String _lookFor;
+};
+
+// Case-insensitive String less
+struct StrLessNoCase
+{
+    bool operator()(const String &s1, const String &s2) const
+    {
+        return s1.CompareNoCase(s2) < 0;
+    }
+};
+
+// Compute case-insensitive hash for a String object
+struct HashStrNoCase
+{
+    size_t operator ()(const String &key) const
+    {
+        return FNV::Hash_LowerCase(key.GetCStr(), key.GetLength());
+    }
+};
+
+// Alias for vector of Strings
+typedef std::vector<String> StringV;
+// Alias for case-sensitive hash-map of Strings
+typedef std::unordered_map<String, String> StringMap;
+// Alias for case-insensitive hash-map of Strings
+typedef std::unordered_map<String, String, HashStrNoCase, StrEqNoCase> StringIMap;
+// Alias for std::array of C-strings
+template <size_t SIZE> using CstrArr = std::array<const char*, SIZE>;
 
 } // namespace Common
-
-namespace AGS3 {
-namespace AGS {
-namespace Shared {
-
-typedef std::vector<String> StringV;
-typedef std::unordered_map<String, String> StringMap;
-typedef std::unordered_map<String, String, IgnoreCase_Hash, IgnoreCase_EqualTo> StringIMap;
-
-} // namespace Shared
 } // namespace AGS
-} // namespace AGS3
 
-#endif
+#endif //__AGS_CN_UTIL__STRINGTYPES_H

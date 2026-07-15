@@ -1,38 +1,29 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+#ifndef __AGS_EE_MAIN__ENGINE_H
+#define __AGS_EE_MAIN__ENGINE_H
 
-#ifndef AGS_ENGINE_MAIN_ENGINE_H
-#define AGS_ENGINE_MAIN_ENGINE_H
+#include "util/ini_util.h"
+#include "util/error.h"
 
-#include "ags/shared/util/ini_util.h"
-
-namespace AGS3 {
-
-const char			*get_engine_name();
-const char			*get_engine_version();
-AGS::Shared::String  get_engine_version_and_build();
-
+const char *get_engine_name();
+const char *get_engine_version();
+AGS::Common::String get_engine_version_and_build();
 void        show_preload();
 void        engine_init_game_settings();
-int         initialize_engine(const AGS::Shared::ConfigTree &startup_opts);
+AGS::Common::HError engine_init_sprites();
+int         initialize_engine(const AGS::Common::ConfigTree &startup_opts);
 
 struct DisplayModeSetup;
 // Try to set new graphics mode deduced from given configuration;
@@ -47,28 +38,30 @@ void        engine_on_window_changed(const Size &sz);
 // Shutdown graphics mode (used before shutting down tha application)
 void        engine_shutdown_gfxmode();
 
-using AGS::Shared::String;
+using AGS::Common::String;
 // Defines a package file location
-struct PackLocation {
-	String Name; // filename, for the reference or to use as an ID
-	String Path; // full path
+struct PackLocation
+{
+    String Name; // filename, for the reference or to use as an ID
+    String Path; // full path
 };
 // Game resource paths
 // TODO: the asset path configuration should certainly be revamped at some
 // point, with uniform method of configuring auxiliary paths and packages.
-struct ResourcePaths {
-	PackLocation GamePak;    // main game package
-	PackLocation AudioPak;   // audio package
-	PackLocation SpeechPak;  // voice-over package
-	String       DataDir;    // path to the data directory
-	bool		 VoiceAvail = false; // tells whether voice files available in either location
-	// NOTE: optional directories are currently only for compatibility with Editor (game test runs)
-	// This is bit ugly, but remain so until more flexible configuration is designed
-	String       DataDir2;   // optional data directory
-	String       AudioDir2;  // optional audio directory
-	String       VoiceDir2;  // optional voice-over directory (base)
-	String       VoiceDirSub;// full voice-over directory with optional sub-dir
+struct ResourcePaths
+{
+    PackLocation GamePak;    // main game package
+    PackLocation AudioPak;   // audio package
+    PackLocation SpeechPak;  // voice-over package
+    String       DataDir;    // path to the data directory
+    bool         VoiceAvail = false; // tells whether voice files available in either location
+    // Optional directories are represented by pairs of "path" and "filter".
+    // Currently are only set for compatibility with Editor (game test runs from IDE),
+    // see "--runfromide" command line arg.
+    std::vector<std::pair<String, String>> OptDataDirs; // optional data directories
+    String       VoiceDirSub;// full voice-over directory with optional sub-dir
 };
+extern ResourcePaths ResPaths;
 
 // (Re-)Assign all known asset search paths to the AssetManager
 void engine_assign_assetpaths();
@@ -78,6 +71,4 @@ void engine_assign_assetpaths();
 typedef void (*t_engine_pre_init_callback)(void);
 extern void engine_set_pre_init_callback(t_engine_pre_init_callback callback);
 
-} // namespace AGS3
-
-#endif
+#endif // __AGS_EE_MAIN__ENGINE_H

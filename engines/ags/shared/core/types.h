@@ -1,37 +1,26 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
 //=============================================================================
 //
 // Basic types definition
 //
 //=============================================================================
+#ifndef __AGS_CN_CORE__TYPES_H
+#define __AGS_CN_CORE__TYPES_H
 
-#ifndef AGS_SHARED_CORE_TYPES_H
-#define AGS_SHARED_CORE_TYPES_H
-
-#include "common/scummsys.h"
-#include "ags/lib/std.h"
-
-namespace AGS3 {
+#include <stddef.h> // for size_t
+#include <stdint.h>
+#include <limits.h> // for _WORDSIZE
 
 #ifndef NULL
 #define NULL nullptr
@@ -39,96 +28,33 @@ namespace AGS3 {
 
 // Not all compilers have this. Added in clang and gcc followed
 #ifndef __has_attribute
-#define __has_attribute(x) 0
+    #define __has_attribute(x) 0
 #endif
 
 #ifndef FORCEINLINE
-#ifdef _MSC_VER
-#define FORCEINLINE __forceinline
+    #ifdef _MSC_VER
+        #define FORCEINLINE __forceinline
 
-#elif defined (__GNUC__) || __has_attribute(__always_inline__)
-#define FORCEINLINE inline __attribute__((__always_inline__))
+    #elif defined (__GNUC__) || __has_attribute(__always_inline__)
+        #define FORCEINLINE inline __attribute__((__always_inline__))
 
-#else
-#define FORCEINLINE inline
+    #else
+        #define FORCEINLINE inline
 
+    #endif
 #endif
-#endif
 
-typedef uint8 uint8_t;
-typedef uint16 uint16_t;
-typedef uint32 uint32_t;
-typedef uint64 uint64_t;
-typedef int8 int8_t;
-typedef int16 int16_t;
-typedef int32 int32_t;
-typedef int64 int64_t;
+// Stream offset type
+typedef int64_t soff_t;
 
-typedef int64 soff_t;       // Stream offset type
-typedef int64 intptr_t;
-typedef uint64 uintptr_t;
-
-// fixed point type
-#define fixed_t int32_t
-#define color_t int
-
-#undef INT16_MIN
-#undef INT16_MAX
-#undef UINT16_MAX
-#undef INT32_MIN
-#undef INT32_MAX
-#undef INT_MIN
-#undef INT_MAX
-#undef UINT32_MAX
-#undef UINT_MAX
-#undef SIZE_MAX
-#define INT16_MIN     -32768
-#define INT16_MAX     0x7fff
-#define UINT16_MAX    0xffff
-#define INT32_MIN     (-2147483647 - 1)
-#define INT32_MAX       2147483647
-#define INT_MIN     (-2147483647 - 1)
-#define INT_MAX       2147483647
-#define UINT_MAX      0xffffffff
-#define SIZE_MAX      0xffffffff
-#define UINT32_MAX    0xffffffff
-
-#undef TRUE
-#undef FALSE
-#define TRUE true
-#define FALSE false
+typedef int32_t fixed_t; // fixed point type
+typedef int32_t color_t; // AGS color number type (meaning depends on game's setting)
 
 // TODO: use distinct fixed point class
-enum {
-	kShift = 16,
-	kUnit = 1 << kShift
+enum
+{
+    kShift    = 16,
+    kUnit     = 1 << kShift
 };
 
-/**
- * Basic class that can hold either a number or a pointer. Helps avoid some
- * of the more nasty casts the codebase does, which was causing issues
- * on 64-bit systems
- */
-class NumberPtr {
-	intptr_t _value;
-
-public:
-	NumberPtr() : _value(0) {
-	}
-	NumberPtr(int value) : _value(value) {
-	}
-	NumberPtr(void *ptr) : _value((intptr_t)ptr) {
-	}
-	NumberPtr(const void *ptr) : _value((intptr_t)ptr) {
-	}
-	operator int32_t() const {
-		return (int32_t)_value;
-	}
-	intptr_t full() const { return _value; }
-	void *ptr() const { return (void *)_value; }
-	const void *cptr() const { return (const void *)_value; }
-};
-
-} // namespace AGS3
-
-#endif
+#endif // __AGS_CN_CORE__TYPES_H

@@ -1,34 +1,23 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
 //=============================================================================
 //
 // Room version constants and information
 //
 //=============================================================================
 
-#ifndef AGS_SHARED_GAME_ROOM_VERSION_H
-#define AGS_SHARED_GAME_ROOM_VERSION_H
-
-namespace AGS3 {
+#ifndef __AGS_CN_AC__ROOMVERSION_H
+#define __AGS_CN_AC__ROOMVERSION_H
 
 /* room file versions history
 8:  final v1.14 release
@@ -59,41 +48,40 @@ namespace AGS3 {
 33:  v3.5.0.8 - deprecated room resolution, added mask resolution
 Since then format value is defined as AGS version represented as NN,NN,NN,NN.
 */
-enum RoomFileVersion {
-	kRoomVersion_Undefined = 0,
-	kRoomVersion_pre114_3 = 3,  // exact version unknown
-	kRoomVersion_pre114_4 = 4,  // exact version unknown
-	kRoomVersion_pre114_5 = 5,  // exact version unknown
-	kRoomVersion_pre114_6 = 6,  // exact version unknown
-	kRoomVersion_114 = 8,
-	kRoomVersion_200_alpha = 9,
-	kRoomVersion_200_alpha7 = 10,
-	kRoomVersion_200_final = 11,
-	kRoomVersion_208 = 12,
-	kRoomVersion_214 = 13,
-	kRoomVersion_240 = 14,
-	kRoomVersion_241 = 15,
-	kRoomVersion_250a = 16,
-	kRoomVersion_250b = 17,
-	kRoomVersion_251 = 18,
-	kRoomVersion_253 = 19,
-	kRoomVersion_255a = 20,
-	kRoomVersion_255b = 21,
-	kRoomVersion_261 = 22,
-	kRoomVersion_262 = 23,
-	kRoomVersion_270 = 24,
-	kRoomVersion_272 = 25,
-	kRoomVersion_300a = 26,
-	kRoomVersion_300b = 27,
-	kRoomVersion_303a = 28,
-	kRoomVersion_303b = 29,
-	kRoomVersion_3404 = 30,
-	kRoomVersion_3415 = 31,
-	kRoomVersion_350 = 32,
-	kRoomVersion_3508 = 33,
-	kRoomVersion_Current = kRoomVersion_3508
+enum RoomFileVersion
+{
+    kRoomVersion_Undefined = 0,
+    kRoomVersion_pre114_3 = 3,  // exact version unknown
+    kRoomVersion_pre114_4 = 4,  // exact version unknown
+    kRoomVersion_pre114_5 = 5,  // exact version unknown
+    kRoomVersion_pre114_6 = 6,  // exact version unknown
+    kRoomVersion_114 = 8,
+    kRoomVersion_200_alpha = 9,
+    kRoomVersion_200_alpha7 = 10,
+    kRoomVersion_200_final = 11,
+    kRoomVersion_208 = 12,
+    kRoomVersion_214 = 13,
+    kRoomVersion_240 = 14,
+    kRoomVersion_241 = 15,
+    kRoomVersion_250a = 16,
+    kRoomVersion_250b = 17,
+    kRoomVersion_251 = 18,
+    kRoomVersion_253 = 19,
+    kRoomVersion_255a = 20,
+    kRoomVersion_255b = 21,
+    kRoomVersion_261 = 22,
+    kRoomVersion_262 = 23,
+    kRoomVersion_270 = 24,
+    kRoomVersion_272 = 25,
+    kRoomVersion_300a = 26,
+    kRoomVersion_300b = 27,
+    kRoomVersion_303a = 28,
+    kRoomVersion_303b = 29,
+    kRoomVersion_3404 = 30,
+    kRoomVersion_3415 = 31,
+    kRoomVersion_350 = 32,
+    kRoomVersion_3508 = 33,
+    kRoomVersion_Current = kRoomVersion_3508
 };
 
-} // namespace AGS3
-
-#endif
+#endif // __AGS_CN_AC__ROOMVERSION_H

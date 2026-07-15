@@ -1,0 +1,2 @@
+OBJS = \
+    ags_parallax\ags_parallax.o

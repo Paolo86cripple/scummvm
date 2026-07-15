@@ -1,73 +1,56 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
 
-#include "ags/engine/ac/global_textbox.h"
-#include "ags/shared/ac/common.h"
-#include "ags/shared/ac/game_setup_struct.h"
-#include "ags/engine/ac/string.h"
-#include "ags/engine/ac/textbox.h"
-#include "ags/shared/gui/gui_main.h"
-#include "ags/shared/gui/gui_textbox.h"
+#include "ac/global_textbox.h"
+#include "ac/common.h"
+#include "ac/gamesetupstruct.h"
+#include "ac/gui.h"
+#include "ac/string.h"
+#include "ac/textbox.h"
 
-namespace AGS3 {
+using namespace AGS::Common;
 
-using namespace AGS::Shared;
+extern GameSetupStruct game;
 
+void SetTextBoxFont(int guin,int objn, int fontnum) {
 
+    if ((guin<0) | (guin>=game.numgui)) quit("!SetTextBoxFont: invalid GUI number");
+    if ((objn<0) | (objn>=guis[guin].GetControlCount())) quit("!SetTextBoxFont: invalid object number");
+    if (guis[guin].GetControlType(objn) != kGUITextBox)
+        quit("!SetTextBoxFont: specified control is not a text box");
 
-void SetTextBoxFont(int guin, int objn, int fontnum) {
-	if ((guin < 0) || (guin >= _GP(game).numgui))
-		quit("!SetTextBoxFont: invalid GUI number");
-	if ((objn < 0) || (objn >= _GP(guis)[guin].GetControlCount()))
-		quit("!SetTextBoxFont: invalid object number");
-	if (_GP(guis)[guin].GetControlType(objn) != kGUITextBox)
-		quit("!SetTextBoxFont: specified control is not a text box");
-
-	GUITextBox *guit = (GUITextBox *)_GP(guis)[guin].GetControl(objn);
-	TextBox_SetFont(guit, fontnum);
+    GUITextBox *guit = (GUITextBox*)guis[guin].GetControl(objn);
+    TextBox_SetFont(guit, fontnum);
 }
 
-void GetTextBoxText(int guin, int objn, char *txbuf) {
-	VALIDATE_STRING(txbuf);
-	if ((guin < 0) || (guin >= _GP(game).numgui))
-		quit("!GetTextBoxText: invalid GUI number");
-	if ((objn < 0) || (objn >= _GP(guis)[guin].GetControlCount()))
-		quit("!GetTextBoxText: invalid object number");
-	if (_GP(guis)[guin].GetControlType(objn) != kGUITextBox)
-		quit("!GetTextBoxText: specified control is not a text box");
+void GetTextBoxText(int guin, int objn, char*txbuf) {
+    VALIDATE_STRING(txbuf);
+    if ((guin<0) | (guin>=game.numgui)) quit("!GetTextBoxText: invalid GUI number");
+    if ((objn<0) | (objn>=guis[guin].GetControlCount())) quit("!GetTextBoxText: invalid object number");
+    if (guis[guin].GetControlType(objn)!=kGUITextBox)
+        quit("!GetTextBoxText: specified control is not a text box");
 
-	GUITextBox *guisl = (GUITextBox *)_GP(guis)[guin].GetControl(objn);
-	TextBox_GetText(guisl, txbuf);
+    GUITextBox*guisl=(GUITextBox*)guis[guin].GetControl(objn);
+    TextBox_GetText(guisl, txbuf);
 }
 
-void SetTextBoxText(int guin, int objn, const char *txbuf) {
-	if ((guin < 0) || (guin >= _GP(game).numgui))
-		quit("!SetTextBoxText: invalid GUI number");
-	if ((objn < 0) || (objn >= _GP(guis)[guin].GetControlCount()))
-		quit("!SetTextBoxText: invalid object number");
-	if (_GP(guis)[guin].GetControlType(objn) != kGUITextBox)
-		quit("!SetTextBoxText: specified control is not a text box");
+void SetTextBoxText(int guin, int objn, const char* txbuf) {
+    if ((guin<0) | (guin>=game.numgui)) quit("!SetTextBoxText: invalid GUI number");
+    if ((objn<0) | (objn>=guis[guin].GetControlCount())) quit("!SetTextBoxText: invalid object number");
+    if (guis[guin].GetControlType(objn)!=kGUITextBox)
+        quit("!SetTextBoxText: specified control is not a text box");
 
-	GUITextBox *guisl = (GUITextBox *)_GP(guis)[guin].GetControl(objn);
-	TextBox_SetText(guisl, txbuf);
+    GUITextBox*guisl=(GUITextBox*)guis[guin].GetControl(objn);
+    TextBox_SetText(guisl, txbuf);
 }
-
-} // namespace AGS3

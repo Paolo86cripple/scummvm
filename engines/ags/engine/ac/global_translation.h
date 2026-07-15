@@ -1,34 +1,29 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+//
+//
+//
+//=============================================================================
+#ifndef __AGS_EE_AC__GLOBALTRANSLATION_H
+#define __AGS_EE_AC__GLOBALTRANSLATION_H
 
-#ifndef AGS_ENGINE_AC_GLOBAL_TRANSLATION_H
-#define AGS_ENGINE_AC_GLOBAL_TRANSLATION_H
-
-namespace AGS3 {
-
-const char *get_translation(const char *text);
-int IsTranslationAvailable();
+// WARNING: get_translation returns original char* if no translation is found;
+// for that reason make sure that you don't pass temporary buffer there, unless
+// you use returned value immediately or save it in another buffer.
+const char *get_translation (const char *text);
+int IsTranslationAvailable ();
 // GetTranslationName assumes a string buffer of MAX_MAXSTRLEN
 int GetTranslationName(char *buffer);
 
-} // namespace AGS3
-
-#endif
+#endif // __AGS_EE_AC__GLOBALTRANSLATION_H

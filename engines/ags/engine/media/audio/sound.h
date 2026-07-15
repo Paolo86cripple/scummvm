@@ -1,46 +1,39 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
 //=============================================================================
 //
-// SOUNDCLIP factory methods.
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
 //
 //=============================================================================
+//
+// SoundClip factory methods.
+//
+//=============================================================================
+#ifndef __AC_SOUND_H
+#define __AC_SOUND_H
 
-#ifndef AGS_ENGINE_MEDIA_AUDIO_SOUND_H
-#define AGS_ENGINE_MEDIA_AUDIO_SOUND_H
+#include <memory>
+#include "ac/asset_helper.h"
+#include "media/audio/soundclip.h"
 
-#include "ags/engine/ac/asset_helper.h"
-#include "ags/engine/media/audio/sound_clip.h"
+// Threshold in bytes for loading sounds immediately, in KB
+const size_t DEFAULT_SOUNDLOADATONCE_KB = 1024u;
+// Sound cache limit, in KB
+const size_t DEFAULT_SOUNDCACHESIZE_KB = 1024u * 32; // 32 MB
 
-namespace AGS3 {
+// Sets sound loading and caching rules:
+// * max_loadatonce - threshold in bytes for loading sounds immediately, vs streaming
+// * max_cachesize - sound cache limit, in bytes
+void soundcache_set_rules(size_t max_loadatonce, size_t max_cachesize);
+void soundcache_clear();
+void soundcache_precache(const AssetPath &apath);
 
-SOUNDCLIP *my_load_wave(const AssetPath &asset_name, bool loop);
-SOUNDCLIP *my_load_mp3(const AssetPath &asset_name, bool loop);
-SOUNDCLIP *my_load_static_mp3(const AssetPath &asset_name, bool loop);
-SOUNDCLIP *my_load_static_ogg(const AssetPath &asset_name, bool loop);
-SOUNDCLIP *my_load_ogg(const AssetPath &asset_name, bool doLoop);
-SOUNDCLIP *my_load_midi(const AssetPath &asset_name, bool loop);
-SOUNDCLIP *my_load_mod(const AssetPath &asset_name, bool loop);
+std::unique_ptr<SoundClip> load_sound_clip(const AssetPath &apath, const char *extension_hint, bool loop);
 
-} // namespace AGS3
-
-#endif
+#endif // __AC_SOUND_H

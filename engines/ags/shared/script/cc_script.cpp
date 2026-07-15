@@ -1,336 +1,232 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+#include <stdlib.h>
+#include <string.h>
+#include "script/cc_common.h"
+#include "script/cc_internal.h"
+#include "script/cc_script.h"
+#include "util/stream.h"
+#include "util/string_compat.h"
+#include "util/string_utils.h"
 
-#include "ags/shared/script/cc_common.h"
-#include "ags/shared/script/cc_script.h"
-#include "ags/shared/script/cc_internal.h"
-#include "ags/shared/util/stream.h"
-#include "ags/shared/util/string_compat.h"
-#include "ags/shared/util/string_utils.h"
-#include "ags/globals.h"
+using namespace AGS::Common;
 
-namespace AGS3 {
+// script file format signature
+const char scfilesig[5] = "SCOM";
 
-using namespace AGS::Shared;
+const std::string ccScript::noname = "";
+// FIXME: this constant should not be in ccScript, but in whoever uses its section names?
+const std::string ccScript::unknownSectionName = "(unknown section)";
 
-ccScript *ccScript::CreateFromStream(Stream *in) {
-	ccScript *scri = new ccScript();
-	if (!scri->Read(in)) {
-		delete scri;
-		return nullptr;
-	}
-	return scri;
+ccScript *ccScript::CreateFromStream(Stream *in)
+{
+    ccScript *scri = new ccScript();
+    if (!scri->Read(in))
+    {
+        delete scri;
+        return nullptr;
+    }
+    return scri;
 }
 
-ccScript::ccScript() {
-	globaldata = nullptr;
-	globaldatasize = 0;
-	code = nullptr;
-	codesize = 0;
-	strings = nullptr;
-	stringssize = 0;
-	fixuptypes = nullptr;
-	fixups = nullptr;
-	numfixups = 0;
-	importsCapacity = 0;
-	imports = nullptr;
-	numimports = 0;
-	exportsCapacity = 0;
-	exports = nullptr;
-	export_addr = nullptr;
-	numexports = 0;
-	instances = 0;
-	sectionNames = nullptr;
-	sectionOffsets = nullptr;
-	numSections = 0;
-	capacitySections = 0;
+ccScript *ccScript::CreateFromStream(const std::string &name, Common::Stream *in)
+{
+    ccScript *scri = new ccScript(name);
+    if (!scri->Read(in))
+    {
+        delete scri;
+        return nullptr;
+    }
+    return scri;
 }
 
-ccScript::ccScript(const ccScript &src) {
-	globaldatasize = src.globaldatasize;
-	if (globaldatasize > 0) {
-		globaldata = (char *)malloc(globaldatasize);
-		memcpy(globaldata, src.globaldata, globaldatasize);
-	} else {
-		globaldata = nullptr;
-	}
-
-	codesize = src.codesize;
-	if (codesize > 0) {
-		code = (int32_t *)malloc(codesize * sizeof(int32_t));
-		memcpy(code, src.code, sizeof(int32_t) * codesize);
-	} else {
-		code = nullptr;
-	}
-
-	stringssize = src.stringssize;
-	if (stringssize > 0) {
-		strings = (char *)malloc(stringssize);
-		memcpy(strings, src.strings, stringssize);
-	} else {
-		strings = nullptr;
-	}
-
-	numfixups = src.numfixups;
-	if (numfixups > 0) {
-		fixuptypes = (char *)malloc(numfixups);
-		fixups = (int32_t *)malloc(numfixups * sizeof(int32_t));
-		memcpy(fixuptypes, src.fixuptypes, numfixups);
-		memcpy(fixups, src.fixups, numfixups * sizeof(int32_t));
-	} else {
-		fixups = nullptr;
-		fixuptypes = nullptr;
-	}
-
-	importsCapacity = src.numimports;
-	numimports = src.numimports;
-	if (numimports > 0) {
-		imports = (char **)malloc(sizeof(char *) * numimports);
-		for (int i = 0; i < numimports; ++i)
-			imports[i] = ags_strdup(src.imports[i]);
-	} else {
-		imports = nullptr;
-	}
-
-	exportsCapacity = src.numexports;
-	numexports = src.numexports;
-	if (numexports > 0) {
-		exports = (char **)malloc(sizeof(char *) * numexports);
-		export_addr = (int32_t *)malloc(sizeof(int32_t) * numexports);
-		for (int i = 0; i < numexports; ++i) {
-			exports[i] = ags_strdup(src.exports[i]);
-			export_addr[i] = src.export_addr[i];
-		}
-	} else {
-		exports = nullptr;
-		export_addr = nullptr;
-	}
-
-	capacitySections = src.numSections;
-	numSections = src.numSections;
-	if (numSections > 0) {
-		sectionNames = (char **)malloc(numSections * sizeof(char *));
-		sectionOffsets = (int32_t *)malloc(numSections * sizeof(int32_t));
-		for (int i = 0; i < numSections; ++i) {
-			sectionNames[i] = ags_strdup(src.sectionNames[i]);
-			sectionOffsets[i] = src.sectionOffsets[i];
-		}
-	} else {
-		numSections = 0;
-		sectionNames = nullptr;
-		sectionOffsets = nullptr;
-	}
-
-	instances = 0;
+ccScript::ccScript(const std::string &name)
+{
+    scriptname = name;
 }
 
-ccScript::~ccScript() {
-	Free();
+ccScript::ccScript(const ccScript &src)
+{
+    *this = src;
 }
 
-void ccScript::Write(Stream *out) {
-	int n;
-	out->Write(_G(scfilesig), 4);
-	out->WriteInt32(SCOM_VERSION);
-	out->WriteInt32(globaldatasize);
-	out->WriteInt32(codesize);
-	out->WriteInt32(stringssize);
-	if (globaldatasize > 0)
-		out->WriteArray(globaldata, globaldatasize, 1);
-	if (codesize > 0)
-		out->WriteArrayOfInt32(code, codesize);
-	if (stringssize > 0)
-		out->WriteArray(strings, stringssize, 1);
-	out->WriteInt32(numfixups);
-	if (numfixups > 0) {
-		out->WriteArray(fixuptypes, numfixups, 1);
-		out->WriteArrayOfInt32(fixups, numfixups);
-	}
-	out->WriteInt32(numimports);
-	for (n = 0; n < numimports; n++)
-		StrUtil::WriteCStr(imports[n], out);
-	out->WriteInt32(numexports);
-	for (n = 0; n < numexports; n++) {
-		StrUtil::WriteCStr(exports[n], out);
-		out->WriteInt32(export_addr[n]);
-	}
-	out->WriteInt32(numSections);
-	for (n = 0; n < numSections; n++) {
-		StrUtil::WriteCStr(sectionNames[n], out);
-		out->WriteInt32(sectionOffsets[n]);
-	}
-	out->WriteInt32(ENDFILESIG);
+ccScript &ccScript::operator =(const ccScript &src)
+{
+    scriptname = src.scriptname;
+    globaldata = src.globaldata;
+    code = src.code;
+    strings = src.strings;
+    fixuptypes = src.fixuptypes;
+    fixups = src.fixups;
+    imports = src.imports;
+    exports = src.exports;
+    export_addr = src.export_addr;
+    sectionNames = src.sectionNames;
+    sectionOffsets = src.sectionOffsets;
+    instances = 0; // don't copy reference count, since it's a new object
+    return *this;
 }
 
-bool ccScript::Read(Stream *in) {
-	instances = 0;
-	int n;
-	char gotsig[5];
-	_G(currentline) = -1;
-	in->Read(gotsig, 4);
-	gotsig[4] = 0;
-
-	int fileVer = in->ReadInt32();
-
-	if ((strcmp(gotsig, _G(scfilesig)) != 0) || (fileVer > SCOM_VERSION)) {
-		cc_error("file was not written by ccScript::Write or seek position is incorrect");
-		return false;
-	}
-
-	globaldatasize = in->ReadInt32();
-	codesize = in->ReadInt32();
-	stringssize = in->ReadInt32();
-
-	if (globaldatasize > 0) {
-		globaldata = (char *)malloc(globaldatasize);
-		in->Read(globaldata, globaldatasize);
-	} else
-		globaldata = nullptr;
-
-	if (codesize > 0) {
-		code = (int32_t *)malloc(codesize * sizeof(int32_t));
-		in->ReadArrayOfInt32(code, codesize);
-	} else
-		code = nullptr;
-
-	if (stringssize > 0) {
-		strings = (char *)malloc(stringssize);
-		in->Read(strings, stringssize);
-	} else
-		strings = nullptr;
-
-	numfixups = in->ReadInt32();
-	if (numfixups > 0) {
-		fixuptypes = (char *)malloc(numfixups);
-		fixups = (int32_t *)malloc(numfixups * sizeof(int32_t));
-		in->Read(fixuptypes, numfixups);
-		in->ReadArrayOfInt32(fixups, numfixups);
-	} else {
-		fixups = nullptr;
-		fixuptypes = nullptr;
-	}
-
-	numimports = in->ReadInt32();
-
-	imports = (char **)malloc(sizeof(char *) * numimports);
-	for (n = 0; n < numimports; n++)
-		imports[n] = StrUtil::ReadMallocCStrOrNull(in);
-
-	numexports = in->ReadInt32();
-	exports = (char **)malloc(sizeof(char *) * numexports);
-	export_addr = (int32_t *)malloc(sizeof(int32_t) * numexports);
-	for (n = 0; n < numexports; n++) {
-		exports[n] = StrUtil::ReadMallocCStrOrNull(in);
-		export_addr[n] = in->ReadInt32();
-	}
-
-	if (fileVer >= 83) {
-		// read in the Sections
-		numSections = in->ReadInt32();
-		sectionNames = (char **)malloc(numSections * sizeof(char *));
-		sectionOffsets = (int32_t *)malloc(numSections * sizeof(int32_t));
-		for (n = 0; n < numSections; n++) {
-			sectionNames[n] = StrUtil::ReadMallocCStrOrNull(in);
-			sectionOffsets[n] = in->ReadInt32();
-		}
-	} else {
-		numSections = 0;
-		sectionNames = nullptr;
-		sectionOffsets = nullptr;
-	}
-
-	if (static_cast<uint32_t>(in->ReadInt32()) != ENDFILESIG) {
-		cc_error("internal error rebuilding script");
-		return false;
-	}
-	return true;
+void ccScript::Write(Stream *out)
+{
+    out->Write(scfilesig,4);
+    out->WriteInt32(SCOM_VERSION_CURRENT);
+    out->WriteInt32(globaldata.size());
+    out->WriteInt32(code.size());
+    out->WriteInt32(strings.size());
+    if (globaldata.size() > 0)
+        out->Write(globaldata.data(), globaldata.size());
+    if (code.size() > 0)
+        out->WriteArrayOfInt32(code.data(), code.size());
+    if (strings.size() > 0)
+        out->Write(strings.data(), strings.size());
+    out->WriteInt32(fixups.size());
+    if (fixups.size() > 0)
+    {
+        out->Write(fixuptypes.data(), fixups.size());
+        out->WriteArrayOfInt32(fixups.data(), fixups.size());
+    }
+    out->WriteInt32(imports.size());
+    for (size_t n = 0; n < imports.size(); ++n)
+        StrUtil::WriteCStr(imports[n].c_str(), out);
+    out->WriteInt32(exports.size());
+    for (size_t n = 0; n < exports.size(); ++n)
+    {
+        StrUtil::WriteCStr(exports[n].c_str(), out);
+        out->WriteInt32(export_addr[n]);
+    }
+    out->WriteInt32(sectionNames.size());
+    for (size_t n = 0; n < sectionNames.size(); ++n)
+    {
+        StrUtil::WriteCStr(sectionNames[n].c_str(), out);
+        out->WriteInt32(sectionOffsets[n]);
+    }
+    out->WriteInt32(ENDFILESIG);
 }
 
-void ccScript::Free() {
-	if (globaldata != nullptr)
-		free(globaldata);
+bool ccScript::Read(Stream *in)
+{
+    instances = 0;
+    currentline = -1;
 
-	if (code != nullptr)
-		free(code);
+    char gotsig[5]{};
+    in->Read(gotsig, 4);
 
-	if (strings != nullptr)
-		free(strings);
+    int fileVer = in->ReadInt32();
+    if ((strcmp(gotsig, scfilesig) != 0) || (fileVer > SCOM_VERSION_CURRENT))
+    {
+        cc_error("file was not written by ccScript::Write or seek position is incorrect");
+        return false;
+    }
 
-	if (fixups != nullptr && numfixups > 0)
-		free(fixups);
+    const uint32_t globaldatasize = in->ReadInt32();
+    const uint32_t codesize = in->ReadInt32();
+    const uint32_t stringssize = in->ReadInt32();
 
-	if (fixuptypes != nullptr && numfixups > 0)
-		free(fixuptypes);
+    globaldata.resize(globaldatasize);
+    if (globaldatasize > 0)
+    {
+        in->Read(globaldata.data(), globaldata.size());
+    }
 
-	globaldata = nullptr;
-	code = nullptr;
-	strings = nullptr;
-	fixups = nullptr;
-	fixuptypes = nullptr;
+    code.resize(codesize);
+    if (codesize > 0)
+    {
+        in->ReadArrayOfInt32(code.data(), code.size());
+    }
 
-	int aa;
-	for (aa = 0; aa < numimports; aa++) {
-		if (imports[aa] != nullptr)
-			free(imports[aa]);
-	}
+    strings.resize(stringssize);
+    if (strings.size() > 0)
+    {
+        in->Read(strings.data(), strings.size());
+    }
 
-	for (aa = 0; aa < numexports; aa++)
-		free(exports[aa]);
+    const uint32_t numfixups = in->ReadInt32();
+    fixuptypes.resize(numfixups);
+    fixups.resize(numfixups);
+    if (numfixups > 0)
+    {
+        in->Read(fixuptypes.data(), numfixups);
+        in->ReadArrayOfInt32(fixups.data(), numfixups);
+    }
 
-	for (aa = 0; aa < numSections; aa++)
-		free(sectionNames[aa]);
+    const uint32_t numimports = in->ReadInt32();
+    imports.resize(numimports);
+    for (uint32_t n = 0; n < numimports; ++n)
+    {
+        imports[n] = StrUtil::ReadCStrAsStdString(in);
+    }
 
-	if (sectionNames != nullptr) {
-		free(sectionNames);
-		free(sectionOffsets);
-		sectionNames = nullptr;
-		sectionOffsets = nullptr;
-	}
+    const uint32_t numexports = in->ReadInt32();
+    exports.resize(numexports);
+    export_addr.resize(numexports);
+    for (uint32_t n = 0; n < numexports; ++n)
+    {
+        exports[n] = StrUtil::ReadCStrAsStdString(in);
+        export_addr[n] = in->ReadInt32();
+    }
 
-	if (imports != nullptr) {
-		free(imports);
-		free(exports);
-		free(export_addr);
-		imports = nullptr;
-		exports = nullptr;
-		export_addr = nullptr;
-	}
-	numimports = 0;
-	numexports = 0;
-	numSections = 0;
+    if (fileVer >= SCOM_VERSION_SECTIONS)
+    {
+        // read in the Sections
+        const uint32_t numsections = in->ReadInt32();
+        sectionNames.resize(numsections);
+        sectionOffsets.resize(numsections);
+        for (uint32_t n = 0; n < numsections; ++n)
+        {
+            sectionNames[n] = StrUtil::ReadCStrAsStdString(in);
+            sectionOffsets[n] = in->ReadInt32();
+        }
+    }
+
+    if (static_cast<uint32_t>(in->ReadInt32()) != ENDFILESIG)
+    {
+        cc_error("!internal error reading script: end file signature not found");
+        return false;
+    }
+    return true;
 }
 
-const char *ccScript::GetSectionName(int32_t offs) const {
-	int i;
-	for (i = 0; i < numSections; i++) {
-		if (sectionOffsets[i] < offs)
-			continue;
-		break;
-	}
-
-	// if no sections in script, return unknown
-	if (i == 0)
-		return "(unknown section)";
-
-	return sectionNames[i - 1];
+const std::string &ccScript::GetScriptName() const
+{
+    if (!scriptname.empty())
+        return scriptname;
+    // In a regular script sections contain an optional list of headers in an order
+    // they were included, and the script body's own name as the last element.
+    if (sectionNames.size() > 0)
+        return sectionNames.back();
+    return noname;
 }
 
-} // namespace AGS3
+const std::string &ccScript::GetSectionName(int32_t offs) const
+{
+    size_t sect_idx = 0;
+    for (; sect_idx < sectionOffsets.size(); ++sect_idx)
+    {
+        if (sectionOffsets[sect_idx] < offs)
+            continue;
+        break;
+    }
+
+    // if no sections in script, return unknown
+    if (sect_idx == 0)
+        return unknownSectionName;
+
+    return sectionNames[sect_idx - 1];
+}
+
+void ccScript::SetScriptName(const std::string &name)
+{
+    scriptname = name;
+}

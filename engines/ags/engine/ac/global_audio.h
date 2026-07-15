@@ -1,33 +1,23 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+#ifndef __AGS_EE_AC__GLOBALAUDIO_H
+#define __AGS_EE_AC__GLOBALAUDIO_H
 
-#ifndef AGS_ENGINE_AC_GLOBAL_AUDIO_H
-#define AGS_ENGINE_AC_GLOBAL_AUDIO_H
+#include "speech.h"
 
-#include "ags/engine/ac/speech.h"
-
-namespace AGS3 {
-
-void    StopAmbientSound(int channel);
-void    PlayAmbientSound(int channel, int sndnum, int vol, int x, int y);
+void    StopAmbientSound (int channel);
+void    PlayAmbientSound (int channel, int sndnum, int vol, int x, int y);
 int     IsChannelPlaying(int chan);
 int     IsSoundPlaying();
 // returns -1 on failure, channel number on success
@@ -35,29 +25,29 @@ int     PlaySoundEx(int val1, int channel);
 void    StopAllSounds(int evenAmbient);
 
 void    PlayMusicResetQueue(int newmus);
-void    SeekMIDIPosition(int position);
-int     GetMIDIPosition();
+void    SeekMIDIPosition (int position);
+int     GetMIDIPosition ();
 int     IsMusicPlaying();
 int     PlayMusicQueued(int musnum);
 void    scr_StopMusic();
 void    SeekMODPattern(int patnum);
-void    SeekMP3PosMillis(int posn);
-int     GetMP3PosMillis();
+void    SeekMP3PosMillis (int posn);
+int     GetMP3PosMillis ();
 void    SetMusicVolume(int newvol);
 void    SetMusicMasterVolume(int newvol);
 void    SetSoundVolume(int newvol);
 void    SetChannelVolume(int chan, int newvol);
-void    SetDigitalMasterVolume(int newvol);
+void    SetDigitalMasterVolume (int newvol);
 int     GetCurrentMusic();
 void    SetMusicRepeat(int loopflag);
-void    PlayMP3File(const char *filename);
-void    PlaySilentMIDI(int mnum);
+void    PlayMP3File (const char *filename);
+void    PlaySilentMIDI (int mnum);
 
 void    SetSpeechVolume(int newvol);
 void    SetVoiceMode(int newmod);
 int     GetVoiceMode();
 int     IsVoxAvailable();
-int     IsMusicVoxAvailable();
+int     IsMusicVoxAvailable ();
 
 struct CharacterInfo;
 struct ScriptAudioChannel;
@@ -76,6 +66,4 @@ void    stop_voice_speech();
 // Stop non-blocking voice-over and revert audio volumes if necessary
 void    stop_voice_nonblocking();
 
-} // namespace AGS3
-
-#endif
+#endif // __AGS_EE_AC__GLOBALAUDIO_H

@@ -1,40 +1,31 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
 //=============================================================================
 //
 // Universal error class, that may be used both as a return value or
 // thrown as an exception.
 //
 //=============================================================================
+#ifndef __AGS_CN_UTIL__ERROR_H
+#define __AGS_CN_UTIL__ERROR_H
 
-#ifndef AGS_SHARED_UTIL_ERROR_H
-#define AGS_SHARED_UTIL_ERROR_H
+#include <memory>
+#include "util/string.h"
 
-#include "common/std/memory.h"
-#include "ags/shared/util/string.h"
-
-namespace AGS3 {
-namespace AGS {
-namespace Shared {
+namespace AGS
+{
+namespace Common
+{
 
 class Error;
 typedef std::shared_ptr<Error> PError;
@@ -43,58 +34,50 @@ typedef std::shared_ptr<Error> PError;
 // A simple struct, that provides several fields to describe an error in the program.
 // If wanted, may be reworked into subclass of std::exception.
 //
-class Error {
+class Error
+{
 public:
-	Error(int code, String general, PError inner_error = PError()) : _code(code), _general(general), _innerError(inner_error) {
-	}
-	Error(int code, String general, String comment, PError inner_error = PError()) : _code(code), _general(general), _comment(comment), _innerError(inner_error) {
-	}
-	Error(String general, PError inner_error = PError()) : _code(0), _general(general), _innerError(inner_error) {
-	}
-	Error(String general, String comment, PError inner_error = PError()) : _code(0), _general(general), _comment(comment), _innerError(inner_error) {
-	}
+    Error(int code, String general, PError inner_error = PError()) : _code(code), _general(general), _innerError(inner_error) {}
+    Error(int code, String general, String comment, PError inner_error = PError()) : _code(code), _general(general), _comment(comment), _innerError(inner_error) {}
+    Error(String general, PError inner_error = PError()) : _code(0), _general(general), _innerError(inner_error) {}
+    Error(String general, String comment, PError inner_error = PError()) : _code(0), _general(general), _comment(comment), _innerError(inner_error) {}
+    
 
-
-	// Error code is a number, defining error subtype. It is not much use to the end-user,
-	// but may be checked in the program to know more precise cause of the error.
-	int    Code() const {
-		return _code;
-	}
-	// General description of this error type and subtype.
-	String General() const {
-		return _general;
-	}
-	// Any complementary information.
-	String Comment() const {
-		return _comment;
-	}
-	PError InnerError() const {
-		return _innerError;
-	}
-	// Full error message combines general description and comment.
-	// NOTE: if made a child of std::exception, FullMessage may be substituted
-	// or complemented with virtual const char* what().
-	String FullMessage() const {
-		String msg;
-		const Error *err = this;
-		do {
-			msg.Append(err->General());
-			if (!err->Comment().IsEmpty()) {
-				msg.AppendChar('\n');
-				msg.Append(err->Comment());
-			}
-			err = err->InnerError().get();
-			if (err)
-				msg.AppendChar('\n');
-		} while (err);
-		return msg;
-	}
+    // Error code is a number, defining error subtype. It is not much use to the end-user,
+    // but may be checked in the program to know more precise cause of the error.
+    int    Code() const { return _code; }
+    // General description of this error type and subtype.
+    String General() const { return _general; }
+    // Any complementary information.
+    String Comment() const { return _comment; }
+    PError InnerError() const { return _innerError; }
+    // Full error message combines general description and comment.
+    // NOTE: if made a child of std::exception, FullMessage may be substituted
+    // or complemented with virtual const char* what().
+    String FullMessage() const
+    {
+        String msg;
+        const Error *err = this;
+        do
+        {
+            msg.Append(err->General());
+            if (!err->Comment().IsEmpty())
+            {
+                msg.AppendChar('\n');
+                msg.Append(err->Comment());
+            }
+            err = err->InnerError().get();
+            if (err)
+                msg.AppendChar('\n');
+        } while (err);
+        return msg;
+    }
 
 private:
-	int    _code; // numeric code, for specific uses
-	String _general; // general description of this error class
-	String _comment; // additional information about particular case
-	PError _innerError; // previous error that caused this one
+    int    _code; // numeric code, for specific uses
+    String _general; // general description of this error class
+    String _comment; // additional information about particular case
+    PError _innerError; // previous error that caused this one
 };
 
 
@@ -107,36 +90,23 @@ private:
 // shared_ptr converts to 'true' when it contains an object, but ErrorHandle
 // returns 'true' when it *does NOT* contain an object, meaning there
 // is no error.
-template <class T> class ErrorHandle {
+template <class T> class ErrorHandle
+{
 public:
-	static ErrorHandle<T> None() {
-		return ErrorHandle();
-	}
+    static ErrorHandle<T> None() { return ErrorHandle(); }
 
-	ErrorHandle() {}
-	ErrorHandle(T *err) : _error(err) {
-	}
-	ErrorHandle(std::shared_ptr<T> err) : _error(err) {
-	}
+    ErrorHandle() = default;
+    ErrorHandle(T *err) : _error(err) {}
+    ErrorHandle(std::shared_ptr<T> err) : _error(err) {}
 
-	bool HasError() const {
-		return _error.get() != NULL;
-	}
-	explicit operator bool() const {
-		return _error.get() == nullptr;
-	}
-	operator PError() const {
-		return _error;
-	}
-	T *operator ->() const {
-		return _error.operator->();
-	}
-	T &operator *() const {
-		return _error.operator * ();
-	}
+    bool HasError() const { return _error.get() != NULL; }
+    explicit operator bool() const { return _error.get() == nullptr; }
+    operator PError() const { return _error; }
+    T *operator ->() const { return _error.operator->(); }
+    T &operator *() const { return _error.operator*(); }
 
 private:
-	std::shared_ptr<T> _error;
+    std::shared_ptr<T> _error;
 };
 
 
@@ -149,22 +119,18 @@ typedef ErrorHandle<Error> HError;
 // you'd like to restrict code values to particular enumerator.
 // TODO: a type identifier as a part of template (string, or perhaps a int16
 // to be placed at high-bytes in Code) to be able to distinguish error group.
-template <typename CodeType, String(*GetErrorText)(CodeType)>
-class TypedCodeError : public Error {
+template <typename CodeType, String (*GetErrorText)(CodeType)>
+class TypedCodeError : public Error
+{
 public:
-	TypedCodeError(CodeType code, PError inner_error = PError()) : Error(code, GetErrorText(code), inner_error) {
-	}
-	TypedCodeError(CodeType code, String comment, PError inner_error = PError()) :
-		Error(code, GetErrorText(code), comment, inner_error) {
-	}
+    TypedCodeError(CodeType code, PError inner_error = PError()) : Error(code, GetErrorText(code), inner_error) {}
+    TypedCodeError(CodeType code, String comment, PError inner_error = PError()) :
+        Error(code, GetErrorText(code), comment, inner_error) {}
 
-	CodeType Code() const {
-		return (CodeType)Error::Code();
-	}
+    CodeType Code() const { return (CodeType)Error::Code(); }
 };
 
-} // namespace Shared
+} // namespace Common
 } // namespace AGS
-} // namespace AGS3
 
-#endif
+#endif // __AGS_CN_UTIL__ERROR_H

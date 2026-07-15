@@ -1,64 +1,55 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+#include "ac/common.h"
+#include "ac/draw.h"
+#include "ac/gamesetupstruct.h"
+#include "ac/gamestate.h"
+#include "ac/global_palette.h"
+#include "util/wgt2allg.h"
 
-#include "ags/shared/ac/common.h"
-#include "ags/engine/ac/draw.h"
-#include "ags/shared/ac/game_setup_struct.h"
-#include "ags/engine/ac/game_state.h"
-#include "ags/engine/ac/global_palette.h"
-#include "ags/shared/util/wgt2_allg.h"
-
-namespace AGS3 {
+extern GameSetupStruct game;
+extern RGB palette[256];
 
 
+void CyclePalette(int strt,int eend) {
+    // hi-color game must invalidate screen since the palette changes
+    // the effect of the drawing operations
+    // FIXME: this is likely wrong, it should also/instead test the graphic driver capabilities?
+    if (game.color_depth > 1)
+        invalidate_screen();
 
+    if ((strt < 0) || (strt > 255) || (eend < 0) || (eend > 255))
+        quit("!CyclePalette: start and end must be 0-255");
 
-
-
-void CyclePalette(int strt, int eend) {
-	// hi-color game must invalidate screen since the palette changes
-	// the effect of the drawing operations
-	if (_GP(game).color_depth > 1)
-		invalidate_screen();
-
-	if ((strt < 0) || (strt > 255) || (eend < 0) || (eend > 255))
-		quit("!CyclePalette: start and end must be 0-255");
-
-	if (eend > strt) {
-		// forwards
-		wcolrotate(strt, eend, 0, _G(palette));
-		set_palette_range(_G(palette), strt, eend, 0);
-	} else {
-		// backwards
-		wcolrotate(eend, strt, 1, _G(palette));
-		set_palette_range(_G(palette), eend, strt, 0);
-	}
+    if (eend > strt) {
+        // forwards
+        wcolrotate(strt, eend, 0, palette);
+        set_palette_range(palette, strt, eend, 0);
+    }
+    else {
+        // backwards
+        wcolrotate(eend, strt, 1, palette);
+        set_palette_range(palette, eend, strt, 0);
+    }
 
 }
-void SetPalRGB(int inndx, int rr, int gg, int bb) {
-	if (_GP(game).color_depth > 1)
-		invalidate_screen();
+void SetPalRGB(int inndx,int rr,int gg,int bb) {
+    if (game.color_depth > 1)
+        invalidate_screen();
 
-	wsetrgb(inndx, rr, gg, bb, _G(palette));
-	set_palette_range(_G(palette), inndx, inndx, 0);
+    wsetrgb(inndx,rr,gg,bb,palette);
+    set_palette_range(palette, inndx, inndx, 0);
 }
 /*void scSetPal(color*pptr) {
 wsetpalette(0,255,pptr);
@@ -68,11 +59,9 @@ get_palette(pptr);
 }*/
 
 void UpdatePalette() {
-	if (_GP(game).color_depth > 1)
-		invalidate_screen();
+    if (game.color_depth > 1)
+        invalidate_screen();
 
-	if (!_GP(play).fast_forward)
-		setpal();
+    if (!play.fast_forward)  
+        setpal();
 }
-
-} // namespace AGS3

@@ -1,186 +1,443 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+#include "media/video/video.h"
 
-#include "graphics/palette.h"
-#include "video/avi_decoder.h"
-#include "video/flic_decoder.h"
-#include "video/mpegps_decoder.h"
-#include "video/theora_decoder.h"
-#include "ags/shared/core/platform.h"
-#include "ags/shared/core/types.h"
-#include "ags/engine/debugging/debug_log.h"
-#include "ags/shared/debugging/out.h"
-#include "ags/engine/ac/asset_helper.h"
-#include "ags/shared/ac/common.h"
-#include "ags/engine/ac/draw.h"
-#include "ags/shared/ac/game_version.h"
-#include "ags/shared/ac/game_setup_struct.h"
-#include "ags/engine/ac/game_state.h"
-#include "ags/engine/ac/global_display.h"
-#include "ags/engine/ac/mouse.h"
-#include "ags/engine/ac/sys_events.h"
-#include "ags/engine/ac/runtime_defines.h"
-#include "ags/engine/ac/system.h"
-#include "ags/shared/core/asset_manager.h"
-#include "ags/shared/gfx/bitmap.h"
-#include "ags/engine/gfx/ddb.h"
-#include "ags/engine/gfx/graphics_driver.h"
-#include "ags/engine/main/game_run.h"
-#include "ags/shared/util/stream.h"
-#include "ags/engine/media/audio/audio_system.h"
-#include "ags/engine/media/video/video.h"
-#include "ags/ags.h"
-#include "ags/events.h"
+#ifndef AGS_NO_VIDEO_PLAYER
+#include <chrono>
+#include <mutex>
+#include <thread>
+#include "core/assetmanager.h"
+#include "ac/draw.h"
+#include "ac/game.h"
+#include "ac/gamesetupstruct.h"
+#include "ac/gamestate.h"
+#include "ac/global_audio.h"
+#include "ac/sys_events.h"
+#include "debug/debug_log.h"
+#include "gfx/graphicsdriver.h"
+#include "main/game_run.h"
+#include "media/audio/audio.h"
+#include "media/video/videoplayer.h"
+#include "media/video/flic_player.h"
+#include "media/video/theora_player.h"
+#include "util/memory_compat.h"
 
-namespace AGS3 {
+using namespace AGS::Common;
+using namespace AGS::Engine;
 
-using AGS::Shared::AssetManager;
 
-static bool play_video(Video::VideoDecoder *decoder, const char *name, int flags, VideoSkipType skip, bool showError) {
-	std::unique_ptr<Stream> video_stream(_GP(AssetMgr)->OpenAsset(name));
-	if (!video_stream) {
-		if (showError)
-			Display("Unable to load video '%s'", name);
-		return false;
-	}
+extern GameSetupStruct game;
+extern IGraphicsDriver *gfxDriver;
 
-	AGS::Shared::ScummVMReadStream *stream = new AGS::Shared::ScummVMReadStream(video_stream.get(), DisposeAfterUse::NO);
+static bool video_check_user_input(VideoSkipType skip);
 
-	if (!decoder->loadStream(stream)) {
-		warning("Unable to decode video '%s'", name);
-		return false;
-	}
+//-----------------------------------------------------------------------------
+// BlockingVideoPlayer game state
+//-----------------------------------------------------------------------------
+namespace AGS
+{
+namespace Engine
+{
 
-	update_polled_stuff();  // TODO: probably unneeded
+// Blocking video playback state
+class BlockingVideoPlayer : public GameState
+{
+public:
+    BlockingVideoPlayer(std::unique_ptr<VideoPlayer> player,
+        int video_flags, int state_flags, VideoSkipType skip);
+    ~BlockingVideoPlayer();
 
-	Graphics::Screen scr;
-	bool stretchVideo = (flags & kVideo_Stretch) != 0;
-	bool enableVideo = (flags & kVideo_EnableVideo) != 0;
-	bool enableAudio = (flags & kVideo_EnableAudio) != 0;
-	bool clut8Screen = scr.format.isCLUT8();
+    PlaybackState GetPlayState() const { return _playbackState; }
 
-	if (!enableAudio)
-		decoder->setVolume(0);
+    void Begin() override;
+    void End() override;
+    void Draw() override;
+    bool Run() override;
 
-	update_polled_stuff();
+    void Pause() override;
+    void Resume() override;
 
-	decoder->start();
-	while (!SHOULD_QUIT && !decoder->endOfVideo()) {
-		if (decoder->needsUpdate()) {
-			// Get the next video frame and draw onto the screen
-			const Graphics::Surface *frame = decoder->decodeNextFrame();
-			if (clut8Screen && decoder->hasDirtyPalette())
-				scr.setPalette(decoder->getPalette(), 0, 256);
+private:
+#if !defined(AGS_DISABLE_THREADS)
+    static void PollVideo(BlockingVideoPlayer *self);
+#endif
+    void StopVideo();
 
-			if (frame && enableVideo) {
-				Rect dstRect = PlaceInRect(RectWH(0, 0, scr.w, scr.h), RectWH(0, 0, frame->w, frame->h),
-					(stretchVideo ? kPlaceStretchProportional : kPlaceCenter));
+    std::unique_ptr<VideoPlayer> _player;
+    const String _assetName; // for diagnostics
+    int _videoFlags = 0;
+    int _stateFlags = 0;
+    IDriverDependantBitmap *_videoDDB = nullptr;
+    Rect _dstRect;
+    float _oldFps = 0.f;
+    VideoSkipType _skip = VideoSkipNone;
+    std::thread _videoThread;
+    std::mutex _videoMutex;
+    PlaybackState _playbackState = PlayStateInvalid;
 
-				if (stretchVideo && frame->w == dstRect.GetWidth() && frame->h == dstRect.GetHeight())
-					// Don't need to stretch video after all
-					stretchVideo = false;
+    // For saving and restoring game sounds
+    int _wasMusPlaying = -1;
+    int _wasAmbient[MAX_GAME_CHANNELS]{0};
+};
 
-				Graphics::Palette p(decoder->getPalette(), 256);
-				if (stretchVideo) {
-					scr.fillRect(Common::Rect(dstRect.Left, dstRect.Top, dstRect.Right + 1, dstRect.Bottom + 1), 0);
-					scr.transBlitFrom(*frame, Common::Rect(0, 0, frame->w, frame->h),
-									  Common::Rect(dstRect.Left, dstRect.Top, dstRect.Right + 1, dstRect.Bottom + 1),
-									  &p);
-				} else {
-					scr.blitFrom(*frame, Common::Point(dstRect.Left, dstRect.Top), &p);
-				}
-			}
-
-			scr.update();
-		}
-
-		g_system->delayMillis(10);
-		::AGS::g_events->pollEvents();
-
-		if (skip != VideoSkipNone) {
-			// Check for whether user aborted video
-			KeyInput ki;
-			eAGSMouseButton mbut;
-			int mwheelz;
-			// Handle all the buffered key events
-			bool do_break = false;
-			while (ags_keyevent_ready()) {
-				if (run_service_key_controls(ki) && !IsAGSServiceKey(ki.Key)) {
-					if ((ki.Key == eAGSKeyCodeEscape) && (skip == VideoSkipEscape))
-						do_break = true;
-					if (skip >= VideoSkipAnyKey)
-						do_break = true;  // skip on any key
-				}
-			}
-			if (do_break)
-				return true; // skip on key press
-			if (run_service_mb_controls(mbut, mwheelz) && mbut >= kMouseNone && skip == VideoSkipKeyOrMouse)
-				return true; // skip on mouse click
-		}
-	}
-
-	// Clear the screen after playback
-	if (_G(gfxDriver)->UsesMemoryBackBuffer())
-		_G(gfxDriver)->GetMemoryBackBuffer()->Clear();
-	render_to_screen();
-
-	invalidate_screen();
-
-	return true;
+BlockingVideoPlayer::BlockingVideoPlayer(std::unique_ptr<VideoPlayer> player,
+    int video_flags, int state_flags, VideoSkipType skip)
+    : _player(std::move(player))
+    , _videoFlags(video_flags)
+    , _stateFlags(state_flags)
+    , _skip(skip)
+{
 }
 
-bool play_avi_video(const char *name, int flags, VideoSkipType skip, bool showError) {
-	Video::AVIDecoder decoder;
-	return play_video(&decoder, name, flags, skip, showError);
+BlockingVideoPlayer::~BlockingVideoPlayer()
+{
+    StopVideo();
 }
 
-bool play_mpeg_video(const char *name, int flags, VideoSkipType skip, bool showError) {
-	Video::MPEGPSDecoder decoder;
-	return play_video(&decoder, name, flags, skip, showError);
-}
+void BlockingVideoPlayer::Begin()
+{
+    assert(_player);
 
-bool play_theora_video(const char *name, int flags, VideoSkipType skip, bool showError) {
-#if !defined (USE_THEORADEC)
-	if (showError)
-		Display("This games uses Theora videos but ScummVM has been compiled without Theora support");
-	return false;
-#else
-	Video::TheoraDecoder decoder;
-	return play_video(&decoder, name, flags, skip, showError);
+    // Optionally stop the game audio
+    if ((_stateFlags & kVideoState_StopGameAudio) != 0)
+    {
+        // Save the game audio parameters, in case we stop these
+        // TODO: implement a global function that does this?
+        _wasMusPlaying = play.cur_music_number;
+        for (int i = NUM_SPEECH_CHANS; i < game.numGameChannels; ++i)
+            _wasAmbient[i] = ambient[i].channel;
+        stop_all_sound_and_music();
+    }
+
+    // Setup video
+    if ((_videoFlags & kVideo_EnableVideo) != 0)
+    {
+        const bool software_draw = gfxDriver->HasAcceleratedTransform();
+        Size frame_sz = _player->GetFrameSize();
+        Rect dest = PlaceInRect(play.GetMainViewport(), RectWH(frame_sz),
+            ((_stateFlags & kVideoState_Stretch) == 0) ? kPlaceCenter : kPlaceStretchProportional);
+        // override the stretch option if necessary
+        if (frame_sz == dest.GetSize())
+            _stateFlags &= ~kVideoState_Stretch;
+        else
+            _stateFlags |= kVideoState_Stretch;
+
+        // We only need to resize target bitmap for software renderer,
+        // because texture-based ones can scale the texture themselves.
+        if (software_draw && (frame_sz != dest.GetSize()))
+        {
+            _player->SetTargetFrame(dest.GetSize());
+        }
+
+        const int dst_depth = _player->GetTargetDepth();
+        if (!software_draw || ((_stateFlags & kVideoState_Stretch) == 0))
+        {
+            _videoDDB = gfxDriver->CreateDDB(frame_sz.Width, frame_sz.Height, dst_depth, true);
+        }
+        else
+        {
+            _videoDDB = gfxDriver->CreateDDB(dest.GetWidth(), dest.GetHeight(), dst_depth, true);
+        }
+        _dstRect = dest;
+    }
+
+    // Clear the screen before starting playback
+    // TODO: needed for FLIC, but perhaps may be done differently
+    if ((_stateFlags & kVideoState_ClearScreen) != 0)
+    {
+        if (gfxDriver->UsesMemoryBackBuffer())
+        {
+            gfxDriver->GetMemoryBackBuffer()->Clear();
+        }
+        render_to_screen();
+    }
+
+    auto video_fps = _player->GetFramerate();
+    auto game_fps = get_game_speed();
+    _oldFps = game_fps;
+    if (((_stateFlags & kVideoState_SetGameFps) != 0) &&
+        (game_fps < video_fps))
+    {
+        set_game_speed(video_fps);
+    }
+
+    _player->Play();
+    _playbackState = _player->GetPlayState();
+
+#if !defined(AGS_DISABLE_THREADS)
+    _videoThread = std::thread(BlockingVideoPlayer::PollVideo, this);
 #endif
 }
 
-bool play_flc_video(int numb, int flags, VideoSkipType skip) {
-	Video::FlicDecoder decoder;
-	String flicName = String::FromFormat("flic%d.flc", numb);
+void BlockingVideoPlayer::End()
+{
+    StopVideo();
 
-	return play_video(&decoder, flicName, flags, skip, false);
+    set_game_speed(_oldFps);
+
+    // Clear the screen after stopping playback
+    // TODO: needed for FLIC, but perhaps may be done differently
+    if ((_stateFlags & kVideoState_ClearScreen) != 0)
+    {
+        if (gfxDriver->UsesMemoryBackBuffer())
+        {
+            gfxDriver->GetMemoryBackBuffer()->Clear();
+        }
+        render_to_screen();
+    }
+
+    invalidate_screen();
+    ags_clear_input_state();
+
+    // Restore the game audio if we stopped them before the video playback
+    if ((_stateFlags & kVideoState_StopGameAudio) != 0)
+    {
+        // TODO: implement a global function that does this?
+        update_music_volume();
+        if (_wasMusPlaying >= 0)
+            newmusic(_wasMusPlaying);
+        for (int i = NUM_SPEECH_CHANS; i < game.numGameChannels; ++i)
+        {
+            if (_wasAmbient[i] > 0)
+                PlayAmbientSound(_wasAmbient[i], ambient[i].num, ambient[i].vol, ambient[i].x, ambient[i].y);
+        }
+    }
 }
 
-void video_pause() {
-	// TODO
+void BlockingVideoPlayer::Pause()
+{
+    assert(_player);
+    std::lock_guard<std::mutex> lk(_videoMutex);
+    _player->Pause();
 }
 
-void video_resume() {
-	// TODO
+void BlockingVideoPlayer::Resume()
+{
+    assert(_player);
+    std::lock_guard<std::mutex> lk(_videoMutex);
+    _player->Play();
 }
 
-} // namespace AGS3
+bool BlockingVideoPlayer::Run()
+{
+    assert(_player);
+    if (!_player)
+        return false;
+    // Loop until finished or skipped by player
+    if (IsPlaybackDone(GetPlayState()))
+        return false;
+
+    sys_evt_process_pending();
+    // Check user input skipping the video
+    if (video_check_user_input(_skip))
+        return false;
+
+#if defined(AGS_DISABLE_THREADS)
+    if (!_player->Poll())
+        return false;
+#endif
+
+    // update/render next frame
+    std::unique_ptr<Bitmap> frame;
+    {
+        std::lock_guard<std::mutex> lk(_videoMutex);
+        _playbackState = _player->GetPlayState();
+        frame = _player->GetReadyFrame();
+    }
+
+    if ((_videoFlags & kVideo_EnableVideo) != 0)
+    {
+        if (frame)
+        {
+            gfxDriver->UpdateDDBFromBitmap(_videoDDB, frame.get(), false);
+            _videoDDB->SetStretch(_dstRect.GetWidth(), _dstRect.GetHeight(), false);
+
+            {
+                std::lock_guard<std::mutex> lk(_videoMutex);
+                _player->ReleaseFrame(std::move(frame));
+            }
+        }
+    }
+
+    Draw();
+
+    // update the game and wait for next frame
+    UpdateGameAudioOnly();
+    return IsPlaybackReady(GetPlayState());
+}
+
+void BlockingVideoPlayer::Draw()
+{
+    if (_videoDDB)
+    {
+        gfxDriver->BeginSpriteBatch(play.GetMainViewport(), SpriteTransform());
+        gfxDriver->DrawSprite(_dstRect.Left, _dstRect.Top, _videoDDB);
+        gfxDriver->EndSpriteBatch();
+    }
+    render_to_screen();
+}
+
+void BlockingVideoPlayer::StopVideo()
+{
+    // Stop player and wait for the thread to stop
+    if (_player)
+    {
+        std::lock_guard<std::mutex> lk(_videoMutex);
+        _player->Stop();
+    }
+#if !defined(AGS_DISABLE_THREADS)
+    if (_videoThread.joinable())
+        _videoThread.join();
+#endif
+
+    if (_videoDDB)
+        gfxDriver->DestroyDDB(_videoDDB);
+    _videoDDB = nullptr;
+}
+
+#if !defined(AGS_DISABLE_THREADS)
+/* static */ void BlockingVideoPlayer::PollVideo(BlockingVideoPlayer *self)
+{
+    assert(self && self->_player.get());
+    if (!self || !self->_player.get())
+        return;
+
+    bool do_run = true;
+    while (do_run)
+    {
+        {
+            std::lock_guard<std::mutex> lk(self->_videoMutex);
+            self->_player->Poll();
+            do_run = IsPlaybackReady(self->_player->GetPlayState());
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(8));
+    }
+}
+#endif
+
+std::unique_ptr<BlockingVideoPlayer> gl_Video;
+
+} // namespace Engine
+} // namespace AGS
+
+
+//-----------------------------------------------------------------------------
+// Blocking video API
+// Running the single video playback
+//-----------------------------------------------------------------------------
+// Checks input events, tells if the video should be skipped
+static bool video_check_user_input(VideoSkipType skip)
+{
+    for (InputType type = ags_inputevent_ready(); type != kInputNone; type = ags_inputevent_ready())
+    {
+        if (type == kInputKeyboard)
+        {
+            KeyInput ki;
+            if (run_service_key_controls(ki) && !IsAGSServiceKey(ki.Key))
+            {
+                if ((ki.Key == eAGSKeyCodeEscape) && (skip == VideoSkipEscape))
+                    return true; // skip on Escape key
+                if (skip >= VideoSkipAnyKey)
+                    return true;  // skip on any key
+            }
+        }
+        else if (type == kInputMouse)
+        {
+            eAGSMouseButton mbut;
+            if (run_service_mb_controls(mbut) && (skip == VideoSkipKeyOrMouse))
+                return true; // skip on mouse click
+        }
+    }
+    return false;
+}
+
+static HError video_single_run(std::unique_ptr<VideoPlayer> video, const String &asset_name,
+    int video_flags, int state_flags, VideoSkipType skip)
+{
+    assert(video);
+    if (!video)
+        return HError::None();
+
+    auto video_stream = AssetMgr->OpenAsset(asset_name);
+    if (!video_stream)
+    {
+        return new Error(String::FromFormat("Failed to open file: %s", asset_name.GetCStr()));
+    }
+
+    const int dst_depth = game.GetColorDepth();
+    HError err = video->Open(std::move(video_stream), asset_name, video_flags, Size(), dst_depth);
+    if (!err)
+    {
+        return new Error(String::FromFormat("Failed to run video %s", asset_name.GetCStr()), err);
+    }
+
+    gl_Video.reset(new BlockingVideoPlayer(std::move(video), video_flags, state_flags, skip));
+    gl_Video->Begin();
+    while (gl_Video->Run());
+    gl_Video->End();
+    gl_Video = {};
+    
+    return HError::None();
+}
+
+HError play_flc_video(int numb, int video_flags, int state_flags, VideoSkipType skip)
+{
+    // Try couple of various filename formats
+    String flicname = String::FromFormat("flic%d.flc", numb);
+    if (!AssetMgr->DoesAssetExist(flicname))
+    {
+        flicname.Format("flic%d.fli", numb);
+        if (!AssetMgr->DoesAssetExist(flicname))
+            return new Error(String::FromFormat("FLIC animation flic%d.flc nor flic%d.fli were found", numb, numb));
+    }
+
+    return video_single_run(std::make_unique<FlicPlayer>(), flicname, video_flags, state_flags, skip);
+}
+
+HError play_theora_video(const char *name, int video_flags, int state_flags, VideoSkipType skip)
+{
+    return video_single_run(std::make_unique<TheoraPlayer>(), name, video_flags, state_flags, skip);
+}
+
+void video_single_pause()
+{
+    if (gl_Video)
+        gl_Video->Pause();
+}
+
+void video_single_resume()
+{
+    if (gl_Video)
+        gl_Video->Resume();
+}
+
+void video_single_stop()
+{
+    gl_Video = {};
+}
+
+void video_shutdown()
+{
+    video_single_stop();
+}
+
+#else
+
+HError play_theora_video(const char *name, int video_flags, int state_flags, AGS::Engine::VideoSkipType skip) { return HError::None(); }
+HError play_flc_video(int numb, int video_flags, int state_flags, AGS::Engine::VideoSkipType skip) { return HError::None(); }
+void video_pause() {}
+void video_resume() {}
+void video_shutdown() {}
+
+#endif

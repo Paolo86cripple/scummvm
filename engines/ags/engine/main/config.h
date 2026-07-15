@@ -1,37 +1,33 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+//
+//
+//
+//=============================================================================
+#ifndef __AGS_EE_MAIN__CONFIG_H
+#define __AGS_EE_MAIN__CONFIG_H
 
-#ifndef AGS_ENGINE_MAIN_CONFIG_H
-#define AGS_ENGINE_MAIN_CONFIG_H
+#include "ac/gamesetup.h"
+#include "ac/speech.h"
+#include "main/graphics_mode.h"
+#include "util/ini_util.h"
 
-#include "ags/engine/main/graphics_mode.h"
-#include "ags/shared/util/ini_util.h"
-
-namespace AGS3 {
-
-using AGS::Shared::String;
-using AGS::Shared::ConfigTree;
+using AGS::Common::String;
+using AGS::Common::ConfigTree;
 
 // Set up default config settings
-void config_defaults();
+void config_defaults(GameSetup &setup);
 // Find and default configuration file (usually located in the game installation directory)
 String find_default_cfg_file();
 // Find all-games user configuration file
@@ -41,17 +37,26 @@ String find_user_cfg_file();
 // Apply overriding values from the external config (e.g. for mobile ports)
 void override_config_ext(ConfigTree &cfg);
 // Setup game using final config tree
-void apply_config(const ConfigTree &cfg);
+void apply_config(const ConfigTree &cfg, GameSetup &setup);
 // Fixup game setup parameters
-void post_config();
+void post_config(GameSetup &setup);
 
-void save_config_file();
+// Load common configuration from the config tree into GameConfig struct
+void load_common_config(const ConfigTree &cfg, GameConfig &setup);
+// Saves common configuration from GameConfig struct to the config tree
+void save_common_config(const GameConfig &setup, ConfigTree &cfg);
 
+// Saves minimal runtime config using current engine state
+void save_runtime_config_file();
+
+WindowSetup parse_window_mode(const String &option, bool as_windowed, const WindowSetup &def_value = WindowSetup());
 FrameScaleDef parse_scaling_option(const String &option, FrameScaleDef def_value = kFrame_Undefined);
+SkipSpeechStyle parse_speechskip_style(const String &option, SkipSpeechStyle def_value = kSkipSpeechNone);
+void   parse_asset_dirs(const String &option, std::vector<std::pair<String, String>> &opt_dirs);
+String make_window_mode_option(const WindowSetup &ws);
 String make_scaling_option(FrameScaleDef scale_def);
+String make_speechskip_option(SkipSpeechStyle style);
 uint32_t convert_scaling_to_fp(int scale_factor);
 int convert_fp_to_scaling(uint32_t scaling);
 
-} // namespace AGS3
-
-#endif
+#endif // __AGS_EE_MAIN__CONFIG_H

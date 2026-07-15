@@ -1,33 +1,22 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
 //=============================================================================
 //
 // Registering symbols for the script system
 //
 //=============================================================================
 
-#include "ags/shared/ac/game_struct_defines.h"
-
-namespace AGS3 {
+#include "ac/gamestructdefines.h"
 
 extern void RegisterAudioChannelAPI();
 extern void RegisterAudioClipAPI();
@@ -38,10 +27,11 @@ extern void RegisterDateTimeAPI();
 extern void RegisterDialogAPI();
 extern void RegisterDialogOptionsRenderingAPI();
 extern void RegisterDrawingSurfaceAPI(ScriptAPIVersion base_api, ScriptAPIVersion compat_api);
+extern void RegisterDynamicArrayAPI();
 extern void RegisterDynamicSpriteAPI();
 extern void RegisterFileAPI();
 extern void RegisterGameAPI();
-extern void RegisterGlobalAPI();
+extern void RegisterGlobalAPI(ScriptAPIVersion base_api, ScriptAPIVersion compat_api);
 extern void RegisterGUIAPI();
 extern void RegisterGUIControlAPI();
 extern void RegisterHotspotAPI();
@@ -64,47 +54,49 @@ extern void RegisterSystemAPI();
 extern void RegisterTextBoxAPI();
 extern void RegisterViewFrameAPI();
 extern void RegisterViewportAPI();
+extern void RegisterSaveInfoAPI();
 
 extern void RegisterStaticObjects();
 
-void setup_script_exports(ScriptAPIVersion base_api, ScriptAPIVersion compat_api) {
-	RegisterAudioChannelAPI();
-	RegisterAudioClipAPI();
-	RegisterButtonAPI();
-	RegisterCharacterAPI(base_api, compat_api);
-	RegisterContainerAPI();
-	RegisterDateTimeAPI();
-	RegisterDialogAPI();
-	RegisterDialogOptionsRenderingAPI();
-	RegisterDrawingSurfaceAPI(base_api, compat_api);
-	RegisterDynamicSpriteAPI();
-	RegisterFileAPI();
-	RegisterGameAPI();
-	RegisterGlobalAPI();
-	RegisterGUIAPI();
-	RegisterGUIControlAPI();
-	RegisterHotspotAPI();
-	RegisterInventoryItemAPI();
-	RegisterInventoryWindowAPI();
-	RegisterLabelAPI();
-	RegisterListBoxAPI();
-	RegisterMathAPI();
-	RegisterMouseAPI();
-	RegisterObjectAPI();
-	RegisterOverlayAPI();
-	RegisterParserAPI();
-	RegisterRegionAPI();
-	RegisterRoomAPI();
-	RegisterScreenAPI();
-	RegisterSliderAPI();
-	RegisterSpeechAPI(base_api, compat_api);
-	RegisterStringAPI();
-	RegisterSystemAPI();
-	RegisterTextBoxAPI();
-	RegisterViewFrameAPI();
-	RegisterViewportAPI();
+void setup_script_exports(ScriptAPIVersion base_api, ScriptAPIVersion compat_api)
+{
+    RegisterAudioChannelAPI();
+    RegisterAudioClipAPI();
+    RegisterButtonAPI();
+    RegisterCharacterAPI(base_api, compat_api);
+    RegisterContainerAPI();
+    RegisterDateTimeAPI();
+    RegisterDialogAPI();
+    RegisterDialogOptionsRenderingAPI();
+    RegisterDrawingSurfaceAPI(base_api, compat_api);
+    RegisterDynamicArrayAPI();
+    RegisterDynamicSpriteAPI();
+    RegisterFileAPI();
+    RegisterGameAPI();
+    RegisterGlobalAPI(base_api, compat_api);
+    RegisterGUIAPI();
+    RegisterGUIControlAPI();
+    RegisterHotspotAPI();
+    RegisterInventoryItemAPI();
+    RegisterInventoryWindowAPI();
+    RegisterLabelAPI();
+    RegisterListBoxAPI();
+    RegisterMathAPI();
+    RegisterMouseAPI();
+    RegisterObjectAPI();
+    RegisterOverlayAPI();
+    RegisterParserAPI();
+    RegisterRegionAPI();
+    RegisterRoomAPI();
+    RegisterScreenAPI();
+    RegisterSliderAPI();
+    RegisterSpeechAPI(base_api, compat_api);
+    RegisterStringAPI();
+    RegisterSystemAPI();
+    RegisterTextBoxAPI();
+    RegisterViewFrameAPI();
+    RegisterViewportAPI();
+    RegisterSaveInfoAPI();
 
-	RegisterStaticObjects();
+    RegisterStaticObjects();
 }
-
-} // namespace AGS3

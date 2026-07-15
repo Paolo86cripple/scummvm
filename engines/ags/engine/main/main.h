@@ -1,46 +1,45 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+//
+//
+//
+//=============================================================================
+#ifndef __AGS_EE_MAIN__MAIN_H
+#define __AGS_EE_MAIN__MAIN_H
 
-#ifndef AGS_ENGINE_MAIN_MAIN_H
-#define AGS_ENGINE_MAIN_MAIN_H
+#include "core/platform.h"
+#include "util/version.h"
 
-#include "ags/shared/core/platform.h"
-#include "ags/shared/util/version.h"
-#include "ags/shared/util/ini_util.h"
+// Current engine version
+extern AGS::Common::Version EngineVersion;
 
-namespace AGS3 {
+//=============================================================================
 
-using AGS::Shared::ConfigTree;
-using AGS::Shared::String;
+// Full path to the engine executable
+extern AGS::Common::String appPath;
+// Engine executable's directory
+extern AGS::Common::String appDirectory;
+// Game path from the startup options (before reading config)
+extern AGS::Common::String cmdGameDataPath;
 
-extern void main_init(int argc, const char *argv[]);
+// Startup flags, set from parameters to engine
+extern int override_start_room;
+extern bool justTellInfo;
+extern AGS::Common::String loadSaveGameOnStartup;
 
-extern int main_process_cmdline(ConfigTree &cfg, int argc, const char *argv[]);
+void main_print_help();
 
-extern String get_engine_string();
+int ags_entry_point(int argc, char *argv[]);
 
-extern void main_print_help();
-
-extern void main_set_gamedir(int argc, const char *argv[]);
-
-} // namespace AGS3
-
-#endif
+#endif // __AGS_EE_MAIN__MAIN_H

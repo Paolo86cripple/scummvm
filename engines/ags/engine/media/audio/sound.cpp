@@ -1,138 +1,162 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
 //=============================================================================
 //
-// ACSOUND - AGS sound system wrapper
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
 //
 //=============================================================================
+#include "media/audio/sound.h"
+#include <list>
+#include <unordered_map>
+#include "ac/game.h"
+#include "core/assetmanager.h"
+#include "debug/out.h"
+#include "media/audio/audio_core.h"
+#include "media/audio/audiodefines.h"
+#include "util/path.h"
+#include "util/resourcecache.h"
+#include "util/stream.h"
+#include "util/string_types.h"
 
-#include "ags/engine/media/audio/audio_defines.h"
-#include "ags/engine/media/audio/sound.h"
-#include "ags/engine/media/audio/sound_clip.h"
-#include "ags/engine/media/audio/clip_my_midi.h"
-#include "ags/shared/core/asset_manager.h"
-#include "audio/mods/universaltracker.h"
-#include "audio/mods/mod_xm_s3m.h"
-#include "audio/mods/protracker.h"
-#include "audio/decoders/mp3.h"
-#include "audio/decoders/vorbis.h"
-#include "audio/decoders/wave.h"
-#include "ags/globals.h"
+using namespace AGS::Common;
+using namespace AGS::Engine;
 
-namespace AGS3 {
-
-SOUNDCLIP *my_load_wave(const AssetPath &asset_name, bool loop) {
-	Common::SeekableReadStream *data = _GP(AssetMgr)->OpenAssetStream(asset_name.Name, asset_name.Filter);
-	if (data) {
-		Audio::AudioStream *audioStream = Audio::makeWAVStream(data, DisposeAfterUse::YES);
-		return new SoundClipWave<MUS_WAVE>(audioStream, loop);
-	} else {
-		return nullptr;
-	}
+static int GuessSoundTypeFromExt(const String &extension)
+{
+    if (extension.CompareNoCase("mp3") == 0) {
+        return MUS_MP3;
+    }
+    else if (extension.CompareNoCase("ogg") == 0) {
+        return MUS_OGG;
+    }
+    else if (extension.CompareNoCase("mid") == 0) {
+        return MUS_MIDI;
+    }
+    else if (extension.CompareNoCase("wav") == 0) {
+        return MUS_WAVE;
+    }
+    else if (extension.CompareNoCase("voc") == 0) {
+        return MUS_WAVE;
+    }
+    else if (extension.CompareNoCase("mod") == 0) {
+        return MUS_MOD;
+    }
+    else if (extension.CompareNoCase("s3m") == 0) {
+        return MUS_MOD;
+    }
+    else if (extension.CompareNoCase("it") == 0) {
+        return MUS_MOD;
+    }
+    else if (extension.CompareNoCase("xm") == 0) {
+        return MUS_MOD;
+    }
+    return 0;
 }
 
-SOUNDCLIP *my_load_static_mp3(const AssetPath &asset_name, bool loop) {
-#ifdef USE_MAD
-	Common::SeekableReadStream *data = _GP(AssetMgr)->OpenAssetStream(asset_name.Name, asset_name.Filter);
-	if (data) {
-		Audio::AudioStream *audioStream = Audio::makeMP3Stream(data, DisposeAfterUse::YES);
-		return new SoundClipWave<MUS_MP3>(audioStream, loop);
-	} else {
-		return nullptr;
-	}
-#else
-	return nullptr;
-#endif
+// Sound cache, stores most recent used sounds, tracks use history with MRU list.
+class SoundCache final :
+    public ResourceCache<String, std::shared_ptr<std::vector<uint8_t>>>
+{
+public:
+    typedef std::shared_ptr<std::vector<uint8_t>> DataRef;
+
+    SoundCache() : ResourceCache(DEFAULT_SOUNDCACHESIZE_KB)
+    {
+    }
+
+private:
+    // Calculates item size; expects to return 0 if an item is invalid
+    // and should not be added to the cache.
+    size_t CalcSize(const DataRef &item) override
+    {
+        assert(item);
+        return item ? item->size() : 0u;
+    }
+};
+
+
+// Maximal sound asset size which is allowed to be loaded at once;
+// anything larger will be streamed
+static size_t MaxLoadAtOnce = DEFAULT_SOUNDLOADATONCE_KB;
+static SoundCache SndCache;
+
+void soundcache_set_rules(size_t max_loadatonce, size_t max_cachesize)
+{
+    MaxLoadAtOnce = max_loadatonce;
+    SndCache.SetMaxCacheSize(max_cachesize);
+    Debug::Printf("Sound cache set: %zu KB", max_cachesize / 1024);
 }
 
-SOUNDCLIP *my_load_mp3(const AssetPath &asset_name, bool loop) {
-	return my_load_static_mp3(asset_name, loop);
+void soundcache_clear()
+{
+    SndCache.Clear();
 }
 
-SOUNDCLIP *my_load_static_ogg(const AssetPath &asset_name, bool loop) {
-#ifdef USE_VORBIS
-	Common::SeekableReadStream *data = _GP(AssetMgr)->OpenAssetStream(asset_name.Name, asset_name.Filter);
-	if (data) {
-		Audio::AudioStream *audioStream = Audio::makeVorbisStream(data, DisposeAfterUse::YES);
-		return new SoundClipWave<MUS_OGG>(audioStream, loop);
-	} else {
-		return nullptr;
-	}
-#else
-	return nullptr;
-#endif
+void soundcache_precache(const AssetPath &apath)
+{
+    if (SndCache.GetMaxCacheSize() == 0)
+        return; // cache is disabled
+    if (SndCache.Exists(apath.Name))
+        return; // already in cache
+    auto s_in = AssetMgr->OpenAsset(apath);
+    if (!s_in)
+        return; // failed to open asset
+    size_t asset_size = static_cast<size_t>(s_in->GetLength());
+    if (asset_size > MaxLoadAtOnce)
+        return; // too big for the cache
+    // Read and put into the cache
+    auto sounddata = std::make_shared<std::vector<uint8_t>>(asset_size);
+    s_in->Read(sounddata->data(), asset_size);
+    SndCache.Put(apath.Name, sounddata);
 }
 
-SOUNDCLIP *my_load_ogg(const AssetPath &asset_name, bool loop) {
-	return my_load_static_ogg(asset_name, loop);
+std::unique_ptr<SoundClip> load_sound_clip(const AssetPath &apath, const char *extension_hint, bool loop)
+{
+    size_t asset_size;
+    std::unique_ptr<Stream> s_in;
+    auto sounddata = SndCache.Get(apath.Name);
+    if (sounddata)
+    {
+        asset_size = sounddata->size();
+    }
+    else
+    {
+        s_in = AssetMgr->OpenAsset(apath);
+        if (!s_in)
+            return nullptr;
+        asset_size = static_cast<size_t>(s_in->GetLength());
+    }
+
+    const auto asset_ext = AGS::Common::Path::GetFileExtension(apath.Name);
+    const auto ext_hint = asset_ext.IsEmpty() ? String(extension_hint) : asset_ext;
+
+    int slot{};
+    // If sound data was cached, or asset's size is small enough to load at once,
+    // then load/use it and update the cache if necessary
+    if (sounddata || asset_size <= MaxLoadAtOnce)
+    {
+        if (!sounddata)
+        {
+            sounddata.reset(new std::vector<uint8_t>(asset_size));
+            s_in->Read(sounddata->data(), asset_size);
+            SndCache.Put(apath.Name, sounddata);
+        }
+        slot = audio_core_slot_init(sounddata, ext_hint, loop);
+    }
+    // Otherwise, if asset's size is too large, start streaming
+    else
+    {
+        slot = audio_core_slot_init(std::move(s_in), ext_hint, loop);
+    }
+
+    if (slot < 0) { return nullptr; }
+
+    const auto sound_type = GuessSoundTypeFromExt(ext_hint);
+    return std::unique_ptr<SoundClip>(new SoundClip(slot, sound_type, loop));
 }
-
-SOUNDCLIP *my_load_midi(const AssetPath &asset_name, bool loop) {
-	Common::SeekableReadStream *data = _GP(AssetMgr)->OpenAssetStream(asset_name.Name, asset_name.Filter);
-	if (data) {
-		return new MYMIDI(data, loop);
-	} else {
-		return nullptr;
-	}
-}
-
-SOUNDCLIP *my_load_mod(const AssetPath &asset_name, bool loop) {
-	Common::SeekableReadStream *data = _GP(AssetMgr)->OpenAssetStream(asset_name.Name, asset_name.Filter);
-	if (data) {
-		// determine the file extension
-		size_t lastDot = asset_name.Name.FindCharReverse('.');
-		if (lastDot == AGS::Shared::String::NoIndex || lastDot == asset_name.Name.GetLength() - 1) {
-			delete data;
-			return nullptr;
-		}
-		// get the first char of the extension
-		char charAfterDot = toupper(asset_name.Name[lastDot + 1]);
-
-		// use the appropriate loader
-		Audio::AudioStream *audioStream = nullptr;
-		if (charAfterDot == 'I') {
-			// Impulse Tracker
-			audioStream = Audio::makeUniversalTrackerStream(data, DisposeAfterUse::YES);
-			if (!audioStream) {
-				audioStream = Audio::makeSilentAudioStream(22050, true);
-				delete data;
-			}
-
-		} else if (charAfterDot == 'X') {
-			audioStream = Audio::makeModXmS3mStream(data, DisposeAfterUse::YES);
-		} else if (charAfterDot == 'S') {
-			audioStream = Audio::makeModXmS3mStream(data, DisposeAfterUse::YES);
-		} else if (charAfterDot == 'M') {
-			audioStream = Audio::makeModXmS3mStream(data, DisposeAfterUse::YES);
-		} else {
-			warning("MOD file format not recognized");
-			delete data;
-			return nullptr;
-		}
-
-		return new SoundClipWave<MUS_MOD>(audioStream, loop);
-	} else {
-		return nullptr;
-	}
-}
-
-} // namespace AGS3

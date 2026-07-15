@@ -1,30 +1,26 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+//
+// 'C'-style script compiler
+//
+//=============================================================================
+#ifndef __CC_INTERNAL_H
+#define __CC_INTERNAL_H
 
-#ifndef AGS_SHARED_SCRIPT_CC_INTERNAL_H
-#define AGS_SHARED_SCRIPT_CC_INTERNAL_H
-
-namespace AGS3 {
-
-#define SCOM_VERSION 90
+#define SCOM_VERSION_SECTIONS 83
+#define SCOM_VERSION_321  90
+#define SCOM_VERSION_CURRENT SCOM_VERSION_321
 #define SCOM_VERSIONSTR "0.90"
 
 // virtual CPU registers
@@ -126,9 +122,12 @@ namespace AGS3 {
 #define FIXUP_DATADATA    5     // globaldata[fixup] += &globaldata[0]
 #define FIXUP_STACK       6     // code[fixup] += &stack[0]
 
+#define BUILTIN_SYMBOL_PREFIX        "__Builtin_"
+// Built-in pseudo property DynamicArray.Length
+#define BUILTIN_DYNAMIC_ARRAY_LENGTH "__Builtin_DynamicArray::get_Length"
+
 // Script file signature
+extern const char scfilesig[5];
 #define ENDFILESIG 0xbeefcafe
 
-} // namespace AGS3
-
-#endif
+#endif // __CC_INTERNAL_H

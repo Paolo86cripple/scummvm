@@ -1,24 +1,15 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
 //=============================================================================
 //
 // Dynamic object management utilities.
@@ -26,48 +17,43 @@
 // use of ManagedPool class.
 //
 //=============================================================================
+#ifndef __AGS_EE_DYNOBJ__DYNOBJMANAGER_H
+#define __AGS_EE_DYNOBJ__DYNOBJMANAGER_H
 
-#ifndef AGS_ENGINE_AC_DYNOBJ_MANAGER_H
-#define AGS_ENGINE_AC_DYNOBJ_MANAGER_H
-
-#include "ags/shared/core/types.h"
-#include "ags/engine/script/runtime_script_value.h"
-#include "ags/engine/ac/dynobj/cc_script_object.h"
-
-namespace AGS3 {
+#include "core/types.h"
+#include "script/runtimescriptvalue.h"
+#include "ac/dynobj/cc_scriptobject.h"
+#include "util/string.h"
 
 // Forward declaration
-namespace AGS {
-namespace Shared {
-class Stream;
-} // namespace Shared
-} // namespace AGS
-
+namespace AGS { namespace Common { class Stream; } }
 using namespace AGS; // FIXME later
 
 // register a memory handle for the object and allow script
 // pointers to point to it
-extern int32_t ccRegisterManagedObject(void *object, IScriptObject *, ScriptValueType obj_type = kScValScriptObject);
+int32_t ccRegisterManagedObject(void *object, IScriptObject *, ScriptValueType obj_type = kScValScriptObject);
 // register a de-serialized object
-extern int32_t ccRegisterUnserializedObject(int index, void *object, IScriptObject *, ScriptValueType obj_type = kScValScriptObject);
+int32_t ccRegisterUnserializedObject(int index, void *object, IScriptObject *, ScriptValueType obj_type = kScValScriptObject);
 // unregister a particular object
-extern int   ccUnRegisterManagedObject(void *object);
+int   ccUnRegisterManagedObject(void *object);
 // remove all registered objects
-extern void  ccUnregisterAllObjects();
+void  ccUnregisterAllObjects();
 // serialize all objects to disk
-extern void  ccSerializeAllObjects(Shared::Stream *out);
+void  ccSerializeAllObjects(Common::Stream *out);
 // un-serialise all objects (will remove all currently registered ones)
-extern int   ccUnserializeAllObjects(Shared::Stream *in, ICCObjectCollectionReader *callback);
+int   ccUnserializeAllObjects(Common::Stream *in, ICCObjectCollectionReader *callback);
 // dispose the object if RefCount==0
-extern void  ccAttemptDisposeObject(int32_t handle);
+void  ccAttemptDisposeObject(int32_t handle);
 // translate between object handles and memory addresses
-extern int32_t ccGetObjectHandleFromAddress(void *address);
-extern void *ccGetObjectAddressFromHandle(int32_t handle);
-extern ScriptValueType ccGetObjectAddressAndManagerFromHandle(int32_t handle, void *&object, IScriptObject *&manager);
+int32_t ccGetObjectHandleFromAddress(void *address);
+void *ccGetObjectAddressFromHandle(int32_t handle);
+ScriptValueType ccGetObjectAddressAndManagerFromHandle(int32_t handle, void *&object, IScriptObject *&manager);
 
-extern int ccAddObjectReference(int32_t handle);
-extern int ccReleaseObjectReference(int32_t handle);
+int ccAddObjectReference(int32_t handle);
+int ccReleaseObjectReference(int32_t handle);
 
-} // namespace AGS3
+typedef void (*PfnProcessManagedObject)(int handle, IScriptObject *obj);
+// Iterates all managed objects identified by their Type ID, and runs a callback for each of them
+void ccTraverseManagedObjects(const AGS::Common::String &type, PfnProcessManagedObject proc);
 
-#endif
+#endif // __AGS_EE_DYNOBJ__DYNOBJMANAGER_H

@@ -1,40 +1,26 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+#ifndef __AC_COMMON_H
+#define __AC_COMMON_H
 
-#ifndef AGS_SHARED_AC_COMMON_H
-#define AGS_SHARED_AC_COMMON_H
-
-#include "ags/shared/util/string.h"
-
-namespace AGS3 {
+#include "util/string.h"
 
 // These are the project-dependent functions, they are defined both in Engine.App and AGS.Native.
-void quit(const AGS::Shared::String &str);
+void quit(const AGS::Common::String &str);
 void quit(const char *);
 void quitprintf(const char *fmt, ...);
 void set_our_eip(int eip);
 int  get_our_eip();
 
-extern const char *game_file_sig;
-
-} // namespace AGS3
-
-#endif
+#endif // __AC_COMMON_H

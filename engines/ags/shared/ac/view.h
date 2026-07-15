@@ -1,101 +1,84 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+#ifndef __AC_VIEW_H
+#define __AC_VIEW_H
 
-#ifndef AGS_SHARED_AC_VIEW_H
-#define AGS_SHARED_AC_VIEW_H
+#include <vector>
 
-#include "common/std/vector.h"
-#include "ags/shared/core/types.h"
-
-namespace AGS3 {
-
-namespace AGS {
-namespace Shared {
-class Stream;
-} // namespace Shared
-} // namespace AGS
-
+namespace AGS { namespace Common { class Stream; } }
 using namespace AGS; // FIXME later
 
 #define VFLG_FLIPSPRITE 1
 
 struct ViewFrame {
-	int   pic;
-	short xoffs, yoffs;
-	short speed;
-	int   flags;  // VFLG_* flags
-	int   sound;  // play sound when this frame comes round
-	int   reserved_for_future[2]; // kept only for plugin api
-	// not saved, set at runtime only
-	int audioclip; // actual audio clip reference (in case sound is a legacy number)
+    int   pic;
+    short xoffs, yoffs;
+    short speed;
+    int   flags;  // VFLG_* flags
+    int   sound;  // play sound when this frame comes round
+    int   reserved_for_future[2]; // kept only for plugin api
+    // not saved, set at runtime only
+    int   audioclip; // actual audio clip reference (in case sound is a legacy number)
+    ViewFrame();
 
-	ViewFrame();
-
-	void ReadFromFile(Shared::Stream *in);
-	void WriteToFile(Shared::Stream *out);
+    void ReadFromFile(Common::Stream *in);
+    void WriteToFile(Common::Stream *out);
 };
 
 #define LOOPFLAG_RUNNEXTLOOP 1
 
-struct ViewLoopNew {
-	int numFrames;
-	int   flags;
-	std::vector<ViewFrame> frames;
-	// NOTE: we still need numFrames:
-	// as we always allocate at least 1 frame for safety, to avoid crashes,
-	// but have to report "logical" number of frames for the engine API.
+struct ViewLoopNew
+{
+    int   numFrames;
+    int   flags;
+    std::vector<ViewFrame> frames;
+    // NOTE: we still need numFrames:
+    // as we always allocate at least 1 frame for safety, to avoid crashes,
+    // but have to report "logical" number of frames for the engine API.
 
-	ViewLoopNew();
-	void Initialize(int frameCount);
-	void Dispose();
-	bool RunNextLoop();
-	void WriteToFile_v321(Shared::Stream *out);
-	void ReadFromFile_v321(Shared::Stream *in);
-	void WriteFrames(Shared::Stream *out);
-	void ReadFrames(Shared::Stream *in);
+    ViewLoopNew();
+    void Initialize(int frameCount);
+    void Dispose();
+    bool RunNextLoop();
+    void WriteToFile_v321(Common::Stream *out);
+    void ReadFromFile_v321(Common::Stream *in);
+    void WriteFrames(Common::Stream *out);
+    void ReadFrames(Common::Stream *in);
 };
 
-struct ViewStruct {
-	int numLoops;
-	std::vector<ViewLoopNew> loops;
+struct ViewStruct
+{
+    int numLoops;
+    std::vector<ViewLoopNew> loops;
 
-	ViewStruct();
-	void Initialize(int loopCount);
-	void Dispose();
-	void WriteToFile(Shared::Stream *out);
-	void ReadFromFile(Shared::Stream *in);
+    ViewStruct();
+    void Initialize(int loopCount);
+    void Dispose();
+    void WriteToFile(Common::Stream *out);
+    void ReadFromFile(Common::Stream *in);
 };
 
 struct ViewStruct272 {
-	short     numloops;
-	short     numframes[16];
-	int32_t   loopflags[16];
-	ViewFrame frames[16][20];
+    short     numloops;
+    short     numframes[16];
+    int       loopflags[16];
+    ViewFrame frames[16][20];
 
-	ViewStruct272();
-	void ReadFromFile(Shared::Stream *in);
+    ViewStruct272();
+    void ReadFromFile(Common::Stream *in);
 };
 
-extern void Convert272ViewsToNew(const std::vector<ViewStruct272> &oldv, std::vector<ViewStruct> &newv);
+void Convert272ViewsToNew(const std::vector<ViewStruct272> &oldv, std::vector<ViewStruct> &newv);
 
-} // namespace AGS3
-
-#endif
+#endif // __AC_VIEW_H

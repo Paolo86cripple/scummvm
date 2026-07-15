@@ -1,55 +1,41 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+#include "ac/dynobj/cc_dialog.h"
+#include "ac/dynobj/dynobj_manager.h"
+#include "ac/dialog.h"
+#include "ac/dialogtopic.h"
+#include "ac/gamestructdefines.h"
+#include "util/stream.h"
 
-#include "ags/engine/ac/dynobj/cc_dialog.h"
-#include "ags/engine/ac/dynobj/dynobj_manager.h"
-#include "ags/engine/ac/dialog.h"
-#include "ags/shared/ac/dialog_topic.h"
-#include "ags/shared/ac/game_struct_defines.h"
-#include "ags/shared/util/stream.h"
-#include "ags/globals.h"
-
-namespace AGS3 {
-
-using namespace AGS::Shared;
+using namespace AGS::Common;
 
 // return the type name of the object
 const char *CCDialog::GetType() {
-	return "Dialog";
+    return "Dialog";
 }
 
-size_t CCDialog::CalcSerializeSize(const void * /*address*/) {
-	return sizeof(int32_t);
+size_t CCDialog::CalcSerializeSize(const void* /*address*/)
+{
+    return sizeof(int32_t);
 }
 
-// serialize the object into BUFFER (which is BUFSIZE bytes)
-// return number of bytes used
 void CCDialog::Serialize(const void *address, Stream *out) {
-	const ScriptDialog *shh = static_cast<const ScriptDialog *>(address);
-	out->WriteInt32(shh->id);
+    const ScriptDialog *shh = static_cast<const ScriptDialog*>(address);
+    out->WriteInt32(shh->id);
 }
 
-void CCDialog::Unserialize(int index, Stream *in, size_t data_sz) {
-	int num = in->ReadInt32();
-	ccRegisterUnserializedObject(index, &_GP(scrDialog)[num], this);
+void CCDialog::Unserialize(int index, Stream *in, size_t /*data_sz*/) {
+    int num = in->ReadInt32();
+    ccRegisterUnserializedObject(index, &scrDialog[num], this);
 }
-
-} // namespace AGS3

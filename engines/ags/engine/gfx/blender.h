@@ -1,34 +1,24 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
 //=============================================================================
 //
 // AGS specific color blending routines for transparency and tinting effects
 //
 //=============================================================================
+#ifndef __AC_BLENDER_H
+#define __AC_BLENDER_H
 
-#ifndef AGS_ENGINE_GFX_BLENDER_H
-#define AGS_ENGINE_GFX_BLENDER_H
-
-namespace AGS3 {
+#include "core/types.h"
 
 //
 // Allegro's standard alpha blenders result in:
@@ -42,9 +32,29 @@ namespace AGS3 {
 void set_alpha_blender();
 */
 
+uint32_t _myblender_color15(uint32_t x, uint32_t y, uint32_t n);
+uint32_t _myblender_color16(uint32_t x, uint32_t y, uint32_t n);
+uint32_t _myblender_color32(uint32_t x, uint32_t y, uint32_t n);
+uint32_t _myblender_color15_light(uint32_t x, uint32_t y, uint32_t n);
+uint32_t _myblender_color16_light(uint32_t x, uint32_t y, uint32_t n);
+uint32_t _myblender_color32_light(uint32_t x, uint32_t y, uint32_t n);
 // Customizable alpha blender that uses the supplied alpha value as src alpha,
 // and preserves destination's alpha channel (if there was one);
 void set_my_trans_blender(int r, int g, int b, int a);
+// Argb2argb alpha blender combines RGBs proportionally to src alpha, but also
+// applies dst alpha factor to the dst RGB used in the merge;
+// The final alpha is calculated by multiplying two translucences (1 - .alpha).
+// Custom alpha parameter, when not zero, is treated as fraction of source
+// alpha that has to be used in color blending.
+uint32_t _argb2argb_blender(uint32_t src_col, uint32_t dst_col, uint32_t src_alpha);
+// Argb2rgb blender combines RGBs proportionally to src alpha, but discards alpha in the end.
+// It is almost a clone of Allegro's _blender_alpha32, except it also applies optional overall alpha.
+uint32_t _argb2rgb_blender(uint32_t src_col, uint32_t dst_col, uint32_t src_alpha);
+// Rgb2argb blender treats all src pixels as if having opaque alpha.
+uint32_t _rgb2argb_blender(uint32_t src_col, uint32_t dst_col, uint32_t src_alpha);
+// Sets the alpha channel to opaque. Used when drawing a non-alpha sprite onto an alpha-sprite.
+uint32_t _opaque_alpha_blender(uint32_t src_col, uint32_t dst_col, uint32_t src_alpha);
+
 // Additive alpha blender plain copies src over, applying a summ of src and
 // dst alpha values.
 void set_additive_alpha_blender();
@@ -53,6 +63,4 @@ void set_opaque_alpha_blender();
 // Sets argb2argb for 32-bit mode, and provides appropriate funcs for blending 32-bit onto 15/16/24-bit destination
 void set_argb2any_blender();
 
-} // namespace AGS3
-
-#endif
+#endif // __AC_BLENDER_H

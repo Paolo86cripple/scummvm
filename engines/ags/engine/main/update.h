@@ -1,28 +1,24 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
-#ifndef AGS_ENGINE_MAIN_UPDATE_H
-#define AGS_ENGINE_MAIN_UPDATE_H
-
-namespace AGS3 {
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+//
+// Contains various update functions (moving, animating, etc).
+// TODO: cleanup this h/cpp pair, the header is mostly useless, merge with
+// something else.
+//
+//=============================================================================
+#ifndef __AGS_EE_MAIN__UPDATE_H
+#define __AGS_EE_MAIN__UPDATE_H
 
 // Update MoveList of certain index, save current position;
 // *resets* mslot to zero if path is complete.
@@ -35,6 +31,10 @@ void restore_movelists();
 // Update various things on the game frame (historical code mess...)
 void update_stuff();
 
-} // namespace AGS3
+// Tells if a voice lipsyncing is currently active (enabled and speech playing)
+bool has_voice_lipsync();
+// Updates speech animation frame in accordance to a voice-based lipsync,
+// returns if there was any active voice-based lipsync running, or not
+int update_voice_lipsync(int frame);
 
-#endif
+#endif // __AGS_EE_MAIN__UPDATE_H

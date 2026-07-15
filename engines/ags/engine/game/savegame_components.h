@@ -1,68 +1,57 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+#ifndef __AGS_EE_GAME__SAVEGAMECOMPONENTS_H
+#define __AGS_EE_GAME__SAVEGAMECOMPONENTS_H
 
-#ifndef AGS_ENGINE_GAME_SAVEGAME_COMPONENTS_H
-#define AGS_ENGINE_GAME_SAVEGAME_COMPONENTS_H
+#include "game/savegame.h"
+#include "util/stream.h"
 
-#include "ags/engine/game/savegame.h"
-#include "ags/shared/util/stream.h"
+namespace AGS
+{
 
-namespace AGS3 {
-namespace AGS {
+namespace Common { struct Interaction; }
 
-namespace Shared {
-struct Interaction;
-} // namespace Shared
+namespace Engine
+{
 
-namespace Engine {
-
-using Shared::Stream;
-using Shared::Interaction;
+using Common::Stream;
+using Common::Interaction;
 
 struct PreservedParams;
 struct RestoredData;
 
-namespace SavegameComponents {
+namespace SavegameComponents
+{
+    // Reads all available components from the stream
+    HSaveError    ReadAll(Stream *in, SavegameVersion svg_version, SaveCmpSelection select_cmp,
+        const PreservedParams &pp, RestoredData &r_data);
+    // Prescans all components, gathering data counts and asserting data match;
+    // does *not* keep any actual game data
+    HSaveError    PrescanAll(Stream *in, SavegameVersion svg_version, SaveCmpSelection select_cmp,
+        const PreservedParams &pp, RestoredData &r_data);
+    // Writes a full list of common components to the stream
+    HSaveError    WriteAllCommon(Stream *out, SaveCmpSelection select_cmp);
 
-extern void component_handlers_init();
-extern void component_handlers_free();
-
-// Reads all available components from the stream
-HSaveError    ReadAll(Stream *in, SavegameVersion svg_version, const PreservedParams &pp, RestoredData &r_data);
-// Writes a full list of common components to the stream
-HSaveError    WriteAllCommon(Stream *out);
-
-// Utility functions for reading and writing legacy interactions,
-// or their "times run" counters separately.
-void ReadTimesRun272(Interaction &intr, Stream *in);
-HSaveError ReadInteraction272(Interaction &intr, Stream *in);
-void WriteTimesRun272(const Interaction &intr, Stream *out);
-void WriteInteraction272(const Interaction &intr, Stream *out);
-
-// Precreates primary camera and viewport and reads legacy camera data
-void ReadLegacyCameraState(Stream *in, RestoredData &r_data);
-} // namespace SavegameComponents
+    // Utility functions for reading and writing legacy interactions,
+    // or their "times run" counters separately.
+    void ReadTimesRun272(Interaction &intr, Stream *in);
+    HSaveError ReadInteraction272(Interaction &intr, Stream *in);
+    void WriteTimesRun272(const Interaction &intr, Stream *out);
+    void WriteInteraction272(const Interaction &intr, Stream *out);
+}
 
 } // namespace Engine
 } // namespace AGS
-} // namespace AGS3
 
-#endif
+#endif // __AGS_EE_GAME__SAVEGAMECOMPONENTS_H

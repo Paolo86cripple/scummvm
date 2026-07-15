@@ -1,30 +1,20 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+#ifndef __AC_DEFINES_H
+#define __AC_DEFINES_H
 
-#ifndef AGS_SHARED_AC_COMMON_DEFINES_H
-#define AGS_SHARED_AC_COMMON_DEFINES_H
-
-#include "ags/shared/core/platform.h"
-
-namespace AGS3 {
+#include "core/platform.h"
 
 // Some arbitrary return values, should be replaced with either
 // simple boolean, or HError
@@ -67,9 +57,9 @@ namespace AGS3 {
 // v1.12             12  :  Play FLI/FLC animation FLIC%d.FLC or FLIC%d.FLI
 //                   13  :  Turn object on
 // v2.00             14  :  Run conversation
-#if defined(OBSOLETE)
+#if defined (OBSOLETE)
 #define NUM_MISC      20
-#define NUMOTCON      7 // number of conditions before standing on
+#define NUMOTCON      7                 // number of conditions before standing on
 #define NUM_CONDIT    (120 + NUMOTCON)
 #define MISC_COND     (MAX_WALK_BEHINDS * 4 + NUMOTCON + MAX_ROOM_OBJECTS * 4)
 #define NUMRESPONSE   14
@@ -103,6 +93,11 @@ namespace AGS3 {
 #define LEGACY_MAX_SPRITES_V25  6000
 #define LEGACY_MAX_SPRITES      30000
 
+// Max number of old-style global interaction variables
+#define MAX_INTERACTION_VARIABLES 100
+// An offset for local room's interaction variable IDs
+#define LOCAL_INTER_VAR_OFFSET 10000
+
 // The game to screen coordinate conversion multiplier, was used in older high-res games
 #define HIRES_COORD_MULTIPLIER 2
 
@@ -115,7 +110,7 @@ namespace AGS3 {
 #define OBJF_SOLID          0x20  // blocks characters from moving
 #define OBJF_LEGACY_LOCKED  0x40  // object position is locked in the editor (OBSOLETE since 3.5.0)
 #define OBJF_HASLIGHT       0x80  // the tint_light is valid and treated as brightness
-#define OBJF_TINTLIGHTMASK (OBJF_HASTINT | OBJF_HASLIGHT | OBJF_USEREGIONTINTS)
+#define OBJF_TINTLIGHTMASK  (OBJF_HASTINT | OBJF_HASLIGHT | OBJF_USEREGIONTINTS)
 
 // Animation flow mode
 // NOTE: had to move to common_defines, because used by CharacterInfo
@@ -126,6 +121,7 @@ namespace AGS3 {
 // Animates once and stops, resetting to the very first frame
 #define ANIM_ONCERESET         2
 
-} // namespace AGS3
+// An identifier of a "null font", a pseudo font used when you don't want a text to be drawn
+#define FONT_NULL (-1)
 
-#endif
+#endif // __AC_DEFINES_H

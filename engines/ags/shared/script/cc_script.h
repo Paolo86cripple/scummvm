@@ -1,85 +1,76 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+//
+// Compiled script object. A result of AGS script compilation,
+// loaded and run by the engine. A single game may have multiple scripts.
+//
+//=============================================================================
+#ifndef __CC_SCRIPT_H
+#define __CC_SCRIPT_H
 
-#ifndef AGS_SHARED_SCRIPT_CC_SCRIPT_H
-#define AGS_SHARED_SCRIPT_CC_SCRIPT_H
+#include <memory>
+#include <string>
+#include <vector>
+#include "core/types.h"
 
-#include "common/std/memory.h"
-#include "ags/shared/core/types.h"
-
-namespace AGS3 {
-
-namespace AGS {
-namespace Shared {
-class Stream;
-}
-}
+namespace AGS { namespace Common { class Stream; } }
 using namespace AGS; // FIXME later
 
-struct ccScript {
+struct ccScript
+{
 public:
-	char *globaldata;
-	int32_t globaldatasize;
-	int32_t *code;                // executable byte-code, 32-bit per op or arg
-	int32_t codesize; // TODO: find out if we can make it size_t
-	char *strings;
-	int32_t stringssize;
-	char *fixuptypes;             // global data/string area/ etc
-	int32_t *fixups;              // code array index to fixup (in ints)
-	int numfixups;
-	int importsCapacity;
-	char **imports;
-	int numimports;
-	int exportsCapacity;
-	char **exports;   // names of exports
-	int32_t *export_addr; // high byte is type; low 24-bits are offset
-	int numexports;
-	int instances;
-	// 'sections' allow the interpreter to find out which bit
-	// of the code came from header files, and which from the main file
-	char **sectionNames;
-	int32_t *sectionOffsets;
-	int numSections;
-	int capacitySections;
+    static const std::string noname;
+    static const std::string unknownSectionName;
 
-	static ccScript *CreateFromStream(Shared::Stream *in);
+    std::string scriptname;
+    std::vector<char> globaldata;
+    std::vector<int32_t> code;    // executable byte-code, 32-bit per op or arg
+    std::vector<char> strings;
+    std::vector<char> fixuptypes; // global data/string area/ etc
+    std::vector<int32_t> fixups;  // code array index to fixup (in ints)
+    std::vector<std::string> imports; // names of imports
+    std::vector<std::string> exports; // names of exports
+    std::vector<int32_t> export_addr; // export addresses: high byte is type; low 24-bits are offset
+    // 'sections' allow the interpreter to find out which bit
+    // of the code came from header files, and which from the main file
+    std::vector<std::string> sectionNames;
+    std::vector<int32_t> sectionOffsets;
+    // Extended information
 
-	ccScript();
-	ccScript(const ccScript &src);
-	virtual ~ccScript(); // there are few derived classes, so dtor should be virtual
+    int instances = 0; // reference count for this script object
 
-	// write the script to disk (after compiling)
-	void        Write(Shared::Stream *out);
-	// read back a script written with Write
-	bool        Read(Shared::Stream *in);
-	const char *GetSectionName(int32_t offset) const;
+    static ccScript *CreateFromStream(Common::Stream *in);
+    static ccScript *CreateFromStream(const std::string &name, Common::Stream *in);
 
-protected:
-	// free the memory occupied by the script - do NOT attempt to run the
-	// script after calling this function
-	void        Free();
+    ccScript() = default;
+    ccScript(const std::string &name);
+    ccScript(const ccScript &src);
+    virtual ~ccScript() = default; // there are few derived classes, so dtor should be virtual
+
+    ccScript &operator =(const ccScript&);
+
+    const std::string &GetScriptName() const;
+    const std::string &GetSectionName(int32_t offset) const;
+
+    void        SetScriptName(const std::string &name);
+
+    // write the script to disk (after compiling)
+    void        Write(Common::Stream *out);
+    // read back a script written with Write
+    bool        Read(Common::Stream *in);
 };
 
 typedef std::shared_ptr<ccScript> PScript;
 
-} // namespace AGS3
-
-#endif
+#endif // __CC_SCRIPT_H

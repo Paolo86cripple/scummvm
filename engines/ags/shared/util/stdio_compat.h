@@ -1,47 +1,52 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+#ifndef __AGS_CN_UTIL__STDIOCOMPAT_H
+#define __AGS_CN_UTIL__STDIOCOMPAT_H
 
-#ifndef AGS_SHARED_UTIL_STDIO_COMPAT_H
-#define AGS_SHARED_UTIL_STDIO_COMPAT_H
+#include <stdio.h>
+#include <stdint.h>
+#include <time.h>
 
-#include "common/stream.h"
-#include "common/fs.h"
+typedef int64_t file_off_t;
 
-namespace AGS3 {
-
-typedef int64 file_off_t;
-
-// Size of the buffer enough to accommodate a UTF-8 path
-const size_t MAX_PATH_SZ = 1024;
-
-extern Common::ArchiveMemberPtr getFile(const char *path);
-
-extern int  ags_fseek(Common::Stream *stream, file_off_t offset, int whence);
-extern file_off_t ags_ftell(Common::Stream *stream);
-
-extern int ags_file_exists(const char *path);
-extern int ags_directory_exists(const char *path);
-extern int ags_path_exists(const char *path);
-extern file_off_t ags_file_size(const char *path);
-
-} // namespace AGS3
-
+// Size of the buffer enough to accomodate a UTF-8 path
+#ifdef __cplusplus
+const size_t MAX_PATH_SZ = 1024u;
+#else
+#define MAX_PATH_SZ (1024u)
 #endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+FILE *ags_fopen(const char *path, const char *mode);
+int	 ags_fseek(FILE * stream, file_off_t offset, int whence);
+file_off_t	 ags_ftell(FILE * stream);
+
+int ags_file_exists(const char *path);
+int ags_directory_exists(const char *path);
+int ags_path_exists(const char *path);
+file_off_t ags_file_size(const char *path);
+time_t ags_file_time(const char *path);
+
+int ags_file_remove(const char *path);
+int ags_file_rename(const char *src, const char *dst);
+int ags_file_copy(const char *src, const char *dst, int overwrite);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // __AGS_CN_UTIL__STDIOCOMPAT_H

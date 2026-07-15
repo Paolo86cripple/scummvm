@@ -1,24 +1,15 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
 //=============================================================================
 //
 // This unit provides game initialization routine, which takes place after
@@ -26,28 +17,30 @@
 //
 //=============================================================================
 
-#ifndef AGS_ENGINE_GAME_GAME_INIT_H
-#define AGS_ENGINE_GAME_GAME_INIT_H
+#ifndef __AGS_EE_GAME__GAMEINIT_H
+#define __AGS_EE_GAME__GAMEINIT_H
 
-#include "ags/shared/game/main_game_file.h"
-#include "ags/shared/util/string.h"
+#include "game/main_game_file.h"
+#include "util/string.h"
 
-namespace AGS3 {
-namespace AGS {
-namespace Engine {
+namespace AGS
+{
+namespace Engine
+{
 
-using namespace Shared;
+using namespace Common;
 
 // Error codes for initializing the game
-enum GameInitErrorType {
-	kGameInitErr_NoError,
-	// currently AGS requires at least one font to be present in game
-	kGameInitErr_NoFonts,
-	kGameInitErr_TooManyAudioTypes,
-	kGameInitErr_EntityInitFail,
-	kGameInitErr_PluginNameInvalid,
-	kGameInitErr_NoGlobalScript,
-	kGameInitErr_ScriptLinkFailed
+enum GameInitErrorType
+{
+    kGameInitErr_NoError,
+    // currently AGS requires at least one font to be present in game
+    kGameInitErr_NoFonts,
+    kGameInitErr_TooManyAudioTypes,
+    kGameInitErr_EntityInitFail,
+    kGameInitErr_PluginNameInvalid,
+    kGameInitErr_NoGlobalScript,
+    kGameInitErr_ScriptLinkFailed,
 };
 
 String GetGameInitErrorText(GameInitErrorType err);
@@ -56,10 +49,11 @@ typedef TypedCodeError<GameInitErrorType, GetGameInitErrorText> GameInitError;
 typedef ErrorHandle<GameInitError> HGameInitError;
 
 // Sets up game state for play using preloaded data
-HGameInitError  InitGameState(const LoadedGameEntities &ents, GameDataVersion data_ver);
+HGameInitError InitGameState(const LoadedGameEntities &ents, GameDataVersion data_ver);
+// Applies accessibility options, some of them may override game settings
+void ApplyAccessibilityOptions();
 
 } // namespace Engine
 } // namespace AGS
-} // namespace AGS3
 
-#endif
+#endif // __AGS_EE_GAME__GAMEINIT_H

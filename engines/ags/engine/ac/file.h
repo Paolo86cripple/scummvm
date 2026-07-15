@@ -1,72 +1,61 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
 //=============================================================================
 //
 // Script File API implementation.
 //
 //=============================================================================
+#ifndef __AGS_EE_AC__FILE_H
+#define __AGS_EE_AC__FILE_H
 
-#ifndef AGS_ENGINE_AC_FILE_H
-#define AGS_ENGINE_AC_FILE_H
+#include <memory>
+#include <vector>
+#include "ac/dynobj/scriptfile.h"
+#include "ac/runtime_defines.h"
+#include "util/stream.h"
+#include "util/string.h"
 
-#include "common/std/memory.h"
-#include "ags/engine/ac/dynobj/script_file.h"
-#include "ags/engine/ac/runtime_defines.h"
-
-namespace AGS3 {
-
-using AGS::Shared::Stream;
-
-int     File_Exists(const char *fnmm);
-int     File_Delete(const char *fnmm);
-void *sc_OpenFile(const char *fnmm, int mode);
+int		File_Exists(const char *fnmm);
+int		File_Delete(const char *fnmm);
+void	*sc_OpenFile(const char *fnmm, int mode);
 const char *File_ResolvePath(const char *fnmm);
-void    File_Close(sc_File *fil);
-void    File_WriteString(sc_File *fil, const char *towrite);
-void    File_WriteInt(sc_File *fil, int towrite);
-void    File_WriteRawChar(sc_File *fil, int towrite);
-void    File_WriteRawInt(sc_File *fil, int towrite);
-void    File_WriteRawLine(sc_File *fil, const char *towrite);
-void    File_ReadRawLine(sc_File *fil, char *buffer);
-const char *File_ReadRawLineBack(sc_File *fil);
-void    File_ReadString(sc_File *fil, char *toread);
-const char *File_ReadStringBack(sc_File *fil);
-int     File_ReadInt(sc_File *fil);
-int     File_ReadRawChar(sc_File *fil);
-int     File_ReadRawInt(sc_File *fil);
+void	File_Close(sc_File *fil);
+void	File_WriteString(sc_File *fil, const char *towrite);
+void	File_WriteInt(sc_File *fil, int towrite);
+void	File_WriteRawChar(sc_File *fil, int towrite);
+void	File_WriteRawInt(sc_File *fil, int towrite);
+void	File_WriteRawLine(sc_File *fil, const char *towrite);
+void	File_ReadRawLine(sc_File *fil, char* buffer);
+const char* File_ReadRawLineBack(sc_File *fil);
+void	File_ReadString(sc_File *fil, char *toread);
+const char* File_ReadStringBack(sc_File *fil);
+int		File_ReadInt(sc_File *fil);
+int		File_ReadRawChar(sc_File *fil);
+int		File_ReadRawInt(sc_File *fil);
 int     File_Seek(sc_File *fil, int offset, int origin);
-int     File_GetEOF(sc_File *fil);
-int     File_GetError(sc_File *fil);
+int		File_GetEOF(sc_File *fil);
+int		File_GetError(sc_File *fil);
 int     File_GetPosition(sc_File *fil);
+// Fills a list of filenames found using given pattern; sorts the resulting list
+void    FillDirList(std::vector<AGS::Common::String> &files, const AGS::Common::String &pattern, ScriptFileSortStyle file_sort, ScriptSortDirection sort_dir);
 
-struct ScriptFileHandle {
-	std::unique_ptr<Stream> stream;
-	int32_t  handle = 0;
-};
+//=============================================================================
 
-ScriptFileHandle *check_valid_file_handle_ptr(Stream *stream_ptr, const char *operation_name);
-ScriptFileHandle *check_valid_file_handle_int32(int32_t handle, const char *operation_name);
-Stream *get_valid_file_stream_from_handle(int32_t handle, const char *operation_name);
+// Managed file streams: for script and plugin use
+int32_t add_file_stream(std::unique_ptr<AGS::Common::Stream> &&stream, const char *operation_name);
+void    close_file_stream(int32_t fhandle, const char *operation_name);
+AGS::Common::Stream *get_file_stream(int32_t fhandle, const char *operation_name);
+AGS::Common::IStreamBase *get_file_stream_iface(int32_t fhandle, const char *operation_name);
+void    close_all_file_streams();
 
-} // namespace AGS3
-
-#endif
+#endif // __AGS_EE_AC__FILE_H

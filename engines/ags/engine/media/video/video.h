@@ -1,67 +1,73 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
 //=============================================================================
 //
-// Video playback interface.
+// Adventure Game Studio (AGS)
 //
-// TODO: good future changes:
-//  - do not render to the screen right inside the VideoPlayer class,
-//    instead write the frame into the bitmap or texture, and expose
-//    current frame in the interface to let the engine decide what to do
-//    with it.
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
 //
 //=============================================================================
+//
+// Game-blocking video interface.
+//
+//=============================================================================
+#ifndef __AGS_EE_MEDIA__VIDEO_H
+#define __AGS_EE_MEDIA__VIDEO_H
 
-#ifndef AGS_ENGINE_MEDIA_VIDEO_VIDEO_H
-#define AGS_ENGINE_MEDIA_VIDEO_VIDEO_H
+#include "media/video/videoplayer.h"
+#include "util/geometry.h"
+#include "util/string.h"
+#include "util/error.h"
 
-namespace AGS3 {
+namespace AGS
+{
+namespace Engine
+{
 
-enum VideoFlags {
-	kVideo_EnableVideo = 0x0001,
-	kVideo_Stretch = 0x0002,
-	kVideo_ClearScreen = 0x0004,
-	kVideo_LegacyFrameSize = 0x0008,
-	kVideo_EnableAudio = 0x0010,
-	kVideo_KeepGameAudio  = 0x0020
+// Flags which define behavior of a blocking video "game state"
+enum VideoStateFlags
+{
+    // Force-clear screen on begin and end (meant for software render)
+    kVideoState_ClearScreen    = 0x0001,
+    // Stretch video to the game screen
+    kVideoState_Stretch        = 0x0002,
+    // Stop game audio and restore after video finishes playing
+    kVideoState_StopGameAudio  = 0x0004,
+    // Increase game FPS to match video's
+    kVideoState_SetGameFps     = 0x0008
 };
 
-enum VideoSkipType {
-	VideoSkipNone = 0,
-	VideoSkipEscape = 1,
-	VideoSkipAnyKey = 2,
-	VideoSkipKeyOrMouse = 3
+// Flags which define a skipping method for the blocking video playback
+enum VideoSkipType
+{
+    VideoSkipNone         = 0,
+    VideoSkipEscape       = 1,
+    VideoSkipAnyKey       = 2,
+    VideoSkipKeyOrMouse   = 3
 };
 
-extern bool play_avi_video(const char *name, int flags, VideoSkipType skip, bool showError);
-extern bool play_mpeg_video(const char *name, int flags, VideoSkipType skip, bool showError);
-extern bool play_theora_video(const char *name, int flags, VideoSkipType skip, bool showError);
-extern bool play_flc_video(int numb, int flags, VideoSkipType skip);
+} // namespace Engine
+} // namespace AGS
 
-// Pause the active video
-extern void video_pause();
-// Resume the active video
-extern void video_resume();
 
-} // namespace AGS3
+// Blocking video API
+//
+// Start a blocking OGV playback
+AGS::Common::HError play_theora_video(const char *name, int video_flags, int state_flags, AGS::Engine::VideoSkipType skip);
+// Start a blocking FLIC playback
+AGS::Common::HError play_flc_video(int numb, int video_flags, int state_flags, AGS::Engine::VideoSkipType skip);
+// Pause the active blocking video
+void video_single_pause();
+// Resume the active blocking video
+void video_single_resume();
+// Stop current blocking video playback and dispose all video resource
+void video_single_stop();
 
-#endif
+// Stop all videos and video thread
+void video_shutdown();
+
+#endif // __AGS_EE_MEDIA__VIDEO_H

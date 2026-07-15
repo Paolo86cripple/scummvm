@@ -1,85 +1,95 @@
-/* ScummVM - Graphic Adventure Engine
- *
- * ScummVM is the legal property of its developers, whose names
- * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this source distribution.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- */
+//=============================================================================
+//
+// Adventure Game Studio (AGS)
+//
+// Copyright (C) 1999-2011 Chris Jones and 2011-2025 various contributors
+// The full list of copyright holders can be found in the Copyright.txt
+// file, which is part of this source code distribution.
+//
+// The AGS source code is provided under the Artistic License 2.0.
+// A copy of this license can be found in the file License.txt and at
+// https://opensource.org/license/artistic-2-0/
+//
+//=============================================================================
+#include "script/cc_common.h"
+#include <stdio.h>
+#include <utility>
+#include "util/string.h"
 
-#include "common/std/utility.h"
-#include "ags/shared/script/cc_common.h"
-#include "ags/shared/util/string.h"
-#include "ags/globals.h"
+using namespace AGS::Common;
 
-namespace AGS3 {
+// FIXME: refactor, get rid of these global vars!
+//
+int ccCompOptions = SCOPT_LEFTTORIGHT;
+// currently compiled or executed line
+int currentline;
+// name of currently compiling script or script section
+std::string ccCurScriptName;
 
-using namespace AGS::Shared;
-
-void ccSetOption(int optbit, int onoroff) {
-	if (onoroff)
-		_G(ccCompOptions) |= optbit;
-	else
-		_G(ccCompOptions) &= ~optbit;
+void ccSetOption(int optbit, int onoroff)
+{
+    if (onoroff)
+        ccCompOptions |= optbit;
+    else
+        ccCompOptions &= ~optbit;
 }
 
-int ccGetOption(int optbit) {
-	if (_G(ccCompOptions) & optbit)
-		return 1;
+int ccGetOption(int optbit)
+{
+    if (ccCompOptions & optbit)
+        return 1;
 
-	return 0;
+    return 0;
 }
 
-void cc_clear_error() {
-	_GP(ccError) = ScriptError();
+// Returns current running script callstack as a human-readable text
+extern String cc_get_callstack(int max_lines = INT_MAX);
+
+static ScriptError ccError;
+
+void cc_clear_error()
+{
+    ccError = ScriptError();
 }
 
-bool cc_has_error() {
-	return _GP(ccError).HasError;
+bool cc_has_error()
+{
+    return ccError.HasError;
 }
 
-const ScriptError &cc_get_error() {
-	return _GP(ccError);
+const ScriptError &cc_get_error()
+{
+    return ccError;
 }
 
-String cc_get_err_callstack(int max_lines) {
-	return cc_has_error() ? _GP(ccError).CallStack : cc_get_callstack(max_lines);
+String cc_get_err_callstack(int max_lines)
+{
+    return cc_has_error() ? ccError.CallStack : cc_get_callstack(max_lines);
 }
 
-void cc_error(const char *descr, ...) {
-	_GP(ccError).IsUserError = false;
-	if (descr[0] == '!') {
-		_GP(ccError).IsUserError = true;
-		descr++;
-	}
+void cc_error(const char *descr, ...)
+{
+    ccError.IsUserError = false;
+    if (descr[0] == '!')
+    {
+        ccError.IsUserError = true;
+        descr++;
+    }
 
-	va_list ap;
-	va_start(ap, descr);
-	String displbuf = String::FromFormatV(descr, ap);
-	va_end(ap);
+    va_list ap;
+    va_start(ap, descr);
+    String displbuf = String::FromFormatV(descr, ap);
+    va_end(ap);
 
-	// TODO: because this global ccError is a global shared variable,
-	// we have to use project-dependent function to format the final message
-	_GP(ccError).ErrorString = cc_format_error(displbuf);
-	_GP(ccError).CallStack = cc_get_callstack();
-	_GP(ccError).HasError = 1;
-	_GP(ccError).Line = _G(currentline);
+    // TODO: because this global ccError is a global shared variable,
+    // we have to use project-dependent function to format the final message
+    ccError.ErrorString = cc_format_error(displbuf);
+    ccError.CallStack = cc_get_callstack();
+    ccError.HasError = 1;
+    ccError.Line = currentline;
 }
 
-void cc_error(const ScriptError &err) {
-	_GP(ccError) = err;
+void cc_error(const ScriptError &err)
+{
+    ccError = err;
 }
-
-} // namespace AGS3
