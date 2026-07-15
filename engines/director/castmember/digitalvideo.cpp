@@ -39,6 +39,7 @@
 #include "director/movie.h"
 #include "director/window.h"
 #include "director/castmember/digitalvideo.h"
+#include "director/castmember/xtra.h"
 #include "director/lingo/lingo-the.h"
 
 namespace Director {
@@ -107,6 +108,7 @@ DigitalVideoCastMember::DigitalVideoCastMember(Cast *cast, uint16 castId)
 	_enableSound = true;
 	_crop = false;
 	_center = false;
+	_scaleX = _scaleY = 100;
 	_dirty = false;
 	_emptyFile = false;
 
@@ -182,6 +184,8 @@ DigitalVideoCastMember::DigitalVideoCastMember(Cast *cast, uint16 castId, Digita
 	_enableSound = source._enableSound;
 	_crop = source._crop;
 	_center = source._center;
+	_scaleX = source._scaleX;
+	_scaleY = source._scaleY;
 	_preload = source._preload;
 	_showControls = source._showControls;
 	_directToStage = source._directToStage;
@@ -209,6 +213,47 @@ DigitalVideoCastMember::~DigitalVideoCastMember() {
 
 	if (_video)
 		delete _video;
+}
+
+// QuickTime Asset Xtra property flags, stored as a BE32 word after the
+// 16-bit serialization version in the member's Xtra payload.
+enum {
+	kQTflag_Controller  = 0x1,
+	kQTflag_Crop        = 0x2,
+	kQTflag_Center      = 0x4,
+	kQTflag_Video       = 0x8,
+	kQTflag_DTS         = 0x10,
+	kQTflag_InvertMask  = 0x20,
+	kQTflag_Loop        = 0x40,
+	kQTflag_Preload     = 0x80,
+	kQTflag_PAS         = 0x100,
+	kQTflag_Sound       = 0x200,
+	kQTflag_Mask        = 0x400,
+	kQTflag_Rotation    = 0x800,
+	kQTflag_Translation = 0x1000,
+	kQTflag_Scale       = 0x2000,
+	kQTflag_FrameRate   = 0x4000,
+	kQTflag_AlphaMask   = 0x8000,
+	kQTflag_Stream      = 0x10000
+};
+
+CastMember *DigitalVideoCastMember::createFromXtra(Cast *cast, uint16 castId, XtraCastMember *xtra) {
+	DigitalVideoCastMember *dv = new DigitalVideoCastMember(cast, castId);
+	dv->_qtmovie = true;
+	const Common::Array<byte> &data = xtra->getXtraData();
+	if (data.size() >= 8) {
+		uint32 flags = READ_BE_UINT32(&data[4]);
+		dv->_showControls = (flags & kQTflag_Controller) != 0;
+		dv->_crop = (flags & kQTflag_Crop) != 0;
+		dv->_center = (flags & kQTflag_Center) != 0;
+		dv->_enableVideo = (flags & kQTflag_Video) != 0;
+		dv->_directToStage = (flags & kQTflag_DTS) != 0;
+		dv->_looping = (flags & kQTflag_Loop) != 0;
+		dv->_preload = (flags & kQTflag_Preload) != 0;
+		dv->_pausedAtStart = (flags & kQTflag_PAS) != 0;
+		dv->_enableSound = (flags & kQTflag_Sound) != 0;
+	}
+	return dv;
 }
 
 bool DigitalVideoCastMember::loadVideoFromCast() {
@@ -584,8 +629,20 @@ Common::String DigitalVideoCastMember::formatInfo() {
 	);
 }
 
+Common::Rect DigitalVideoCastMember::getInitialRect() {
+	// Sprites are sized from this rect, and the widget stretches the
+	// decoded frame to the sprite bbox, so scaling here scales rendering.
+	Common::Rect rect = _initialRect;
+	if (_scaleX > 0 && _scaleX != 100)
+		rect.setWidth(_initialRect.width() * _scaleX / 100);
+	if (_scaleY > 0 && _scaleY != 100)
+		rect.setHeight(_initialRect.height() * _scaleY / 100);
+	return rect;
+}
+
 Common::Point DigitalVideoCastMember::getRegistrationOffset() {
-	return Common::Point(_initialRect.width() / 2, _initialRect.height() / 2);
+	Common::Rect rect = getInitialRect();
+	return Common::Point(rect.width() / 2, rect.height() / 2);
 }
 
 Common::Point DigitalVideoCastMember::getRegistrationOffset(int16 width, int16 height) {
@@ -607,6 +664,7 @@ bool DigitalVideoCastMember::hasField(int field) {
 	case kTheLoop:
 	case kThePausedAtStart:
 	case kThePreLoad:
+	case kTheScale:
 	case kTheSound:
 	case kTheTimeScale:
 	case kTheVideo:
@@ -659,6 +717,12 @@ Datum DigitalVideoCastMember::getField(int field) {
 	case kThePreLoad:
 		d = _preload;
 		break;
+	case kTheScale:
+		d.type = ARRAY;
+		d.u.farr = new FArray;
+		d.u.farr->arr.push_back(_scaleX);
+		d.u.farr->arr.push_back(_scaleY);
+		break;
 	case kTheSound:
 		d = _enableSound;
 		break;
@@ -702,8 +766,9 @@ void DigitalVideoCastMember::setField(int field, const Datum &d) {
 		CastMember::setField(field, d);
 		loadVideoFromCast();
 		if (_channel) {
-			_channel->setWidth(_initialRect.width());
-			_channel->setHeight(_initialRect.height());
+			Common::Rect rect = getInitialRect();
+			_channel->setWidth(rect.width());
+			_channel->setHeight(rect.height());
 		}
 		return;
 	case kTheFrameRate:
@@ -721,6 +786,19 @@ void DigitalVideoCastMember::setField(int field, const Datum &d) {
 		return;
 	case kThePreLoad:
 		_preload = (bool)d.asInt();
+		return;
+	case kTheScale:
+		if ((d.type == ARRAY || d.type == POINT) && d.u.farr->arr.size() >= 2) {
+			_scaleX = d.u.farr->arr[0].asInt();
+			_scaleY = d.u.farr->arr[1].asInt();
+			if (_channel) {
+				Common::Rect rect = getInitialRect();
+				_channel->setWidth(rect.width());
+				_channel->setHeight(rect.height());
+			}
+		} else {
+			warning("DigitalVideoCastMember::setField(): scale expects an [x, y] percentage list, got %s", d.type2str());
+		}
 		return;
 	case kTheSound:
 		_enableSound = (bool)d.asInt();

@@ -36,6 +36,8 @@
  * TKKG 6 / 7 / 8 / 9 / 11 / 13 / 14
  * Oscar the Balloonist Flies into the Mountains
  * Physicus / Physikus (l'Espresso, Italian; Ruske & Pühretmaier)
+ * Bioscopia / Biolab
+ * Der Regenbogenfisch Junior 2: Kraktors Geburtstag
  *
  **************************************************/
 
@@ -192,6 +194,7 @@ namespace Director {
 const char *BudAPIXtra::xlibName = "BudAPI";
 const XlibFileDesc BudAPIXtra::fileNames[] = {
 	{ "budapi",   nullptr },
+	{ "budapi32", nullptr },
 	{ nullptr,        nullptr },
 };
 

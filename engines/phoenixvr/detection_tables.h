@@ -57,6 +57,18 @@ const ADGameDescription gameDescriptions[] = {
 		GUIO1(GUIO_NONE)
 	},
 
+    {"necrono",
+		nullptr,
+		AD_ENTRY4s("script.pak", "da42a18dd02fc01f116228d5c219b2fd", 215,
+				   "textes.txt", "c3af2d55b4fa55d200b047b6ec0d9f73", 5507,
+				   "cd1/Data/Script1.pak", "626cac1db5160142313fdcf483fda2bf", 57410,
+				   "cd2/Data/Script3.pak", "4252ea1b2458264e8d2a3afb67242820", 64012),
+		Common::DE_DEU,
+		Common::kPlatformWindows,
+		ADGF_DROPPLATFORM | ADGF_CD,
+		GUIO1(GUIO_NONE)
+	},
+
 	{"necrono",
 		nullptr,
 		AD_ENTRY2s("script.pak", "86294b9c445c3e06e24269c84036a207", 223,
@@ -255,7 +267,7 @@ const ADGameDescription gameDescriptions[] = {
 				   "Interface.vr", "70362765ee83bb822d5bb08948317f23", 98844),
 		Common::DE_DEU,
 		Common::kPlatformWindows,
-		ADGF_DROPPLATFORM | ADGF_UNSTABLE,
+		ADGF_DROPPLATFORM | ADGF_TESTING,
 		GUIO1(GUIO_NONE)
 	},
 
@@ -301,8 +313,8 @@ const ADGameDescription gameDescriptions[] = {
 	},
 
 	{"dracula1",
-		nullptr,
-		AD_ENTRY2s("script.pak", "6998262fcce9cb5d3cc8a555f8ee024a", 265,
+		"Retail version",
+		AD_ENTRY2s("Install/script.pak", "6998262fcce9cb5d3cc8a555f8ee024a", 265,
 				   "Interface.vr", "47099471f31f794be8a7e5a3c382bf62", 104304),
 		Common::IT_ITA,
 		Common::kPlatformWindows,
@@ -321,10 +333,67 @@ const ADGameDescription gameDescriptions[] = {
 	},
 
 	{"dracula2",
-		nullptr,
-		AD_ENTRY2s("script.pak", "ff52d2000eddc5c438f3c8ef50fea858", 277,
-				   "Compiler.dat", "ff30c7ea065af1e86182b428e1f2cc7b", 42650),
+		"GOG release",
+		AD_ENTRY3s("script.pak", "ff52d2000eddc5c438f3c8ef50fea858", 277,
+				   "Compiler.dat", "ff30c7ea065af1e86182b428e1f2cc7b", 42650,
+				   "InsertCD.vr", "54d1ea71f27a849a4a088cf21ca64aff", 53817),
 		Common::EN_ANY,
+		Common::kPlatformWindows,
+		ADGF_DROPPLATFORM | ADGF_TESTING,
+		GUIO1(GUIO_NONE)
+	},
+
+	{"dracula2",
+		"Retail version",
+		AD_ENTRY4s("Install/script.pak", "ff52d2000eddc5c438f3c8ef50fea858", 277,
+				   "Install/Compiler.dat", "ff30c7ea065af1e86182b428e1f2cc7b", 42650,
+				   "Install/InsertCD.vr", "54d1ea71f27a849a4a088cf21ca64aff", 53817,
+				   "First.exe", "403417a28a11a08deb8443dc08a2213c", 31770),
+		Common::EN_ANY,
+		Common::kPlatformWindows,
+		ADGF_DROPPLATFORM | ADGF_TESTING,
+		GUIO1(GUIO_NONE)
+	},
+
+	{"dracula2",
+		"GOG release",
+		AD_ENTRY3s("script.pak", "ff52d2000eddc5c438f3c8ef50fea858", 277,
+				   "Compiler.dat", "ff30c7ea065af1e86182b428e1f2cc7b", 42650,
+				   "InsertCD.vr", "0bc196a016845e99d99a0bc634f51e9d", 53670),
+		Common::DE_DEU,
+		Common::kPlatformWindows,
+		ADGF_DROPPLATFORM | ADGF_TESTING,
+		GUIO1(GUIO_NONE)
+	},
+
+	{"dracula2",
+		"GOG release",
+		AD_ENTRY3s("script.pak", "ff52d2000eddc5c438f3c8ef50fea858", 277,
+				   "Compiler.dat", "ff30c7ea065af1e86182b428e1f2cc7b", 42650,
+				   "InsertCD.vr", "699f7519cc1caa740fe27434f6ca9766", 54394),
+		Common::ES_ESP,
+		Common::kPlatformWindows,
+		ADGF_DROPPLATFORM | ADGF_TESTING,
+		GUIO1(GUIO_NONE)
+	},
+
+	{"dracula2",
+		"GOG release",
+		AD_ENTRY3s("script.pak", "ff52d2000eddc5c438f3c8ef50fea858", 277,
+				   "Compiler.dat", "ff30c7ea065af1e86182b428e1f2cc7b", 42650,
+				   "InsertCD.vr", "21b1cb64d71010799368a8e7097c133b", 54210),
+		Common::FR_FRA,
+		Common::kPlatformWindows,
+		ADGF_DROPPLATFORM | ADGF_TESTING,
+		GUIO1(GUIO_NONE)
+	},
+
+	{"dracula2",
+		"GOG release",
+		AD_ENTRY3s("script.pak", "ff52d2000eddc5c438f3c8ef50fea858", 277,
+				   "Compiler.dat", "ff30c7ea065af1e86182b428e1f2cc7b", 42650,
+				   "InsertCD.vr", "2d5d17124caeebad668661abaff0c8fc", 54442),
+		Common::IT_ITA,
 		Common::kPlatformWindows,
 		ADGF_DROPPLATFORM | ADGF_TESTING,
 		GUIO1(GUIO_NONE)
@@ -332,7 +401,7 @@ const ADGameDescription gameDescriptions[] = {
 
 	// GOG release
 	{"amerzone",
-		nullptr,
+		"GOG release",
 		AD_ENTRY1s("amerzone.pak", "bd580dcfe91be9923da608fba72bf128", 314),
 		Common::EN_USA,
 		Common::kPlatformWindows,
