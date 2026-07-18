@@ -1547,6 +1547,16 @@ bool BaseGame::scCallMethod(ScScript *script, ScStack *stack, ScStack *thisStack
 		return STATUS_OK;
 	}
 
+	//////////////////////////////////////////////////////////////////////////
+	// IsMusicCrossfading
+	//////////////////////////////////////////////////////////////////////////
+	else if (strcmp(name, "IsMusicCrossfading") == 0) {
+		stack->correctParams(0);
+
+		stack->pushBool(_musicCrossfadeRunning);
+		return STATUS_OK;
+	}
+
 #ifdef ENABLE_FOXTAIL
 	//////////////////////////////////////////////////////////////////////////
 	// [FoxTail] MusicCrossfadeVolume
@@ -2360,6 +2370,18 @@ bool BaseGame::scCallMethod(ScScript *script, ScStack *stack, ScStack *thisStack
 	}
 
 	//////////////////////////////////////////////////////////////////////////
+	// PrepareScreenshot
+	//////////////////////////////////////////////////////////////////////////
+	else if (strcmp(name, "PrepareScreenshot") == 0) {
+		stack->correctParams(0);
+
+		// ignore method, it's used in 'J.U.L.I.A - Among the Stars'
+
+		stack->pushNULL();
+		return STATUS_OK;
+	}
+
+	//////////////////////////////////////////////////////////////////////////
 	// Screenshot
 	//////////////////////////////////////////////////////////////////////////
 	else if (strcmp(name, "Screenshot") == 0) {
@@ -2669,7 +2691,13 @@ bool BaseGame::scCallMethod(ScScript *script, ScStack *stack, ScStack *thisStack
 		stack->correctParams(0);
 		SAFE_DELETE(_cachedThumbnail);
 		_cachedThumbnail = new SaveThumbHelper(this);
-		if (DID_FAIL(_cachedThumbnail->storeThumbnail())) {
+		bool doFlip = false;
+
+		if (BaseEngine::instance().getGameId() == "barrowhilldp") {
+			doFlip = true;
+		}
+
+		if (DID_FAIL(_cachedThumbnail->storeThumbnail(doFlip))) {
 			SAFE_DELETE(_cachedThumbnail);
 			stack->pushBool(false);
 		} else {
@@ -2828,6 +2856,37 @@ bool BaseGame::scCallMethod(ScScript *script, ScStack *stack, ScStack *thisStack
 		stack->pushNULL();
 
 		return STATUS_OK;
+	}
+	//////////////////////////////////////////////////////////////////////////
+	// SetGamma
+	// This is for game 'Oknytt'
+	//////////////////////////////////////////////////////////////////////////
+	else if (strcmp(name, "SetGamma") == 0) {
+		stack->correctParams(1);
+
+		int32 gamma = stack->pop()->getInt(0);
+
+		if (_renderer3D)
+			_renderer3D->setGamma(gamma);
+
+		stack->pushNULL();
+
+		return STATUS_OK;
+	}
+	//////////////////////////////////////////////////////////////////////////
+	// GetGamma
+	// This is for game 'Oknytt'
+	//////////////////////////////////////////////////////////////////////////
+	else if (strcmp(name, "GetGamma") == 0) {
+		stack->correctParams(0);
+
+		int32 gamma = 0;
+		if (_renderer3D)
+			gamma = _renderer3D->getGamma();
+
+		stack->pushInt(gamma);
+
+		return STATUS_OK;
 	} else {
 		return BaseObject::scCallMethod(script, stack, thisStack, name);
 	}
@@ -2929,6 +2988,15 @@ ScValue *BaseGame::scGetProperty(const char *name) {
 	//////////////////////////////////////////////////////////////////////////
 	else if (strcmp(name, "ScreenHeight") == 0) {
 		_scValue->setInt(_renderer->getHeight());
+		return _scValue;
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+	// ScreenshotPrepared (RO)
+	//////////////////////////////////////////////////////////////////////////
+	else if (strcmp(name, "ScreenshotPrepared") == 0) {
+		// always true, it's used in 'J.U.L.I.A - Among the Stars'
+		_scValue->setBool(true);
 		return _scValue;
 	}
 

@@ -101,6 +101,8 @@ public:
 	byte _playDirection = kPlayMovieForward;
 	uint16 _firstFrame = 0;
 	uint16 _lastFrame = 0;
+	// Nancy14-only: when non-zero, hide the movie once it reaches its last frame.
+	uint16 _hideOnFinish = 0;
 	Common::Array<FlagAtFrame> _frameFlags;
 	MultiEventFlagDescription _triggerFlags;
 	FlagDescription _videoStartFlag;
@@ -119,6 +121,11 @@ public:
 	uint16 _randomPlayerCursorAllowed = kPlayerCursorAllowed;
 	Common::Array<RandomSequence> _sequences;
 
+	// Nancy13+ carries one extra "secondary" movie (e.g. a recognition
+	// animation) after the sequence list. Stored for future playback; reading
+	// it is required so the trailing hotspot list stays aligned.
+	RandomSequence _secondaryMovie;
+
 	// Chain state. After a sequence's movie finishes the engine rolls a
 	// weighted pick: "stay" -> enter pause for a random duration and
 	// re-roll; valid next-sequence -> swap to that sequence's movie.
@@ -136,9 +143,7 @@ public:
 
 	bool isViewportRelative() const override { return true; }
 
-	bool isPersistentAcrossScenes() const override {
-		return _isRandom && !_isDone && !_randomStopRequested;
-	}
+	bool isPersistentAcrossScenes() const override;
 
 	Common::String getRecordExtraInfo() const override { return Common::String::format("Scene %d", _sceneChange.sceneID); }
 
@@ -151,6 +156,9 @@ protected:
 	// needed for SecondaryVideoDescription::readData.
 	void readRandomMovieData(Common::Serializer &ser, Common::SeekableReadStream &stream);
 	void readRandomSequence(Common::Serializer &ser, RandomSequence &seq);
+	void readSecondaryRandomMovie(Common::Serializer &ser, RandomSequence &seq);
+
+	void readDataNancy14(Common::Serializer &ser, Common::SeekableReadStream &stream);
 
 	// Apply a RandomSequence's playback config to the PSM flat fields
 	// and reload the decoder. Returns true on success.
@@ -160,6 +168,17 @@ protected:
 	// Returns -1 if "stay" was picked (and sets up the pause state),
 	// or the chosen sequence index otherwise.
 	int rollNextSequence();
+
+	// Enter the paused chain state for a random duration in the sequence's
+	// [minPauseMs, maxPauseMs] range. Always returns -1.
+	int beginRandomPause(const RandomSequence &seq);
+
+	// Find a sequence by name, warning and returning -1 if it isn't present.
+	int lookupSequence(const Common::Path &name) const;
+
+	// Resolve the -1/-2 "whole movie" sentinels in _firstFrame/_lastFrame
+	// against the loaded decoder's frame count. Random sequences only.
+	void resolveSentinelFrames();
 
 	Graphics::ManagedSurface _fullFrame;
 	int _curViewportFrame = -1;

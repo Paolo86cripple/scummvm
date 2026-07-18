@@ -49,6 +49,8 @@
 
 namespace Macs2 {
 
+static constexpr const char *kGameSpeedModeConfigKey = "macs2_game_speed_mode";
+
 void resetCharacterWalkPath(Character *character) {
 	if (character == nullptr || character->_gameObject == nullptr)
 		return;
@@ -845,7 +847,6 @@ void Macs2Engine::snapToWalkablePosition(int16 *pTargetY, int16 *pTargetX, int16
 	// Phase 4: If still non-walkable, scan X toward character
 	uint16 w = getWalkabilityAt(*pTargetY, *pTargetX);
 	if (isWalkabilityBlocking(w)) {
-		*pTargetX = savedX;
 		*pTargetY = savedY;
 		if (charX < *pTargetX) {
 			while (true) {
@@ -1769,11 +1770,6 @@ bool Macs2Engine::loadAnimationFromSceneData(uint16 objectIndex, uint16 slotInde
 		go->_blobMirrorFlags[slotIndex - 1] = shouldMirror;
 	}
 
-	if (targetBlob == nullptr) {
-		_scriptExecutor->setScriptError(1);
-		return false;
-	}
-
 	// Binary: memFree old blob if bSlotLoaded, then alloc + read; sets slot+0x33 = 1.
 	*targetBlob = data;
 	if (slotIndex == 0x15)
@@ -2003,8 +1999,14 @@ Common::String Macs2Engine::getGameId() const {
 	return _gameDescription->gameId;
 }
 
+void Macs2Engine::setGameSpeedMode(uint16 mode) {
+	_gameSpeedMode = mode % 3;
+	ConfMan.setInt(kGameSpeedModeConfigKey, _gameSpeedMode);
+}
+
 Common::Error Macs2Engine::run() {
 	GameObjects::instance().init();
+	setGameSpeedMode(ConfMan.getInt(kGameSpeedModeConfigKey));
 	readResourceFile();
 	readExecutable();
 

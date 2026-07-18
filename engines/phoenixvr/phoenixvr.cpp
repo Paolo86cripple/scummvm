@@ -23,6 +23,7 @@
 #include "audio/audiostream.h"
 #include "audio/decoders/wave.h"
 #include "audio/mixer.h"
+#include "common/archive.h"
 #include "common/config-manager.h"
 #include "common/events.h"
 #include "common/file.h"
@@ -59,8 +60,12 @@ PhoenixVREngine *g_engine;
 
 static Common::CodePage getTextCodePage(Common::Language language) {
 	switch (language) {
+	case Common::JA_JPN:
+		return Common::kWindows932;
 	case Common::RU_RUS:
 		return Common::kWindows1251;
+	case Common::ZH_TWN:
+		return Common::kBig5;
 	default:
 		return Common::kWindows1252;
 	}
@@ -363,6 +368,10 @@ Common::String PhoenixVREngine::removeDrive(const Common::String &path) {
 		return path.substr(2);
 }
 
+static bool isSimpleFilename(const Common::String &filename) {
+	return !filename.contains('/') && !filename.contains('\\');
+}
+
 Common::SeekableReadStream *PhoenixVREngine::tryOpen(const Common::Path &name, Common::String *origName) {
 	Common::ScopedPtr<Common::File> s(new Common::File());
 	if (s->open(name)) {
@@ -387,9 +396,23 @@ Common::SeekableReadStream *PhoenixVREngine::tryOpen(const Common::Path &name, C
 
 Common::SeekableReadStream *PhoenixVREngine::open(const Common::String &filename, Common::String *origName) {
 	debug("open %s", filename.c_str());
-	auto *stream = tryOpen(_currentScriptPath.append(filename, '\\').normalize(), origName);
-	if (stream)
-		return stream;
+	Common::SeekableReadStream *stream = nullptr;
+
+	if (!_currentScriptPath.empty()) {
+		stream = tryOpen(_currentScriptPath.append(filename, '\\').normalize(), origName);
+		if (stream)
+			return stream;
+	}
+
+	if (isSimpleFilename(filename)) {
+		stream = tryOpen(Common::Path(Common::String::format("cd1/Install/%s", filename.c_str()), '/'), origName);
+		if (stream)
+			return stream;
+
+		stream = tryOpen(Common::Path(Common::String::format("Install/%s", filename.c_str()), '/'), origName);
+		if (stream)
+			return stream;
+	}
 
 	stream = tryOpen(Common::Path{filename}, origName);
 	if (stream)
@@ -441,8 +464,6 @@ void PhoenixVREngine::loadNextScript() {
 	_script.reset(new Script(*s));
 	for (auto &var : _script->getVarNames())
 		declareVariable(var);
-	if (gameIdMatches("amerzone"))
-		declareVariable("oeuf_pose"); // crash in chapter 7
 	if (gameIdMatches("dracula1")) {
 		declareVariable("P_Alliance"); // Referenced by 0M1Script.lst, declared by 0M2Script.lst
 		declareVariable("reloaddone"); // Referenced by InsertCD.lst, declared by chapter scripts
@@ -509,6 +530,7 @@ void PhoenixVREngine::interpolateAngle(float x, float y, float speed, float zoom
 				break;
 			}
 			default:
+				processGenericEvents(event);
 				break;
 			}
 		}
@@ -565,6 +587,7 @@ void PhoenixVREngine::fade(int start, int stop, int speed) {
 			}
 
 			default:
+				processGenericEvents(event);
 				break;
 			}
 		}
@@ -618,8 +641,15 @@ void PhoenixVREngine::transFade(int speed) {
 		while (!shouldQuit() && waiting && (direction > 0 ? pos < 0 : pos > -256)) {
 			Common::Event event;
 			while (g_system->getEventManager()->pollEvent(event)) {
-				if (event.type == Common::EVENT_KEYDOWN && event.kbd.ascii == ' ')
-					waiting = false;
+				switch (event.type) {
+				case Common::EVENT_KEYDOWN:
+					if (event.kbd.ascii == ' ')
+						waiting = false;
+					break;
+				default:
+					processGenericEvents(event);
+					break;
+				}
 			}
 
 			renderTransition(direction > 0 ? 0 : pos, direction > 0 ? pos : 0);
@@ -646,6 +676,7 @@ void PhoenixVREngine::until(const Common::String &var, int value) {
 		while (g_system->getEventManager()->pollEvent(event)) {
 			switch (event.type) {
 			default:
+				processGenericEvents(event);
 				break;
 			}
 		}
@@ -671,6 +702,7 @@ void PhoenixVREngine::wait(float seconds) {
 		while (g_system->getEventManager()->pollEvent(event)) {
 			switch (event.type) {
 			default:
+				processGenericEvents(event);
 				break;
 			}
 		}
@@ -708,6 +740,7 @@ bool PhoenixVREngine::goToWarp(const Common::String &warp, bool savePrev) {
 		_nextWarp = _script->getWarp(warp);
 
 	_hoverIndex = -1;
+	_messengerInventoryHover = -1;
 	if (savePrev) {
 		assert(_warpIdx >= 0);
 		_prevWarp = _warpIdx;
@@ -770,27 +803,24 @@ void PhoenixVREngine::hideCursor(const Common::String &wname, int idx) {
 }
 
 void PhoenixVREngine::declareVariable(const Common::String &name) {
-	if (!_variables.contains(name))
-		_variables.setVal(name, 0);
+	_variables.declare(name);
 }
 
 bool PhoenixVREngine::hasVariable(const Common::String &name) const {
-	return _variables.contains(name);
+	return _variables.declared(name);
 }
 
 void PhoenixVREngine::setVariable(const Common::String &name, int value) {
-	if (!hasVariable(name)) {
-		debug("set %s %d - ignored, variable was not declared", name.c_str(), value);
-		return;
-	}
-	debug("set %s %d", name.c_str(), value);
-	_variables.setVal(name, value);
+	_variables.set(name, value);
 }
 
 int PhoenixVREngine::getVariable(const Common::String &name) const {
-	if (!hasVariable(name))
-		warning("get %s - variable was not declared", name.c_str());
-	return _variables.getValOrDefault(name, 0);
+	return _variables.get(name);
+}
+
+static int8 panToBalance(int pan) {
+	pan = CLIP(pan, 0, 255);
+	return static_cast<int8>((pan * 254 + 127) / 255 - 127);
 }
 
 void PhoenixVREngine::playSound(const Common::String &sound, Audio::Mixer::SoundType type, uint8 volume, int loops, bool spatial, float angle) {
@@ -814,7 +844,7 @@ void PhoenixVREngine::playSound(const Common::String &sound, Audio::Mixer::Sound
 		_currentMusicVolume = volume;
 	}
 
-	_mixer->playStream(type, &h, Audio::makeWAVStream(stream.release(), DisposeAfterUse::YES), -1, volume);
+	_mixer->playStream(type, &h, Audio::makeWAVStream(stream.release(), DisposeAfterUse::YES), -1, volume, spatial ? 0 : panToBalance(_globalPan));
 	if (loops < 0 || music)
 		_mixer->loopChannel(h);
 	Common::SharedPtr<Video::Subtitles> subtitles;
@@ -822,6 +852,16 @@ void PhoenixVREngine::playSound(const Common::String &sound, Audio::Mixer::Sound
 		subtitles = loadSubtitles(sound);
 
 	_sounds[sound] = Sound{h, spatial, angle, volume, loops, subtitles};
+}
+
+void PhoenixVREngine::playRandomSound(const Common::String &sound, Audio::Mixer::SoundType type, uint8 volume, int probability, int loops) {
+	debug("register random sound %s %d %d, probability: %d", sound.c_str(), volume, loops, probability);
+	_randomSounds.push_back(RandomSound{
+		sound,
+		type,
+		volume,
+		probability,
+		loops});
 }
 
 void PhoenixVREngine::stopSound(const Common::String &sound) {
@@ -845,6 +885,7 @@ void PhoenixVREngine::stopAllSounds() {
 			kv._value.subtitles->clearSubtitle();
 	}
 	_sounds.clear();
+	_randomSounds.clear();
 }
 
 Common::Path PhoenixVREngine::getSubtitlePath(const Common::String &path) const {
@@ -920,7 +961,6 @@ void PhoenixVREngine::playMovie(const Common::String &movie) {
 		return;
 	}
 
-	_mixer->pauseAll(true);
 	_system->lockMouse(false);
 	dec->start();
 
@@ -944,6 +984,7 @@ void PhoenixVREngine::playMovie(const Common::String &movie) {
 			}
 
 			default:
+				processGenericEvents(event);
 				break;
 			}
 		}
@@ -969,7 +1010,6 @@ void PhoenixVREngine::playMovie(const Common::String &movie) {
 	if (subtitles)
 		g_system->hideOverlay();
 	_system->lockMouse(_vr.isVR());
-	_mixer->pauseAll(false);
 }
 
 void PhoenixVREngine::playAnimation(const Common::String &name, const Common::String &var, int varValue, float speed) {
@@ -985,13 +1025,60 @@ void PhoenixVREngine::resetLockKey() {
 	_prevWarp = -1; // original game does only this o_O
 }
 
+const Graphics::Surface *PhoenixVREngine::findArchiveImage(const Common::String &image) const {
+	const Graphics::Surface *surface = _arn ? _arn->get(image) : nullptr;
+	if (!surface && !image.contains('.'))
+		surface = _arn ? _arn->get(image + ".bmp") : nullptr;
+	return surface;
+}
+
+void PhoenixVREngine::drawArchiveImage(const Common::String &image, int x, int y) {
+	const Graphics::Surface *surface = findArchiveImage(image);
+	if (!surface) {
+		warning("can't find archive image %s", image.c_str());
+		return;
+	}
+
+	_screen->simpleBlitFrom(*surface, Common::Point(x, y));
+
+	Common::Point pos(x, y);
+	for (ArchiveImage &archiveImage : _archiveImages) {
+		if (archiveImage.pos == pos) {
+			archiveImage.image = image;
+			return;
+		}
+	}
+
+	_archiveImages.push_back({image, pos});
+}
+
+void PhoenixVREngine::drawArchiveText(int textId, const Common::Rect &dstRect, int size, bool bold, uint16 color) {
+	for (TextState &archiveText : _archiveTexts) {
+		if (archiveText.rect == dstRect) {
+			archiveText = {textId, dstRect, size, bold, color};
+			paintText(archiveText);
+			return;
+		}
+	}
+
+	_archiveTexts.push_back({textId, dstRect, size, bold, color});
+	paintText(_archiveTexts.back());
+}
+
+void PhoenixVREngine::clearArchiveText(const Common::Rect &dstRect) {
+	for (uint i = 0; i < _archiveTexts.size(); ++i) {
+		if (_archiveTexts[i].rect == dstRect) {
+			_archiveTexts.remove_at(i);
+			return;
+		}
+	}
+}
+
 void PhoenixVREngine::showImageOverlay(const Common::String &image, int x, int y) {
 	debug("AfficheImage %s %d %d", image.c_str(), x, y);
 	_imageOverlay.reset();
 
-	const Graphics::Surface *surface = _arn ? _arn->get(image) : nullptr;
-	if (!surface && !image.contains('.'))
-		surface = _arn ? _arn->get(image + ".bmp") : nullptr;
+	const Graphics::Surface *surface = findArchiveImage(image);
 	if (!surface) {
 		warning("can't find image overlay %s", image.c_str());
 		return;
@@ -1158,7 +1245,7 @@ void PhoenixVREngine::tickTimer(float dt) {
 }
 
 void PhoenixVREngine::renderTimer() {
-	if (_timerFlags == 0 || !_showTimer || !_arn)
+	if ((_timerFlags & 4) == 0 || !_showTimer || !_arn)
 		return;
 	auto timerBg = _arn->get("cadre.bmp");
 	auto timerFg = _arn->get("cadreB.bmp");
@@ -1168,7 +1255,7 @@ void PhoenixVREngine::renderTimer() {
 	// Necronomicon has timer in scripts, but does not contain bitmaps for timers.
 	Common::Rect bgRect{320, 16, 632, 44};
 	Common::Rect fgRect{333, 23, 619, 38};
-	if (gameIdMatches("dracula2")) {
+	if (gameIdMatches("dracula2") || gameIdMatches("messenger")) {
 		bgRect = Common::Rect(165, 15, 474, 48);
 		fgRect = Common::Rect(177, 15, 461, 48);
 	}
@@ -1185,30 +1272,53 @@ void PhoenixVREngine::renderTimer() {
 
 void PhoenixVREngine::renderVR(float dt) {
 	_vr.render(_screen, _angleX.angle(), _angleY.angle(), _fov, dt, _showRegions ? _regSet.get() : nullptr);
-	if (_textId >= 0 && _textes.contains(_textId)) {
-		const Graphics::Font *font = getFont(_textSize, _textBold);
-		if (font) {
-			Common::Array<Common::U32String> lines;
-			font->wordWrapText(_textes.getVal(_textId), _textRect.width(), lines, Graphics::kWordWrapDefault);
-
-			const int fontH = font->getFontHeight();
-			int textW = 0;
-			for (const Common::U32String &line : lines)
-				textW = MAX(textW, font->getStringWidth(line));
-
-			byte r, g, b;
-			_rgb565.colorToRGB(_textColor, r, g, b);
-			const uint32 textColor = _screen->format.RGBToColor(r, g, b);
-			const int16 textX = _textRect.left + (_textRect.width() - textW) / 2;
-			const int16 textY = _textRect.top + (_textRect.height() - fontH * lines.size()) / 2;
-			for (uint i = 0; i < lines.size(); ++i) {
-				const int16 lineX = textX + (textW - font->getStringWidth(lines[i])) / 2;
-				font->drawString(_screen, lines[i], lineX, textY + i * fontH, _textRect.right - lineX, textColor, Graphics::kTextAlignLeft);
-			}
-		}
-	}
+	paintText(_rolloverText);
+	renderArchiveImages();
+	renderArchiveTexts();
 	renderImageOverlay();
 	renderTimer();
+}
+
+void PhoenixVREngine::renderArchiveImages() {
+	for (const ArchiveImage &archiveImage : _archiveImages) {
+		const Graphics::Surface *surface = findArchiveImage(archiveImage.image);
+		if (!surface)
+			continue;
+
+		_screen->simpleBlitFrom(*surface, archiveImage.pos);
+	}
+}
+
+void PhoenixVREngine::renderArchiveTexts() {
+	for (const TextState &archiveText : _archiveTexts)
+		paintText(archiveText);
+}
+
+void PhoenixVREngine::paintText(const TextState &textState) {
+	auto *font = getFont(textState.size, textState.bold);
+	if (!font || !_textes.contains(textState.textId))
+		return;
+
+	Common::Array<Common::U32String> lines;
+	font->wordWrapText(_textes.getVal(textState.textId), textState.rect.width(), lines, Graphics::kWordWrapDefault);
+	if (lines.empty())
+		return;
+
+	int fontH = font->getFontHeight();
+	int textW = 0;
+	for (uint i = 0; i < lines.size(); ++i) {
+		textW = MAX(textW, font->getStringWidth(lines[i]));
+	}
+
+	byte r, g, b;
+	_rgb565.colorToRGB(textState.color, r, g, b);
+	uint32 textColor = _screen->format.RGBToColor(r, g, b);
+	int16 dstX = textState.rect.left + (textState.rect.width() - textW) / 2;
+	int16 dstY = textState.rect.top + (textState.rect.height() - fontH * lines.size()) / 2;
+	for (uint i = 0; i < lines.size(); ++i) {
+		int16 lineX = dstX + (textW - font->getStringWidth(lines[i])) / 2;
+		font->drawString(_screen, lines[i], lineX, dstY + i * fontH, textState.rect.right - lineX, textColor, Graphics::kTextAlignLeft);
+	}
 }
 
 void PhoenixVREngine::renderImageOverlay() {
@@ -1218,23 +1328,12 @@ void PhoenixVREngine::renderImageOverlay() {
 
 void PhoenixVREngine::saveVariables() {
 	debug("SaveVariable() - saving variable state");
-	_variableSnapshot.resize(_variableOrder.size());
-	for (uint i = 0, n = _variableOrder.size(); i != n; ++i) {
-		_variableSnapshot[i] = _variables.getVal(_variableOrder[i]);
-	}
+	_variables.save();
 }
 
 void PhoenixVREngine::loadVariables() {
 	debug("LoadVariable() - loading variable state");
-	if (_variableSnapshot.empty()) {
-		debug("skipping, no snapshot");
-		return;
-	}
-	assert(_variableSnapshot.size() == _variableOrder.size());
-	for (uint i = 0, n = _variableOrder.size(); i != n; ++i) {
-		_variables.setVal(_variableOrder[i], _variableSnapshot[i]);
-	}
-	_variableSnapshot.clear();
+	_variables.load();
 }
 
 const Graphics::Font *PhoenixVREngine::getFont(int size, bool bold) const {
@@ -1302,17 +1401,17 @@ void PhoenixVREngine::rollover(int textId, RolloverType type) {
 
 	if (!_textes.contains(textId)) {
 		debug("text cleared");
-		_textId = -1;
+		_rolloverText = TextState();
 		return;
 	}
 	auto &text = _textes.getVal(textId);
 	debug("rollover %s, %s font size: %d, bold: %d, color: %02x", dstRect.toString().c_str(), text.encode(Common::kUtf8).c_str(), size, bold, color);
 
-	_textId = textId;
-	_textRect = dstRect;
-	_textSize = size;
-	_textBold = bold;
-	_textColor = color;
+	_rolloverText = TextState(textId, dstRect, size, bold, color);
+}
+
+void PhoenixVREngine::clearText() {
+	_rolloverText = TextState();
 }
 
 void PhoenixVREngine::tick(float dt) {
@@ -1352,17 +1451,31 @@ void PhoenixVREngine::tick(float dt) {
 			_sounds.erase(it);
 		}
 	}
+	if (!_randomSounds.empty()) {
+		for (auto &sound : _randomSounds) {
+			uint32 rnd = getRandomNumber(UINT_MAX);
+			rnd /= (((0x3C0000 * sound.probability) >> 8) + 0x40000);
+			uint32 lastFrameMs = dt * 1000u;
+			if (rnd < lastFrameMs) {
+				debug("random sound %s triggered: rnd: %d -> %d < %u", sound.sound.c_str(), sound.probability, rnd, lastFrameMs);
+				playSound(sound.sound, sound.type, sound.volume, sound.loops);
+			}
+		}
+	}
 
 	if (!_nextScript.empty()) {
 		loadNextScript();
 		goToWarp(_script->getInitScript()->vrFile);
 	}
-	if (_nextWarp >= 0) {
-		_textId = -1;
+	while (_nextWarp >= 0) {
+		_rolloverText = TextState();
+		_archiveImages.clear();
+		_archiveTexts.clear();
 		_warpIdx = _nextWarp;
 		_warp = _script->getWarp(_nextWarp);
 		debug("warp %d -> %s %s", _nextWarp, _warp->vrFile.c_str(), _warp->testFile.c_str());
 		_nextWarp = -1;
+		_randomSounds.clear();
 
 		{
 			Common::String origName;
@@ -1397,7 +1510,6 @@ void PhoenixVREngine::tick(float dt) {
 		else
 			warning("no default script!");
 		_restarted = false;
-		return;
 	}
 
 	if (_nextTest >= 0) {
@@ -1406,18 +1518,24 @@ void PhoenixVREngine::tick(float dt) {
 		executeTest(nextTest);
 	}
 
-	renderVR(dt);
+	// Render VR only if we're not switching scripts or warping anywhere.
+	if (_nextWarp < 0 && _nextScript.empty())
+		renderVR(dt);
 
 	Graphics::ManagedSurface *cursor = nullptr;
 	auto &cursors = _cursors[_warpIdx];
 	bool anyMatched = false;
-	for (int i = 0, n = cursors.size(); i != n; ++i) {
+	int messengerInventoryHover = -1;
+	int regionCount = _regSet ? _regSet->size() : 0;
+	for (int i = 0, n = MAX<int>(regionCount, cursors.size()); i != n; ++i) {
 		auto *region = getRegion(i);
 		if (!region)
 			continue;
 
 		if (_vr.isVR() ? region->contains3D(currentVRPos()) : region->contains2D(_mousePos.x, _mousePos.y)) {
 			anyMatched = true;
+			if (gameIdMatches("messenger") && _warp && _warp->vrFile.equalsIgnoreCase("portef.vr") && i >= 0 && i < 12)
+				messengerInventoryHover = i;
 
 			auto test = _warp->getTest(i);
 			if (test && test->hover == 1 && _hoverIndex < 0) {
@@ -1426,17 +1544,42 @@ void PhoenixVREngine::tick(float dt) {
 				executeTest(i);
 			}
 
-			auto &name = cursors[i];
-			if (!cursor) {
+			if (!cursor && i < static_cast<int>(cursors.size())) {
+				auto &name = cursors[i];
 				cursor = loadCursor(name);
 			}
 		} else if (i == _hoverIndex) {
 			debug("leaving hover region");
-			auto leave = _warp->getTest(i + 1);
+			auto leave = _warp->getTest(i - 1);
+			if (!leave || leave->hover != 2)
+				leave = _warp->getTest(i + 1);
 			if (leave && leave->hover == 2) {
-				executeTest(i + 1);
+				executeTest(leave->idx);
 			}
 			_hoverIndex = -1;
+		}
+	}
+
+	if (messengerInventoryHover != _messengerInventoryHover) {
+		_messengerInventoryHover = messengerInventoryHover;
+		if (gameIdMatches("messenger") && _warp && _warp->vrFile.equalsIgnoreCase("portef.vr")) {
+			const Common::Rect textRect(62, 402, 354, 466);
+			drawArchiveImage("EffaceText.bmp", textRect.left, textRect.top);
+			clearArchiveText(textRect);
+
+			int textId = 0;
+			if (_messengerInventoryHover >= 0)
+				textId = getVariable(Common::String::format("Pos%d", _messengerInventoryHover + 1));
+			else {
+				int selection = getVariable("Selection");
+				if (selection > 100)
+					selection -= 100;
+				if (selection >= 1 && selection <= 12)
+					textId = getVariable(Common::String::format("Pos%d", selection));
+			}
+
+			if (textId != 0)
+				drawArchiveText(textId, textRect, 14, true, 1987);
 		}
 	}
 
@@ -1467,14 +1610,39 @@ Common::Error PhoenixVREngine::run() {
 	if (_pixelFormat.isCLUT8())
 		return Common::kUnsupportedColorMode;
 
+	const Common::FSNode gameDataDir(ConfMan.getPath("path"));
+	SearchMan.addDirectory(gameDataDir, 0, 4);
+
 	_arn.reset(ARN::create());
 #ifdef USE_FREETYPE2
-	static const Common::String regular("NotoSans-Regular.ttf");
-	static const Common::String bold("NotoSans-Bold.ttf");
+	const Common::Language language = _gameDescription->language;
+	const bool isJapanese = language == Common::JA_JPN;
+	const bool isTraditionalChinese = language == Common::ZH_TWN;
+	static const Common::String defaultRegular("NotoSans-Regular.ttf");
+	static const Common::String defaultBold("NotoSans-Bold.ttf");
+	static const Common::String japaneseRegular("NotoSansJP-Regular.otf");
+	static const Common::String japaneseBold("NotoSansJP-Regular.otf");
+	static const Common::String traditionalChineseRegular("NotoSansTC-Regular.otf");
+	static const Common::String traditionalChineseBold("NotoSansTC-Bold.otf");
+	const Common::String *regular = &defaultRegular;
+	const Common::String *bold = &defaultBold;
+
+	if (isJapanese) {
+		regular = &japaneseRegular;
+		bold = &japaneseBold;
+	} else if (isTraditionalChinese) {
+		regular = &traditionalChineseRegular;
+		bold = &traditionalChineseBold;
+	}
+
 	const int fontSizes[] = {8, 10, 12, 14, 16, 18};
 	for (uint i = 0; i < ARRAYSIZE(fontSizes); ++i) {
-		_regularFonts[i].reset(Graphics::loadTTFFontFromArchive(regular, fontSizes[i]));
-		_boldFonts[i].reset(Graphics::loadTTFFontFromArchive(bold, fontSizes[i]));
+		_regularFonts[i].reset(Graphics::loadTTFFontFromArchive(*regular, fontSizes[i]));
+		_boldFonts[i].reset(Graphics::loadTTFFontFromArchive(*bold, fontSizes[i]));
+		if (isJapanese && !_regularFonts[i])
+			_regularFonts[i].reset(Graphics::loadTTFFontFromArchive("VL-Gothic-Regular.ttf", fontSizes[i], Graphics::kTTFSizeModeCell));
+		if (isJapanese && !_boldFonts[i])
+			_boldFonts[i].reset(Graphics::loadTTFFontFromArchive("VL-Gothic-Regular.ttf", fontSizes[i], Graphics::kTTFSizeModeCell));
 	}
 #endif
 
@@ -1483,25 +1651,17 @@ Common::Error PhoenixVREngine::run() {
 
 	_screen = new Graphics::Screen();
 	_screenCenter = _screen->getBounds().center();
+
+	// Set the engine's debugger console before declaring script variables.
+	setDebugger(new Console());
+
+	_variables.loadVariableTxt();
 	{
-		Common::File vars;
-		if (vars.open(Common::Path("variable.txt"))) {
-			while (!vars.eos()) {
-				auto var = vars.readLine();
-				if (var == "*")
-					break;
-				declareVariable(var);
-				_variableOrder.push_back(Common::move(var));
-			}
-		} else
-			debug("no variables.txt");
-	}
-	{
-		Common::File textes;
-		if (textes.open(Common::Path("textes.txt"))) {
+		Common::ScopedPtr<Common::SeekableReadStream> textes(open("textes.txt"));
+		if (textes) {
 			Common::CodePage textCodePage = getTextCodePage(_gameDescription->language);
-			while (!textes.eos()) {
-				auto text = textes.readLine();
+			while (!textes->eos()) {
+				auto text = textes->readLine();
 				if (text.empty() || text[0] != '*')
 					continue;
 				uint pos = 1;
@@ -1525,9 +1685,6 @@ Common::Error PhoenixVREngine::run() {
 		setNextScript("first.lst");
 	else
 		setNextScript("script.lst");
-
-	// Set the engine's debugger console
-	setDebugger(new Console());
 
 	// If a savegame was selected from the launcher, load it
 	int saveSlot = ConfMan.getInt("save_slot");
@@ -1600,8 +1757,12 @@ Common::Error PhoenixVREngine::run() {
 				}
 			} break;
 			case Common::EVENT_RBUTTONUP: {
-				if (_prevWarp != -1)
+				if (!_hasFocus)
 					break;
+				if (_prevWarp != -1) {
+					returnToWarp();
+					break;
+				}
 				debug("right click");
 				auto &rclick = _lockKey[12];
 				if (!rclick.empty())
@@ -1625,7 +1786,8 @@ Common::Error PhoenixVREngine::run() {
 				if (_warpIdx < 0)
 					break;
 				auto &cursors = _cursors[_warpIdx];
-				for (uint i = 0, n = cursors.size(); i != n; ++i) {
+				int regionCount = _regSet ? _regSet->size() : 0;
+				for (uint i = 0, n = MAX<int>(regionCount, cursors.size()); i != n; ++i) {
 					auto *region = getRegion(i);
 					if (!region)
 						continue;
@@ -1645,13 +1807,8 @@ Common::Error PhoenixVREngine::run() {
 					}
 				}
 			} break;
-			case Common::EVENT_FOCUS_GAINED:
-				_hasFocus = true;
-				break;
-			case Common::EVENT_FOCUS_LOST:
-				_hasFocus = false;
-				break;
 			default:
+				processGenericEvents(event);
 				break;
 			}
 		}
@@ -1669,6 +1826,30 @@ Common::Error PhoenixVREngine::run() {
 	}
 
 	return Common::kNoError;
+}
+
+void PhoenixVREngine::processGenericEvents(const Common::Event &event) {
+	switch (event.type) {
+	case Common::EVENT_FOCUS_GAINED:
+		_hasFocus = true;
+		_mouseRel = {};
+		break;
+	case Common::EVENT_FOCUS_LOST:
+		_hasFocus = false;
+		break;
+	default:
+		break;
+	}
+}
+
+void PhoenixVREngine::pauseEngineIntern(bool pause) {
+	// this is called when main menu appears on the screen
+	Engine::pauseEngineIntern(pause);
+	if (pause) {
+		_system->lockMouse(false);
+	} else {
+		_system->lockMouse(_vr.isVR());
+	}
 }
 
 bool PhoenixVREngine::testSaveSlot(int idx) const {
@@ -1924,8 +2105,7 @@ Common::Error PhoenixVREngine::saveGameStream(Common::WriteStream *slot, bool is
 	state.dibHeader.assign(dib.getData(), dib.getData() + dib.size());
 
 	state.thumbnail.assign(thumbnailPixels, thumbnailPixels + thumbnailSize);
-	state.state = Common::move(_capturedState);
-	_capturedState.clear();
+	state.state = _capturedState;
 
 	state.save(*slot);
 	return Common::kNoError;
@@ -2053,6 +2233,16 @@ void PhoenixVREngine::setGlobalVolume(int volume) {
 	ConfMan.setInt("music_volume", volume);
 	ConfMan.setInt("sfx_volume", volume);
 	syncSoundSettings();
+}
+
+void PhoenixVREngine::setGlobalPan(int pan) {
+	_globalPan = CLIP(pan, 0, 255);
+	int8 balance = panToBalance(_globalPan);
+
+	for (auto &kv : _sounds) {
+		if (!kv._value.spatial && _mixer->isSoundHandleActive(kv._value.handle))
+			_mixer->setChannelBalance(kv._value.handle, balance);
+	}
 }
 
 void PhoenixVREngine::syncSoundSettings() {
