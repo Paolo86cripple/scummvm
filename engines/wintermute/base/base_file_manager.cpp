@@ -256,6 +256,10 @@ bool BaseFileManager::registerPackages() {
 		if (!it->getChildren(files, Common::FSNode::kListFilesOnly)) {
 			warning("getChildren() failed for path: %s", it->getName().c_str());
 		}
+
+		// Sort packages in alphabetical order
+		Common::sort(files.begin(), files.end());
+
 		for (Common::FSList::const_iterator fileIt = files.begin(); fileIt != files.end(); ++fileIt) {
 			if (!fileIt)
 				continue;
@@ -274,10 +278,10 @@ bool BaseFileManager::registerPackages() {
 				searchSignature = true;
 			}
 
-			// W/A: skip broken package in 'Project Joe' and 'Mystic Triddle'
+			// W/A: skip package in 'Project Joe' and 'Mystic Triddle'
 			if (fileName == "master.dcp" &&
-			    (BaseEngine::instance().getGameId() == "projectjoe" ||
-			     BaseEngine::instance().getGameId() == "mystictriddle")) {
+				(BaseEngine::instance().getGameId() == "projectjoe" ||
+				 BaseEngine::instance().getGameId() == "mystictriddle")) {
 				continue;
 			}
 
