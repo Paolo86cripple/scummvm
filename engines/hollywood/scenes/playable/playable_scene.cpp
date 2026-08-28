@@ -146,9 +146,10 @@ PlayableScene::PlayableScene(HollywoodEngine *vm, const PlayableSceneConfig &con
 		_routeSteps(_pathController.routeSteps),
 		_actorPathFrames(_pathController.frames),
 		_actorPathStepDeltas(_pathController.stepDeltas),
+		_panelArt(vm->getLanguage()),
 		_random(Common::String::format("scene%u", config.sceneId)),
 		_animationPlayer(*this),
-		_speechController(),
+		_speechController(vm->getLanguage()),
 		_speech(_speechController.player),
 		_speechOverlay(_speechController.secondaryOverlay),
 		_primarySpeechOverlay(_speechController.primaryOverlay),
@@ -463,6 +464,14 @@ bool PlayableScene::isAlternatePaletteResourceActive() const {
 	return false;
 }
 
+int PlayableScene::replacementFillRunsResourceChunkIndex() const {
+	return -1;
+}
+
+int PlayableScene::replacementPaletteMaskResourceChunkIndex() const {
+	return -1;
+}
+
 bool PlayableScene::shouldLoadInventoryActionTables() const {
 	return _config.loadInventoryActionTables;
 }
@@ -709,6 +718,21 @@ bool PlayableScene::load() {
 	}
 	if (!loadVariableChunk(4, _metadata)) {
 		warning("%s load failed: %s chunk 4 metadata", sceneDebugName(), archiveName);
+		return false;
+	}
+
+	const int replacementFillRunsChunkIndex = replacementFillRunsResourceChunkIndex();
+	if (replacementFillRunsChunkIndex >= 0 &&
+			!loadVariableChunk((uint)replacementFillRunsChunkIndex, _fillRuns)) {
+		warning("%s load failed: %s replacement fill runs chunk %d", sceneDebugName(),
+			archiveName, replacementFillRunsChunkIndex);
+		return false;
+	}
+	const int replacementPaletteMaskChunkIndex = replacementPaletteMaskResourceChunkIndex();
+	if (replacementPaletteMaskChunkIndex >= 0 &&
+			!loadVariableChunk((uint)replacementPaletteMaskChunkIndex, _paletteMask)) {
+		warning("%s load failed: %s replacement palette mask chunk %d", sceneDebugName(),
+			archiveName, replacementPaletteMaskChunkIndex);
 		return false;
 	}
 
@@ -1926,13 +1950,13 @@ bool PlayableScene::playResidentSoundEffect(byte soundEffectId, byte volumePerce
 bool PlayableScene::playActiveActorFootstep() {
 	if (_activeActorWorldX < 0 || _activeActorWorldX >= HollywoodEngine::kSceneBufferWidth ||
 			_activeActorWorldY < 0 || _activeActorWorldY >= HollywoodEngine::kSceneBufferHeight ||
-			_paletteMaskOriginal.size() < kSceneColorToFootstepSoundMap + kScenePaletteMapPageSize)
+			_paletteMask.size() < kSceneColorToFootstepSoundMap + kScenePaletteMapPageSize)
 		return false;
 
 	const uint framebufferOffset = (uint)_activeActorWorldY * HollywoodEngine::kSceneBufferWidth +
 		(uint)_activeActorWorldX;
 	const byte floorColor = savedFramebufferPixelAt(framebufferOffset);
-	const byte soundEffectId = _paletteMaskOriginal[kSceneColorToFootstepSoundMap + floorColor];
+	const byte soundEffectId = _paletteMask[kSceneColorToFootstepSoundMap + floorColor];
 	return playResidentSoundEffect(soundEffectId);
 }
 

@@ -24,6 +24,7 @@
 #include "graphics/surface.h"
 
 #include "hollywood/font.h"
+#include "hollywood/game_strings.h"
 #include "hollywood/graphics.h"
 #include "hollywood/hollywood.h"
 #include "hollywood/resource.h"
@@ -43,23 +44,12 @@ const byte kBottomCaptionColorIndex = 0xfc;
 const uint kBottomCaptionPaletteOffset = kBottomCaptionColorIndex * 3;
 const int kBottomCaptionTopY = 0x1ca;
 const uint32 kHoverCaptionRefreshMillis = 100;
-const char *const kInventoryActionCaptions[kInventoryActionCaptionCount] = {
-	" a",
-	"Ir a",
-	"Hablar con",
-	"Coger",
-	"Mirar",
-	"Usar",
-	"Abrir",
-	"Cerrar",
-	"Dar"
-};
 
-Common::String inventoryActionCaption(byte stripIndex) {
+Common::String inventoryActionCaption(Common::Language language, byte stripIndex) {
 	if (stripIndex >= kInventoryActionCaptionCount)
 		return Common::String();
 
-	return Common::String(kInventoryActionCaptions[stripIndex]);
+	return Common::String(getGameStrings(language).actionCaptions[stripIndex]);
 }
 
 bool SceneHotspotTable::load(const Common::Array<byte> &paletteMapBlock, const Common::Array<byte> &metadata,
@@ -211,6 +201,14 @@ void SceneHotspotTable::setActionTarget(byte itemId, const ScenePoint &interacti
 	_actionTargets[itemId].approachPoint = approachPoint;
 }
 
+void SceneHotspotTable::setActionInteraction(byte itemId, const ScenePoint &interactionPoint, byte facing) {
+	if (itemId >= _actionTargets.size())
+		return;
+
+	_actionTargets[itemId].interactionPoint = interactionPoint;
+	_actionTargets[itemId].facing = facing;
+}
+
 void SceneHotspotTable::setVerbActionHandlerByGlobalRecordIndex(uint globalRecordIndex, uint16 actionHandlerId) {
 	if (globalRecordIndex < _verbActionRecords.size())
 		_verbActionRecords[globalRecordIndex].actionHandlerId = actionHandlerId;
@@ -219,6 +217,19 @@ void SceneHotspotTable::setVerbActionHandlerByGlobalRecordIndex(uint globalRecor
 void SceneHotspotTable::setVerbMovementModeByGlobalRecordIndex(uint globalRecordIndex, uint16 movementMode) {
 	if (globalRecordIndex < _verbActionRecords.size())
 		_verbActionRecords[globalRecordIndex].movementMode = movementMode;
+}
+
+void SceneHotspotTable::setRelationMovementMode(byte inventoryItemId, byte sceneItemId,
+		byte relationMode, uint16 movementMode) {
+	Common::Array<SceneVerbActionRecord> *records = nullptr;
+	if (relationMode == 1)
+		records = &_relationMode1ActionRecords;
+	else if (relationMode == 2)
+		records = &_relationMode2ActionRecords;
+
+	const uint recordIndex = (uint)inventoryItemId * HollywoodEngine::kSceneItemCount + sceneItemId;
+	if (records != nullptr && recordIndex < records->size())
+		(*records)[recordIndex].movementMode = movementMode;
 }
 
 Common::String SceneHotspotTable::itemName(byte itemId) const {
@@ -234,7 +245,8 @@ Common::String SceneHotspotTable::itemName(byte itemId) const {
 	return Common::String((const char *)row, length);
 }
 
-SceneHoverCaption::SceneHoverCaption() :
+SceneHoverCaption::SceneHoverCaption(Common::Language language) :
+		_language(language),
 		_timer(0),
 		_currentStrip(1),
 		_relationMode(0),
@@ -379,7 +391,8 @@ Common::String SceneHoverCaption::buildCaption(const SceneHotspotTable &hotspots
 	Common::String caption = actionCaption(descriptor.verbTextIndex);
 	if (descriptor.relationTextIndex != 0) {
 		caption += _primaryItemName;
-		caption += descriptor.relationTextIndex == 2 ? " a " : " con ";
+		const HollywoodGameStrings &strings = getGameStrings(_language);
+		caption += descriptor.relationTextIndex == 2 ? strings.relationTo : strings.relationWith;
 		if (descriptor.secondItemId != 0 && descriptor.secondItemSourceKind == kSceneItemSourceKind)
 			caption += hotspots.itemName(descriptor.secondItemId);
 		return caption;
@@ -392,7 +405,7 @@ Common::String SceneHoverCaption::buildCaption(const SceneHotspotTable &hotspots
 }
 
 Common::String SceneHoverCaption::actionCaption(byte stripIndex) const {
-	return inventoryActionCaption(stripIndex);
+	return inventoryActionCaption(_language, stripIndex);
 }
 
 } // End of namespace Hollywood

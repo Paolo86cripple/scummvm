@@ -23,6 +23,7 @@
 #define HOLLYWOOD_GAMEPLAY_HOTSPOTS_H
 
 #include "common/array.h"
+#include "common/language.h"
 #include "common/str.h"
 #include "common/types.h"
 
@@ -36,7 +37,7 @@ namespace Hollywood {
 
 class HollywoodFont;
 
-Common::String inventoryActionCaption(byte stripIndex);
+Common::String inventoryActionCaption(Common::Language language, byte stripIndex);
 
 struct SceneVerbActionRecord {
 	uint16 actionHandlerId;
@@ -62,8 +63,10 @@ public:
 	SceneVerbActionRecord relationActionRecord(byte inventoryItemId, byte sceneItemId, byte relationMode) const;
 	SceneActionTarget actionTarget(byte itemId) const;
 	void setActionTarget(byte itemId, const ScenePoint &interactionPoint, const ScenePoint &approachPoint);
+	void setActionInteraction(byte itemId, const ScenePoint &interactionPoint, byte facing);
 	void setVerbActionHandlerByGlobalRecordIndex(uint globalRecordIndex, uint16 actionHandlerId);
 	void setVerbMovementModeByGlobalRecordIndex(uint globalRecordIndex, uint16 movementMode);
+	void setRelationMovementMode(byte inventoryItemId, byte sceneItemId, byte relationMode, uint16 movementMode);
 	Common::String itemName(byte itemId) const;
 
 private:
@@ -78,7 +81,7 @@ private:
 
 class SceneHoverCaption {
 public:
-	SceneHoverCaption();
+	SceneHoverCaption(Common::Language language);
 
 	void reset();
 	void setCurrentStrip(byte stripIndex);
@@ -116,6 +119,7 @@ private:
 	Descriptor _descriptor;
 	Descriptor _lastDescriptor;
 	Common::String _captionText;
+	Common::Language _language;
 	uint32 _timer;
 	byte _currentStrip;
 	byte _relationMode;
