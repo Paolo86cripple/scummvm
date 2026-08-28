@@ -37,20 +37,47 @@ private:
 	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
+	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	void runCustomEntrySequence() override;
+	bool shouldRunExitSideEffectsAfterLoop() const override;
+	void runExitSideEffectsAfterLoop() override;
 	bool prepareCustomGameplayLoop() override;
 	bool advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
+	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
+	byte ambientSoundCueVolume(byte cueId, byte defaultVolumePercent) const override;
+	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
+	byte primarySpeechAnimationFrameCount(byte animationGroup) const override;
+	uint32 primarySpeechAnimationFrameMillis(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
 
 	void resetAnimationLayers();
 	void advanceLayer(TimedAnimationChannel &channel, uint layerIndex, uint frameCount, uint32 delta);
+	void advanceDialogueIdleLayer(TimedAnimationChannel &channel, uint layerIndex,
+		byte baseFrame, byte accentFrame, uint32 delta);
+	void advanceRonDialogueIdle(uint32 delta);
+	void advanceConcurrentPrimarySpeech(uint32 delta);
+	void advanceScoutTransitions(uint32 delta);
+	void startScoutStopTransition();
+	void startScoutResumeTransition();
+	void waitForScoutTransition();
+	void finishScoutStopTransition();
+	void finishScoutResumeTransition();
+	void showRonConversationLayer(uint chunkIndex, byte baseFrame);
+	void clearActorReplacementLayers();
+	void finishScoutConversation();
+	void runRonPoseTransition(bool faceGladys);
+	void runDeckRefusalSequence();
+	void runDeckPickupSequence();
+	void runUnderpantsPresentationAnimation();
+	void runUnderpantsHandoffAnimation();
+	void beginConversationMusicSuppression();
 	void runMineCartEntryAnimation();
 	void runExitToMineSwitches();
-	void runDeckOfCardsAction();
+	void runDeckOfCardsAction(bool fromUnderpantsExchange = false);
 	void runVanessaConversation();
 	void runGladysConversation();
 	void runSpecialInventorySequence();
@@ -64,13 +91,33 @@ private:
 	void beginRonDialogueLine(uint16 rowIndex, byte frameIndex);
 	void beginVanessaSpeechLine(uint16 rowIndex, byte frameIndex);
 	void beginGladysSpeechLine(uint16 rowIndex, byte frameIndex);
-	void copyStageSmallRow(byte destinationRow, byte sourceRow);
+	bool startConcurrentPrimarySpeechCue(uint16 textRecordId, uint16 voiceSampleId,
+		uint16 centerX, uint16 topY, byte red, byte green, byte blue, byte animationGroup);
+	bool startConcurrentPrimarySpeechLine(uint16 rowIndex, byte frameIndex,
+		uint16 centerX, uint16 topY, byte red, byte green, byte blue, byte animationGroup);
+	bool waitForConcurrentPrimarySpeech();
+	void finishConcurrentPrimarySpeech();
+	void runScoutSpeechLineDuringRonTurn(bool gladys, uint16 rowIndex, byte frameIndex);
+	void copyStageSmallRowLabel(byte destinationRow, byte sourceRow);
 	void clearSceneItemFromColorMap(byte itemId);
 
 	TimedAnimationChannel _chunk8Channel;
 	TimedAnimationChannel _chunk9Channel;
 	TimedAnimationChannel _chunk10Channel;
+	TimedAnimationChannel _ronDialogueIdleChannel;
 	TransientLayerCompositor _animationLayers;
+	ResourceSpriteLayer _actorReplacementLayer;
+	ResourceSpriteLayer _alternateVanessaLayer;
+	bool _scoutStopTransitionActive;
+	bool _scoutResumeTransitionActive;
+	bool _scoutTransitionCompletionPending;
+	bool _scoutsInDialoguePose;
+	bool _musicSuppressed;
+	bool _concurrentPrimarySpeechActive;
+	uint32 _concurrentPrimarySpeechElapsed;
+	uint32 _concurrentPrimarySpeechDuration;
+	byte _ronSpeechBaseFrame;
+	uint _ronConversationChunk;
 };
 
 } // End of namespace Hollywood
