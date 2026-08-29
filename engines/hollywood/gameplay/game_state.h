@@ -364,6 +364,9 @@ struct GameplayState {
 		scene5110WerewolfDialogueChoiceUnlocked = false;
 		scene5120TongsTaken = false;
 		scene5120CocktailState = 0;
+		scene5120CocktailRed = 0;
+		scene5120CocktailGreen = 0;
+		scene5120CocktailBlue = 0;
 		reviewedFrankensteinNote = false;
 		frankensteinNoteOverlayMode = 0;
 		hannoverCourtyardDialogueState = 0;
@@ -541,7 +544,7 @@ struct GameplayState {
 		inventoryItemResourcePageByOwnerAndItemId[0][0x6c] = 0x46;
 	}
 
-	void initializeRonInventoryItems() {
+	void initializeRonInventoryItems(bool includeDemoSuitcase = false) {
 		if (kInventoryOwnerCount == 0)
 			return;
 
@@ -557,8 +560,13 @@ struct GameplayState {
 		inventoryItemSlotByOwnerAndItemId[owner][0x6a] = 1;
 		inventoryItemSlotByOwnerAndItemId[owner][0x09] = 2;
 		inventoryItemSlotByOwnerAndItemId[owner][0x01] = 3;
-		inventoryItemCountByOwner[owner] = 3;
-		inventoryFirstVisibleSlotByOwner[owner] = firstVisibleInventorySlotForCount(3);
+		const byte itemCount = includeDemoSuitcase ? 4 : 3;
+		if (includeDemoSuitcase) {
+			inventorySlotItemIdByOwner[owner][4] = 0x19;
+			inventoryItemSlotByOwnerAndItemId[owner][0x19] = 4;
+		}
+		inventoryItemCountByOwner[owner] = itemCount;
+		inventoryFirstVisibleSlotByOwner[owner] = firstVisibleInventorySlotForCount(itemCount);
 		ronInventoryInitialized = true;
 		inventoryPanelDirty = true;
 	}
@@ -1123,6 +1131,9 @@ struct GameplayState {
 	bool scene5110WerewolfDialogueChoiceUnlocked;
 	bool scene5120TongsTaken;
 	byte scene5120CocktailState;
+	byte scene5120CocktailRed;
+	byte scene5120CocktailGreen;
+	byte scene5120CocktailBlue;
 	bool reviewedFrankensteinNote;
 	byte frankensteinNoteOverlayMode;
 	byte hannoverCourtyardDialogueState;
