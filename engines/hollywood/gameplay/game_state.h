@@ -42,6 +42,7 @@ struct GameplayState {
 		kInventoryFirstSlot = 1,
 		kInventoryLastSlot = kInventoryOwnerSlotStride - 1,
 		kInventoryVisibleSlotCount = 16,
+		kInvalidInventoryItemResourcePage = 0xff,
 		kTravelScreenSlotCount = 8,
 		kTravelScreenDisabledSlot = 0xff,
 		kFrankensteinPartRewardCount = 3,
@@ -74,7 +75,7 @@ struct GameplayState {
 			for (uint slot = 0; slot < kInventoryOwnerSlotStride; ++slot) {
 				inventorySlotItemIdByOwner[owner][slot] = 0;
 				inventoryItemSlotByOwnerAndItemId[owner][slot] = 0;
-				inventoryItemResourcePageByOwnerAndItemId[owner][slot] = 0;
+				inventoryItemResourcePageByOwnerAndItemId[owner][slot] = kInvalidInventoryItemResourcePage;
 			}
 		}
 		clearInventoryActionTables();
@@ -282,10 +283,13 @@ struct GameplayState {
 		scene4010DestinationUnlocked = false;
 		scene4020FallReactionLineSeen = false;
 		scene4020GateUnlocked = false;
+		scene4030TowerVisited = false;
 		scene4030InitialEntryLineSeen = false;
 		scene4030RopeTaken = false;
 		scene4030LooseBoneState = 0;
 		scene4030ImprovisedLeverInstalled = false;
+		scene4030IronMaidenOpen = true;
+		scene4030MechanismRemarkSeen = false;
 		scene4040EntryLineSeen = false;
 		scene4040CandilTaken = false;
 		scene4050EntryLineSeen = false;
@@ -300,7 +304,7 @@ struct GameplayState {
 		scene4070EntryLineSeen = false;
 		scene4070TrophyBaseOpened = false;
 		scene4070FrankiePartGranted = 0;
-		scene4070SlimmingTreatmentApplied = false;
+		scene4070DraculaDialogueIntroSeen = false;
 		scene4080GwendolynState = 1;
 		scene4080GwendolynStateTransition = 0;
 		scene4080CoffinShiftedState = 0;
@@ -313,7 +317,7 @@ struct GameplayState {
 		scene4090FinalCutsceneCompleted = 0;
 		scene4090FinalCutsceneDialogueSeen = false;
 		scene4100EntryLineSeen = false;
-		scene4110LetterTaken = false;
+		scene4110StrawTaken = false;
 		scene4110BridgeOpened = false;
 		seenScene5010EntryLine = false;
 		scene5010MineTransportState = 0;
@@ -433,7 +437,7 @@ struct GameplayState {
 			return;
 
 		for (uint itemId = 0; itemId < kInventoryOwnerSlotStride; ++itemId)
-			inventoryItemResourcePageByOwnerAndItemId[0][itemId] = 0;
+			inventoryItemResourcePageByOwnerAndItemId[0][itemId] = kInvalidInventoryItemResourcePage;
 
 		inventoryItemResourcePageByOwnerAndItemId[0][0x01] = 0x09;
 		inventoryItemResourcePageByOwnerAndItemId[0][0x02] = 0x5c;
@@ -468,6 +472,7 @@ struct GameplayState {
 		inventoryItemResourcePageByOwnerAndItemId[0][0x1f] = 0x33;
 		inventoryItemResourcePageByOwnerAndItemId[0][0x20] = 0x2e;
 		inventoryItemResourcePageByOwnerAndItemId[0][0x21] = 0x04;
+		inventoryItemResourcePageByOwnerAndItemId[0][0x22] = 0x00;
 		inventoryItemResourcePageByOwnerAndItemId[0][0x23] = 0x4c;
 		inventoryItemResourcePageByOwnerAndItemId[0][0x24] = 0x60;
 		inventoryItemResourcePageByOwnerAndItemId[0][0x25] = 0x15;
@@ -615,7 +620,7 @@ struct GameplayState {
 			return;
 
 		for (uint itemId = 0; itemId < kInventoryOwnerSlotStride; ++itemId)
-			inventoryItemResourcePageByOwnerAndItemId[1][itemId] = 0;
+			inventoryItemResourcePageByOwnerAndItemId[1][itemId] = kInvalidInventoryItemResourcePage;
 
 		inventoryItemResourcePageByOwnerAndItemId[1][0x01] = 0x6f;
 		inventoryItemResourcePageByOwnerAndItemId[1][0x02] = 0x7c;
@@ -727,7 +732,8 @@ struct GameplayState {
 
 		byte writeSlot = kInventoryFirstSlot;
 		for (byte itemId = kInventoryFirstSlot; itemId < kInventoryOwnerSlotStride; ++itemId) {
-			if (inventoryItemResourcePageByOwnerAndItemId[owner][itemId] == 0)
+			if (inventoryItemResourcePageByOwnerAndItemId[owner][itemId] ==
+					kInvalidInventoryItemResourcePage)
 				continue;
 
 			inventorySlotItemIdByOwner[owner][writeSlot] = itemId;
@@ -1050,10 +1056,13 @@ struct GameplayState {
 	bool scene4010DestinationUnlocked;
 	bool scene4020FallReactionLineSeen;
 	bool scene4020GateUnlocked;
+	bool scene4030TowerVisited;
 	bool scene4030InitialEntryLineSeen;
 	bool scene4030RopeTaken;
 	byte scene4030LooseBoneState;
 	bool scene4030ImprovisedLeverInstalled;
+	bool scene4030IronMaidenOpen;
+	bool scene4030MechanismRemarkSeen;
 	bool scene4040EntryLineSeen;
 	bool scene4040CandilTaken;
 	bool scene4050EntryLineSeen;
@@ -1068,7 +1077,7 @@ struct GameplayState {
 	bool scene4070EntryLineSeen;
 	bool scene4070TrophyBaseOpened;
 	byte scene4070FrankiePartGranted;
-	bool scene4070SlimmingTreatmentApplied;
+	bool scene4070DraculaDialogueIntroSeen;
 	byte scene4080GwendolynState;
 	byte scene4080GwendolynStateTransition;
 	byte scene4080CoffinShiftedState;
@@ -1081,7 +1090,7 @@ struct GameplayState {
 	byte scene4090FinalCutsceneCompleted;
 	bool scene4090FinalCutsceneDialogueSeen;
 	bool scene4100EntryLineSeen;
-	bool scene4110LetterTaken;
+	bool scene4110StrawTaken;
 	bool scene4110BridgeOpened;
 	bool seenScene5010EntryLine;
 	byte scene5010MineTransportState;

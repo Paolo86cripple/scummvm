@@ -54,6 +54,8 @@ Common::String inventoryActionCaption(Common::Language language, byte stripIndex
 
 bool SceneHotspotTable::load(const Common::Array<byte> &paletteMapBlock, const Common::Array<byte> &metadata,
 		const Common::Array<byte> &stageSmallRows) {
+	_fallbackRectHotspots.clear();
+
 	if (paletteMapBlock.size() < kSceneChunk3ColorToItemMapOffset + kSceneColorMapSize) {
 		warning("Scene palette map block is too short for hotspot color map");
 		return false;
@@ -132,7 +134,17 @@ byte SceneHotspotTable::resolveItemAt(const Graphics::Surface &savedFramebuffer,
 		return 0;
 
 	const byte color = *(const byte *)savedFramebuffer.getBasePtr(sceneX, sceneY);
-	return _colorToItemMap[color];
+	const byte mappedItem = _colorToItemMap[color];
+	if (mappedItem != 0)
+		return mappedItem;
+
+	for (uint i = _fallbackRectHotspots.size(); i > 0; --i) {
+		const FallbackRectHotspot &hotspot = _fallbackRectHotspots[i - 1];
+		if (hotspot.bounds.contains(sceneX, sceneY))
+			return hotspot.itemId;
+	}
+
+	return 0;
 }
 
 byte SceneHotspotTable::defaultStripForItem(byte itemId) const {
@@ -209,6 +221,16 @@ void SceneHotspotTable::setActionInteraction(byte itemId, const ScenePoint &inte
 	_actionTargets[itemId].facing = facing;
 }
 
+void SceneHotspotTable::addFallbackRectHotspot(byte itemId, const Common::Rect &bounds) {
+	if (itemId == 0 || bounds.isEmpty())
+		return;
+
+	FallbackRectHotspot hotspot;
+	hotspot.itemId = itemId;
+	hotspot.bounds = bounds;
+	_fallbackRectHotspots.push_back(hotspot);
+}
+
 void SceneHotspotTable::setVerbActionHandlerByGlobalRecordIndex(uint globalRecordIndex, uint16 actionHandlerId) {
 	if (globalRecordIndex < _verbActionRecords.size())
 		_verbActionRecords[globalRecordIndex].actionHandlerId = actionHandlerId;
@@ -217,6 +239,19 @@ void SceneHotspotTable::setVerbActionHandlerByGlobalRecordIndex(uint globalRecor
 void SceneHotspotTable::setVerbMovementModeByGlobalRecordIndex(uint globalRecordIndex, uint16 movementMode) {
 	if (globalRecordIndex < _verbActionRecords.size())
 		_verbActionRecords[globalRecordIndex].movementMode = movementMode;
+}
+
+void SceneHotspotTable::setRelationActionHandler(byte inventoryItemId, byte sceneItemId,
+		byte relationMode, uint16 actionHandlerId) {
+	Common::Array<SceneVerbActionRecord> *records = nullptr;
+	if (relationMode == 1)
+		records = &_relationMode1ActionRecords;
+	else if (relationMode == 2)
+		records = &_relationMode2ActionRecords;
+
+	const uint recordIndex = (uint)inventoryItemId * HollywoodEngine::kSceneItemCount + sceneItemId;
+	if (records != nullptr && recordIndex < records->size())
+		(*records)[recordIndex].actionHandlerId = actionHandlerId;
 }
 
 void SceneHotspotTable::setRelationMovementMode(byte inventoryItemId, byte sceneItemId,

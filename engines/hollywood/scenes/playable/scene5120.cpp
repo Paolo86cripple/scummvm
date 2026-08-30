@@ -34,7 +34,7 @@ const uint16 kScene5110ReturnState = 0x13f7;
 const uint16 kScene5100ReturnState = 0x13ed;
 const uint16 kScene5120ViewportXOffset = 0x00a0;
 const uint kScene5120ActorBankTableEntry = 0x0000;
-const uint kScene5120ActorPaletteTableEntry = 0x00b0;
+const uint kScene5120ActorPaletteTableEntry = 0x00cc;
 const uint32 kScene5120SpeechCueDescriptorTableOffset = 0x1135;
 const uint32 kScene5120ActionFrameMillis = 75;
 const uint32 kScene5120ElevatorFrameMillis = 60;
@@ -567,7 +567,7 @@ void Scene5120::runTongsPickup() {
 	applySceneStateToHotspotsAndPatches(1);
 	addInventoryItem(kScene5120TongsInventoryItem);
 	_soundBank0.playSample(1, 100);
-	beginSecondarySpeechLine(18, 1);
+	beginSharedInventorySpeechLine(0x14, randomSharedInventorySpeechFrame(4));
 }
 
 void Scene5120::runCocktailFillPillbox() {

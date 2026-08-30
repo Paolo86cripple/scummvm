@@ -54,7 +54,10 @@ const uint16 kTravelDestinationStateIds[] = { 1000, 2000, 3000, 4000, 5000, 6000
 const uint16 kTravelSameAreaStateIds[] = { 0x03f4, 0x07ee, 0x0bc2, 0x0faa, 0x1392, 0x177a, 0x1f4a };
 const byte kEgyptChapterId = 2;
 const uint16 kEgyptChapterEntryState = 2000;
+const byte kCastleChapterId = 4;
+const uint16 kCastleChapterEntryState = 4000;
 const uint16 kTravelInterludeState = 9140;
+const uint32 kTravelUnlockTransitionMillis = 5000;
 const byte kTravelScreenNormalRamp[] = {
 	0x00, 0x00, 0x00, 0x05, 0x05, 0x05, 0x0d, 0x0d, 0x0d,
 	0x15, 0x15, 0x15, 0x1e, 0x1e, 0x1e, 0x28, 0x28, 0x28,
@@ -117,6 +120,44 @@ bool TravelScreen::showViewer() {
 	return true;
 }
 
+bool TravelScreen::showUnlockTransition(byte slotIndex) {
+	if (!load(false) || !isActiveSlot(slotIndex))
+		return false;
+
+	presentBlack();
+	applySlotPalette(slotIndex, true);
+	present();
+
+	const uint32 startMillis = g_system->getMillis();
+	while (!Engine::shouldQuit() && !_vm->isSceneRestartRequested() &&
+			g_system->getMillis() - startMillis < kTravelUnlockTransitionMillis) {
+		Common::Event event;
+		while (g_system->getEventManager()->pollEvent(event)) {
+			switch (event.type) {
+			case Common::EVENT_QUIT:
+			case Common::EVENT_RETURN_TO_LAUNCHER:
+				Engine::quitGame();
+				break;
+			case Common::EVENT_MAINMENU:
+				_vm->openMainMenuDialog();
+				if (_vm->isSceneRestartRequested())
+					return true;
+				_displayPalette.markAllDirty();
+				present();
+				break;
+			default:
+				break;
+			}
+		}
+
+		if (!Engine::shouldQuit() && !_vm->isSceneRestartRequested())
+			g_system->delayMillis(10);
+	}
+
+	presentBlack();
+	return true;
+}
+
 bool TravelScreen::runSelection(byte currentChapterId, uint16 &selectedStateId) {
 	if (!load(true))
 		return false;
@@ -176,7 +217,13 @@ bool TravelScreen::runSelection(byte currentChapterId, uint16 &selectedStateId) 
 			GameplayState &state = _vm->gameState();
 			const byte destinationId = state.travelScreenSlotIds[requestedSlot];
 			selectedStateId = destinationState(destinationId, currentChapterId);
-			if (currentChapterId != kEgyptChapterId &&
+			if (currentChapterId != kCastleChapterId &&
+					selectedStateId == kCastleChapterEntryState &&
+					state.scene4070DraculaStage == 2) {
+				state.scene4070DraculaStage = 3;
+				state.scene9140ReturnStateId = kCastleChapterEntryState;
+				selectedStateId = kTravelInterludeState;
+			} else if (currentChapterId != kEgyptChapterId &&
 					selectedStateId == kEgyptChapterEntryState &&
 					state.scene2100MummyBranchState == 1 && state.scene2110TreasureGranted) {
 				state.scene2100MummyBranchState = 2;
@@ -360,6 +407,13 @@ uint16 TravelScreen::destinationState(byte destinationId, byte currentChapterId)
 
 void TravelScreen::present() {
 	presentIndexedFrame(_framebuffer.surface(), _palette, _screen, _displayPalette);
+}
+
+void TravelScreen::presentBlack() {
+	Common::Array<byte> palette;
+	palette.resize(kPaletteSize);
+	memset(palette.data(), 0, palette.size());
+	presentIndexedFrame(_framebuffer.surface(), palette, _screen, _displayPalette);
 }
 
 } // End of namespace Hollywood

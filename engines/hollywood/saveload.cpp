@@ -333,10 +333,13 @@ Common::Error HollywoodEngine::syncGameStream(Common::Serializer &s) {
 	syncStateBool(s, state.scene4010DestinationUnlocked);
 	syncStateBool(s, state.scene4020FallReactionLineSeen);
 	syncStateBool(s, state.scene4020GateUnlocked);
+	syncStateBool(s, state.scene4030TowerVisited);
 	syncStateBool(s, state.scene4030InitialEntryLineSeen);
 	syncStateBool(s, state.scene4030RopeTaken);
 	s.syncAsByte(state.scene4030LooseBoneState);
 	syncStateBool(s, state.scene4030ImprovisedLeverInstalled);
+	syncStateBool(s, state.scene4030IronMaidenOpen);
+	syncStateBool(s, state.scene4030MechanismRemarkSeen);
 	syncStateBool(s, state.scene4040EntryLineSeen);
 	syncStateBool(s, state.scene4040CandilTaken);
 	syncStateBool(s, state.scene4050EntryLineSeen);
@@ -351,7 +354,7 @@ Common::Error HollywoodEngine::syncGameStream(Common::Serializer &s) {
 	syncStateBool(s, state.scene4070EntryLineSeen);
 	syncStateBool(s, state.scene4070TrophyBaseOpened);
 	s.syncAsByte(state.scene4070FrankiePartGranted);
-	syncStateBool(s, state.scene4070SlimmingTreatmentApplied);
+	syncStateBool(s, state.scene4070DraculaDialogueIntroSeen);
 	s.syncAsByte(state.scene4080GwendolynState);
 	s.syncAsByte(state.scene4080GwendolynStateTransition);
 	s.syncAsByte(state.scene4080CoffinShiftedState);
@@ -364,7 +367,7 @@ Common::Error HollywoodEngine::syncGameStream(Common::Serializer &s) {
 	s.syncAsByte(state.scene4090FinalCutsceneCompleted);
 	syncStateBool(s, state.scene4090FinalCutsceneDialogueSeen);
 	syncStateBool(s, state.scene4100EntryLineSeen);
-	syncStateBool(s, state.scene4110LetterTaken);
+	syncStateBool(s, state.scene4110StrawTaken);
 	syncStateBool(s, state.scene4110BridgeOpened);
 	syncStateBool(s, state.seenScene5010EntryLine);
 	s.syncAsByte(state.scene5010MineTransportState);
