@@ -42,8 +42,8 @@ private:
 							 byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
 	bool shouldPresentPreviewBeforeEntrySequence() const override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	void prepareCustomActorPathRoute(int startX, int startY) override;
 	bool customizeRouteSegment(byte currentRegion, byte nextRegion,
@@ -65,7 +65,6 @@ private:
 
 	void resetSceneLayers();
 	void advanceSueIdle(uint32 delta);
-	void advanceState609Prop(uint32 delta);
 	void drawNormalForeground(int actorWorldX, int actorWorldY, byte actorDrawOrderMode);
 	void runArrivalCutscene();
 	void runState609Cutscene();
@@ -87,14 +86,13 @@ private:
 	ResourceSpriteLayer _state609PropLayer;
 	ResourceSpriteLayer _state609NpcLayer;
 	TimedAnimationChannel _sueIdleChannel;
-	TimedAnimationChannel _state609PropChannel;
+	uint _state609PropTrack;
 	uint32 _sueSpeechTimerAccumulator;
 	byte _sueMode;
 	byte _completedSueSpeechCount;
 	byte _lastSueIdleSpeechFrame;
 	bool _manualSequenceActive;
 	bool _pendingRonRetort;
-	bool _state609PropContinuous;
 	bool _state609PropAlternatePose;
 };
 

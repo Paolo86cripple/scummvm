@@ -38,8 +38,8 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool customizeRouteSegment(byte currentRegion, byte nextRegion, const ActorPathBuildState &state,
@@ -51,7 +51,6 @@ private:
 	void handleAnimationFrameHook(byte hookId, uint frame) override;
 
 	void resetAmbientLayer();
-	void advanceAmbientLayer(uint32 delta);
 	void runEntryFromSphinxInterior();
 	void runEntryFromLabyrinthReturn();
 	void runGoToLabyrinth();
@@ -82,8 +81,7 @@ private:
 	void copyMuralTile(byte visibleTileId, byte sourceTileId, const byte *rawFrame, byte *destination);
 	void copyStageSmallRow(byte destinationRow, byte sourceRow);
 
-	TimedAnimationChannel _ambientChannel;
-	ResourceSpriteLayer _ambientLayer;
+	uint _ambientTrack;
 	bool _muralPermutationInitialized;
 	byte _muralPermutationChunkIndex;
 	byte _muralSelectedTile;

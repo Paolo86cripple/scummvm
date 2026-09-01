@@ -41,8 +41,8 @@ private:
 	void runCustomEntrySequence() override;
 	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
@@ -62,9 +62,9 @@ private:
 	void runBridgeOpeningOverlay();
 	void patchActionMovementModes();
 
-	TransientLayerCompositor _backgroundLayers;
-	TransientLayerCompositor _bridgeBackLayers;
-	TransientLayerCompositor _bridgeFrontLayers;
+	SceneLayerStack _backgroundLayers;
+	SceneLayerStack _bridgeBackLayers;
+	SceneLayerStack _bridgeFrontLayers;
 	TimedAnimationChannel _backgroundChannel;
 	byte _backgroundSequence;
 	byte _backgroundFrameInSequence;

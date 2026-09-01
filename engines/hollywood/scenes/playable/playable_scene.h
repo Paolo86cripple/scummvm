@@ -86,6 +86,61 @@ public:
 protected:
 	PlayableScene(HollywoodEngine *vm, const PlayableSceneConfig &config);
 
+	// Executes blocking steps immediately; it coordinates control flow without storing a scene script.
+	// Pose, patch, and commit steps still finalize state after interrupted media.
+	class BlockingSequence {
+	public:
+		enum PaletteTransition {
+			kFadeFromBlack,
+			kFadeToBlack
+		};
+
+		explicit BlockingSequence(PlayableScene &scene);
+
+		template<class FrameTarget>
+		BlockingSequence &layerFrames(FrameTarget &target, const AnimationFrameRange &range) {
+			if (canRun()) {
+				const bool completed = _scene.playAnimationFrames(target, range);
+				if (!completed && !_scene._skipRequested)
+					_running = false;
+				refresh();
+			}
+			return *this;
+		}
+
+		BlockingSequence &layerFrames(SceneLayerStack &layers, uint layerId,
+			const AnimationFrameRange &range);
+		BlockingSequence &actorReplacement(uint chunkIndex, uint descriptorCount,
+			const byte *frameMap, uint frameMapSize, uint32 frameMillis);
+		BlockingSequence &actorReplacement(const ActionOverlaySpec &spec);
+		BlockingSequence &actorPose(const SceneActorPose &pose, byte cel = 0);
+		BlockingSequence &actorPath(const SceneActorPose &target, byte cel = 0,
+			bool cancelOnSkip = false);
+		BlockingSequence &sound(uint16 cueId, byte volumePercent = 100);
+		BlockingSequence &loopingSound(uint16 cueId, byte volumePercent = 100);
+		BlockingSequence &stopSound();
+		BlockingSequence &secondarySpeech(uint16 rowIndex, byte frameIndex);
+		BlockingSequence &primarySpeech(uint16 rowIndex, byte frameIndex, uint16 centerX,
+			uint16 topY, byte red, byte green, byte blue);
+		BlockingSequence &framebufferPatch(byte selector);
+		BlockingSequence &paletteTransition(PaletteTransition transition);
+
+		template<class T>
+		BlockingSequence &commit(T &target, const T &value) {
+			target = value;
+			return *this;
+		}
+
+		bool completed() const { return _running; }
+
+	private:
+		bool canRun();
+		void refresh();
+
+		PlayableScene &_scene;
+		bool _running;
+	};
+
 	// Resource format constants
 	enum {
 		kFrameBufferSize = 0x78000,
@@ -178,9 +233,13 @@ protected:
 	virtual bool shouldDrawSecondaryActorInPlayableComposite() const;
 	virtual bool shouldApplyGameplayPanelObjectPalette() const;
 	virtual void runCustomEntrySequence();
-	virtual bool prepareCustomGameplayLoop();
-	// Returning true skips the shared primary-speech and ambient updates for this frame.
-	virtual bool advanceCustomGameplayLoop(uint32 delta);
+	virtual void prepareCustomGameplayLoop();
+	virtual void advanceCustomGameplayLoop(uint32 delta);
+	// The base loop invokes these services every frame; overrides only replace their strategy.
+	virtual void advancePrimarySpeechAnimation(uint32 delta);
+	virtual void advanceAmbientAudio(uint32 delta);
+	// Lets scene-owned animation state distinguish natural completion from cancellation.
+	virtual void realtimeSpeechEnded(byte speechId, bool completed);
 	// Returning true suppresses generic action dispatch.
 	virtual bool dispatchCustomSceneAction(uint16 handlerId);
 	// Controls actor paths started by scene clicks, including free walk and item relations.
@@ -303,6 +362,19 @@ protected:
 	void advanceSecondaryActorSpeechFrame();
 	void advancePrimaryLeftSpeechFrame();
 	void advancePrimaryDialogueSpeechFrame(uint32 delta);
+	// Realtime speech advances inside the gameplay loop, leaving panels and scene input responsive.
+	bool startRealtimePrimarySpeechLine(uint16 rowIndex, byte frameIndex, uint16 centerX,
+		uint16 topY, byte red, byte green, byte blue, byte animationGroup, byte speechId);
+	bool startRealtimeSecondarySpeechLine(uint16 rowIndex, byte frameIndex, byte speechId);
+	void advanceRealtimeSpeech(uint32 delta);
+	void stopRealtimeSpeech();
+	bool isRealtimeSpeechActive() const { return _realtimeSpeechActive; }
+	bool isRealtimeSecondarySpeechActive() const {
+		return _realtimeSpeechActive && !_realtimeSpeechPrimary;
+	}
+	byte realtimeSpeechId() const { return _realtimeSpeechId; }
+	void startRealtimeSpeechPart();
+	void finishRealtimeSpeech(bool completed);
 
 	// Scene action dispatch
 	void processSceneActionClick(const GameplayLoopCursorState &state);
@@ -335,6 +407,8 @@ protected:
 	// Selector 0xff reapplies the complete state; other values request scene-specific partial updates.
 	void applySceneStateToHotspotsAndPatches(byte selector);
 	void rebuildWalkablePaletteMask();
+	// Adds a notebook destination and presents its original unlock transition.
+	bool unlockTravelDestination(byte destinationId);
 
 	// Inventory
 	bool hasInventoryItem(byte itemId) const;
@@ -386,8 +460,8 @@ protected:
 	void drawMappedSpriteFrame(uint chunkIndex, uint descriptorCount, const byte *frameMap, uint frameMapSize, byte frameIndex);
 	void restoreResourceSpriteLayerBackground(const ResourceSpriteLayer &layer, const Graphics::Surface &background);
 	void drawResourceSpriteLayer(const ResourceSpriteLayer &layer);
-	void drawTransientLayers(const TransientLayerCompositor &compositor);
-	void drawAnimationLayers(const SceneAnimationLayers &layers, SceneAnimationStratum stratum);
+	void drawLayerStack(const SceneLayerStack &layers, SceneAnimationStratum stratum);
+	void drawActionOverlayAtStratum(SceneAnimationStratum stratum);
 	void drawActionOverlayLayer();
 	template<class FrameTarget>
 	bool playAnimationFrames(FrameTarget &target, const AnimationFrameRange &range) {
@@ -397,7 +471,7 @@ protected:
 	bool playAndPresentAnimationFrames(FrameTarget &target, const AnimationFrameRange &range) {
 		return _animationPlayer.playAndPresent(target, range);
 	}
-	bool playAnimationFrames(SceneAnimationLayers &layers, uint layerId, const AnimationFrameRange &range);
+	bool playAnimationFrames(SceneLayerStack &layers, uint layerId, const AnimationFrameRange &range);
 	template<class FrameTarget>
 	bool playAnimationTransition(FrameTarget &target, const AnimationTransition &transition) {
 		return _animationPlayer.transition(target, transition);
@@ -406,7 +480,7 @@ protected:
 	bool playAndPresentAnimationTransition(FrameTarget &target, const AnimationTransition &transition) {
 		return _animationPlayer.transitionAndPresent(target, transition);
 	}
-	bool playAnimationTransition(SceneAnimationLayers &layers, uint layerId,
+	bool playAnimationTransition(SceneLayerStack &layers, uint layerId,
 		const AnimationTransition &transition);
 	// Plays a caller-owned layer without choosing its draw stratum; clears it by default.
 	bool playResourceLayerSequence(ResourceSpriteLayer &layer, uint chunkIndex, uint16 descriptorCount,
@@ -572,10 +646,13 @@ protected:
 	SoundBank0Player _additionalAmbientSoundBank0Slots[kAmbientSoundSlotCount - 1];
 	ResidentSoundEffectPlayer _residentSoundEffects;
 	Common::RandomSource _random;
+	SceneLayerStack _sceneLayers;
+	RealtimeAnimationTracks _realtimeAnimationTracks;
 	SceneAnimationPlayer _animationPlayer;
 
 	// Speech runtime state
 	SpeechController _speechController;
+	SpeechPlayer _realtimeSpeechPlayer;
 	SpeechPlayer &_speech;
 	SpeechOverlay &_speechOverlay;
 	SpeechOverlay &_primarySpeechOverlay;
@@ -588,6 +665,19 @@ protected:
 	uint32 &_primaryLeftSpeechTimerAccumulator;
 	uint32 &_primaryDialogueSpeechTimerAccumulator;
 	byte &_secondaryActorFrame;
+	uint32 _realtimeSpeechElapsed;
+	uint32 _realtimeSpeechDuration;
+	uint16 _realtimeSpeechTextRecordId;
+	uint16 _realtimeSpeechVoiceSampleId;
+	uint16 _realtimeSpeechCenterX;
+	uint16 _realtimeSpeechTopY;
+	byte _realtimeSpeechContinuationPart;
+	byte _realtimeSpeechContinuationCount;
+	byte _realtimeSpeechAnimationGroup;
+	byte _realtimeSpeechId;
+	byte _realtimeSpeechVolumePercent;
+	bool _realtimeSpeechActive;
+	bool _realtimeSpeechPrimary;
 
 	// Action overlay runtime state
 	ActionOverlayPlayer _actionOverlayPlayer;

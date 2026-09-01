@@ -33,12 +33,7 @@ public:
 	Scene1090(HollywoodEngine *vm);
 
 private:
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	void handleAnimationFrameHook(byte hookId, uint frame) override;

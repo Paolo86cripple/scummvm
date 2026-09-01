@@ -38,8 +38,8 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
@@ -58,7 +58,6 @@ private:
 
 	byte _cloakroomAttendantRepeatCount;
 	RandomIdleAnimation _cloakroomAttendantAnimation;
-	ResourceSpriteLayer _cloakroomAttendantLayer;
 };
 
 } // End of namespace Hollywood

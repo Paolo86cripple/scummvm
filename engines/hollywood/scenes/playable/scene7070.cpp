@@ -50,6 +50,19 @@ const uint16 kScene7070Chunk7DescriptorCount = 10;
 const uint16 kScene7070Chunk8DescriptorCount = 4;
 const uint16 kScene7070Chunk12DescriptorCount = 0x24;
 const uint32 kScene7070OverlayFrameMillis = 75;
+const byte kScene7070RecordCabinetItem = 4;
+const byte kScene7070DrawerItem = 9;
+const byte kScene7070UpperDrawerItem = 11;
+const uint kScene7070UpperDrawerTakeVerbRecordIndex = 91;
+const uint kScene7070UpperDrawerLookVerbRecordIndex = 92;
+const int kScene7070UpperDrawerHotspotLeft = 0x114;
+const int kScene7070UpperDrawerHotspotTop = 0x0e6;
+const int kScene7070UpperDrawerHotspotRight = 0x148;
+const int kScene7070UpperDrawerHotspotBottom = 0x0fc;
+const int kScene7070DrawerHotspotLeft = 0x114;
+const int kScene7070DrawerHotspotTop = 0x10e;
+const int kScene7070DrawerHotspotRight = 0x148;
+const int kScene7070DrawerHotspotBottom = 0x124;
 const byte kScene7070ExitDoorFrameMap[] = {
 	0, 0, 1, 2, 3
 };
@@ -147,11 +160,6 @@ void Scene7070::runCustomEntrySequence() {
 	}
 }
 
-bool Scene7070::advanceCustomGameplayLoop(uint32 delta) {
-	updateAmbientAudioAndMusicCues(delta);
-	return true;
-}
-
 bool Scene7070::dispatchCustomSceneAction(uint16 handlerId) {
 	switch (handlerId) {
 	case 301: // Ir a pasillo (go to hallway)
@@ -168,6 +176,8 @@ bool Scene7070::dispatchCustomSceneAction(uint16 handlerId) {
 		return true;
 	case 305: // Mirar mueble con discos (look at record cabinet)
 		beginSecondarySpeechLine(0x17, 0);
+		if (_vm->restoredContentEnabled())
+			beginStaticSecondarySpeechLine(0x30, 0);
 		return true;
 	case 306: // Mirar puerta (look at door)
 		beginSecondarySpeechLine(5, _vm->gameState().gramophoneRoomDoorState < 2 ? 0 : 1);
@@ -186,6 +196,14 @@ bool Scene7070::dispatchCustomSceneAction(uint16 handlerId) {
 		return true;
 	case 311: // Mirar carbón (look at coal)
 		beginSecondarySpeechLine(10, 0);
+		return true;
+	case 312: // Restored: Mirar cajón (look at drawer)
+		if (_vm->restoredContentEnabled())
+			beginSecondarySpeechLine(0x0b, 0);
+		return true;
+	case 313: // Restored: Abrir cajón (open drawer)
+		if (_vm->restoredContentEnabled())
+			beginSecondarySpeechLine(0x0c, 0);
 		return true;
 	case 314: // Cerrar cajón/Coger manivela (close drawer/take crank)
 		beginSecondarySpeechLine(0x16, 0);
@@ -210,6 +228,9 @@ bool Scene7070::dispatchCustomSceneAction(uint16 handlerId) {
 		return true;
 	case 321: // Usar llave con puerta (use key with door)
 		beginSecondarySpeechLine(0x12, 0);
+		return true;
+	case 322: // Restored: Mirar/Coger cajón superior (look at/take upper drawer)
+		beginSecondarySpeechLine(0x0b, 2);
 		return true;
 	default:
 		return false;
@@ -238,6 +259,34 @@ bool Scene7070::applyCustomSceneStateToHotspotsAndPatches(byte selector) {
 
 		rebuildWalkableMask();
 		_hotspots.load(_paletteMask, _metadata, _stage003SmallRows);
+		if (_vm->restoredContentEnabled()) {
+			const SceneActionTarget cabinetTarget = _hotspots.actionTarget(kScene7070RecordCabinetItem);
+			_hotspots.setItemName(kScene7070UpperDrawerItem,
+				_hotspots.itemName(kScene7070DrawerItem));
+			_hotspots.setItemDefaultStrip(kScene7070UpperDrawerItem, 4);
+			_hotspots.setActionTarget(kScene7070UpperDrawerItem,
+				cabinetTarget.interactionPoint, cabinetTarget.approachPoint);
+			_hotspots.setActionInteraction(kScene7070UpperDrawerItem,
+				cabinetTarget.interactionPoint, cabinetTarget.facing);
+			_hotspots.setVerbActionHandlerByGlobalRecordIndex(
+				kScene7070UpperDrawerTakeVerbRecordIndex, 322);
+			_hotspots.setVerbMovementModeByGlobalRecordIndex(
+				kScene7070UpperDrawerTakeVerbRecordIndex, 1);
+			_hotspots.setVerbActionHandlerByGlobalRecordIndex(
+				kScene7070UpperDrawerLookVerbRecordIndex, 322);
+			_hotspots.setVerbMovementModeByGlobalRecordIndex(
+				kScene7070UpperDrawerLookVerbRecordIndex, 1);
+			_hotspots.addOverrideRectHotspot(kScene7070UpperDrawerItem,
+				Common::Rect(kScene7070UpperDrawerHotspotLeft, kScene7070UpperDrawerHotspotTop,
+					kScene7070UpperDrawerHotspotRight, kScene7070UpperDrawerHotspotBottom));
+			_hotspots.setActionTarget(kScene7070DrawerItem,
+				cabinetTarget.interactionPoint, cabinetTarget.approachPoint);
+			_hotspots.setActionInteraction(kScene7070DrawerItem,
+				cabinetTarget.interactionPoint, cabinetTarget.facing);
+			_hotspots.addOverrideRectHotspot(kScene7070DrawerItem,
+				Common::Rect(kScene7070DrawerHotspotLeft, kScene7070DrawerHotspotTop,
+					kScene7070DrawerHotspotRight, kScene7070DrawerHotspotBottom));
+		}
 	}
 	return true;
 }
@@ -254,17 +303,10 @@ AmbientAudioProfile Scene7070::ambientAudioProfile() const {
 	return createLoopingAmbientAudioProfile(50);
 }
 
-void Scene7070::runOverlaySequence(uint chunkIndex, uint descriptorCount, const byte *frameMap, uint frameMapSize,
-		uint32 frameMillis, int statePatchFrame, int soundFrame, byte soundId) {
-	runActorReplacement(ActionOverlaySpec(chunkIndex, descriptorCount,
-		frameMap, frameMapSize, frameMillis)
-		.patchAt(statePatchFrame, 2)
-		.soundAt(soundFrame, soundId));
-}
-
 void Scene7070::handleBackToG06() {
-	_soundBank0.playSample(3, 100);
-	_vm->gameState().mainFlowStateId = kScene7070BackToG06State;
+	BlockingSequence(*this)
+		.sound(3)
+		.commit(_vm->gameState().mainFlowStateId, kScene7070BackToG06State);
 }
 
 void Scene7070::handleExitDoorAction() {
@@ -274,42 +316,48 @@ void Scene7070::handleExitDoorAction() {
 		return;
 	}
 
-	runOverlaySequence(8, kScene7070Chunk8DescriptorCount,
-		kScene7070ExitDoorFrameMap, ARRAYSIZE(kScene7070ExitDoorFrameMap),
-		kScene7070OverlayFrameMillis);
-	_soundBank0.playSample(3, 100);
-	state.gramophoneRoomDoorState = 2;
-	state.mainFlowStateId = state.gramophoneCrankState < 3 ? kScene7070ExitToG08State : kScene7070ExitToG09State;
+	const uint16 exitState = state.gramophoneCrankState < 3 ?
+		kScene7070ExitToG08State : kScene7070ExitToG09State;
+	BlockingSequence(*this)
+		.actorReplacement(8, kScene7070Chunk8DescriptorCount,
+			kScene7070ExitDoorFrameMap, ARRAYSIZE(kScene7070ExitDoorFrameMap),
+			kScene7070OverlayFrameMillis)
+		.sound(3)
+		.commit(state.gramophoneRoomDoorState, (byte)2)
+		.commit(state.mainFlowStateId, exitState);
 }
 
 void Scene7070::handleChunk12ItemAction() {
 	GameplayState &state = _vm->gameState();
-	runOverlaySequence(12, kScene7070Chunk12DescriptorCount,
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(12, kScene7070Chunk12DescriptorCount,
 		kScene7070Chunk12ItemFrameMap, ARRAYSIZE(kScene7070Chunk12ItemFrameMap),
-		kScene7070OverlayFrameMillis, -1, 6, 0x19);
+		kScene7070OverlayFrameMillis)
+		.soundAt(6, 0x19));
 
 	if (state.gramophoneCrankState == 1) {
-		beginSecondarySpeechLine(0x0e, 0);
-		state.gramophoneCrankState = 3;
-		state.hannoverCourtyardDialogueState = 1;
+		sequence.secondarySpeech(0x0e, 0)
+			.commit(state.gramophoneCrankState, (byte)3)
+			.commit(state.hannoverCourtyardDialogueState, (byte)1);
 	} else if (state.gramophoneCrankState == 2) {
-		state.gramophoneCrankState = 3;
-		state.hannoverCourtyardDialogueState = 1;
+		sequence.commit(state.gramophoneCrankState, (byte)3)
+			.commit(state.hannoverCourtyardDialogueState, (byte)1);
 	} else {
-		state.gramophoneCrankState = 2;
-		state.hannoverCourtyardDialogueState = 0;
+		sequence.commit(state.gramophoneCrankState, (byte)2)
+			.commit(state.hannoverCourtyardDialogueState, (byte)0);
 	}
-	applySceneStateToHotspotsAndPatches(2);
+	sequence.framebufferPatch(2);
 }
 
 void Scene7070::handleTradeItem10ForItem08() {
-	beginSecondarySpeechLine(0x0f, 0);
-	runOverlaySequence(7, kScene7070Chunk7DescriptorCount,
-		kScene7070TradeItemFrameMap, ARRAYSIZE(kScene7070TradeItemFrameMap),
-		kScene7070OverlayFrameMillis);
+	BlockingSequence sequence(*this);
+	sequence.secondarySpeech(0x0f, 0)
+		.actorReplacement(7, kScene7070Chunk7DescriptorCount,
+			kScene7070TradeItemFrameMap, ARRAYSIZE(kScene7070TradeItemFrameMap),
+			kScene7070OverlayFrameMillis);
 	removeInventoryItem(0x10);
 	addInventoryItem(0x08);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 }
 
 void Scene7070::handlePrimeExitDoorAction() {
@@ -319,23 +367,26 @@ void Scene7070::handlePrimeExitDoorAction() {
 		return;
 	}
 
-	beginSecondarySpeechLine(0x10, 0);
-	runOverlaySequence(9, kScene7070Chunk7DescriptorCount,
-		kScene7070PrimeExitDoorFrameMap, ARRAYSIZE(kScene7070PrimeExitDoorFrameMap),
-		kScene7070OverlayFrameMillis);
-	state.gramophoneRoomDoorState = 1;
-	beginSecondarySpeechLine(0x10, 1);
+	BlockingSequence(*this)
+		.secondarySpeech(0x10, 0)
+		.actorReplacement(9, kScene7070Chunk7DescriptorCount,
+			kScene7070PrimeExitDoorFrameMap, ARRAYSIZE(kScene7070PrimeExitDoorFrameMap),
+			kScene7070OverlayFrameMillis)
+		.commit(state.gramophoneRoomDoorState, (byte)1)
+		.secondarySpeech(0x10, 1);
 }
 
 void Scene7070::handleUseItem13OnSceneObject() {
 	GameplayState &state = _vm->gameState();
-	state.gramophoneCrankState = 1;
-	runOverlaySequence(12, kScene7070Chunk12DescriptorCount,
-		kScene7070UseItem13FrameMap, ARRAYSIZE(kScene7070UseItem13FrameMap),
-		kScene7070OverlayFrameMillis, 0x16);
+	BlockingSequence sequence(*this);
+	sequence.commit(state.gramophoneCrankState, (byte)1)
+		.actorReplacement(ActionOverlaySpec(12, kScene7070Chunk12DescriptorCount,
+			kScene7070UseItem13FrameMap, ARRAYSIZE(kScene7070UseItem13FrameMap),
+			kScene7070OverlayFrameMillis)
+			.patchAt(0x16, 2));
 	removeInventoryItem(0x13);
-	_soundBank0.playSample(1, 100);
-	beginSecondarySpeechLine(0x15, 0);
+	sequence.sound(1)
+		.secondarySpeech(0x15, 0);
 }
 
 } // End of namespace Hollywood

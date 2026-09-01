@@ -59,6 +59,12 @@ const byte kScene3020PickupFrameMap[] = {
 	7, 8, 9, 10, 11, 12, 13
 };
 
+const uint kScene3020LoopLayer = 0;
+const SceneLayerSpec kScene3020LayerSpecs[] = {
+	{kSceneAnimationBehindActors, 7, kScene3020LoopDescriptorCount,
+		kScene3020LoopFrameMap, ARRAYSIZE(kScene3020LoopFrameMap), true, 0}
+};
+
 PlayableSceneConfig scene3020Config() {
 	PlayableSceneConfig config(3020,
 		SceneResourceLayout(11, 5, 10),
@@ -73,10 +79,11 @@ PlayableSceneConfig scene3020Config() {
 
 Scene3020::Scene3020(HollywoodEngine *vm) :
 		PlayableScene(vm, scene3020Config()),
-		_loopChannel(),
-		_loopLayer() {
-	_loopLayer.configure(7, kScene3020LoopDescriptorCount,
-		kScene3020LoopFrameMap, ARRAYSIZE(kScene3020LoopFrameMap));
+		_loopTrack(RealtimeAnimationTracks::kInvalidTrack) {
+	_sceneLayers.configure(kScene3020LayerSpecs);
+	_loopTrack = _realtimeAnimationTracks.addFrameMap(
+		_sceneLayers.layer(kScene3020LoopLayer),
+		kScene3020LoopFrameMillis, _vm->gameState().windmillBladesMoving);
 }
 
 void Scene3020::initializeCustomPreviewState() {
@@ -103,7 +110,7 @@ void Scene3020::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 	(void)actorDrawOrderMode;
 
 	copyBaseFramebufferToSceneFramebuffer();
-	drawResourceSpriteLayer(_loopLayer);
+	drawLayerStack(_sceneLayers, kSceneAnimationBehindActors);
 	drawActionOverlayLayer();
 	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
 		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
@@ -123,17 +130,13 @@ void Scene3020::runCustomEntrySequence() {
 		runEntryFromScene3010();
 }
 
-bool Scene3020::prepareCustomGameplayLoop() {
+void Scene3020::prepareCustomGameplayLoop() {
 	resetAnimationLayers();
 	rebuildWalkableMask();
-	return true;
 }
 
-bool Scene3020::advanceCustomGameplayLoop(uint32 delta) {
-	if (_vm->gameState().windmillBladesMoving)
-		advanceLoopingLayer(delta);
-	updateAmbientAudioAndMusicCues(delta);
-	return true;
+void Scene3020::advanceCustomGameplayLoop(uint32 delta) {
+	_realtimeAnimationTracks.setActive(_loopTrack, _vm->gameState().windmillBladesMoving);
 }
 
 bool Scene3020::dispatchCustomSceneAction(uint16 handlerId) {
@@ -240,9 +243,9 @@ AmbientAudioProfile Scene3020::ambientAudioProfile() const {
 }
 
 void Scene3020::resetAnimationLayers() {
-	_loopChannel.reset(0, kScene3020LoopFrameMillis);
-	_loopLayer.visible = true;
-	_loopLayer.reset(0);
+	_sceneLayers.reset();
+	_realtimeAnimationTracks.reset(_loopTrack);
+	_realtimeAnimationTracks.setActive(_loopTrack, _vm->gameState().windmillBladesMoving);
 }
 
 void Scene3020::rebuildWalkableMask() {
@@ -250,15 +253,6 @@ void Scene3020::rebuildWalkableMask() {
 	for (uint i = 0; i < _walkablePaletteMask.size(); ++i) {
 		if (_walkablePaletteMask[i] > 1 && _walkablePaletteMask[i] < 4)
 			_walkablePaletteMask[i] = 0;
-	}
-}
-
-void Scene3020::advanceLoopingLayer(uint32 delta) {
-	const uint frameCount = _loopChannel.consumeFrames(delta);
-	for (uint frame = 0; frame < frameCount; ++frame) {
-		_loopChannel.frameIndex = _loopChannel.frameIndex + 1 < ARRAYSIZE(kScene3020LoopFrameMap) ?
-			_loopChannel.frameIndex + 1 : 0;
-		_loopLayer.setFrame(_loopChannel.frameIndex);
 	}
 }
 
@@ -311,8 +305,7 @@ void Scene3020::runDescriptorTransitionClip(uint chunkIndex, uint descriptorCoun
 		const uint32 delta = now - lastMillis;
 		lastMillis = now;
 		frameAccumulator += delta;
-		if (_vm->gameState().windmillBladesMoving)
-			advanceLoopingLayer(delta);
+		_realtimeAnimationTracks.advance(_loopTrack, delta, _random);
 		updateAmbientAudioAndMusicCues(delta);
 
 		bool frameDirty = false;
@@ -333,7 +326,7 @@ void Scene3020::runDescriptorTransitionClip(uint chunkIndex, uint descriptorCoun
 
 void Scene3020::drawDescriptorTransitionFrame(const Common::Array<byte> &clipData, uint descriptorCount, byte frameIndex) {
 	copyBaseFramebufferToSceneFramebuffer();
-	drawResourceSpriteLayer(_loopLayer);
+	drawLayerStack(_sceneLayers, kSceneAnimationBehindActors);
 	// The continuation descriptors contain Ron and their own occlusion.
 	drawStripSpriteFrame(clipData, 0, 0, descriptorCount, frameIndex, _sceneFramebuffer);
 }

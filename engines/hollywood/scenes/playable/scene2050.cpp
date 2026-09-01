@@ -121,6 +121,12 @@ private:
 	byte &_frame;
 };
 
+const uint kScene2050AmbientLayer = 0;
+const SceneLayerSpec kScene2050LayerSpecs[] = {
+	{kSceneAnimationBehindActors, 10, kScene2050AmbientDescriptorCount,
+		kScene2050AmbientFrameMap, ARRAYSIZE(kScene2050AmbientFrameMap), true, 0}
+};
+
 static PlayableSceneConfig scene2050Config() {
 	PlayableSceneConfig config(2050,
 		SceneResourceLayout(15, 5, 14),
@@ -135,8 +141,7 @@ static PlayableSceneConfig scene2050Config() {
 
 Scene2050::Scene2050(HollywoodEngine *vm) :
 		PlayableScene(vm, scene2050Config()),
-		_ambientChannel(),
-		_ambientLayer(),
+		_ambientTrack(RealtimeAnimationTracks::kInvalidTrack),
 		_muralPermutationInitialized(false),
 		_muralPermutationChunkIndex(0),
 		_muralSelectedTile(0),
@@ -148,8 +153,10 @@ Scene2050::Scene2050(HollywoodEngine *vm) :
 		_sealDiscoverySpeechStarted(false),
 		_sealDiscoverySpeechStartMillis(0),
 		_sealDiscoverySpeechDurationMillis(0) {
-	_ambientLayer.configure(10, kScene2050AmbientDescriptorCount,
-		kScene2050AmbientFrameMap, ARRAYSIZE(kScene2050AmbientFrameMap));
+	_sceneLayers.configure(kScene2050LayerSpecs);
+	_ambientTrack = _realtimeAnimationTracks.addFrameMap(
+		_sceneLayers.layer(kScene2050AmbientLayer),
+		kScene2050AmbientFrameMillis);
 }
 
 void Scene2050::initializeCustomPreviewState() {
@@ -177,7 +184,7 @@ void Scene2050::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 	(void)actorDrawOrderMode;
 
 	copyBaseFramebufferToSceneFramebuffer();
-	drawResourceSpriteLayer(_ambientLayer);
+	drawLayerStack(_sceneLayers, kSceneAnimationBehindActors);
 	drawActionOverlayLayer();
 	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
 		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
@@ -192,17 +199,13 @@ void Scene2050::runCustomEntrySequence() {
 		runEntryFromSphinxInterior();
 }
 
-bool Scene2050::prepareCustomGameplayLoop() {
+void Scene2050::prepareCustomGameplayLoop() {
 	resetAmbientLayer();
-	return true;
 }
 
-bool Scene2050::advanceCustomGameplayLoop(uint32 delta) {
+void Scene2050::advanceCustomGameplayLoop(uint32 delta) {
 	if (_vm->gameState().scene2050MuralPuzzleState == 2)
 		runSealDiscoveryIfPending();
-	advanceAmbientLayer(delta);
-	updateAmbientAudioAndMusicCues(delta);
-	return true;
 }
 
 bool Scene2050::dispatchCustomSceneAction(uint16 handlerId) {
@@ -325,17 +328,8 @@ AmbientAudioProfile Scene2050::ambientAudioProfile() const {
 }
 
 void Scene2050::resetAmbientLayer() {
-	_ambientChannel.reset(0, kScene2050AmbientFrameMillis);
-	_ambientLayer.visible = true;
-	_ambientLayer.reset(0);
-}
-
-void Scene2050::advanceAmbientLayer(uint32 delta) {
-	const uint frameCount = _ambientChannel.consumeFrames(delta);
-	for (uint frame = 0; frame < frameCount; ++frame) {
-		_ambientChannel.frameIndex = (_ambientChannel.frameIndex + 1) % ARRAYSIZE(kScene2050AmbientFrameMap);
-		_ambientLayer.setFrame(_ambientChannel.frameIndex);
-	}
+	_sceneLayers.reset();
+	_realtimeAnimationTracks.reset(_ambientTrack);
 }
 
 void Scene2050::runEntryFromSphinxInterior() {

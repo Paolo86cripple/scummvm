@@ -38,8 +38,8 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
@@ -50,14 +50,11 @@ private:
 	void handleBalloonPickup();
 	void handleGorillaCordSetup();
 	void runGorillaExitBackToBanquetRoom();
-	void runOverlaySequence(uint chunkIndex, uint descriptorCount, const byte *frameMap,
-		uint frameMapSize, uint32 frameMillis, int patchFrame = -1, byte patchSelector = 0xff);
 	void drawForegroundBlocks(int activeWorldY);
 	void advanceGorillaAnimation(uint32 delta);
 	void setCordActionTarget();
 
 	TimedAnimationChannel _gorillaChannel;
-	ResourceSpriteLayer _gorillaLayer;
 	bool _gorillaLongSequence;
 };
 

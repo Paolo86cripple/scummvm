@@ -38,8 +38,10 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
+	void advancePrimarySpeechAnimation(uint32 delta) override;
+	void advanceAmbientAudio(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
@@ -51,7 +53,6 @@ private:
 	void replaceColorMapItemFromOriginal(byte sourceItem, byte destinationItem);
 	void replaceActorPaletteClassFromOriginal(byte sourceClass, byte destinationClass);
 	void copySmallTextRow(byte sourceRow, byte destinationRow);
-	void advanceFrontLayer(uint32 delta);
 	void advanceBlindManLayer(uint32 delta);
 	void beginBlindManSpeechAnimation();
 	void advanceBlindManSpeechAnimation(uint32 delta);
@@ -73,12 +74,12 @@ private:
 	void runSaxophoneHandoff();
 	void drawForegroundBlocks(int activeWorldY);
 
-	TimedAnimationChannel _frontChannel;
 	TimedAnimationChannel _blindManChannel;
 	TimedAnimationChannel _puzzleChannel;
 	ResourceSpriteLayer _frontLayer;
 	ResourceSpriteLayer _blindManLayer;
 	ResourceSpriteLayer _puzzleLayer;
+	uint _frontTrack;
 	bool _puzzleLayerTriggered;
 	bool _dialogueMenuActive;
 	bool _blindManConversationActive;

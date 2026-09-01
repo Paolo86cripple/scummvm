@@ -34,14 +34,11 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
 	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool customizeRouteSegment(byte currentRegion, byte nextRegion, const ActorPathBuildState &state,
@@ -66,7 +63,6 @@ private:
 	void applyCurtainBand(const Graphics::Surface *source, uint sweepOffset, byte bandWidth);
 	void runCurtainClearToBlack();
 
-	ResourceSpriteLayer _foregroundLayer;
 	TimedAnimationChannel _paletteCycleChannel;
 	bool _paletteCycleActive;
 };

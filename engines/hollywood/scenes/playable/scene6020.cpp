@@ -216,18 +216,13 @@ void Scene6020::runCustomEntrySequence() {
 		runEntryFromScene6010();
 }
 
-bool Scene6020::prepareCustomGameplayLoop() {
+void Scene6020::prepareCustomGameplayLoop() {
 	resetTaffyLayer();
-	return true;
 }
 
-bool Scene6020::advanceCustomGameplayLoop(uint32 delta) {
-	if (_primaryDialogueSpeechActive)
-		advancePrimaryDialogueSpeechFrame(delta);
-	else
+void Scene6020::advanceCustomGameplayLoop(uint32 delta) {
+	if (!_primaryDialogueSpeechActive)
 		advanceTaffyLayer(delta);
-	updateAmbientAudioAndMusicCues(delta);
-	return true;
 }
 
 bool Scene6020::dispatchCustomSceneAction(uint16 handlerId) {
@@ -755,7 +750,9 @@ void Scene6020::runPickupItem5E() {
 }
 
 void Scene6020::runUseItem39Overlay() {
-	if (!hasInventoryItem(0x39) || !_vm->gameState().scene6030HannoverInterviewCompleted) {
+	GameplayState &state = _vm->gameState();
+	if (!hasInventoryItem(0x39) || !state.scene3090DialogueMentionedBlindManLaxative ||
+			!state.scene6030HannoverInterviewCompleted) {
 		dispatchGenericSceneAction(0xe7);
 		return;
 	}
@@ -763,7 +760,7 @@ void Scene6020::runUseItem39Overlay() {
 	runActorReplacement(ActionOverlaySpec(11, kScene6020Chunk11DescriptorCount,
 		kScene6020PickupReverseFrameMap, ARRAYSIZE(kScene6020PickupReverseFrameMap), kScene6020FrameMillis));
 	removeInventoryItem(0x39);
-	_vm->gameState().scene6030CoffeeState = 1;
+	state.scene6030CoffeeState = 1;
 	_soundBank0.playSample(1, 100);
 	beginSecondarySpeechLine(15, 0);
 }

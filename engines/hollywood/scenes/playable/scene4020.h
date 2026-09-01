@@ -35,14 +35,10 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
 	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	void runCustomEntrySequence() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool customizeRouteSegment(byte currentRegion, byte nextRegion, const ActorPathBuildState &state,
 		const ScenePoint &boundary, int &requestedFacing, bool &restoredStepDeltas) override;
@@ -51,8 +47,7 @@ private:
 	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
-	void initializeIdleLayer();
-	void advanceIdleLayer(uint32 delta);
+	void resetIdleLayer();
 	void setActiveActorPose(int x, int y, byte facing);
 	void runEntryFromScene4010();
 	void runEntryFromScene4030();
@@ -60,8 +55,7 @@ private:
 	void useSkullcrackerOnGrate();
 	void copyStepDeltas(uint firstOffset, uint lastOffset);
 
-	ResourceSpriteLayer _idleLayer;
-	TimedAnimationChannel _idleChannel;
+	uint _idleTrack;
 };
 
 } // End of namespace Hollywood

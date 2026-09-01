@@ -38,15 +38,12 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 	void handleAnimationFrameHook(byte hookId, uint frame) override;
 
 	void rebuildWalkableMask();
-	void runOverlaySequence(uint chunkIndex, uint descriptorCount, const byte *frameMap, uint frameMapSize,
-		uint32 frameMillis, int statePatchFrame = -1);
 	void handleBackToG07();
 	void handlePickupItem13();
 

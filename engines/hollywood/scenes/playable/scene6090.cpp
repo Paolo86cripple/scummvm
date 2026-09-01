@@ -130,8 +130,9 @@ Scene6090::Scene6090(HollywoodEngine *vm) :
 		_escapeBackdropLayer(),
 		_freedSueLayer(),
 		_specialEffectLayer(),
+		_leftAmbientTrack(RealtimeAnimationTracks::kInvalidTrack),
+		_rightAmbientTrack(RealtimeAnimationTracks::kInvalidTrack),
 		_tiedRonChannel(),
-		_ambientLayerChannel(),
 		_sueIdleChannel(),
 		_mechanismChannel(),
 		_escapeChannel(),
@@ -170,6 +171,10 @@ Scene6090::Scene6090(HollywoodEngine *vm) :
 		_asyncPartRemainingMillis(0) {
 	_leftAmbientLayer.configure(5, 0x1a, nullptr, 0);
 	_rightAmbientLayer.configure(6, 0x1a, nullptr, 0);
+	_leftAmbientTrack = _realtimeAnimationTracks.addLoop(_leftAmbientLayer,
+		kScene6090FrameMillis, 0x1a);
+	_rightAmbientTrack = _realtimeAnimationTracks.addLoop(_rightAmbientLayer,
+		kScene6090FrameMillis, 0x1a);
 	_tiedRonLayer.configure(7, 0x2a, nullptr, 0);
 	_hannoverLayer.configure(8, 0x1a, kScene6090HannoverFrameMap,
 		ARRAYSIZE(kScene6090HannoverFrameMap));
@@ -230,8 +235,8 @@ void Scene6090::restoreTiedSequencePalette() {
 }
 
 void Scene6090::resetSceneLayers() {
-	_leftAmbientLayer.reset(0);
-	_rightAmbientLayer.reset(0x0c);
+	_realtimeAnimationTracks.resetToFrame(_leftAmbientTrack, 0);
+	_realtimeAnimationTracks.resetToFrame(_rightAmbientTrack, 0x0c);
 	_tiedRonLayer.reset(0);
 	_hannoverLayer.reset(0);
 	_karloffLayer.reset(0);
@@ -263,7 +268,6 @@ void Scene6090::resetSceneLayers() {
 	_specialEffectLayer.visible = true;
 
 	_tiedRonChannel.reset(0, kScene6090TiedRonFrameMillis);
-	_ambientLayerChannel.reset(0, kScene6090FrameMillis);
 	_sueIdleChannel.reset(0, kScene6090FrameMillis);
 	_mechanismChannel.reset(0, kScene6090FrameMillis);
 	_escapeChannel.reset(0, kScene6090FrameMillis);
@@ -540,30 +544,25 @@ void Scene6090::runOpeningConversation() {
 	_mechanismState = 3;
 }
 
-bool Scene6090::prepareCustomGameplayLoop() {
+void Scene6090::prepareCustomGameplayLoop() {
 	_tiedRonChannel.reset(_tiedRonIdleFrame, kScene6090TiedRonFrameMillis);
-	_ambientLayerChannel.reset(_leftAmbientLayer.frameIndex, kScene6090FrameMillis);
+	_realtimeAnimationTracks.resetTimer(_leftAmbientTrack);
+	_realtimeAnimationTracks.resetTimer(_rightAmbientTrack);
 	_sueIdleChannel.reset(_sueFaceLayer.frameIndex, kScene6090FrameMillis);
 	_mechanismChannel.reset(_karloffLayer.frameIndex, kScene6090FrameMillis);
 	_escapeChannel.reset(_freedSueLayer.frameIndex, kScene6090FrameMillis);
 	_paletteFadeChannel.reset(0, kScene6090FrameMillis);
 	_secondaryEffectSound.setArchive(Common::Path(kScene6090SoundArchiveName));
 	_manualSequenceActive = false;
-	return true;
 }
 
-bool Scene6090::advanceCustomGameplayLoop(uint32 delta) {
+void Scene6090::advanceCustomGameplayLoop(uint32 delta) {
 	if (_vm->consumeDebugSceneSolveRequest(6090) && !_delayedEventDone) {
 		runDelayedInterruption();
-		return true;
+		return;
 	}
 
 	advanceTiedRonIdle(delta);
-	advanceAmbientLayers(delta);
-	if (_asyncPrimaryActive)
-		advanceAsyncPrimarySpeech(delta);
-	else if (_primaryDialogueSpeechActive)
-		advancePrimaryDialogueSpeechFrame(delta);
 
 	if (_freedSueActive) {
 		if (_escapeAnimationActive)
@@ -575,9 +574,13 @@ bool Scene6090::advanceCustomGameplayLoop(uint32 delta) {
 		advanceEscapePalette(delta);
 	if (!_manualSequenceActive && !_automaticEventRunning && _compositeMode == kIntroComposite)
 		advanceMechanism(delta);
+}
 
-	updateAmbientAudioAndMusicCues(delta);
-	return true;
+void Scene6090::advancePrimarySpeechAnimation(uint32 delta) {
+	if (_asyncPrimaryActive)
+		advanceAsyncPrimarySpeech(delta);
+	else
+		PlayableScene::advancePrimarySpeechAnimation(delta);
 }
 
 void Scene6090::advanceTiedRonIdle(uint32 delta) {
@@ -595,14 +598,6 @@ void Scene6090::advanceTiedRonIdle(uint32 delta) {
 			_tiedRonIdleFrame = 0;
 		else if (_random.getRandomNumber(14) == 0)
 			_tiedRonIdleFrame = 4;
-	}
-}
-
-void Scene6090::advanceAmbientLayers(uint32 delta) {
-	const uint frameCount = _ambientLayerChannel.consumeFrames(delta);
-	for (uint i = 0; i < frameCount; ++i) {
-		_leftAmbientLayer.setFrame((_leftAmbientLayer.frameIndex + 1) % 0x1a);
-		_rightAmbientLayer.setFrame((_rightAmbientLayer.frameIndex + 1) % 0x1a);
 	}
 }
 

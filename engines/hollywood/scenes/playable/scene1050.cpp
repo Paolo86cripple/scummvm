@@ -185,20 +185,15 @@ void Scene1050::runCustomEntrySequence() {
 	presentFrame();
 }
 
-bool Scene1050::prepareCustomGameplayLoop() {
+void Scene1050::prepareCustomGameplayLoop() {
 	_smallOverlayChannel.reset(_smallOverlayLayer.frameIndex, kScene1050SmallOverlayFrameMillis);
 	_largeOverlayChannel.reset(_largeOverlayLayer.frameIndex, kScene1050LargeOverlayFrameMillis);
-	return true;
 }
 
-bool Scene1050::advanceCustomGameplayLoop(uint32 delta) {
+void Scene1050::advanceCustomGameplayLoop(uint32 delta) {
 	advanceSmallOverlay(delta);
-	if (_primaryDialogueSpeechActive)
-		advancePrimaryDialogueSpeechFrame(delta);
-	else if (!_largeOverlayActionLocked)
+	if (!_primaryDialogueSpeechActive && !_largeOverlayActionLocked)
 		advanceLargeOverlay(delta);
-	updateAmbientAudioAndMusicCues(delta);
-	return true;
 }
 
 bool Scene1050::dispatchCustomSceneAction(uint16 handlerId) {
@@ -301,10 +296,11 @@ AmbientAudioProfile Scene1050::ambientAudioProfile() const {
 }
 
 void Scene1050::runDoorBackToGorillaRoomAction() {
-	runOverlaySequence(9, kScene1050DoorOverlayDescriptorCount, kScene1050DoorFrameMap,
-		ARRAYSIZE(kScene1050DoorFrameMap), kScene1050FrameMillis);
-	_soundBank0.playSample(3, 100);
-	_vm->gameState().mainFlowStateId = kScene1050ExitState1040FromDoor;
+	BlockingSequence(*this)
+		.actorReplacement(9, kScene1050DoorOverlayDescriptorCount,
+			kScene1050DoorFrameMap, ARRAYSIZE(kScene1050DoorFrameMap), kScene1050FrameMillis)
+		.sound(3)
+		.commit(_vm->gameState().mainFlowStateId, kScene1050ExitState1040FromDoor);
 }
 
 void Scene1050::runCloakroomAttendantConversation() {
@@ -507,22 +503,16 @@ void Scene1050::handleDialogueEffect(byte effectId) {
 	GameplayState &state = _vm->gameState();
 	switch (effectId) {
 	case 2:
-		if (!state.hasTravelScreenDestination(1)) {
+		if (!state.hasTravelScreenDestination(1))
 			runTravelUnlockEffect(1);
-			state.unlockTravelScreenDestination(1);
-		}
 		break;
 	case 3:
-		if (!state.hasTravelScreenDestination(2)) {
+		if (!state.hasTravelScreenDestination(2))
 			runTravelUnlockEffect(2);
-			state.unlockTravelScreenDestination(2);
-		}
 		break;
 	case 4:
-		if (!state.hasTravelScreenDestination(3)) {
+		if (!state.hasTravelScreenDestination(3))
 			runTravelUnlockEffect(3);
-			state.unlockTravelScreenDestination(3);
-		}
 		break;
 	case 5:
 		state.scene1050CharlieBogWerewolfClueHeard = true;
@@ -551,14 +541,14 @@ void Scene1050::runDialogueEffectTen() {
 	waitSceneMillis(1000);
 }
 
-void Scene1050::runTravelUnlockEffect(byte travelSlotId) {
-	(void)travelSlotId;
+void Scene1050::runTravelUnlockEffect(byte destinationId) {
 	beginStaticSecondarySpeechLine(0xdb, 0);
-	_soundBank0.playSampleLooping(0x32, 25);
-	runOverlaySequence(13, kScene1050TravelOverlayDescriptorCount, kScene1050TravelFrameMap,
-		ARRAYSIZE(kScene1050TravelFrameMap), kScene1050FrameMillis);
-	_soundBank0.stop();
-	_soundBank0.playSample(1, 100);
+	BlockingSequence(*this)
+		.loopingSound(0x32, 25)
+		.actorReplacement(13, kScene1050TravelOverlayDescriptorCount,
+			kScene1050TravelFrameMap, ARRAYSIZE(kScene1050TravelFrameMap), kScene1050FrameMillis)
+		.stopSound();
+	unlockTravelDestination(destinationId);
 }
 
 void Scene1050::handlePackageExchange() {
@@ -599,13 +589,14 @@ void Scene1050::handleSuitcasePickup() {
 	if (hasInventoryItem(0x19))
 		return;
 
-	runOverlaySequence(12, kScene1050SuitcaseOverlayDescriptorCount, kScene1050SuitcaseFrameMap,
-		ARRAYSIZE(kScene1050SuitcaseFrameMap), kScene1050FrameMillis);
-	_vm->gameState().scene1050SuitcaseTaken = true;
-	applySceneStateToHotspotsAndPatches(0);
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(12, kScene1050SuitcaseOverlayDescriptorCount,
+		kScene1050SuitcaseFrameMap, ARRAYSIZE(kScene1050SuitcaseFrameMap), kScene1050FrameMillis)
+		.commit(_vm->gameState().scene1050SuitcaseTaken, true)
+		.framebufferPatch(0);
 	addInventoryItem(0x19);
-	_soundBank0.playSample(1, 100);
-	beginSecondarySpeechLine(9, 0);
+	sequence.sound(1)
+		.secondarySpeech(9, 0);
 }
 
 void Scene1050::runLargeOverlayPoseTransition(byte mode, byte startFrame) {
@@ -658,13 +649,6 @@ void Scene1050::runSynchronizedOverlaySequence(uint chunkIndex, uint descriptorC
 
 	_actionOverlayPlayer.finish(previousHideActiveActor);
 	_largeOverlayActionLocked = previousLargeOverlayActionLocked;
-}
-
-void Scene1050::runOverlaySequence(uint chunkIndex, uint descriptorCount, const byte *frameMap,
-		uint frameMapSize, uint32 frameMillis, int patchFrame) {
-	runActorReplacement(ActionOverlaySpec(chunkIndex, descriptorCount,
-		frameMap, frameMapSize, frameMillis)
-		.patchAt(patchFrame, 0xff));
 }
 
 void Scene1050::advanceSmallOverlay(uint32 delta) {

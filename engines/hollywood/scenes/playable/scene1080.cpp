@@ -49,6 +49,8 @@ const uint kScene1080BalloonDescriptorCount = 8;
 const byte kScene1080FrancoisSpeechGroup = 1;
 const byte kScene1080DialogueNoResponseFrame = 0xff;
 const uint kScene1080DialogueChoiceRecordCount = 10 * 10 * 7;
+const uint kScene1080BrainQuestionRecord = 70;
+const uint kScene1080FrankensteinBrainQuestionRecord = 71;
 const byte kScene1080PrimarySpeechTextColor = 0xfb;
 const byte kScene1080FrancoisWorkSoundFirstCue = 0x34;
 const byte kScene1080FrancoisWorkSoundCueCount = 3;
@@ -151,19 +153,15 @@ void Scene1080::runCustomEntrySequence() {
 	presentFrame();
 }
 
-bool Scene1080::prepareCustomGameplayLoop() {
+void Scene1080::prepareCustomGameplayLoop() {
 	resetAnimationLayers();
-	return true;
 }
 
-bool Scene1080::advanceCustomGameplayLoop(uint32 delta) {
+void Scene1080::advanceCustomGameplayLoop(uint32 delta) {
 	advanceForegroundLayer(delta);
-	if (_primaryDialogueSpeechActive)
-		advancePrimaryDialogueSpeechFrame(delta);
-	else if (_vm->gameState().scene1080FrancoisProgressState < 2 && !_francoisActionActive)
+	if (!_primaryDialogueSpeechActive &&
+			_vm->gameState().scene1080FrancoisProgressState < 2 && !_francoisActionActive)
 		advanceFrancoisLayer(delta);
-	updateAmbientAudioAndMusicCues(delta);
-	return true;
 }
 
 bool Scene1080::dispatchCustomSceneAction(uint16 handlerId) {
@@ -466,6 +464,9 @@ void Scene1080::runFrancoisConversation() {
 		}
 		if (record.disableAfterUse == 1)
 			record.enabled = 0;
+		// The restored Frankenstein-brain question follows the general brain exchange.
+		if (_vm->restoredContentEnabled() && recordIndex == kScene1080BrainQuestionRecord)
+			records[kScene1080FrankensteinBrainQuestionRecord].enabled = 1;
 
 		const byte previousDepth = depthIndex;
 		switch (record.transitionMode) {
@@ -598,8 +599,8 @@ void Scene1080::initializeFrancoisDialogueRecords(
 	setDialogueRecord(records, 3, 1, 1, 1, 5, 5, 1);
 	setDialogueRecord(records, 4, 1, 0, 0, 6, 6, 1);
 
-	setDialogueRecord(records, 70, 1, 0, 3, 7, 7, 1);
-	setDialogueRecord(records, 71, 0, 0, 3, 8, 8, 1);
+	setDialogueRecord(records, kScene1080BrainQuestionRecord, 1, 0, 3, 7, 7, 1);
+	setDialogueRecord(records, kScene1080FrankensteinBrainQuestionRecord, 0, 0, 3, 8, 8, 1);
 	setDialogueRecord(records, 72, 1, 0, 2, 9, 9, 0);
 
 	setDialogueRecord(records, 77, 1, 1, 3, 10, 10, 1);

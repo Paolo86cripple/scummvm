@@ -150,8 +150,11 @@ PlayableScene::PlayableScene(HollywoodEngine *vm, const PlayableSceneConfig &con
 		_panelArt(vm->getLanguage()),
 		_residentSoundEffects(vm->isDemo() && vm->getPlatform() == Common::kPlatformDOS),
 		_random(Common::String::format("scene%u", config.sceneId)),
+		_sceneLayers(),
+		_realtimeAnimationTracks(),
 		_animationPlayer(*this),
 		_speechController(vm->getLanguage(), vm->hasSpeechData()),
+		_realtimeSpeechPlayer(vm->getLanguage(), vm->hasSpeechData()),
 		_speech(_speechController.player),
 		_speechOverlay(_speechController.secondaryOverlay),
 		_primarySpeechOverlay(_speechController.primaryOverlay),
@@ -164,6 +167,19 @@ PlayableScene::PlayableScene(HollywoodEngine *vm, const PlayableSceneConfig &con
 		_primaryLeftSpeechTimerAccumulator(_speechController.primaryLeftSpeechTimerAccumulator),
 		_primaryDialogueSpeechTimerAccumulator(_speechController.primaryDialogueSpeechTimerAccumulator),
 		_secondaryActorFrame(_speechController.secondaryActorFrame),
+		_realtimeSpeechElapsed(0),
+		_realtimeSpeechDuration(0),
+		_realtimeSpeechTextRecordId(0),
+		_realtimeSpeechVoiceSampleId(0),
+		_realtimeSpeechCenterX(0),
+		_realtimeSpeechTopY(0),
+		_realtimeSpeechContinuationPart(0),
+		_realtimeSpeechContinuationCount(0),
+		_realtimeSpeechAnimationGroup(kInvalidPrimarySpeechAnimationGroup),
+		_realtimeSpeechId(0),
+		_realtimeSpeechVolumePercent(100),
+		_realtimeSpeechActive(false),
+		_realtimeSpeechPrimary(false),
 		_actionOverlayPlayer(),
 		_hideActiveActor(_actionOverlayPlayer.hideActiveActor),
 		_ambientMusicTimerAccumulator(0),
@@ -198,6 +214,119 @@ PlayableScene::PlayableScene(HollywoodEngine *vm, const PlayableSceneConfig &con
 		defaultActorPathStepDeltaTableSize());
 	memset(_inventoryItems, 0, sizeof(_inventoryItems));
 	memset(_sceneStateFlags, 0, sizeof(_sceneStateFlags));
+}
+
+PlayableScene::BlockingSequence::BlockingSequence(PlayableScene &scene) :
+		_scene(scene),
+		_running(true) {
+	refresh();
+}
+
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::layerFrames(
+		SceneLayerStack &layers, uint layerId, const AnimationFrameRange &range) {
+	if (canRun()) {
+		const bool completed = _scene.playAnimationFrames(layers, layerId, range);
+		if (!completed && !_scene._skipRequested)
+			_running = false;
+		refresh();
+	}
+	return *this;
+}
+
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::actorReplacement(
+		uint chunkIndex, uint descriptorCount, const byte *frameMap,
+		uint frameMapSize, uint32 frameMillis) {
+	return actorReplacement(ActionOverlaySpec(chunkIndex, descriptorCount,
+		frameMap, frameMapSize, frameMillis));
+}
+
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::actorReplacement(
+		const ActionOverlaySpec &spec) {
+	if (canRun()) {
+		_scene.runActorReplacement(spec);
+		refresh();
+	}
+	return *this;
+}
+
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::actorPose(
+		const SceneActorPose &pose, byte cel) {
+	_scene.setActiveActorPose(pose.x, pose.y, pose.facing, cel);
+	return *this;
+}
+
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::actorPath(
+		const SceneActorPose &target, byte cel, bool cancelOnSkip) {
+	if (canRun()) {
+		_running = _scene.walkActiveActorTo(target.x, target.y, target.facing, cel, cancelOnSkip);
+		refresh();
+	}
+	return *this;
+}
+
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::sound(
+		uint16 cueId, byte volumePercent) {
+	if (canRun())
+		_scene._soundBank0.playSample(cueId, volumePercent);
+	return *this;
+}
+
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::loopingSound(
+		uint16 cueId, byte volumePercent) {
+	if (canRun())
+		_scene._soundBank0.playSampleLooping(cueId, volumePercent);
+	return *this;
+}
+
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::stopSound() {
+	_scene._soundBank0.stop();
+	return *this;
+}
+
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::secondarySpeech(
+		uint16 rowIndex, byte frameIndex) {
+	if (canRun()) {
+		_scene.beginSecondarySpeechLine(rowIndex, frameIndex);
+		refresh();
+	}
+	return *this;
+}
+
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::primarySpeech(
+		uint16 rowIndex, byte frameIndex, uint16 centerX, uint16 topY,
+		byte red, byte green, byte blue) {
+	if (canRun()) {
+		_scene.beginPrimarySpeechLine(rowIndex, frameIndex, centerX, topY, red, green, blue);
+		refresh();
+	}
+	return *this;
+}
+
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::framebufferPatch(byte selector) {
+	_scene.applySceneStateToHotspotsAndPatches(selector);
+	return *this;
+}
+
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::paletteTransition(
+		PaletteTransition transition) {
+	if (canRun()) {
+		if (transition == kFadeFromBlack)
+			_scene.fadePaletteFromBlack();
+		else
+			_scene.fadePaletteToBlack();
+		refresh();
+	}
+	return *this;
+}
+
+bool PlayableScene::BlockingSequence::canRun() {
+	refresh();
+	return _running;
+}
+
+void PlayableScene::BlockingSequence::refresh() {
+	if (_scene.animationPlaybackShouldStop())
+		_running = false;
 }
 
 PlayableSceneConfig::PlayableSceneConfig(uint16 sceneNumber, const SceneResourceLayout &resourceLayout,
@@ -294,6 +423,7 @@ bool PlayableScene::play() {
 
 	_skipRequested = false;
 	const bool result = runBasicGameplayLoop();
+	stopRealtimeSpeech();
 	if (!_vm->isSceneRestartRequested()) {
 		if (_vm->gameState().activeActorPoseStateId != _vm->gameState().mainFlowStateId)
 			_vm->gameState().activeActorPoseValid = false;
@@ -529,9 +659,21 @@ void PlayableScene::drawCustomComposite(bool drawActiveActor, byte activeFacing,
 		byte actorDrawOrderMode) {
 	(void)actorDrawOrderMode;
 	copyBaseFramebufferToSceneFramebuffer();
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	drawActionOverlayLayer();
+	drawLayerStack(_sceneLayers, kSceneAnimationBehindActors);
+	drawActionOverlayAtStratum(kSceneAnimationBehindActors);
+
+	if (_sceneLayers.hasVisibleLayers(kSceneAnimationActorReplacement)) {
+		if (drawActiveActor || drawSecondaryActor)
+			updateActorPaletteForWorldPoint(activeWorldX, activeWorldY);
+		drawLayerStack(_sceneLayers, kSceneAnimationActorReplacement);
+	} else {
+		drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
+			drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
+	}
+	drawActionOverlayAtStratum(kSceneAnimationActorReplacement);
+	drawLayerStack(_sceneLayers, kSceneAnimationInFrontOfActors);
+	drawActionOverlayAtStratum(kSceneAnimationInFrontOfActors);
+	drawActionOverlayAtStratum(kSceneAnimationScenePlaced);
 }
 
 bool PlayableScene::shouldDrawSecondaryActorInPlayableComposite() const {
@@ -547,13 +689,25 @@ void PlayableScene::runCustomEntrySequence() {
 	presentFrame();
 }
 
-bool PlayableScene::prepareCustomGameplayLoop() {
-	return false;
+void PlayableScene::prepareCustomGameplayLoop() {
 }
 
-bool PlayableScene::advanceCustomGameplayLoop(uint32 delta) {
+void PlayableScene::advanceCustomGameplayLoop(uint32 delta) {
 	(void)delta;
-	return false;
+}
+
+void PlayableScene::advancePrimarySpeechAnimation(uint32 delta) {
+	if (_primaryDialogueSpeechActive)
+		advancePrimaryDialogueSpeechFrame(delta);
+}
+
+void PlayableScene::advanceAmbientAudio(uint32 delta) {
+	updateAmbientAudioAndMusicCues(delta);
+}
+
+void PlayableScene::realtimeSpeechEnded(byte speechId, bool completed) {
+	(void)speechId;
+	(void)completed;
 }
 
 bool PlayableScene::dispatchCustomSceneAction(uint16 handlerId) {
@@ -1147,6 +1301,7 @@ void PlayableScene::initializePreviewState() {
 void PlayableScene::initializeDefaultPreviewState() {
 	_speechController.resetRuntimeState(kInvalidPrimarySpeechAnimationGroup, 7);
 	_actionOverlayPlayer.reset();
+	_sceneLayers.reset();
 	resetAmbientAudioState();
 	_activeActorCel = 0;
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
@@ -1274,12 +1429,7 @@ void PlayableScene::drawResourceSpriteLayer(const ResourceSpriteLayer &layer) {
 		layer.descriptorCount, layer.descriptorIndex(), _sceneFramebuffer);
 }
 
-void PlayableScene::drawTransientLayers(const TransientLayerCompositor &compositor) {
-	for (uint i = 0; i < compositor.layerCount(); ++i)
-		drawResourceSpriteLayer(compositor.layer(i));
-}
-
-void PlayableScene::drawAnimationLayers(const SceneAnimationLayers &layers,
+void PlayableScene::drawLayerStack(const SceneLayerStack &layers,
 		SceneAnimationStratum stratum) {
 	for (uint i = 0; i < layers.layerCount(); ++i) {
 		if (layers.isInStratum(i, stratum))
@@ -1287,14 +1437,19 @@ void PlayableScene::drawAnimationLayers(const SceneAnimationLayers &layers,
 	}
 }
 
-bool PlayableScene::playAnimationFrames(SceneAnimationLayers &layers, uint layerId,
+void PlayableScene::drawActionOverlayAtStratum(SceneAnimationStratum stratum) {
+	if (_actionOverlayPlayer.isVisible() && _actionOverlayPlayer.stratum == stratum)
+		drawActionOverlayLayer();
+}
+
+bool PlayableScene::playAnimationFrames(SceneLayerStack &layers, uint layerId,
 		const AnimationFrameRange &range) {
 	if (!layers.hasLayer(layerId))
 		return false;
 	return playAnimationFrames(layers.layer(layerId), range);
 }
 
-bool PlayableScene::playAnimationTransition(SceneAnimationLayers &layers, uint layerId,
+bool PlayableScene::playAnimationTransition(SceneLayerStack &layers, uint layerId,
 		const AnimationTransition &transition) {
 	if (!layers.hasLayer(layerId))
 		return false;
@@ -1624,6 +1779,7 @@ uint16 PlayableScene::viewportYOffset() const {
 void PlayableScene::prepareGameplayLoop() {
 	_skipRequested = false;
 	_actorPathPlaybackActive = false;
+	stopRealtimeSpeech();
 	_speechController.resetRuntimeState(kInvalidPrimarySpeechAnimationGroup, 7);
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 	_actionOverlayPlayer.reset();
@@ -1636,17 +1792,11 @@ void PlayableScene::prepareGameplayLoop() {
 
 void PlayableScene::advanceGameplayLoop(uint32 delta) {
 	advanceSecondaryActorSpeechAnimation(delta);
-
-	if (advanceCustomGameplayLoop(delta)) {
-		advanceViewportScroll(delta);
-		syncActiveActorPoseToGameState();
-		return;
-	}
-
-	if (_primaryDialogueSpeechActive)
-		advancePrimaryDialogueSpeechFrame(delta);
-
-	updateAmbientAudioAndMusicCues(delta);
+	advanceCustomGameplayLoop(delta);
+	advanceRealtimeSpeech(delta);
+	_realtimeAnimationTracks.advance(delta, _random);
+	advancePrimarySpeechAnimation(delta);
+	advanceAmbientAudio(delta);
 	advanceViewportScroll(delta);
 	syncActiveActorPoseToGameState();
 }
@@ -1680,6 +1830,7 @@ bool PlayableScene::optionsMenuSpeechPreviewSampleId(uint16 &sampleId) const {
 }
 
 void PlayableScene::suspendAudioForOptionsMenu() {
+	stopRealtimeSpeech();
 	_speech.stop();
 	_soundBank0.stop();
 	stopAmbientSoundCues();
@@ -1714,6 +1865,7 @@ void PlayableScene::playSharedInventorySound(byte sampleId) {
 }
 
 void PlayableScene::showTravelScreenViewer() {
+	stopRealtimeSpeech();
 	TravelScreen travelScreen(_vm);
 	if (!travelScreen.showViewer() || Engine::shouldQuit() || _vm->isSceneRestartRequested())
 		return;
@@ -1771,6 +1923,7 @@ void PlayableScene::installFullscreenInventoryMedia(const InventoryMediaPlayer &
 	savedViewportX = _viewportXOffset;
 
 	_vm->gameplayMusic()->stop();
+	stopRealtimeSpeech();
 	_speech.stop();
 	_soundBank0.stop();
 	stopAmbientSoundCues();
@@ -2131,6 +2284,34 @@ void PlayableScene::rebuildWalkablePaletteMask() {
 	}
 }
 
+bool PlayableScene::unlockTravelDestination(byte destinationId) {
+	GameplayState &state = _vm->gameState();
+	if (!state.unlockTravelScreenDestination(destinationId))
+		return false;
+
+	_soundBank0.playSample(1, 100);
+
+	byte slotIndex = GameplayState::kTravelScreenDisabledSlot;
+	for (byte slot = 0; slot < GameplayState::kTravelScreenSlotCount; ++slot) {
+		if (state.travelScreenSlotIds[slot] == destinationId) {
+			slotIndex = slot;
+			break;
+		}
+	}
+
+	if (slotIndex != GameplayState::kTravelScreenDisabledSlot) {
+		TravelScreen travelScreen(_vm);
+		travelScreen.showUnlockTransition(slotIndex);
+		if (!Engine::shouldQuit() && !_vm->isSceneRestartRequested()) {
+			invalidatePresentationPalette();
+			drawPlayableComposite();
+			presentFrame();
+		}
+	}
+
+	return true;
+}
+
 bool PlayableScene::hasInventoryItem(byte itemId) const {
 	const byte owner = _vm->gameState().currentInventoryOwnerIndex;
 	return _vm->gameState().hasInventoryItem(owner, itemId);
@@ -2200,7 +2381,7 @@ void PlayableScene::runActionOverlay(const ActionOverlaySpec &spec, SceneAnimati
 		if (terminalFrame && !options.waitAfterFinalFrame) {
 			drawPlayableComposite();
 			presentFrame();
-		} else if (waitSceneMillis(spec.frameMillis)) {
+		} else if (waitSceneMillis(spec.frameMillis, options.allowSkip)) {
 			break;
 		}
 	}
@@ -2461,6 +2642,132 @@ void PlayableScene::advancePrimaryDialogueSpeechFrame(uint32 delta) {
 			_random, baseFrame, frameCount);
 		setPrimarySpeechAnimationFrame(_primaryDialogueSpeechGroup, nextFrame);
 	}
+}
+
+bool PlayableScene::startRealtimePrimarySpeechLine(uint16 rowIndex, byte frameIndex,
+		uint16 centerX, uint16 topY, byte red, byte green, byte blue,
+		byte animationGroup, byte speechId) {
+	stopRealtimeSpeech();
+	if (!getStage003Cue(rowIndex, frameIndex, _realtimeSpeechTextRecordId,
+			_realtimeSpeechContinuationCount, _realtimeSpeechVoiceSampleId)) {
+		return false;
+	}
+
+	_realtimeSpeechContinuationPart = 0;
+	_realtimeSpeechContinuationCount = MAX<byte>(1, _realtimeSpeechContinuationCount);
+	_realtimeSpeechCenterX = centerX;
+	_realtimeSpeechTopY = topY;
+	_realtimeSpeechAnimationGroup = animationGroup;
+	_realtimeSpeechId = speechId;
+	_realtimeSpeechVolumePercent = primarySpeechVolumePercent(animationGroup);
+	_realtimeSpeechPrimary = true;
+	_realtimeSpeechActive = true;
+	setPaletteEntry6Bit(kDefaultPrimarySpeechTextColor, red, green, blue);
+	_primarySpeechOverlay.colorIndex = kDefaultPrimarySpeechTextColor;
+	const byte baseFrame = primarySpeechAnimationBaseFrame(animationGroup);
+	_speechController.startPrimaryDialogueSpeech(animationGroup, baseFrame);
+	primarySpeechAnimationStarted(animationGroup, baseFrame);
+	setPrimarySpeechAnimationFrame(animationGroup, baseFrame);
+	startRealtimeSpeechPart();
+	return _realtimeSpeechActive;
+}
+
+bool PlayableScene::startRealtimeSecondarySpeechLine(uint16 rowIndex, byte frameIndex,
+		byte speechId) {
+	stopRealtimeSpeech();
+	if (!getStage003Cue(rowIndex, frameIndex, _realtimeSpeechTextRecordId,
+			_realtimeSpeechContinuationCount, _realtimeSpeechVoiceSampleId)) {
+		return false;
+	}
+
+	_realtimeSpeechContinuationPart = 0;
+	_realtimeSpeechContinuationCount = MAX<byte>(1, _realtimeSpeechContinuationCount);
+	_realtimeSpeechCenterX = _activeActorWorldX;
+	_realtimeSpeechTopY = 0;
+	_realtimeSpeechAnimationGroup = kInvalidPrimarySpeechAnimationGroup;
+	_realtimeSpeechId = speechId;
+	_realtimeSpeechVolumePercent = 100;
+	_realtimeSpeechPrimary = false;
+	_realtimeSpeechActive = true;
+	_speechOverlay.colorIndex = kDefaultSecondarySpeechTextColor;
+	_speechController.prepareSecondaryActorSpeech();
+	startRealtimeSpeechPart();
+	return _realtimeSpeechActive;
+}
+
+void PlayableScene::startRealtimeSpeechPart() {
+	while (_realtimeSpeechContinuationPart < _realtimeSpeechContinuationCount) {
+		const Common::String text = getResource003LargeTextRecord(
+			_realtimeSpeechTextRecordId + _realtimeSpeechContinuationPart);
+		if (text.empty()) {
+			++_realtimeSpeechContinuationPart;
+			continue;
+		}
+
+		SpeechOverlay &overlay = _realtimeSpeechPrimary ? _primarySpeechOverlay : _speechOverlay;
+		overlay.visible = true;
+		wrapActorSpeechText(text, _realtimeSpeechCenterX, overlay.lines);
+		calculateSpeechOverlayBounds(overlay, _realtimeSpeechCenterX, _realtimeSpeechTopY,
+			_realtimeSpeechPrimary, _activeActorWorldY);
+		const uint16 sampleId = _realtimeSpeechVoiceSampleId == 0 ? 0 :
+			_realtimeSpeechVoiceSampleId + _realtimeSpeechContinuationPart;
+		const bool started = sampleId != 0 && _realtimeSpeechPlayer.playSample(sampleId,
+			_realtimeSpeechVolumePercent);
+		_realtimeSpeechElapsed = 0;
+		_realtimeSpeechDuration = started ?
+			MAX<uint32>(_realtimeSpeechPlayer.lastSampleDurationMillis(), 750) :
+			MAX<uint32>(1200, overlay.lines.size() * 1100);
+		return;
+	}
+
+	finishRealtimeSpeech(true);
+}
+
+void PlayableScene::advanceRealtimeSpeech(uint32 delta) {
+	if (!_realtimeSpeechActive)
+		return;
+
+	_realtimeSpeechElapsed += delta;
+	if (_realtimeSpeechPlayer.isPlaying() ||
+			_realtimeSpeechElapsed < _realtimeSpeechDuration) {
+		return;
+	}
+
+	++_realtimeSpeechContinuationPart;
+	startRealtimeSpeechPart();
+}
+
+void PlayableScene::stopRealtimeSpeech() {
+	finishRealtimeSpeech(false);
+}
+
+void PlayableScene::finishRealtimeSpeech(bool completed) {
+	_realtimeSpeechPlayer.stop();
+	if (!_realtimeSpeechActive)
+		return;
+
+	const bool primary = _realtimeSpeechPrimary;
+	const byte animationGroup = _realtimeSpeechAnimationGroup;
+	const byte speechId = _realtimeSpeechId;
+	_realtimeSpeechActive = false;
+	_realtimeSpeechElapsed = 0;
+	_realtimeSpeechDuration = 0;
+	_realtimeSpeechContinuationPart = 0;
+	_realtimeSpeechContinuationCount = 0;
+	_realtimeSpeechId = 0;
+	if (primary) {
+		_speechController.clearPrimaryOverlay();
+		const byte baseFrame = primarySpeechAnimationBaseFrame(animationGroup);
+		setPrimarySpeechAnimationFrame(animationGroup, baseFrame);
+		_speechController.stopPrimaryDialogueSpeech(kInvalidPrimarySpeechAnimationGroup, 7);
+		if (completed)
+			primarySpeechAnimationRestored(animationGroup, baseFrame);
+	} else {
+		_speechController.clearSecondaryOverlay();
+		_speechController.prepareSecondaryActorSpeech();
+	}
+
+	realtimeSpeechEnded(speechId, completed);
 }
 
 void PlayableScene::clearSpeechOverlay() {

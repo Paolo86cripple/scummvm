@@ -33,19 +33,23 @@ public:
 	Scene2030(HollywoodEngine *vm);
 
 private:
+	enum LayerId {
+		kRightMerchantLayer,
+		kLeftMerchantLayer
+	};
+
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
 	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
+	void realtimeSpeechEnded(byte speechId, bool completed) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
 	uint32 primarySpeechAnimationFrameMillis(byte animationGroup) const override;
+	byte primarySpeechVolumePercent(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
@@ -55,8 +59,8 @@ private:
 	void advanceRightMerchantTick();
 	void updateRandomMerchantCallouts(uint32 delta);
 	bool startMerchantCalloutSpeech(bool rightMerchant);
-	void advanceMerchantCalloutSpeech(uint32 delta);
 	void stopMerchantCalloutSpeech();
+	void resetMerchantCalloutState();
 	void openMerchantForInteraction(bool rightMerchant);
 	void closeMerchantAfterInteraction(bool rightMerchant);
 	void waitForMerchantState(bool rightMerchant, byte targetState);
@@ -90,21 +94,18 @@ private:
 		bool rightMerchant);
 	void runRightMerchantSaleSequence(byte soldItemId, uint16 moneyAmount, byte merchantFrameIndex, byte secondaryFrameIndex);
 	void addEgyptianMoney(uint16 amount);
+	ResourceSpriteLayer &leftMerchantLayer() { return _sceneLayers.layer(kLeftMerchantLayer); }
+	ResourceSpriteLayer &rightMerchantLayer() { return _sceneLayers.layer(kRightMerchantLayer); }
 
 	TimedAnimationChannel _leftMerchantChannel;
 	TimedAnimationChannel _rightMerchantChannel;
-	ResourceSpriteLayer _leftMerchantLayer;
-	ResourceSpriteLayer _rightMerchantLayer;
 	byte _leftMerchantState;
 	byte _rightMerchantState;
 	byte _merchantCalloutSide;
 	bool _merchantInteractionActive;
 	bool _leftMerchantSequenceLocked;
 	bool _rightMerchantSequenceLocked;
-	bool _merchantCalloutSpeechActive;
 	uint32 _merchantCalloutTimerAccumulator;
-	uint32 _merchantCalloutSpeechElapsed;
-	uint32 _merchantCalloutSpeechDuration;
 };
 
 } // End of namespace Hollywood

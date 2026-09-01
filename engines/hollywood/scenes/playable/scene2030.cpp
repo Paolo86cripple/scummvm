@@ -53,7 +53,6 @@ const uint kScene2030SphinxReturnTransitionChunk = 10;
 const uint kScene2030RightMerchantTradeDescriptorCount = 0x0c;
 const uint kScene2030LeftMerchantPurchaseDescriptorCount = 0x0c;
 const byte kScene2030TransitionFinalFrame = 0x8b;
-const byte kScene2030PrimarySpeechTextColor = 0xfb;
 const byte kScene2030ShopDialogueStageId = 0x62;
 const byte kScene2030ShopPrimaryRow = 99;
 const uint kScene2030ShopDialogueChoiceRecordCount = 10 * 10 * 7;
@@ -92,6 +91,11 @@ enum Scene2030MerchantSpeechGroup {
 	kScene2030LeftMerchantInteractiveSpeech = 3
 };
 
+enum Scene2030RealtimeSpeechId {
+	kScene2030RightMerchantCalloutSpeech = 1,
+	kScene2030LeftMerchantCalloutSpeech = 2
+};
+
 const byte kScene2030LeftMerchantFrameMap[] = {
 	0, 27, 27, 1, 2, 3, 3, 2, 1, 27, 27, 8,
 	9, 10, 11, 11, 10, 9, 8, 27, 3, 4, 5, 6,
@@ -105,6 +109,13 @@ const byte kScene2030RightMerchantFrameMap[] = {
 	3, 4, 5, 6, 7, 13, 14, 15, 16, 17, 18, 19,
 	20, 21, 22, 23, 22, 21, 20, 24, 25, 26, 27, 28,
 	13, 0, 0, 0, 0, 0, 0, 0
+};
+
+const SceneLayerSpec kScene2030LayerSpecs[] = {
+	{kSceneAnimationBehindActors, 6, kScene2030RightMerchantDescriptorCount,
+		kScene2030RightMerchantFrameMap, ARRAYSIZE(kScene2030RightMerchantFrameMap), true, 1},
+	{kSceneAnimationBehindActors, 5, kScene2030LeftMerchantDescriptorCount,
+		kScene2030LeftMerchantFrameMap, ARRAYSIZE(kScene2030LeftMerchantFrameMap), true, 1}
 };
 
 const byte kScene2030RightStallTradeFrameMap[] = {
@@ -181,22 +192,14 @@ Scene2030::Scene2030(HollywoodEngine *vm) :
 		PlayableScene(vm, scene2030Config()),
 		_leftMerchantChannel(),
 		_rightMerchantChannel(),
-		_leftMerchantLayer(),
-		_rightMerchantLayer(),
 		_leftMerchantState(0),
 		_rightMerchantState(0),
 		_merchantCalloutSide(kScene2030MerchantNoCalloutSide),
 		_merchantInteractionActive(false),
 		_leftMerchantSequenceLocked(false),
 		_rightMerchantSequenceLocked(false),
-		_merchantCalloutSpeechActive(false),
-		_merchantCalloutTimerAccumulator(0),
-		_merchantCalloutSpeechElapsed(0),
-		_merchantCalloutSpeechDuration(0) {
-	_leftMerchantLayer.configure(5, kScene2030LeftMerchantDescriptorCount,
-		kScene2030LeftMerchantFrameMap, ARRAYSIZE(kScene2030LeftMerchantFrameMap));
-	_rightMerchantLayer.configure(6, kScene2030RightMerchantDescriptorCount,
-		kScene2030RightMerchantFrameMap, ARRAYSIZE(kScene2030RightMerchantFrameMap));
+		_merchantCalloutTimerAccumulator(0) {
+	_sceneLayers.configure(kScene2030LayerSpecs);
 }
 
 void Scene2030::initializeCustomPreviewState() {
@@ -223,19 +226,6 @@ void Scene2030::initializeCustomPreviewState() {
 
 	_activeActorCel = 0;
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
-}
-
-void Scene2030::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawResourceSpriteLayer(_rightMerchantLayer);
-	drawResourceSpriteLayer(_leftMerchantLayer);
-	drawActionOverlayLayer();
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
 }
 
 void Scene2030::runCustomEntrySequence() {
@@ -265,19 +255,32 @@ void Scene2030::runExitSideEffectsAfterLoop() {
 	fadePaletteToBlack();
 }
 
-bool Scene2030::prepareCustomGameplayLoop() {
+void Scene2030::prepareCustomGameplayLoop() {
 	resetMerchantLayers();
-	return true;
 }
 
-bool Scene2030::advanceCustomGameplayLoop(uint32 delta) {
+void Scene2030::advanceCustomGameplayLoop(uint32 delta) {
 	advanceMerchantLayers(delta);
-	if (_primaryDialogueSpeechActive)
-		advancePrimaryDialogueSpeechFrame(delta);
-	advanceMerchantCalloutSpeech(delta);
 	updateRandomMerchantCallouts(delta);
-	updateAmbientAudioAndMusicCues(delta);
-	return true;
+}
+
+void Scene2030::realtimeSpeechEnded(byte speechId, bool completed) {
+	if (!completed) {
+		resetMerchantCalloutState();
+		return;
+	}
+
+	if (speechId == kScene2030RightMerchantCalloutSpeech) {
+		_rightMerchantState = kScene2030MerchantCalloutClose;
+		_rightMerchantChannel.frameIndex = 6;
+		_rightMerchantChannel.resetTimer();
+		rightMerchantLayer().setFrame(6);
+	} else if (speechId == kScene2030LeftMerchantCalloutSpeech) {
+		_leftMerchantState = kScene2030MerchantCalloutClose;
+		_leftMerchantChannel.frameIndex = 6;
+		_leftMerchantChannel.resetTimer();
+		leftMerchantLayer().setFrame(6);
+	}
 }
 
 bool Scene2030::dispatchCustomSceneAction(uint16 handlerId) {
@@ -351,11 +354,17 @@ uint32 Scene2030::primarySpeechAnimationFrameMillis(byte animationGroup) const {
 	return kScene2030MerchantSpeechFrameMillis;
 }
 
+byte Scene2030::primarySpeechVolumePercent(byte animationGroup) const {
+	return animationGroup == kScene2030RightMerchantIdleSpeech ||
+		animationGroup == kScene2030LeftMerchantIdleSpeech ?
+		kScene2030MerchantCalloutSpeechVolumePercent : 100;
+}
+
 void Scene2030::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) {
 	if (merchantSpeechGroupIsRight(animationGroup))
-		_rightMerchantLayer.setFrame(frameIndex);
+		rightMerchantLayer().setFrame(frameIndex);
 	else if (merchantSpeechGroupIsLeft(animationGroup))
-		_leftMerchantLayer.setFrame(frameIndex);
+		leftMerchantLayer().setFrame(frameIndex);
 }
 
 AmbientAudioProfile Scene2030::ambientAudioProfile() const {
@@ -371,14 +380,8 @@ void Scene2030::resetMerchantLayers() {
 	_merchantInteractionActive = false;
 	_leftMerchantSequenceLocked = false;
 	_rightMerchantSequenceLocked = false;
-	_merchantCalloutSpeechActive = false;
 	_merchantCalloutTimerAccumulator = 0;
-	_merchantCalloutSpeechElapsed = 0;
-	_merchantCalloutSpeechDuration = 0;
-	_leftMerchantLayer.visible = true;
-	_rightMerchantLayer.visible = true;
-	_leftMerchantLayer.reset(1);
-	_rightMerchantLayer.reset(1);
+	_sceneLayers.reset();
 }
 
 void Scene2030::advanceMerchantLayers(uint32 delta) {
@@ -450,7 +453,7 @@ void Scene2030::advanceLeftMerchantTick() {
 		break;
 	}
 
-	_leftMerchantLayer.setFrame(_leftMerchantChannel.frameIndex);
+	leftMerchantLayer().setFrame(_leftMerchantChannel.frameIndex);
 }
 
 void Scene2030::advanceRightMerchantTick() {
@@ -508,11 +511,11 @@ void Scene2030::advanceRightMerchantTick() {
 		break;
 	}
 
-	_rightMerchantLayer.setFrame(_rightMerchantChannel.frameIndex);
+	rightMerchantLayer().setFrame(_rightMerchantChannel.frameIndex);
 }
 
 void Scene2030::updateRandomMerchantCallouts(uint32 delta) {
-	if (_merchantInteractionActive || _merchantCalloutSpeechActive ||
+	if (_merchantInteractionActive || isRealtimeSpeechActive() ||
 			_primarySpeechOverlay.visible || _speechOverlay.visible)
 		return;
 
@@ -526,7 +529,7 @@ void Scene2030::updateRandomMerchantCallouts(uint32 delta) {
 				_rightMerchantState = kScene2030MerchantCalloutClose;
 				_rightMerchantChannel.frameIndex = 6;
 				_rightMerchantChannel.resetTimer();
-				_rightMerchantLayer.setFrame(_rightMerchantChannel.frameIndex);
+				rightMerchantLayer().setFrame(_rightMerchantChannel.frameIndex);
 			}
 			continue;
 		}
@@ -537,7 +540,7 @@ void Scene2030::updateRandomMerchantCallouts(uint32 delta) {
 				_leftMerchantState = kScene2030MerchantCalloutClose;
 				_leftMerchantChannel.frameIndex = 6;
 				_leftMerchantChannel.resetTimer();
-				_leftMerchantLayer.setFrame(_leftMerchantChannel.frameIndex);
+				leftMerchantLayer().setFrame(_leftMerchantChannel.frameIndex);
 			}
 			continue;
 		}
@@ -550,13 +553,13 @@ void Scene2030::updateRandomMerchantCallouts(uint32 delta) {
 			_rightMerchantState = kScene2030MerchantCalloutOpen;
 			_rightMerchantChannel.frameIndex = 2;
 			_rightMerchantChannel.resetTimer();
-			_rightMerchantLayer.setFrame(_rightMerchantChannel.frameIndex);
+			rightMerchantLayer().setFrame(_rightMerchantChannel.frameIndex);
 		} else {
 			_merchantCalloutSide = kScene2030MerchantLeft;
 			_leftMerchantState = kScene2030MerchantCalloutOpen;
 			_leftMerchantChannel.frameIndex = 2;
 			_leftMerchantChannel.resetTimer();
-			_leftMerchantLayer.setFrame(_leftMerchantChannel.frameIndex);
+			leftMerchantLayer().setFrame(_leftMerchantChannel.frameIndex);
 		}
 	}
 }
@@ -573,82 +576,29 @@ bool Scene2030::startMerchantCalloutSpeech(bool rightMerchant) {
 	const byte animationGroup = rightMerchant ? kScene2030RightMerchantIdleSpeech :
 		kScene2030LeftMerchantIdleSpeech;
 
-	uint16 textRecordId = 0;
-	byte continuationCount = 0;
-	uint16 voiceSampleId = 0;
-	if (!getStage003Cue(rowIndex, frameIndex, textRecordId, continuationCount, voiceSampleId))
+	const byte speechId = rightMerchant ? kScene2030RightMerchantCalloutSpeech :
+		kScene2030LeftMerchantCalloutSpeech;
+	if (!startRealtimePrimarySpeechLine(rowIndex, frameIndex, centerX, topY,
+			red, green, blue, animationGroup, speechId)) {
 		return false;
-	(void)continuationCount;
-
-	const Common::String text = getResource003LargeTextRecord(textRecordId);
-	if (text.empty())
-		return false;
-
-	setPaletteEntry6Bit(kScene2030PrimarySpeechTextColor, red, green, blue);
-	_primarySpeechOverlay.visible = true;
-	_primarySpeechOverlay.colorIndex = kScene2030PrimarySpeechTextColor;
-	wrapActorSpeechText(text, centerX, _primarySpeechOverlay.lines);
-	calculateSpeechOverlayBounds(_primarySpeechOverlay, centerX, topY, true, _activeActorWorldY);
-
-	const bool started = voiceSampleId != 0 &&
-		_speech.playSample(voiceSampleId, kScene2030MerchantCalloutSpeechVolumePercent);
-	_merchantCalloutSpeechDuration = started ? MAX<uint32>(_speech.lastSampleDurationMillis(), 750) :
-		MAX<uint32>(1200, _primarySpeechOverlay.lines.size() * 1100);
-	_merchantCalloutSpeechElapsed = 0;
-	_merchantCalloutSpeechActive = true;
+	}
 
 	if (rightMerchant)
 		_rightMerchantState = kScene2030MerchantCalloutSpeaking;
 	else
 		_leftMerchantState = kScene2030MerchantCalloutSpeaking;
 
-	const byte baseFrame = primarySpeechAnimationBaseFrame(animationGroup);
-	_speechController.startPrimaryDialogueSpeech(animationGroup, baseFrame);
-	setPrimarySpeechAnimationFrame(animationGroup, baseFrame);
 	return true;
 }
 
-void Scene2030::advanceMerchantCalloutSpeech(uint32 delta) {
-	if (!_merchantCalloutSpeechActive)
-		return;
-
-	_merchantCalloutSpeechElapsed += delta;
-	if (_speech.isPlaying() || _merchantCalloutSpeechElapsed < _merchantCalloutSpeechDuration)
-		return;
-
-	const bool rightMerchant = _merchantCalloutSide == kScene2030MerchantRight;
-	_speech.stop();
-	_primarySpeechOverlay.visible = false;
-	_primarySpeechOverlay.lines.clear();
-	_speechController.stopPrimaryDialogueSpeech(0xff, 7);
-	_merchantCalloutSpeechActive = false;
-	_merchantCalloutSpeechElapsed = 0;
-	_merchantCalloutSpeechDuration = 0;
-
-	if (rightMerchant) {
-		_rightMerchantState = kScene2030MerchantCalloutClose;
-		_rightMerchantChannel.frameIndex = 6;
-		_rightMerchantChannel.resetTimer();
-		_rightMerchantLayer.setFrame(_rightMerchantChannel.frameIndex);
-	} else {
-		_leftMerchantState = kScene2030MerchantCalloutClose;
-		_leftMerchantChannel.frameIndex = 6;
-		_leftMerchantChannel.resetTimer();
-		_leftMerchantLayer.setFrame(_leftMerchantChannel.frameIndex);
-	}
+void Scene2030::stopMerchantCalloutSpeech() {
+	if (isRealtimeSpeechActive())
+		stopRealtimeSpeech();
+	else
+		resetMerchantCalloutState();
 }
 
-void Scene2030::stopMerchantCalloutSpeech() {
-	if (_merchantCalloutSpeechActive) {
-		_speech.stop();
-		_primarySpeechOverlay.visible = false;
-		_primarySpeechOverlay.lines.clear();
-		_speechController.stopPrimaryDialogueSpeech(0xff, 7);
-	}
-
-	_merchantCalloutSpeechActive = false;
-	_merchantCalloutSpeechElapsed = 0;
-	_merchantCalloutSpeechDuration = 0;
+void Scene2030::resetMerchantCalloutState() {
 	_merchantCalloutTimerAccumulator = 0;
 	_merchantCalloutSide = kScene2030MerchantNoCalloutSide;
 
@@ -658,7 +608,7 @@ void Scene2030::stopMerchantCalloutSpeech() {
 			_rightMerchantState == kScene2030MerchantCalloutClose) {
 		_rightMerchantState = kScene2030MerchantIdle;
 		_rightMerchantChannel.frameIndex = 1;
-		_rightMerchantLayer.setFrame(1);
+		rightMerchantLayer().setFrame(1);
 	}
 
 	if (_leftMerchantState == kScene2030MerchantCalloutOpen ||
@@ -667,7 +617,7 @@ void Scene2030::stopMerchantCalloutSpeech() {
 			_leftMerchantState == kScene2030MerchantCalloutClose) {
 		_leftMerchantState = kScene2030MerchantIdle;
 		_leftMerchantChannel.frameIndex = 1;
-		_leftMerchantLayer.setFrame(1);
+		leftMerchantLayer().setFrame(1);
 	}
 }
 
@@ -679,12 +629,12 @@ void Scene2030::openMerchantForInteraction(bool rightMerchant) {
 		_rightMerchantState = kScene2030MerchantTalkOpen;
 		_rightMerchantChannel.frameIndex = 10;
 		_rightMerchantChannel.resetTimer();
-		_rightMerchantLayer.setFrame(_rightMerchantChannel.frameIndex);
+		rightMerchantLayer().setFrame(_rightMerchantChannel.frameIndex);
 	} else {
 		_leftMerchantState = kScene2030MerchantTalkOpen;
 		_leftMerchantChannel.frameIndex = 10;
 		_leftMerchantChannel.resetTimer();
-		_leftMerchantLayer.setFrame(_leftMerchantChannel.frameIndex);
+		leftMerchantLayer().setFrame(_leftMerchantChannel.frameIndex);
 	}
 
 	waitForMerchantState(rightMerchant, kScene2030MerchantTalkHold);
@@ -695,12 +645,12 @@ void Scene2030::closeMerchantAfterInteraction(bool rightMerchant) {
 		_rightMerchantState = kScene2030MerchantTalkClose;
 		_rightMerchantChannel.frameIndex = 0x11;
 		_rightMerchantChannel.resetTimer();
-		_rightMerchantLayer.setFrame(_rightMerchantChannel.frameIndex);
+		rightMerchantLayer().setFrame(_rightMerchantChannel.frameIndex);
 	} else {
 		_leftMerchantState = kScene2030MerchantTalkClose;
 		_leftMerchantChannel.frameIndex = 0x0f;
 		_leftMerchantChannel.resetTimer();
-		_leftMerchantLayer.setFrame(_leftMerchantChannel.frameIndex);
+		leftMerchantLayer().setFrame(_leftMerchantChannel.frameIndex);
 	}
 
 	waitForMerchantState(rightMerchant, kScene2030MerchantIdle);
@@ -873,8 +823,8 @@ void Scene2030::runTransitionClip(uint chunkIndex, bool includeActiveActor, bool
 void Scene2030::drawTransitionClipFrame(uint chunkIndex, byte frameIndex, Graphics::Surface &transitionBackground) {
 	_sceneFramebuffer.copyRectToSurface(transitionBackground, 0, 0,
 		Common::Rect(0, 0, HollywoodEngine::kSceneBufferWidth, HollywoodEngine::kSceneBufferHeight));
-	drawResourceSpriteLayer(_rightMerchantLayer);
-	drawResourceSpriteLayer(_leftMerchantLayer);
+	drawResourceSpriteLayer(rightMerchantLayer());
+	drawResourceSpriteLayer(leftMerchantLayer());
 	drawClipFrameDeltaToSurface(chunkIndex, kScene2030TransitionDescriptorCount, frameIndex, *_sceneFramebuffer.surfacePtr());
 	drawClipFrameDeltaToSurface(chunkIndex, kScene2030TransitionDescriptorCount, frameIndex, transitionBackground);
 }
@@ -1084,7 +1034,7 @@ void Scene2030::runSynchronizedMerchantOverlay(uint chunkIndex, uint descriptorC
 	if (frameCount == 0)
 		return;
 
-	ResourceSpriteLayer &merchantLayer = rightMerchant ? _rightMerchantLayer : _leftMerchantLayer;
+	ResourceSpriteLayer &merchantLayer = rightMerchant ? rightMerchantLayer() : leftMerchantLayer();
 	TimedAnimationChannel &merchantChannel = rightMerchant ? _rightMerchantChannel : _leftMerchantChannel;
 	if (rightMerchant)
 		_rightMerchantSequenceLocked = true;

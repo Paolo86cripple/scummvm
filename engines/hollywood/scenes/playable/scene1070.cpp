@@ -188,23 +188,18 @@ void Scene1070::runCustomEntrySequence() {
 	presentFrame();
 }
 
-bool Scene1070::prepareCustomGameplayLoop() {
+void Scene1070::prepareCustomGameplayLoop() {
 	resetAnimationLayers();
-	return true;
 }
 
-bool Scene1070::advanceCustomGameplayLoop(uint32 delta) {
+void Scene1070::advanceCustomGameplayLoop(uint32 delta) {
 	advanceBackLayer(delta);
 	advanceCharacterAmbientAudio();
-	if (_primaryDialogueSpeechActive)
-		advancePrimaryDialogueSpeechFrame(delta);
-	else {
+	if (!_primaryDialogueSpeechActive) {
 		advanceSpencerAmbientTrigger(delta);
 		advanceGhostLayer(delta);
 		advanceSpencerLayer(delta);
 	}
-	updateAmbientAudioAndMusicCues(delta);
-	return true;
 }
 
 bool Scene1070::dispatchCustomSceneAction(uint16 handlerId) {
@@ -955,10 +950,12 @@ void Scene1070::runSpencerTravelUnlockEffect() {
 	if (_vm->gameState().hasTravelScreenDestination(kScene1070TravelUnlockDestinationId))
 		return;
 
-	runActorReplacement(ActionOverlaySpec(16, kScene1070TravelUnlockDescriptorCount,
-		kScene1070TravelUnlockFrameMap, ARRAYSIZE(kScene1070TravelUnlockFrameMap), kScene1070FrameMillis));
-	_soundBank0.playSample(1, 100);
-	_vm->gameState().unlockTravelScreenDestination(kScene1070TravelUnlockDestinationId);
+	beginStaticSecondarySpeechLine(0xdb, 0);
+	BlockingSequence(*this)
+		.actorReplacement(16, kScene1070TravelUnlockDescriptorCount,
+			kScene1070TravelUnlockFrameMap, ARRAYSIZE(kScene1070TravelUnlockFrameMap),
+			kScene1070FrameMillis);
+	unlockTravelDestination(kScene1070TravelUnlockDestinationId);
 }
 
 void Scene1070::handleMicrophonePickup() {
@@ -966,11 +963,13 @@ void Scene1070::handleMicrophonePickup() {
 	if (state.scene1070MicrophoneTaken || hasInventoryItem(0x23))
 		return;
 
-	state.scene1070MicrophoneTaken = true;
-	runOverlaySequence(14, kScene1070MicrophoneDescriptorCount, kScene1070MicrophoneFrameMap,
-		ARRAYSIZE(kScene1070MicrophoneFrameMap), kScene1070FrameMillis, 5, 7);
+	BlockingSequence sequence(*this);
+	sequence.commit(state.scene1070MicrophoneTaken, true)
+		.actorReplacement(ActionOverlaySpec(14, kScene1070MicrophoneDescriptorCount,
+			kScene1070MicrophoneFrameMap, ARRAYSIZE(kScene1070MicrophoneFrameMap),
+			kScene1070FrameMillis).patchAt(5, 7));
 	addInventoryItem(0x23);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 	dispatchGenericSceneAction(21);
 }
 
@@ -979,11 +978,13 @@ void Scene1070::handleMicStandPickup() {
 	if (state.scene1070MicrophoneStandTaken || hasInventoryItem(0x24))
 		return;
 
-	state.scene1070MicrophoneStandTaken = true;
-	runOverlaySequence(18, kScene1070MicrophoneStandDescriptorCount, kScene1070MicrophoneStandFrameMap,
-		ARRAYSIZE(kScene1070MicrophoneStandFrameMap), kScene1070FrameMillis, 6, 6);
+	BlockingSequence sequence(*this);
+	sequence.commit(state.scene1070MicrophoneStandTaken, true)
+		.actorReplacement(ActionOverlaySpec(18, kScene1070MicrophoneStandDescriptorCount,
+			kScene1070MicrophoneStandFrameMap, ARRAYSIZE(kScene1070MicrophoneStandFrameMap),
+			kScene1070FrameMillis).patchAt(6, 6));
 	addInventoryItem(0x24);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 	dispatchGenericSceneAction(21);
 }
 
@@ -993,22 +994,16 @@ void Scene1070::handleBallChainPickup() {
 		return;
 
 	dispatchGenericSceneAction(21);
-	_soundBank0.playSampleLooping(0x22, 15);
-	runOverlaySequence(12, kScene1070BallDescriptorCount, kScene1070BallFrameMap,
-		ARRAYSIZE(kScene1070BallFrameMap), kScene1070FrameMillis, -1, 1);
-	_soundBank0.stop();
-	state.scene1070ChainRemoved = true;
+	BlockingSequence sequence(*this);
+	sequence.loopingSound(0x22, 15)
+		.actorReplacement(12, kScene1070BallDescriptorCount,
+			kScene1070BallFrameMap, ARRAYSIZE(kScene1070BallFrameMap), kScene1070FrameMillis)
+		.stopSound()
+		.commit(state.scene1070ChainRemoved, true);
 	addInventoryItem(0x1e);
-	_soundBank0.playSample(1, 100);
-	applySceneStateToHotspotsAndPatches(1);
-	beginSecondarySpeechLine(15, 0);
-}
-
-void Scene1070::runOverlaySequence(uint chunkIndex, uint descriptorCount, const byte *frameMap,
-		uint frameMapSize, uint32 frameMillis, int patchFrame, byte patchSelector) {
-	runActorReplacement(ActionOverlaySpec(chunkIndex, descriptorCount,
-		frameMap, frameMapSize, frameMillis)
-		.patchAt(patchFrame, patchSelector));
+	sequence.sound(1)
+		.framebufferPatch(1)
+		.secondarySpeech(15, 0);
 }
 
 } // End of namespace Hollywood

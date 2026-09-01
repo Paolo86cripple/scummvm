@@ -33,13 +33,16 @@ public:
 	Scene2020(HollywoodEngine *vm);
 
 private:
+	enum LayerId {
+		kPoolLayer,
+		kTigerLayer,
+		kPrincessLayer,
+		kTigerItemEffectLayer
+	};
+
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
@@ -50,7 +53,6 @@ private:
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetAnimationLayers();
-	void advancePoolLayer(uint32 delta);
 	void advanceTigerLayer(uint32 delta);
 	void advanceTigerIdleFrame();
 	void advanceTigerItemSequence(uint32 delta);
@@ -81,17 +83,17 @@ private:
 	void restoreOriginalColorMapItem(byte itemId);
 	void remapOriginalColorMapItems(byte firstSourceItem, byte secondSourceItem, byte destinationItem);
 	byte originalColorMapItemAt(uint paletteIndex) const;
+	ResourceSpriteLayer &poolLayer() { return _sceneLayers.layer(kPoolLayer); }
+	ResourceSpriteLayer &tigerLayer() { return _sceneLayers.layer(kTigerLayer); }
+	ResourceSpriteLayer &princessLayer() { return _sceneLayers.layer(kPrincessLayer); }
+	ResourceSpriteLayer &tigerItemEffectLayer() { return _sceneLayers.layer(kTigerItemEffectLayer); }
 
-	TimedAnimationChannel _poolChannel;
+	uint _poolTrack;
 	TimedAnimationChannel _tigerChannel;
 	TimedAnimationChannel _princessChannel;
 	TimedAnimationChannel _paletteCycleChannel;
 	TimedAnimationChannel _tigerItemActorChannel;
 	TimedAnimationChannel _tigerItemEffectChannel;
-	ResourceSpriteLayer _poolLayer;
-	ResourceSpriteLayer _tigerLayer;
-	ResourceSpriteLayer _princessLayer;
-	ResourceSpriteLayer _tigerItemEffectLayer;
 	byte _tigerAnimationState;
 	byte _princessAnimationState;
 	bool _princessSpeechTransitionActive;

@@ -41,7 +41,7 @@ private:
 	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
@@ -52,7 +52,6 @@ private:
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetAnimationLayers();
-	void advanceAmbientLayer(uint32 delta);
 	void advanceEntryIdle(uint32 delta);
 	void startScriptedActorPath();
 	void advanceScriptedActorPath(uint32 delta);
@@ -68,12 +67,12 @@ private:
 	void runEntryPrimarySpeechLine(byte frameIndex, byte animationGroup);
 	void runTreasurePrimarySpeechLine(uint16 rowIndex, byte frameIndex);
 
-	TimedAnimationChannel _ambientChannel;
 	TimedAnimationChannel _entryIdleChannel;
 	TimedAnimationChannel _scriptedActorPathChannel;
 	ResourceSpriteLayer _entryLayer;
 	ResourceSpriteLayer _ambientLayer;
 	ResourceSpriteLayer _treasureLayer;
+	uint _ambientTrack;
 	bool _entryIdleActive;
 	bool _scriptedActorPathActive;
 	uint _scriptedActorPathFrameIndex;

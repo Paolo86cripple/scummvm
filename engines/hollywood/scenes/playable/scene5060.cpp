@@ -96,17 +96,6 @@ void Scene5060::initializeCustomPreviewState() {
 	setActiveActorPose(0x1fe, 0x17c, 4);
 }
 
-void Scene5060::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	drawActionOverlayLayer();
-}
-
 bool Scene5060::shouldPresentPreviewBeforeEntrySequence() const {
 	return false;
 }
@@ -131,12 +120,11 @@ void Scene5060::runCustomEntrySequence() {
 	}
 }
 
-bool Scene5060::advanceCustomGameplayLoop(uint32 delta) {
+void Scene5060::advanceCustomGameplayLoop(uint32 delta) {
 	(void)delta;
 	ensureAmbientSoundCuePlaying(1, 0x1b, 2);
 	if (_mineCartRumbleActive && !_soundBank0.isPlaying())
 		_soundBank0.playSample(0x18, 100);
-	return false;
 }
 
 bool Scene5060::dispatchCustomSceneAction(uint16 handlerId) {

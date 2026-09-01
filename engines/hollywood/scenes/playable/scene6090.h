@@ -48,8 +48,9 @@ private:
 	bool shouldApplyGameplayPanelObjectPalette() const override;
 	void runCustomEntrySequence() override;
 	bool shouldPresentPreviewBeforeEntrySequence() const override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
+	void advancePrimarySpeechAnimation(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool shouldPlayGameplayClickPath() const override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
@@ -72,7 +73,6 @@ private:
 	void runOpeningConversation();
 
 	void advanceTiedRonIdle(uint32 delta);
-	void advanceAmbientLayers(uint32 delta);
 	void advanceSueIdle(uint32 delta);
 	void advanceMechanism(uint32 delta);
 	void advanceHannoverPose();
@@ -108,8 +108,9 @@ private:
 	ResourceSpriteLayer _escapeBackdropLayer;
 	ResourceSpriteLayer _freedSueLayer;
 	ResourceSpriteLayer _specialEffectLayer;
+	uint _leftAmbientTrack;
+	uint _rightAmbientTrack;
 	TimedAnimationChannel _tiedRonChannel;
-	TimedAnimationChannel _ambientLayerChannel;
 	TimedAnimationChannel _sueIdleChannel;
 	TimedAnimationChannel _mechanismChannel;
 	TimedAnimationChannel _escapeChannel;

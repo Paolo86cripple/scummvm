@@ -32,6 +32,14 @@ public:
 	Scene6080(HollywoodEngine *vm);
 
 private:
+	enum LayerId {
+		kSueNormalLayer,
+		kSueAlternateLayer,
+		kWaxBallLayer,
+		kGuardNormalLayer,
+		kGuardAlternateLayer
+	};
+
 	void initializeCustomPreviewState() override;
 	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel,
 		int activeWorldX, int activeWorldY, bool drawSecondaryActor, byte secondaryFacing,
@@ -39,8 +47,8 @@ private:
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
 	bool shouldPresentPreviewBeforeEntrySequence() const override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
@@ -65,12 +73,13 @@ private:
 	void runFinalSueAnimation();
 	void advanceFinalSueAnimation(uint32 delta);
 	void dimEscapePalette();
+	ResourceSpriteLayer &sueNormalLayer() { return _sceneLayers.layer(kSueNormalLayer); }
+	ResourceSpriteLayer &sueAlternateLayer() { return _sceneLayers.layer(kSueAlternateLayer); }
+	const ResourceSpriteLayer &sueAlternateLayer() const { return _sceneLayers.layer(kSueAlternateLayer); }
+	ResourceSpriteLayer &waxBallLayer() { return _sceneLayers.layer(kWaxBallLayer); }
+	ResourceSpriteLayer &guardNormalLayer() { return _sceneLayers.layer(kGuardNormalLayer); }
+	ResourceSpriteLayer &guardAlternateLayer() { return _sceneLayers.layer(kGuardAlternateLayer); }
 
-	ResourceSpriteLayer _sueNormalLayer;
-	ResourceSpriteLayer _sueAlternateLayer;
-	ResourceSpriteLayer _guardNormalLayer;
-	ResourceSpriteLayer _guardAlternateLayer;
-	ResourceSpriteLayer _waxBallLayer;
 	TimedAnimationChannel _sueIdleChannel;
 	TimedAnimationChannel _guardIdleChannel;
 	TimedAnimationChannel _waxBallChannel;

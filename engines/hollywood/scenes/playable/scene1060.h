@@ -33,13 +33,19 @@ public:
 	Scene1060(HollywoodEngine *vm);
 
 private:
+	enum LayerId {
+		kLargeBackgroundLayer,
+		kInvisibleManLayer,
+		kFlyDoctorLayer,
+		kSmallLoopLayer,
+		kSmallTriggerLayer
+	};
+
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
+	void advancePrimarySpeechAnimation(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	bool shouldAnimatePrimarySpeechLine() const override;
@@ -57,7 +63,6 @@ private:
 	void advanceFlyDoctorIdle(uint32 delta);
 	void advanceFlySlimeDrip(uint32 delta);
 	void advanceTicketPickupFrame(uint32 delta);
-	void advanceSmallLoop(uint32 delta);
 	void advanceSmallTrigger(uint32 delta);
 	void restartSmallTriggerLayerFromFlyDoctorFrame(byte flyDoctorFrame);
 	byte juniorIdleFrame() const;
@@ -82,8 +87,11 @@ private:
 	void handlePocketPaperLook();
 	void handleSkullcrackerExchange();
 	void handleFlySlimeExchange();
-	void runOverlaySequence(uint chunkIndex, uint descriptorCount, const byte *frameMap,
-		uint frameMapSize, uint32 frameMillis, int patchFrame = -1, byte patchSelector = 0);
+	ResourceSpriteLayer &largeBackgroundLayer() { return _sceneLayers.layer(kLargeBackgroundLayer); }
+	ResourceSpriteLayer &invisibleManLayer() { return _sceneLayers.layer(kInvisibleManLayer); }
+	ResourceSpriteLayer &flyDoctorLayer() { return _sceneLayers.layer(kFlyDoctorLayer); }
+	ResourceSpriteLayer &smallLoopLayer() { return _sceneLayers.layer(kSmallLoopLayer); }
+	ResourceSpriteLayer &smallTriggerLayer() { return _sceneLayers.layer(kSmallTriggerLayer); }
 
 	TimedAnimationChannel _largeBackgroundChannel;
 	TimedAnimationChannel _invisibleManChannel;
@@ -91,13 +99,8 @@ private:
 	TimedAnimationChannel _flyDoctorModeChannel;
 	TimedAnimationChannel _flyDoctorIdleChannel;
 	TimedAnimationChannel _flySlimeDripChannel;
-	TimedAnimationChannel _smallLoopChannel;
 	TimedAnimationChannel _smallTriggerChannel;
-	ResourceSpriteLayer _largeBackgroundLayer;
-	ResourceSpriteLayer _invisibleManLayer;
-	ResourceSpriteLayer _flyDoctorLayer;
-	ResourceSpriteLayer _smallLoopLayer;
-	ResourceSpriteLayer _smallTriggerLayer;
+	uint _smallLoopTrack;
 	byte _largeBackgroundMode;
 	uint16 _largeBackgroundIdleCounter;
 	byte _flyDoctorMode;

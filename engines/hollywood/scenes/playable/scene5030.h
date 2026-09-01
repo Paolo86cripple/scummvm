@@ -41,8 +41,7 @@ private:
 	void runCustomEntrySequence() override;
 	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
@@ -105,7 +104,6 @@ private:
 	TimedAnimationChannel _chunk9Channel;
 	TimedAnimationChannel _chunk10Channel;
 	TimedAnimationChannel _ronDialogueIdleChannel;
-	TransientLayerCompositor _animationLayers;
 	ResourceSpriteLayer _actorReplacementLayer;
 	ResourceSpriteLayer _alternateVanessaLayer;
 	bool _scoutStopTransitionActive;

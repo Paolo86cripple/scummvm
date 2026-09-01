@@ -38,8 +38,8 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool customizeRouteSegment(byte currentRegion, byte nextRegion, const ActorPathBuildState &state,
@@ -56,7 +56,6 @@ private:
 	void rebuildWalkableMask();
 	void removeColorMapItem(byte itemId);
 	void restoreOrRemoveDiaryHotspot();
-	void advanceLargeLayer(uint32 delta);
 	void advanceSmallIdleLayer(uint32 delta);
 	void runEntryFromForest();
 	void runEntryFromCabin();
@@ -67,10 +66,10 @@ private:
 	void runFlyerCoatingOverlay();
 	void drawForegroundBlocks();
 
-	TimedAnimationChannel _largeChannel;
 	TimedAnimationChannel _smallIdleChannel;
 	ResourceSpriteLayer _largeLayer;
 	ResourceSpriteLayer _smallIdleLayer;
+	uint _largeTrack;
 	byte _smallIdleMode;
 };
 

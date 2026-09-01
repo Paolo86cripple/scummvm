@@ -45,8 +45,8 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	void advanceDialogueMenu(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
@@ -64,7 +64,6 @@ private:
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetAnimationLayers();
-	void advanceAmbientLayer(uint32 delta);
 	void advanceForegroundActorIdle(uint32 delta);
 	void advanceForegroundActorDialoguePose(uint32 delta);
 	void drawCumulativeDeltaClip();
@@ -95,11 +94,11 @@ private:
 	void setHotspotInteractionY(byte itemId, int16 y);
 	void setHotspotInteractionX(byte itemId, int16 x);
 
-	TimedAnimationChannel _ambientChannel;
 	TimedAnimationChannel _foregroundActorChannel;
 	ResourceSpriteLayer _ambientLayer;
 	ResourceSpriteLayer _foregroundActorLayer;
 	ResourceSpriteLayer _forwardExitPoseLayer;
+	uint _ambientTrack;
 	Common::Array<byte> _deltaClipData;
 	byte _foregroundActorIdleState;
 	byte _foregroundActorIdleDelay;

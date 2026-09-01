@@ -38,8 +38,8 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	bool shouldAnimatePrimarySpeechLine() const override;
@@ -53,7 +53,7 @@ private:
 	void beginCloakroomAttendantSpeechLine(byte frameIndex, bool alternatePose);
 	void handleDialogueEffect(byte effectId);
 	void runDialogueEffectTen();
-	void runTravelUnlockEffect(byte travelSlotId);
+	void runTravelUnlockEffect(byte destinationId);
 	void handlePackageExchange();
 	void handleJackTalkLine();
 	void handleJackLookLine();
@@ -62,8 +62,6 @@ private:
 	void finishLargeOverlayIdleSequence();
 	void runSynchronizedOverlaySequence(uint chunkIndex, uint descriptorCount, const byte *actionFrameMap,
 		const byte *largeOverlayFrameMap, uint frameMapSize, uint32 frameMillis);
-	void runOverlaySequence(uint chunkIndex, uint descriptorCount, const byte *frameMap,
-		uint frameMapSize, uint32 frameMillis, int patchFrame = -1);
 	void advanceSmallOverlay(uint32 delta);
 	void advanceLargeOverlay(uint32 delta);
 	void advanceLargeOverlay(uint32 delta, bool forceFinish);

@@ -39,8 +39,10 @@ private:
 		byte actorDrawOrderMode) override;
 	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
+	void advancePrimarySpeechAnimation(uint32 delta) override;
+	void advanceAmbientAudio(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
@@ -79,16 +81,15 @@ private:
 	void replaceColorMapItemFromOriginal(byte sourceItem, byte destinationItem);
 	void rebuildWalkableMask();
 
-	TransientLayerCompositor _transformedRoomLayers;
 	ResourceSpriteLayer _elevatorLayer;
 	ResourceSpriteLayer _projectorSpeechLayer;
 	TimedAnimationChannel _movingWallChannel;
 	TimedAnimationChannel _mainProjectionChannel;
-	TimedAnimationChannel _sideLoopChannel;
-	TimedAnimationChannel _toggleChannel;
-	TimedAnimationChannel _randomDetailChannel;
 	TimedAnimationChannel _transformationOverlayChannel;
 	TimedAnimationChannel _transformationPaletteChannel;
+	uint _sideLoopTrack;
+	uint _toggleTrack;
+	uint _randomDetailTrack;
 	bool _projectorSpeechActive;
 	bool _roomTransformationActive;
 	bool _transformationOverlayStarted;

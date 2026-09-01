@@ -39,7 +39,6 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
@@ -49,7 +48,6 @@ private:
 	void handleAnimationFrameHook(byte hookId, uint frame) override;
 
 	void resetForegroundLayer();
-	void advanceForegroundLayer(uint32 delta);
 	void runEntryFromLabyrinth();
 	void runEntryFromRightPassage();
 	void runEntryPathWithFinalFacing(int startX, int startY, byte startFacing,
@@ -60,8 +58,7 @@ private:
 	void rebuildWalkableMask();
 	void setColorMapItem(byte sourceItem, byte destinationItem);
 
-	TimedAnimationChannel _foregroundChannel;
-	ResourceSpriteLayer _foregroundLayer;
+	uint _foregroundTrack;
 	bool _sealMemoryActive;
 	byte _sealMemoryFrame;
 };

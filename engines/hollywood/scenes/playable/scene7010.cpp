@@ -118,29 +118,29 @@ const byte kScene7010DialogueOverlayMode2FrameMap[] = {
 	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
 	15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26
 };
-const SceneAnimationLayerSpec kScene7010AnimationLayerSpecs[] = {
+const SceneLayerSpec kScene7010AnimationLayerSpecs[] = {
 	{ kSceneAnimationBehindActors,
-		10, kScene7010Chunk10DescriptorCount, nullptr, 0, true },
+		10, kScene7010Chunk10DescriptorCount, nullptr, 0, true, 0 },
 	{ kSceneAnimationBehindActors,
-		10, kScene7010Chunk10DescriptorCount, nullptr, 0, true },
+		10, kScene7010Chunk10DescriptorCount, nullptr, 0, true, 0 },
 	{ kSceneAnimationBehindActors,
-		10, kScene7010Chunk10DescriptorCount, nullptr, 0, true },
+		10, kScene7010Chunk10DescriptorCount, nullptr, 0, true, 0 },
 	{ kSceneAnimationBehindActors,
-		10, kScene7010Chunk10DescriptorCount, nullptr, 0, true },
+		10, kScene7010Chunk10DescriptorCount, nullptr, 0, true, 0 },
 	{ kSceneAnimationBehindActors,
 		12, kScene7010DialogueOverlayMode1DescriptorCount,
-		kScene7010DialogueOverlayMode1FrameMap, ARRAYSIZE(kScene7010DialogueOverlayMode1FrameMap), false },
+		kScene7010DialogueOverlayMode1FrameMap, ARRAYSIZE(kScene7010DialogueOverlayMode1FrameMap), false, 0 },
 	{ kSceneAnimationBehindActors,
 		14, kScene7010Chunk14DescriptorCount, kScene7010Chunk14FrameMap,
-		ARRAYSIZE(kScene7010Chunk14FrameMap), false },
+		ARRAYSIZE(kScene7010Chunk14FrameMap), false, 0 },
 	{ kSceneAnimationBehindActors,
 		11, kScene7010Chunk11DescriptorCount, kScene7010Chunk11FrameMap,
-		ARRAYSIZE(kScene7010Chunk11FrameMap), false },
+		ARRAYSIZE(kScene7010Chunk11FrameMap), false, 0 },
 	{ kSceneAnimationInFrontOfActors,
 		8, kScene7010Chunk8DescriptorCount, kScene7010Chunk8FrameMap,
-		ARRAYSIZE(kScene7010Chunk8FrameMap), true },
+		ARRAYSIZE(kScene7010Chunk8FrameMap), true, 0 },
 	{ kSceneAnimationInFrontOfActors,
-		9, kScene7010Chunk9DescriptorCount, nullptr, 0, true }
+		9, kScene7010Chunk9DescriptorCount, nullptr, 0, true, 0 }
 };
 const byte kScene7010Route3To2StepDeltas[] = {
 	4, 8, 10, 6, 3, 5, 5, 5, 5, 6, 2, 3
@@ -164,32 +164,40 @@ static PlayableSceneConfig scene7010Config() {
 Scene7010::Scene7010(HollywoodEngine *vm) :
 		PlayableScene(vm, scene7010Config()),
 		_dialogueOverlayMode(0),
-		_chunk11RightSpeechPoseVariant(0),
 		_chunk8SpecialSequenceActive(false),
-		_chunk11RightSpeechActive(false),
-		_doghouseSpeechActive(false),
 		_chunk10IdlePairA(),
 		_chunk10IdlePairB(),
 		_chunk8Animation(),
 		_chunk10Animation(),
-		_dialogueOverlayAnimation(),
-		_hannoverSpeechAnimation(),
-		_doghouseSpeechAnimation(),
-		_animationLayers() {
+		_hannoverSpeechTrack(RealtimeAnimationTracks::kInvalidTrack),
+		_doghouseSpeechTrack(RealtimeAnimationTracks::kInvalidTrack),
+		_dialogueOverlayTrack(RealtimeAnimationTracks::kInvalidTrack) {
+	_sceneLayers.configure(kScene7010AnimationLayerSpecs);
+	_hannoverSpeechTrack = _realtimeAnimationTracks.addRandom(
+		_sceneLayers.layer(kScene7010Chunk11Layer),
+		kScene7010Chunk11SpeechFrameMillis, 0x0e, 0x12, true, false);
+	_doghouseSpeechTrack = _realtimeAnimationTracks.addRandom(
+		_actionOverlayPlayer.layer, kScene7010DoghouseSpeechFrameMillis,
+		kScene7010DoghouseSpeechBaseFrame,
+		kScene7010DoghouseSpeechBaseFrame + kScene7010DoghouseSpeechFrameCount - 1,
+		true, false);
+	_dialogueOverlayTrack = _realtimeAnimationTracks.addFrameMap(
+		_sceneLayers.layer(kScene7010DialogueOverlayLayer),
+		kScene7010DialogueOverlayFrameMillis, false);
 }
 
 void Scene7010::initializeCustomPreviewState() {
-	configureAnimationLayers();
+	_realtimeAnimationTracks.setActive(_hannoverSpeechTrack, false);
+	_realtimeAnimationTracks.setActive(_doghouseSpeechTrack, false);
+	_realtimeAnimationTracks.setActive(_dialogueOverlayTrack, false);
+	_sceneLayers.configure(kScene7010AnimationLayerSpecs);
 	setChunk8Frame(_vm->gameState().currentAmbientMusicCueId == kScene7010AmbientMusicCueWithoutChunk9 ? 0x14 : 0);
 	setChunk9Frame(0);
 	_chunk10IdlePairA.configure(0, 8, AlternatingRandomFramePair::kSecondFrame);
 	_chunk10IdlePairB.configure(4, 0x0c, AlternatingRandomFramePair::kSecondFrame);
 	_dialogueOverlayMode = 0;
-	_chunk11RightSpeechPoseVariant = 0;
 	_primaryLeftSpeechLastFrame = 0;
 	_chunk8SpecialSequenceActive = false;
-	_chunk11RightSpeechActive = false;
-	_doghouseSpeechActive = false;
 	const bool pairASecondPhase = _random.getRandomNumber(1) != 0;
 	const bool pairBSecondPhase = _random.getRandomNumber(1) != 0;
 	_primaryLeftSpeechActive = false;
@@ -197,16 +205,15 @@ void Scene7010::initializeCustomPreviewState() {
 	_primaryDialogueSpeechGroup = 0xff;
 	_chunk10IdlePairA.reset(pairASecondPhase, _chunk10IdlePairA.randomPhaseTicks(_random));
 	_chunk10IdlePairB.reset(pairBSecondPhase, _chunk10IdlePairB.randomPhaseTicks(_random));
-	_animationLayers.setLayerFrame(kScene7010Chunk10IdleLayerA, _chunk10IdlePairA.firstFrame);
-	_animationLayers.setLayerFrame(kScene7010Chunk10IdleLayerB, _chunk10IdlePairA.secondFrame);
-	_animationLayers.setLayerFrame(kScene7010Chunk10IdleLayerC, _chunk10IdlePairB.firstFrame);
-	_animationLayers.setLayerFrame(kScene7010Chunk10IdleLayerD, _chunk10IdlePairB.secondFrame);
+	_sceneLayers.setLayerFrame(kScene7010Chunk10IdleLayerA, _chunk10IdlePairA.firstFrame);
+	_sceneLayers.setLayerFrame(kScene7010Chunk10IdleLayerB, _chunk10IdlePairA.secondFrame);
+	_sceneLayers.setLayerFrame(kScene7010Chunk10IdleLayerC, _chunk10IdlePairB.firstFrame);
+	_sceneLayers.setLayerFrame(kScene7010Chunk10IdleLayerD, _chunk10IdlePairB.secondFrame);
 	_chunk8Animation.reset(chunk8Frame(), kScene7010Chunk8FrameMillis);
 	_chunk10Animation.reset(0, kScene7010Chunk10FrameMillis);
-	_dialogueOverlayAnimation.reset(0, kScene7010DialogueOverlayFrameMillis);
-	_hannoverSpeechAnimation.configure(kScene7010Chunk11SpeechFrameMillis, 0x0e, 5);
-	_doghouseSpeechAnimation.configure(kScene7010DoghouseSpeechFrameMillis,
-		kScene7010DoghouseSpeechBaseFrame, kScene7010DoghouseSpeechFrameCount);
+	_realtimeAnimationTracks.reset(_hannoverSpeechTrack);
+	_realtimeAnimationTracks.reset(_doghouseSpeechTrack);
+	_realtimeAnimationTracks.reset(_dialogueOverlayTrack);
 	_secondaryActorTimerAccumulator = 0;
 	_primaryLeftSpeechTimerAccumulator = 0;
 	_primaryDialogueSpeechTimerAccumulator = 0;
@@ -235,10 +242,10 @@ void Scene7010::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) {
 	copyBaseFramebufferToSceneFramebuffer();
-	drawAnimationLayers(_animationLayers, kSceneAnimationBehindActors);
+	drawLayerStack(_sceneLayers, kSceneAnimationBehindActors);
 
 	if (_actionOverlayPlayer.replacesActor()) {
-		drawAnimationLayers(_animationLayers, kSceneAnimationInFrontOfActors);
+		drawLayerStack(_sceneLayers, kSceneAnimationInFrontOfActors);
 
 		// G01 restores chunk-15's dirty rect before drawing the next action frame.
 		restoreResourceSpriteLayerBackground(_actionOverlayPlayer.layer, _baseFramebuffer);
@@ -256,7 +263,7 @@ void Scene7010::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 	} else {
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[5], _sceneFramebuffer);
 	}
-	drawAnimationLayers(_animationLayers, kSceneAnimationInFrontOfActors);
+	drawLayerStack(_sceneLayers, kSceneAnimationInFrontOfActors);
 }
 
 bool Scene7010::shouldDrawSecondaryActorInPlayableComposite() const {
@@ -321,7 +328,7 @@ void Scene7010::runSueEntryPath(int startX, int startY, int targetX, int targetY
 		if (chunk8Accumulator >= kScene7010Chunk8FrameMillis) {
 			setChunk8Frame(chunk8Frame() == 7 ? 0 : chunk8Frame() + 1);
 			if ((chunk8Frame() & 1) != 0)
-				setChunk9Frame(_animationLayers.layerFrame(kScene7010Chunk9Layer) ^ 1);
+				setChunk9Frame(_sceneLayers.layerFrame(kScene7010Chunk9Layer) ^ 1);
 			chunk8Accumulator = 0;
 		}
 		if (chunk10Accumulator >= kScene7010Chunk10FrameMillis) {
@@ -356,7 +363,7 @@ void Scene7010::runJuniorSpeech() {
 	presentFrame();
 }
 
-bool Scene7010::prepareCustomGameplayLoop() {
+void Scene7010::prepareCustomGameplayLoop() {
 	if (_vm->gameState().mainFlowStateId == kScene7010ReturnState) {
 		_activeActorWorldX = kScene7010SueReturnTargetX;
 		_activeActorWorldY = kScene7010SueReturnTargetY;
@@ -369,52 +376,47 @@ bool Scene7010::prepareCustomGameplayLoop() {
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 	_secondaryActorFrame = 0;
 	_chunk8SpecialSequenceActive = false;
-	_chunk11RightSpeechActive = false;
-	_doghouseSpeechActive = false;
+	_realtimeAnimationTracks.setActive(_hannoverSpeechTrack, false);
+	_realtimeAnimationTracks.setActive(_doghouseSpeechTrack, false);
+	_realtimeAnimationTracks.setActive(_dialogueOverlayTrack, false);
 	setDialogueOverlayMode(0, 0);
 	setChunk11Visible(false);
 	setChunk14Visible(false);
 	updateChunk9Visibility();
 	_chunk8Animation.resetTimer();
 	_chunk10Animation.resetTimer();
-	_hannoverSpeechAnimation.resetTimer();
-	_doghouseSpeechAnimation.resetTimer();
-	_dialogueOverlayAnimation.resetTimer();
-	return true;
+	_realtimeAnimationTracks.resetTimer(_hannoverSpeechTrack);
+	_realtimeAnimationTracks.resetTimer(_doghouseSpeechTrack);
+	_realtimeAnimationTracks.resetTimer(_dialogueOverlayTrack);
 }
 
-bool Scene7010::advanceCustomGameplayLoop(uint32 delta) {
-	if (_sceneStateFlags[0] != 0)
-		updateG01AmbientAudioAndMusicCues(delta);
-	advanceDoghouseSpeechFrame(delta);
-
+void Scene7010::advanceCustomGameplayLoop(uint32 delta) {
 	if (_primaryLeftSpeechActive && _primarySpeechOverlay.visible) {
 		_primaryLeftSpeechTimerAccumulator += delta;
 		while (_primaryLeftSpeechTimerAccumulator >= kScene7010Chunk10FrameMillis) {
 			advancePrimaryLeftSpeechFrame();
 			_primaryLeftSpeechTimerAccumulator -= kScene7010Chunk10FrameMillis;
 		}
-	} else if (_chunk11RightSpeechActive && _primarySpeechOverlay.visible) {
-		_primaryLeftSpeechTimerAccumulator = 0;
-		advanceHannoverPrimarySpeechFrame(delta);
-		for (uint frame = _chunk8Animation.consumeFrames(delta); frame != 0; --frame)
-			advanceChunk8Cycle();
 	} else if (!_chunk8SpecialSequenceActive) {
 		_primaryLeftSpeechTimerAccumulator = 0;
-		_hannoverSpeechAnimation.resetTimer();
 		for (uint frame = _chunk8Animation.consumeFrames(delta); frame != 0; --frame)
 			advanceChunk8Cycle();
 	} else {
 		_primaryLeftSpeechTimerAccumulator = 0;
-		_hannoverSpeechAnimation.resetTimer();
 		_chunk8Animation.resetTimer();
 	}
 
 	for (uint frame = _chunk10Animation.consumeFrames(delta); frame != 0; --frame)
 		advanceChunk10IdleFrames();
 
-	advanceDialogueOverlay(delta);
-	return true;
+	_realtimeAnimationTracks.setActive(_dialogueOverlayTrack,
+		_dialogueOverlayMode == 1 &&
+		!_realtimeAnimationTracks.isActive(_doghouseSpeechTrack));
+}
+
+void Scene7010::advanceAmbientAudio(uint32 delta) {
+	if (_sceneStateFlags[0] != 0)
+		updateG01AmbientAudioAndMusicCues(delta);
 }
 
 bool Scene7010::dispatchCustomSceneAction(uint16 handlerId) {
@@ -553,7 +555,7 @@ void Scene7010::advanceChunk8Cycle() {
 	if ((chunk8Frame() & 1) == 0)
 		return;
 
-	if (_animationLayers.layerFrame(kScene7010Chunk9Layer) == 1) {
+	if (_sceneLayers.layerFrame(kScene7010Chunk9Layer) == 1) {
 		setChunk9Frame(0);
 	} else {
 		if (_random.getRandomNumber(4) == 0)
@@ -608,29 +610,10 @@ void Scene7010::handleAnimationFrameHook(byte hookId, uint frame) {
 void Scene7010::advanceChunk10IdleFrames() {
 	_chunk10IdlePairA.advance(_random);
 	_chunk10IdlePairB.advance(_random);
-	_animationLayers.setLayerFrame(kScene7010Chunk10IdleLayerA, _chunk10IdlePairA.firstFrame);
-	_animationLayers.setLayerFrame(kScene7010Chunk10IdleLayerB, _chunk10IdlePairA.secondFrame);
-	_animationLayers.setLayerFrame(kScene7010Chunk10IdleLayerC, _chunk10IdlePairB.firstFrame);
-	_animationLayers.setLayerFrame(kScene7010Chunk10IdleLayerD, _chunk10IdlePairB.secondFrame);
-}
-
-void Scene7010::advanceDoghouseSpeechFrame(uint32 delta) {
-	if (!_doghouseSpeechActive) {
-		_doghouseSpeechAnimation.resetTimer();
-		return;
-	}
-
-	if (_doghouseSpeechAnimation.advance(_random, delta))
-		_actionOverlayPlayer.setFrame(_doghouseSpeechAnimation.frame());
-}
-
-void Scene7010::advanceDialogueOverlay(uint32 delta) {
-	if (_dialogueOverlayMode != 1 || _doghouseSpeechActive)
-		return;
-
-	for (uint frame = _dialogueOverlayAnimation.consumeFrames(delta); frame != 0; --frame)
-		setDialogueOverlayFrame(_animationLayers.layerFrame(kScene7010DialogueOverlayLayer) == 3 ?
-			0 : _animationLayers.layerFrame(kScene7010DialogueOverlayLayer) + 1);
+	_sceneLayers.setLayerFrame(kScene7010Chunk10IdleLayerA, _chunk10IdlePairA.firstFrame);
+	_sceneLayers.setLayerFrame(kScene7010Chunk10IdleLayerB, _chunk10IdlePairA.secondFrame);
+	_sceneLayers.setLayerFrame(kScene7010Chunk10IdleLayerC, _chunk10IdlePairB.firstFrame);
+	_sceneLayers.setLayerFrame(kScene7010Chunk10IdleLayerD, _chunk10IdlePairB.secondFrame);
 }
 
 void Scene7010::handleActionSlot00TransitionToG03() {
@@ -880,34 +863,29 @@ bool Scene7010::applyHannoverDialogueTransition(const DialogueChoiceRecord &reco
 }
 
 void Scene7010::beginHannoverPrimarySpeechLine(byte frameIndex, byte poseVariant) {
-	_chunk11RightSpeechPoseVariant = poseVariant;
 	const byte baseFrame = poseVariant == 0 ? 0x0e : 0x16;
-	_hannoverSpeechAnimation.configure(kScene7010Chunk11SpeechFrameMillis, baseFrame, 5);
-	_chunk11RightSpeechActive = true;
+	_realtimeAnimationTracks.setRange(_hannoverSpeechTrack, baseFrame, baseFrame + 4);
+	_realtimeAnimationTracks.resetTimer(_hannoverSpeechTrack);
 	setChunk11Frame(baseFrame);
+	_realtimeAnimationTracks.setActive(_hannoverSpeechTrack, true);
 
 	beginPrimarySpeechLine(99, frameIndex, poseVariant == 0 ? 0x302 : 0x2ee,
 		poseVariant == 0 ? 0xe3 : 0xe8, 0x28, 0x16, 0x0b);
 
-	_chunk11RightSpeechActive = false;
-	_hannoverSpeechAnimation.resetTimer();
+	_realtimeAnimationTracks.setActive(_hannoverSpeechTrack, false);
+	_realtimeAnimationTracks.resetTimer(_hannoverSpeechTrack);
 	setChunk11Frame(baseFrame);
-}
-
-void Scene7010::advanceHannoverPrimarySpeechFrame(uint32 delta) {
-	if (_hannoverSpeechAnimation.advance(_random, delta))
-		setChunk11Frame(_hannoverSpeechAnimation.frame());
 }
 
 void Scene7010::runChunk8RevealSequence() {
 	_chunk8SpecialSequenceActive = true;
 	updateChunk9Visibility();
-	playAnimationFrames(_animationLayers, kScene7010Chunk8Layer,
+	playAnimationFrames(_sceneLayers, kScene7010Chunk8Layer,
 		AnimationFrameRange(7, 0x0b, kScene7010Chunk8FrameMillis));
 }
 
 void Scene7010::runChunk8HideSequence() {
-	playAnimationFrames(_animationLayers, kScene7010Chunk8Layer,
+	playAnimationFrames(_sceneLayers, kScene7010Chunk8Layer,
 		AnimationFrameRange(0x0f, 0x13, kScene7010Chunk8FrameMillis));
 	setChunk8Frame(_vm->gameState().currentAmbientMusicCueId == kScene7010AmbientMusicCueWithoutChunk9 ? 0x14 : 0);
 	_chunk8SpecialSequenceActive = false;
@@ -916,19 +894,17 @@ void Scene7010::runChunk8HideSequence() {
 
 bool Scene7010::runChunk11FrameRange(byte startFrame, byte endFrame) {
 	setChunk11Visible(true);
-	return playAnimationFrames(_animationLayers, kScene7010Chunk11Layer,
+	return playAnimationFrames(_sceneLayers, kScene7010Chunk11Layer,
 		AnimationFrameRange(startFrame, endFrame, kScene7010Chunk8FrameMillis));
 }
 
 void Scene7010::runChunk11MidFrames() {
 	runChunk11FrameRange(0x12, 0x16);
-	_chunk11RightSpeechPoseVariant = 1;
 }
 
 void Scene7010::runChunk11ReturnFrames() {
 	runChunk11FrameRange(0x1a, 0x1e);
 	setChunk11Frame(0x0e);
-	_chunk11RightSpeechPoseVariant = 0;
 }
 
 void Scene7010::runChunk11ExtendedFrames() {
@@ -960,7 +936,7 @@ void Scene7010::runChunk13Item09PickupOverlaySequence() {
 void Scene7010::runChunk14FrameRange(byte startFrame, byte endFrame, bool restoreChunk11AtEnd) {
 	setChunk14Visible(true);
 	setChunk11Visible(false);
-	playAnimationFrames(_animationLayers, kScene7010Chunk14Layer,
+	playAnimationFrames(_sceneLayers, kScene7010Chunk14Layer,
 		AnimationFrameRange(startFrame, endFrame, kScene7010Chunk14WindowFrameMillis));
 	setChunk14Visible(false);
 	if (restoreChunk11AtEnd)
@@ -971,8 +947,6 @@ void Scene7010::runDoghouseDepartureSequence() {
 	const bool previousHideActiveActor = _actionOverlayPlayer.beginActorReplacement(15,
 		kScene7010Chunk15DescriptorCount, kScene7010Chunk15FrameMap,
 		ARRAYSIZE(kScene7010Chunk15FrameMap));
-	_doghouseSpeechAnimation.configure(kScene7010DoghouseSpeechFrameMillis,
-		kScene7010DoghouseSpeechBaseFrame, kScene7010DoghouseSpeechFrameCount);
 
 	bool completed = playAnimationFrames(_actionOverlayPlayer,
 		AnimationFrameRange(1, 10, kScene7010Chunk8FrameMillis).unskippable());
@@ -1008,12 +982,12 @@ void Scene7010::runDoghouseDepartureSequence() {
 }
 
 void Scene7010::runDoghouseSpeechLine(byte frameIndex) {
-	_doghouseSpeechActive = true;
-	_doghouseSpeechAnimation.resetTimer();
+	_realtimeAnimationTracks.resetTimer(_doghouseSpeechTrack);
 	_actionOverlayPlayer.setFrame(kScene7010DoghouseSpeechBaseFrame);
+	_realtimeAnimationTracks.setActive(_doghouseSpeechTrack, true);
 	beginPrimarySpeechLine(6, frameIndex, 0x20e, 0x109, 0x3f, 0x28, 0x32);
-	_doghouseSpeechActive = false;
-	_doghouseSpeechAnimation.resetTimer();
+	_realtimeAnimationTracks.setActive(_doghouseSpeechTrack, false);
+	_realtimeAnimationTracks.resetTimer(_doghouseSpeechTrack);
 	_skipRequested = false;
 	_actionOverlayPlayer.setFrame(kScene7010DoghouseSpeechBaseFrame);
 }
@@ -1039,7 +1013,7 @@ void Scene7010::runDialogueOverlayFrames(byte startFrame, byte endFrame, byte fi
 	_vm->gameState().frankensteinNoteOverlayMode = 2;
 	setDialogueOverlayMode(2, startFrame);
 	if (startFrame < endFrame) {
-		playAnimationFrames(_animationLayers, kScene7010DialogueOverlayLayer,
+		playAnimationFrames(_sceneLayers, kScene7010DialogueOverlayLayer,
 			AnimationFrameRange(startFrame + 1, endFrame,
 				kScene7010DialogueOverlayFrameMillis).unskippable().hookEveryFrame(
 					kScene7010DialogueOverlaySoundHook));
@@ -1051,68 +1025,59 @@ void Scene7010::runDialogueOverlayFrames(byte startFrame, byte endFrame, byte fi
 	setDialogueOverlayMode(finalMode, finalMode == 0 ? 0 : endFrame);
 }
 
-void Scene7010::configureAnimationLayers() {
-	_animationLayers.configure(kScene7010AnimationLayerSpecs);
-}
-
 void Scene7010::setDialogueOverlayMode(byte mode, byte frameIndex) {
 	_dialogueOverlayMode = mode;
 
 	if (mode == 1) {
-		_animationLayers.configureLayerResource(kScene7010DialogueOverlayLayer, 12,
+		_sceneLayers.configureLayerResource(kScene7010DialogueOverlayLayer, 12,
 			kScene7010DialogueOverlayMode1DescriptorCount, kScene7010DialogueOverlayMode1FrameMap,
 			ARRAYSIZE(kScene7010DialogueOverlayMode1FrameMap));
-		setDialogueOverlayFrame(frameIndex);
+		_realtimeAnimationTracks.resetToFrame(_dialogueOverlayTrack, frameIndex);
+		_realtimeAnimationTracks.setActive(_dialogueOverlayTrack,
+			!_realtimeAnimationTracks.isActive(_doghouseSpeechTrack));
 		return;
 	}
 
+	_realtimeAnimationTracks.setActive(_dialogueOverlayTrack, false);
 	if (mode == 2) {
-		_animationLayers.configureLayerResource(kScene7010DialogueOverlayLayer, 16,
+		_sceneLayers.configureLayerResource(kScene7010DialogueOverlayLayer, 16,
 			kScene7010DialogueOverlayMode2DescriptorCount, kScene7010DialogueOverlayMode2FrameMap,
 			ARRAYSIZE(kScene7010DialogueOverlayMode2FrameMap));
-		setDialogueOverlayFrame(frameIndex);
+		_sceneLayers.setLayerFrame(kScene7010DialogueOverlayLayer, frameIndex);
 		return;
 	}
 
-	_animationLayers.setLayerVisible(kScene7010DialogueOverlayLayer, false);
-}
-
-void Scene7010::setDialogueOverlayFrame(byte frameIndex) {
-	_animationLayers.setLayerFrame(kScene7010DialogueOverlayLayer, frameIndex);
+	_sceneLayers.setLayerVisible(kScene7010DialogueOverlayLayer, false);
 }
 
 void Scene7010::setChunk8Frame(byte frameIndex) {
-	_animationLayers.setLayerFrame(kScene7010Chunk8Layer, frameIndex);
+	_sceneLayers.setLayerFrame(kScene7010Chunk8Layer, frameIndex);
 }
 
 byte Scene7010::chunk8Frame() const {
-	return _animationLayers.layerFrame(kScene7010Chunk8Layer);
+	return _sceneLayers.layerFrame(kScene7010Chunk8Layer);
 }
 
 void Scene7010::setChunk9Frame(byte frameIndex) {
-	_animationLayers.setLayerFrame(kScene7010Chunk9Layer, frameIndex);
+	_sceneLayers.setLayerFrame(kScene7010Chunk9Layer, frameIndex);
 }
 
 void Scene7010::updateChunk9Visibility() {
-	_animationLayers.setLayerVisible(kScene7010Chunk9Layer,
+	_sceneLayers.setLayerVisible(kScene7010Chunk9Layer,
 		!_chunk8SpecialSequenceActive &&
 		_vm->gameState().currentAmbientMusicCueId != kScene7010AmbientMusicCueWithoutChunk9);
 }
 
 void Scene7010::setChunk11Visible(bool visible) {
-	_animationLayers.setLayerVisible(kScene7010Chunk11Layer, visible);
+	_sceneLayers.setLayerVisible(kScene7010Chunk11Layer, visible);
 }
 
 void Scene7010::setChunk11Frame(byte frameIndex) {
-	_animationLayers.setLayerFrame(kScene7010Chunk11Layer, frameIndex);
+	_sceneLayers.setLayerFrame(kScene7010Chunk11Layer, frameIndex);
 }
 
 void Scene7010::setChunk14Visible(bool visible) {
-	_animationLayers.setLayerVisible(kScene7010Chunk14Layer, visible);
-}
-
-void Scene7010::setChunk14Frame(byte frameIndex) {
-	_animationLayers.setLayerFrame(kScene7010Chunk14Layer, frameIndex);
+	_sceneLayers.setLayerVisible(kScene7010Chunk14Layer, visible);
 }
 
 } // End of namespace Hollywood

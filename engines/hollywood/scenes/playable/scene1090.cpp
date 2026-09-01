@@ -63,17 +63,6 @@ Scene1090::Scene1090(HollywoodEngine *vm) :
 		_darkPaletteMask() {
 }
 
-void Scene1090::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawActionOverlayLayer();
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-}
-
 void Scene1090::runCustomEntrySequence() {
 	GameplayState &state = _vm->gameState();
 	runEntryPath(0x101, 0x15b, 2, 0x101, 0x15b);
@@ -83,15 +72,6 @@ void Scene1090::runCustomEntrySequence() {
 	}
 	drawPlayableComposite();
 	presentFrame();
-}
-
-bool Scene1090::prepareCustomGameplayLoop() {
-	return true;
-}
-
-bool Scene1090::advanceCustomGameplayLoop(uint32 delta) {
-	updateAmbientAudioAndMusicCues(delta);
-	return true;
 }
 
 bool Scene1090::dispatchCustomSceneAction(uint16 handlerId) {

@@ -39,13 +39,12 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetAnimationLayers();
-	void advanceWindmillLayer(uint32 delta);
 	void advanceForestIdleLayer(uint32 delta);
 	void drawForegroundBlocks(int activeWorldY);
 	void runEntryFromChapterStart();
@@ -64,10 +63,10 @@ private:
 		byte frameIndex, Graphics::ManagedSurface &transitionBackground, bool applyFrame);
 	void runWindmillClimbOverlay();
 
-	TimedAnimationChannel _windmillChannel;
 	TimedAnimationChannel _forestIdleChannel;
 	ResourceSpriteLayer _windmillLayer;
 	ResourceSpriteLayer _forestIdleLayer;
+	uint _windmillTrack;
 	byte _forestIdleState;
 	bool _climbOverlayActive;
 };

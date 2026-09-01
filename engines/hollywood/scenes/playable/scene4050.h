@@ -41,8 +41,8 @@ private:
 	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
@@ -53,7 +53,6 @@ private:
 	void resetAnimationLayers();
 	void restoreSceneObjectPaletteRange();
 	void drawSceneLayers();
-	void advanceBackgroundLayer(uint32 delta);
 	void advanceFlagPalette(uint32 delta);
 	void rotateFlagPalette();
 	void advanceRonLayer(uint32 delta);
@@ -70,13 +69,13 @@ private:
 	bool resourceDescriptorBounds(uint chunkIndex, uint16 descriptorCount, uint16 descriptorIndex,
 		int &left, int &top, int &width, int &bottom) const;
 
-	TimedAnimationChannel _backgroundChannel;
 	TimedAnimationChannel _flagPaletteChannel;
 	TimedAnimationChannel _ronSpeechChannel;
 	TimedAnimationChannel _ronIdleChannel;
 	ResourceSpriteLayer _backgroundLayer;
 	ResourceSpriteLayer _ronLayer;
 	ResourceSpriteLayer _d09ReturnTransitionLayer;
+	uint _backgroundTrack;
 	uint32 _ambientEffectTimerAccumulator;
 	byte _previousContinuousAmbientCue;
 	byte _previousRandomAmbientCue;

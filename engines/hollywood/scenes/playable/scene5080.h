@@ -42,7 +42,7 @@ private:
 		byte actorDrawOrderMode) override;
 	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	void runCustomEntrySequence() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool customizeRouteSegment(byte currentRegion, byte nextRegion, const ActorPathBuildState &state,
@@ -75,7 +75,6 @@ private:
 	void copyRouteStepDeltas(uint destinationFirst, const byte *source, uint sourceSize, uint sourceFirst);
 	void copyStepDeltasForCurrentSide();
 
-	ResourceSpriteLayer _mineCartLayer;
 	bool _mineCartRumbleActive;
 };
 

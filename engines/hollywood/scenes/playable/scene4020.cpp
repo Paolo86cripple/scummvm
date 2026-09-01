@@ -45,6 +45,10 @@ const uint kScene4020SkullcrackerDescriptorCount = 0x10;
 const byte kScene4020SkullcrackerItem = 0x20;
 const byte kScene4020SkullcrackerHook = 1;
 
+enum Scene4020LayerId {
+	kScene4020IdleLayer
+};
+
 const byte kScene4020ReturnFromD03FrameMap[] = {
 	12, 11, 10, 9, 8, 7, 6, 5, 4, 3,
 	2, 1, 0
@@ -64,6 +68,11 @@ const byte kScene4020SkullcrackerFrameMap[] = {
 	4, 2, 0
 };
 
+const SceneLayerSpec kScene4020LayerSpecs[] = {
+	{kSceneAnimationBehindActors, kScene4020IdleChunk,
+		kScene4020IdleDescriptorCount, nullptr, 0, true, 0}
+};
+
 static PlayableSceneConfig scene4020Config() {
 	PlayableSceneConfig config(4020,
 		SceneResourceLayout(5, 5, 7),
@@ -78,32 +87,21 @@ static PlayableSceneConfig scene4020Config() {
 
 Scene4020::Scene4020(HollywoodEngine *vm) :
 		PlayableScene(vm, scene4020Config()),
-		_idleLayer(),
-		_idleChannel() {
+		_idleTrack(RealtimeAnimationTracks::kInvalidTrack) {
+	_sceneLayers.configure(kScene4020LayerSpecs);
+	_idleTrack = _realtimeAnimationTracks.addLoop(_sceneLayers.layer(kScene4020IdleLayer),
+		kScene4020FrameMillis, kScene4020IdleDescriptorCount);
 }
 
 void Scene4020::initializeCustomPreviewState() {
 	initializeDefaultPreviewState();
-	initializeIdleLayer();
+	resetIdleLayer();
 
 	if (_vm->gameState().mainFlowStateId == kScene4020ReturnState)
 		setActiveActorPose(0x265, 0x117, 4);
 	else
 		setActiveActorPose(0x50, 0x173, 2);
 }
-
-void Scene4020::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawResourceSpriteLayer(_idleLayer);
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	drawActionOverlayLayer();
-}
-
 bool Scene4020::shouldPresentPreviewBeforeEntrySequence() const {
 	return false;
 }
@@ -122,12 +120,6 @@ void Scene4020::runCustomEntrySequence() {
 		runEntryFromScene4030();
 	else
 		runEntryFromScene4010();
-}
-
-bool Scene4020::advanceCustomGameplayLoop(uint32 delta) {
-	advanceIdleLayer(delta);
-	updateAmbientAudioAndMusicCues(delta);
-	return true;
 }
 
 bool Scene4020::dispatchCustomSceneAction(uint16 handlerId) {
@@ -225,24 +217,8 @@ AmbientAudioProfile Scene4020::ambientAudioProfile() const {
 	return profile;
 }
 
-void Scene4020::initializeIdleLayer() {
-	_idleLayer.configure(kScene4020IdleChunk, kScene4020IdleDescriptorCount, nullptr, 0);
-	_idleLayer.visible = true;
-	_idleLayer.setFrame(0);
-	_idleLayer.hasPreviousDescriptor = false;
-	_idleChannel.reset(0, kScene4020FrameMillis);
-}
-
-void Scene4020::advanceIdleLayer(uint32 delta) {
-	const uint frameCount = _idleChannel.consumeFrames(delta);
-	if (frameCount == 0)
-		return;
-
-	for (uint i = 0; i < frameCount; ++i) {
-		const byte nextFrame = _idleLayer.frameIndex == 0x19 ? 0 : _idleLayer.frameIndex + 1;
-		_idleLayer.setFrame(nextFrame);
-	}
-	_idleChannel.frameIndex = _idleLayer.frameIndex;
+void Scene4020::resetIdleLayer() {
+	_realtimeAnimationTracks.reset(_idleTrack);
 }
 
 void Scene4020::setActiveActorPose(int x, int y, byte facing) {
@@ -274,18 +250,17 @@ void Scene4020::runEntryFromScene4030() {
 		ARRAYSIZE(kScene4020ReturnFromD03FrameMap));
 	_actionOverlayPlayer.setFrame(0);
 	drawPlayableComposite();
-	const bool fadeInterrupted = fadePaletteFromBlack();
-	if (!fadeInterrupted) {
-		playAnimationFrames(_actionOverlayPlayer,
+	BlockingSequence sequence(*this);
+	sequence.paletteTransition(BlockingSequence::kFadeFromBlack)
+		.layerFrames(_actionOverlayPlayer,
 			AnimationFrameRange(1, ARRAYSIZE(kScene4020ReturnFromD03FrameMap) - 1,
 				kScene4020FrameMillis));
-	}
 	_actionOverlayPlayer.finish(previousHideActiveActor);
-	if (fadeInterrupted || Engine::shouldQuit() || _vm->isSceneRestartRequested())
+	if (!sequence.completed())
 		return;
 
-	setActiveActorPose(0x265, 0x117, 5);
-	walkActiveActorTo(0x265, 0x117, 4, 0, false);
+	sequence.actorPose(SceneActorPose(0x265, 0x117, 5))
+		.actorPath(SceneActorPose(0x265, 0x117, 4));
 }
 
 void Scene4020::runExitToScene4030() {

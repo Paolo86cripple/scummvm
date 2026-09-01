@@ -38,8 +38,8 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	bool shouldAnimatePrimarySpeechLine() const override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool customizeRouteSegment(byte currentRegion, byte nextRegion, const ActorPathBuildState &state,
 		const ScenePoint &boundary, int &requestedFacing, bool &restoredStepDeltas) override;
@@ -73,7 +73,6 @@ private:
 		uint32 frameMillis, int soundFrame = -1, byte soundId = 0);
 
 	Common::Array<byte> _originalColorToItemMap;
-	TransientLayerCompositor _temporaryOverlayLayers;
 };
 
 } // End of namespace Hollywood

@@ -41,8 +41,8 @@ private:
 	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
@@ -51,7 +51,7 @@ private:
 	void applyScenePaletteOverride();
 	void resetBackgroundLayers();
 	void drawBackgroundLayers();
-	void advanceBackgroundLayers(uint32 delta);
+	void advanceRandomBackground(uint32 delta);
 	void advanceRandomBackgroundTick();
 	bool isRandomBackgroundHoldFrame(byte frameIndex) const;
 	void runReturnFromUpperExitEntry();
@@ -68,10 +68,10 @@ private:
 	void removeColorMapItem(byte itemId);
 	void replaceColorMapItem(byte sourceItem, byte destinationItem);
 
-	TimedAnimationChannel _cyclicBackgroundChannel;
 	TimedAnimationChannel _randomBackgroundChannel;
 	ResourceSpriteLayer _cyclicBackgroundLayer;
 	ResourceSpriteLayer _randomBackgroundLayer;
+	uint _cyclicBackgroundTrack;
 	byte _randomBackgroundState;
 	byte _randomBackgroundRepeatCount;
 	uint32 _ambientEffectTimerAccumulator;

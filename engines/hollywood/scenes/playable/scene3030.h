@@ -38,8 +38,8 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool customizeRouteFinal(byte currentRegion, byte targetRegion, const ActorPathBuildState &state,
 		int targetX, int targetY, int &requestedFacing, bool &restoredStepDeltas) override;
@@ -47,7 +47,6 @@ private:
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetAnimationLayers();
-	void advanceLoopingLayer(uint32 delta);
 	void drawForegroundBlocks();
 	void promoteMachineHotspots();
 	void runEntryFromScene3020();
@@ -61,9 +60,8 @@ private:
 	void runMachineActivationSequence();
 	void drawMachineSequenceFrame();
 
-	TimedAnimationChannel _loopChannel;
 	ResourceSpriteLayer _loopLayer;
-	TransientLayerCompositor _machineLayers;
+	uint _loopTrack;
 	bool _machineSequenceActive;
 };
 

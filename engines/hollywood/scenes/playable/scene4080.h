@@ -41,8 +41,8 @@ private:
 	void runCustomEntrySequence() override;
 	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
@@ -56,7 +56,6 @@ private:
 	void resetAnimationLayers();
 	void configurePalettePatchLayerForState();
 	void advancePalettePatchLayer(uint32 delta);
-	void advanceForegroundFlickerLayer(uint32 delta);
 	void drawSceneLayers(int activeWorldY);
 	void rememberOriginalColorMap();
 	void replaceColorMapItemFromOriginal(byte sourceItem, byte destinationItem);
@@ -89,8 +88,8 @@ private:
 	ResourceSpriteLayer _foregroundFlickerLayer;
 	ResourceSpriteLayer _scriptLayer;
 	TimedAnimationChannel _palettePatchChannel;
-	TimedAnimationChannel _foregroundFlickerChannel;
 	TimedAnimationChannel _gwendolynIdleChannel;
+	uint _foregroundFlickerTrack;
 	Common::Array<byte> _originalColorToItemMap;
 	uint32 _ambientSoundTimerAccumulator;
 	uint32 _coffinPaletteCycleAccumulator;

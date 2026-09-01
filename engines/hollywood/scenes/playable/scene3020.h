@@ -38,8 +38,8 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool customizeRouteFinal(byte currentRegion, byte targetRegion, const ActorPathBuildState &state,
 		int targetX, int targetY, int &requestedFacing, bool &restoredStepDeltas) override;
@@ -48,7 +48,6 @@ private:
 
 	void resetAnimationLayers();
 	void rebuildWalkableMask();
-	void advanceLoopingLayer(uint32 delta);
 	void drawForegroundBlocks(int activeWorldY);
 	void removeTakenItemHotspots();
 	void runEntryFromScene3010();
@@ -57,8 +56,7 @@ private:
 	void drawDescriptorTransitionFrame(const Common::Array<byte> &clipData, uint descriptorCount, byte frameIndex);
 	void runPickupMace();
 
-	TimedAnimationChannel _loopChannel;
-	ResourceSpriteLayer _loopLayer;
+	uint _loopTrack;
 };
 
 } // End of namespace Hollywood

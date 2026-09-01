@@ -38,8 +38,8 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool customizeRouteSegment(byte currentRegion, byte nextRegion, const ActorPathBuildState &state,
@@ -63,8 +63,6 @@ private:
 	void runDialogueMenuRow98();
 	void beginPrimaryDialogueSpeech(byte frameIndex);
 	void beginPrimaryBrunoSpeechLine(uint16 rowIndex, byte frameIndex);
-	void runOverlaySequence(uint chunkIndex, uint descriptorCount, const byte *frameMap, uint frameMapSize,
-		uint32 frameMillis, int soundFrame = -1, byte soundId = 0);
 	void handleSpeechRow04Variant();
 	void handleSpeechRow04Or06();
 	void handleChunk9Or10MachineAction();

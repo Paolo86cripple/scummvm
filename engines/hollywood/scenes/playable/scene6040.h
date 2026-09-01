@@ -39,14 +39,12 @@ private:
 		byte actorDrawOrderMode) override;
 	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetAnimationLayers();
-	void advanceToggleLayer(TimedAnimationChannel &channel, ResourceSpriteLayer &layer, uint32 delta);
 	void drawForegroundBlocks(int activeWorldY);
 	void runPaintCanPickup();
 	void runWireInspectionAnimation();
@@ -56,10 +54,10 @@ private:
 	void replaceColorMapItemFromOriginal(byte sourceItem, byte destinationItem);
 
 	Common::Array<byte> _originalColorToItemMap;
-	TimedAnimationChannel _leftToggleChannel;
-	TimedAnimationChannel _rightToggleChannel;
 	ResourceSpriteLayer _leftToggleLayer;
 	ResourceSpriteLayer _rightToggleLayer;
+	uint _leftToggleTrack;
+	uint _rightToggleTrack;
 };
 
 } // End of namespace Hollywood

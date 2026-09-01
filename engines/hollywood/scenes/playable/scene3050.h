@@ -38,8 +38,9 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
+	void advancePrimarySpeechAnimation(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
@@ -49,7 +50,6 @@ private:
 	void resetAnimationLayers();
 	void rebuildWalkableMask();
 	void copyCaptionRow(byte sourceRow, byte destinationRow);
-	void advanceBackgroundLayer(uint32 delta);
 	void advanceForegroundActorLayer(uint32 delta);
 	void advanceDialogueActorLayer(uint32 delta);
 	void updateForegroundActorIdleSpeech(uint32 delta);
@@ -68,11 +68,11 @@ private:
 	void initializeDialogueRecords(Common::Array<DialogueChoiceRecord> &records) const;
 	void beginDialogueResponse(byte frameIndex);
 
-	TimedAnimationChannel _backgroundChannel;
 	TimedAnimationChannel _foregroundActorChannel;
 	TimedAnimationChannel _dialogueActorChannel;
 	ResourceSpriteLayer _backgroundLayer;
 	ResourceSpriteLayer _foregroundActorLayer;
+	uint _backgroundTrack;
 	byte _foregroundActorMode;
 	byte _foregroundActorIdleCounter;
 	byte _foregroundActorIdleSpeechFrame;

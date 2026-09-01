@@ -41,8 +41,8 @@ private:
 	void runCustomEntrySequence() override;
 	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
@@ -78,9 +78,8 @@ private:
 		byte bandWidth);
 	void runFinalCutscene();
 
-	TransientLayerCompositor _ambientLayers;
 	ResourceSpriteLayer _scriptLayer;
-	TimedAnimationChannel _chunk12Channel;
+	uint _randomAmbientTrack;
 	TimedAnimationChannel _organBodyChannel;
 	Common::Array<byte> _originalColorToItemMap;
 	uint32 _ambientSoundTimerAccumulator;

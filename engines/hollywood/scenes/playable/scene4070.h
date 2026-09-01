@@ -38,8 +38,8 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool prepareCustomGameplayLoop() override;
-	bool advanceCustomGameplayLoop(uint32 delta) override;
+	void prepareCustomGameplayLoop() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
@@ -55,7 +55,6 @@ private:
 	void resetAnimationLayers();
 	bool isDraculaVisible() const;
 	void setRightSidePatchActive(bool active, bool playSound);
-	void advanceAmbientLayers(uint32 delta);
 	void advanceDraculaIdle(uint32 delta);
 	void updateSidePatchForActorPosition();
 	void drawSceneLayers(int activeWorldY);
@@ -78,8 +77,9 @@ private:
 	ResourceSpriteLayer _ambientLayer;
 	ResourceSpriteLayer _draculaLayer;
 	ResourceSpriteLayer _scriptLayer;
-	TimedAnimationChannel _ambientChannel;
 	TimedAnimationChannel _draculaIdleChannel;
+	uint _ambientTrack;
+	uint _randomAmbientTrack;
 	uint32 _draculaIdleSpeechTimerAccumulator;
 	bool _rightSidePatchActive;
 	bool _draculaIdleSequenceActive;

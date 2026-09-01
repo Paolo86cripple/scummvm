@@ -53,12 +53,6 @@ const byte kScene2070SealMemoryEndSound = 0x2e;
 const byte kScene2070SealMemoryEndSoundHook = 1;
 const uint kScene2070SealMemoryEndSoundFrame = 0x56;
 
-const byte kScene2070ForegroundFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
-	13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-	24, 25
-};
-
 const byte kScene2070SealMemoryFrameMap[] = {
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
 	13, 13, 13, 13, 13, 13, 13, 13, 13, 14, 15,
@@ -75,7 +69,6 @@ const byte kScene2070InventoryOverlayFrameMap[] = {
 	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
 };
 
-static_assert(ARRAYSIZE(kScene2070ForegroundFrameMap) == 0x1a, "Scene 2070 foreground frame map size changed");
 static_assert(ARRAYSIZE(kScene2070SealMemoryFrameMap) == 0x62, "Scene 2070 seal memory frame map size changed");
 static_assert(ARRAYSIZE(kScene2070InventoryOverlayFrameMap) == 14, "Scene 2070 inventory overlay frame map size changed");
 
@@ -101,14 +94,21 @@ static PlayableSceneConfig scene2070Config() {
 	return config;
 }
 
+const uint kScene2070ForegroundLayer = 0;
+const SceneLayerSpec kScene2070LayerSpecs[] = {
+	{kSceneAnimationBehindActors, 7, kScene2070ForegroundDescriptorCount,
+		nullptr, 0, true, 0}
+};
+
 Scene2070::Scene2070(HollywoodEngine *vm) :
 		PlayableScene(vm, scene2070Config()),
-		_foregroundChannel(),
-		_foregroundLayer(),
+		_foregroundTrack(RealtimeAnimationTracks::kInvalidTrack),
 		_sealMemoryActive(false),
 		_sealMemoryFrame(0) {
-	_foregroundLayer.configure(7, kScene2070ForegroundDescriptorCount,
-		kScene2070ForegroundFrameMap, ARRAYSIZE(kScene2070ForegroundFrameMap));
+	_sceneLayers.configure(kScene2070LayerSpecs);
+	_foregroundTrack = _realtimeAnimationTracks.addLoop(
+		_sceneLayers.layer(kScene2070ForegroundLayer),
+		kScene2070ForegroundFrameMillis, kScene2070ForegroundDescriptorCount);
 }
 
 void Scene2070::initializeCustomPreviewState() {
@@ -141,7 +141,7 @@ void Scene2070::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 	(void)actorDrawOrderMode;
 
 	copyBaseFramebufferToSceneFramebuffer();
-	drawResourceSpriteLayer(_foregroundLayer);
+	drawLayerStack(_sceneLayers, kSceneAnimationBehindActors);
 	drawActionOverlayLayer();
 	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
 		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
@@ -154,12 +154,6 @@ void Scene2070::runCustomEntrySequence() {
 		runEntryFromRightPassage();
 	else
 		runEntryFromLabyrinth();
-}
-
-bool Scene2070::advanceCustomGameplayLoop(uint32 delta) {
-	advanceForegroundLayer(delta);
-	updateAmbientAudioAndMusicCues(delta);
-	return true;
 }
 
 bool Scene2070::dispatchCustomSceneAction(uint16 handlerId) {
@@ -333,24 +327,13 @@ AmbientAudioProfile Scene2070::ambientAudioProfile() const {
 }
 
 void Scene2070::resetForegroundLayer() {
-	_foregroundChannel.reset(0, kScene2070ForegroundFrameMillis);
-	_foregroundLayer.visible = true;
-	_foregroundLayer.reset(0);
-}
-
-void Scene2070::advanceForegroundLayer(uint32 delta) {
-	const uint frameCount = _foregroundChannel.consumeFrames(delta);
-	for (uint i = 0; i < frameCount; ++i) {
-		byte nextFrame = (byte)(_foregroundLayer.frameIndex + 1);
-		if (nextFrame >= ARRAYSIZE(kScene2070ForegroundFrameMap))
-			nextFrame = 0;
-		_foregroundLayer.setFrame(nextFrame);
-	}
+	_sceneLayers.reset();
+	_realtimeAnimationTracks.reset(_foregroundTrack);
 }
 
 void Scene2070::runEntryFromLabyrinth() {
 	setActiveActorPose(0x04b, 0x110, 2);
-	_foregroundLayer.setFrame(0);
+	_sceneLayers.setLayerFrame(kScene2070ForegroundLayer, 0);
 	drawPlayableComposite();
 	if (fadePaletteFromBlack())
 		return;
@@ -373,7 +356,7 @@ void Scene2070::runEntryFromLabyrinth() {
 
 void Scene2070::runEntryFromRightPassage() {
 	setActiveActorPose(0x30e, 0x0ee, 4);
-	_foregroundLayer.setFrame(0);
+	_sceneLayers.setLayerFrame(kScene2070ForegroundLayer, 0);
 	drawPlayableComposite();
 	if (fadePaletteFromBlack())
 		return;
