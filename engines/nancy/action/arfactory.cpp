@@ -26,6 +26,7 @@
 #include "engines/nancy/action/miscrecords.h"
 
 #include "engines/nancy/action/autotext.h"
+#include "engines/nancy/action/cameraaction.h"
 #include "engines/nancy/action/conversation.h"
 #include "engines/nancy/action/interactivevideo.h"
 #include "engines/nancy/action/overlay.h"
@@ -46,6 +47,7 @@
 #include "engines/nancy/action/puzzle/collisionpuzzle.h"
 #include "engines/nancy/action/puzzle/cubepuzzle.h"
 #include "engines/nancy/action/puzzle/cuttingpuzzle.h"
+#include "engines/nancy/action/puzzle/decoderpuzzle.h"
 #include "engines/nancy/action/puzzle/dotconnectpuzzle.h"
 #include "engines/nancy/action/puzzle/drivingpuzzle.h"
 #include "engines/nancy/action/puzzle/dropsortpuzzle.h"
@@ -57,6 +59,7 @@
 #include "engines/nancy/action/puzzle/magnetmazepuzzle.h"
 #include "engines/nancy/action/puzzle/mazechasepuzzle.h"
 #include "engines/nancy/action/puzzle/memorypuzzle.h"
+#include "engines/nancy/action/puzzle/meterpuzzle.h"
 #include "engines/nancy/action/puzzle/mindpuzzle.h"
 #include "engines/nancy/action/puzzle/minigolfpuzzle.h"
 #include "engines/nancy/action/puzzle/mirrorlightpuzzle.h"
@@ -229,7 +232,10 @@ ActionRecord *ActionManager::createActionRecord(uint16 type, Common::SeekableRea
 	case 52:
 		return new PlaySecondaryVideo();
 	case 53:
-		return new PlaySecondaryMovie();
+		if (g_nancy->getGameType() >= kGameTypeNancy14)
+			return new RolloverOverlay();
+		else
+			return new PlaySecondaryMovie();
 	case 54:
 		if (g_nancy->getGameType() <= kGameTypeNancy1)
 			return new Overlay(false); // PlayStaticBitmapAnimation
@@ -389,10 +395,8 @@ ActionRecord *ActionManager::createActionRecord(uint16 type, Common::SeekableRea
 		return new AddSearchLink();
 	case 132:	// Nancy12
 		return new ResourceUse();
-	case 133:	// Nancy14 - CameraAction
-		// Cell-phone camera action (introduced alongside the UICM camera UI).
-		// TODO: not yet implemented
-		return nullptr;
+	case 133:	// Nancy14
+		return new CameraAction();
 	case 134:	// Nancy15 - PlayCharAR
 		// Switches the active player character (Nancy / Frank / Joe), the
 		// dual-protagonist mechanic new to The Creature of Kapu Cave.
@@ -507,17 +511,15 @@ ActionRecord *ActionManager::createActionRecord(uint16 type, Common::SeekableRea
 		return new HangmanPuzzle();
 	case 178:
 		return new AdjustPuzzle();
-	case 179:	// MeterPuzzle
-		// TODO: not yet implemented
-		return nullptr;
+	case 179:
+		return new MeterPuzzle();
 	case 180:	// BlockingPuzzle
 		// TODO: not yet implemented
 		return nullptr;
 	case 181:
 		return new PaintPuzzle();
-	case 182:	// DecoderPuzzle
-		// TODO: not yet implemented
-		return nullptr;
+	case 182:
+		return new DecoderPuzzle();
 	// -- Nancy15 new puzzles (types 183-185) --
 	case 183:	// MagicBoxPuzzle
 		// TODO: not yet implemented
