@@ -19,11 +19,8 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene5000.h"
-
-#include "common/system.h"
-
 #include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene5000.h"
 
 namespace Hollywood {
 
@@ -108,16 +105,11 @@ void Scene5000::runPresentation() {
 	uint32 phaseAccumulator = 0;
 	uint32 spriteAccumulator = kScene5000SpriteFrameMillis;
 	uint32 clipAccumulator = kScene5000ClipFrameMillis;
-	uint32 lastMillis = g_system->getMillis();
+	uint32 delta = 0;
 	bool spriteDirty = false;
+	TimedPresentationLoop loop(*this, TimedPresentationLoop::kUntilStopped);
 
-	while (tick < kScene5000EndTick && !_skipRequested && !Engine::shouldQuit()) {
-		if (pollEvents())
-			return;
-
-		const uint32 now = g_system->getMillis();
-		const uint32 delta = now - lastMillis;
-		lastMillis = now;
+	while (tick < kScene5000EndTick && loop.beginFrame()) {
 		phaseAccumulator += delta;
 		spriteAccumulator += delta;
 		clipAccumulator += delta;
@@ -144,7 +136,7 @@ void Scene5000::runPresentation() {
 			++tick;
 
 			if (tick == kScene5000PatchTick)
-				drawResourceBlockList(_resourceArena, _resourceChunkOffsets[2],
+				drawResourceBlockList(_resources._arena, _resources._chunkOffsets[2],
 					_sceneFramebuffer.managedSurface());
 			if (tick == kScene5000BackgroundRefreshTick)
 				memcpy(_sceneFramebuffer.data(), _baseFramebuffer.data(),
@@ -156,7 +148,7 @@ void Scene5000::runPresentation() {
 			spriteDirty = false;
 		}
 
-		g_system->delayMillis(10);
+		delta = loop.finishFrame();
 	}
 
 	_ambientSound.stop();
@@ -166,11 +158,11 @@ void Scene5000::drawPresentationFrame(bool spriteDirty, int previousClipFrame) {
 	const uint mapIndex = MIN<uint>(_spriteFrame, ARRAYSIZE(kScene5000SpriteFrameMap) - 1);
 	const byte descriptor = kScene5000SpriteFrameMap[mapIndex];
 	if (spriteDirty) {
-		restoreSpriteBackground(_resourceArena, _resourceChunkOffsets[3], 0,
+		restoreSpriteBackground(_resources._arena, _resources._chunkOffsets[3], 0,
 			kScene5000SpriteDescriptorCount, descriptor, _baseFramebuffer.surface(),
 			_sceneFramebuffer.surface());
 	}
-	drawStripSpriteFrame(_resourceArena, _resourceChunkOffsets[3], 0,
+	drawStripSpriteFrame(_resources._arena, _resources._chunkOffsets[3], 0,
 		kScene5000SpriteDescriptorCount, descriptor, _sceneFramebuffer.managedSurface());
 	for (int clipFrame = previousClipFrame + 1; clipFrame <= _clipFrame; ++clipFrame)
 		drawClipFrameDelta(4, kScene5000ClipDescriptorCount, clipFrame);

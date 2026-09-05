@@ -40,7 +40,6 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
@@ -55,12 +54,10 @@ private:
 	bool customizeRouteFinal(byte currentRegion, byte targetRegion, const ActorPathBuildState &state,
 		int targetX, int targetY, int &requestedFacing, bool &restoredStepDeltas) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
 	void primarySpeechAnimationRestored(byte animationGroup, byte baseFrame) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetAnimationLayers();
@@ -83,7 +80,7 @@ private:
 	void initializeForegroundDialogueRecords(Common::Array<DialogueChoiceRecord> &records) const;
 	void setDialogueRecord(Common::Array<DialogueChoiceRecord> &records, uint index,
 		byte enabled, byte nextNodeIndex, byte transitionMode, byte playerTextRowId,
-		byte responseFrameIndex, byte disableAfterUse, byte reserved) const;
+		byte responseFrameIndex, byte disableAfterUse) const;
 	void runForegroundActorExitOverlay();
 	void runPostForegroundDialogueEffect();
 	void runDepartureShake();
@@ -95,9 +92,6 @@ private:
 	void setHotspotInteractionX(byte itemId, int16 x);
 
 	TimedAnimationChannel _foregroundActorChannel;
-	ResourceSpriteLayer _ambientLayer;
-	ResourceSpriteLayer _foregroundActorLayer;
-	ResourceSpriteLayer _forwardExitPoseLayer;
 	uint _ambientTrack;
 	Common::Array<byte> _deltaClipData;
 	byte _foregroundActorIdleState;

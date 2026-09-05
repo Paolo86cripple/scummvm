@@ -42,7 +42,6 @@ private:
 	int alternatePaletteResourceChunkIndex() const override;
 	bool isAlternatePaletteResourceActive() const override;
 	bool shouldConvertSavedFramebufferFF() const override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	void initializeCustomPreviewState() override;
 	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
@@ -62,11 +61,10 @@ private:
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
 	void primarySpeechAnimationStarted(byte animationGroup, byte baseFrame) override;
 	void primarySpeechAnimationRestored(byte animationGroup, byte baseFrame) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 
 	void runJosephGuestListGreeting();
 	void waitPreItemIdleSequence();
-	bool shouldStopJosephGuestListGreeting();
+	bool shouldAbortJosephGuestListGreeting();
 	void advanceChunk11PreItemIdleAnimation(uint32 delta);
 	void advanceChunk16PostItemAnimation(uint32 delta);
 	byte pickPrimarySpeechFrameExcluding(byte frameCount, byte previousFrame);
@@ -89,8 +87,6 @@ private:
 	void runChunk11Range(byte firstFrame, byte endFrame);
 	void runChunk14ActionRange(byte firstFrame, byte endFrame);
 	void runChunk14AltRange(uint chunkIndex, byte firstFrame, byte endFrame);
-	void applyChunk14ActionSideEffects(byte frameIndex);
-	void applyChunk14AltSideEffects(byte frameIndex);
 	void configureAnimationLayers();
 	void resetTransientAnimationLayers();
 	void syncAnimationLayerFrames();

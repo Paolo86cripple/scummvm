@@ -19,15 +19,12 @@
  *
  */
 
-#include "hollywood/scenes/intro/scene9170.h"
-
 #include "common/debug.h"
-#include "common/system.h"
 
-#include "hollywood/font.h"
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/intro/scene9170.h"
 
 namespace Hollywood {
 
@@ -42,7 +39,6 @@ const byte kScene9170BlueSpeechColor = 0xfb;
 const uint kScene9170SpeechFrameMillis = 125;
 const uint kScene9170ScrollFrameMillis = 50;
 const uint kScene9170EffectFrameMillis = 60;
-const int kScene9170SpeechLineHeight = 20;
 
 const byte kScene9170UpperFrameMaps[3][5] = {
 	{ 0, 1, 2, 3, 4 },
@@ -83,8 +79,7 @@ const byte kScene9170ScrollUpB[] = {
 };
 
 Scene9170::Scene9170(HollywoodEngine *vm) :
-		IntroSceneBase(vm, "Scene 9170", kScene9170TallFramebufferSize, kFrameBufferSize),
-		_resources(),
+		PresentationScene(vm, "Scene 9170", kScene9170TallFramebufferSize, kSceneBufferByteCount),
 		_music(vm->introMusic()),
 		_speech(vm->getLanguage()),
 		_ambientSpeech(vm->getLanguage()),
@@ -95,7 +90,6 @@ Scene9170::Scene9170(HollywoodEngine *vm) :
 		_paletteResource(),
 		_baseFramebuffer(),
 		_staticFramebuffer(),
-		_subtitle(),
 		_rowOffset(0),
 		_upperActorsEnabled(false),
 		_lowerActorsEnabled(false),
@@ -112,12 +106,8 @@ Scene9170::Scene9170(HollywoodEngine *vm) :
 		_shakeActive(false),
 		_shakeRowOffset(0) {
 	_paletteResource.resize(kPaletteSize);
-	_baseFramebuffer.resize(kFrameBufferSize);
+	_baseFramebuffer.resize(kSceneBufferByteCount);
 	_staticFramebuffer.resize(kScene9170TallFramebufferSize);
-	_subtitle.visible = false;
-	_subtitle.colorIndex = kScene9170BlueSpeechColor;
-	_subtitle.centerX = 0;
-	_subtitle.topY = 0;
 	_upperFrames[0] = _upperFrames[1] = _upperFrames[2] = 0;
 	_upperDirty[0] = _upperDirty[1] = _upperDirty[2] = false;
 }
@@ -150,7 +140,7 @@ bool Scene9170::load() {
 	if (!_resources.validateChunkRange(kScene9170ArchiveName, _debugName, 0, 8))
 		return false;
 
-	if (!loadChunk(0, _paletteResource, kPaletteSize))
+	if (!loadFixedChunk(0, _paletteResource, kPaletteSize))
 		return false;
 
 	_resources.allocateArena(_resources.totalChunkSize(1, 8));
@@ -166,14 +156,6 @@ bool Scene9170::load() {
 	return true;
 }
 
-bool Scene9170::loadChunk(uint index, Common::Array<byte> &destination, uint fixedSize) {
-	return _resources.loadFixedChunk(_debugName, index, destination, fixedSize);
-}
-
-bool Scene9170::loadArenaChunk(uint index) {
-	return _resources.loadArenaChunk(_debugName, index, index);
-}
-
 void Scene9170::runSequence() {
 	buildInitialStaticFrame();
 	_music->setArchive(Common::Path(kScene9170MusicArchiveName));
@@ -182,7 +164,7 @@ void Scene9170::runSequence() {
 	_rowOffset = 0;
 	addBlockListToCanvas(2, 0);
 	fadeInPalette();
-	if (delay(7000))
+	if (delay(7000) && (_skipRequested || Engine::shouldQuit()))
 		return;
 
 	scrollByTable(kScene9170ScrollDownA, ARRAYSIZE(kScene9170ScrollDownA), true);
@@ -236,7 +218,7 @@ void Scene9170::runSequence() {
 	presentFrame();
 	waitWithAnimations(1000, 3, false);
 	scrollByTable(kScene9170ScrollDownB, ARRAYSIZE(kScene9170ScrollDownB), true);
-	if (delay(3000))
+	if (delay(3000) && (_skipRequested || Engine::shouldQuit()))
 		return;
 	scrollByTable(kScene9170ScrollUpB, ARRAYSIZE(kScene9170ScrollUpB), false);
 	runSpeechLine(4, 2, 0x128, 0x0c2, 0x3f, 0x20, 0x3f, 3);
@@ -246,7 +228,7 @@ void Scene9170::runSequence() {
 	presentFrame();
 	waitWithAnimations(2000, 3, false);
 	scrollTo(0x140, 4);
-	if (delay(3000))
+	if (delay(3000) && (_skipRequested || Engine::shouldQuit()))
 		return;
 
 	_lowerFrame = 7;
@@ -263,7 +245,7 @@ void Scene9170::buildInitialStaticFrame() {
 	_staticFramebuffer.clear(0);
 	_sceneFramebuffer.clear(0);
 	_baseFramebuffer.clear(0);
-	drawResourceBlockList(_resources.arena, _resources.chunkOffsets[3], _baseFramebuffer.surface());
+	drawResourceBlockList(_resources._arena, _resources._chunkOffsets[3], _baseFramebuffer.surface());
 	copyBaseToCanvasAtYOffset(0x1e0);
 
 	_upperActorsEnabled = true;
@@ -282,7 +264,7 @@ void Scene9170::buildInitialStaticFrame() {
 
 void Scene9170::switchToLowerRoomFrame() {
 	_baseFramebuffer.clear(0);
-	drawResourceBlockList(_resources.arena, _resources.chunkOffsets[1], _baseFramebuffer.surface());
+	drawResourceBlockList(_resources._arena, _resources._chunkOffsets[1], _baseFramebuffer.surface());
 	copyBaseToCanvasAtYOffset(0);
 	_upperActorsEnabled = false;
 	_lowerActorsEnabled = true;
@@ -301,11 +283,11 @@ void Scene9170::switchToLowerRoomFrame() {
 }
 
 void Scene9170::addBlockListToCanvas(uint chunkIndex, int yOffset) {
-	if (chunkIndex >= IntroResourceSet::kResourceChunkCount)
+	if (chunkIndex >= kResourceChunkCount)
 		return;
-	drawResourceBlockList(_resources.arena, _resources.chunkOffsets[chunkIndex],
+	drawResourceBlockList(_resources._arena, _resources._chunkOffsets[chunkIndex],
 		_staticFramebuffer.surface(), yOffset);
-	drawResourceBlockList(_resources.arena, _resources.chunkOffsets[chunkIndex],
+	drawResourceBlockList(_resources._arena, _resources._chunkOffsets[chunkIndex],
 		_sceneFramebuffer.surface(), yOffset);
 }
 
@@ -379,22 +361,22 @@ void Scene9170::composeFrame() {
 
 void Scene9170::restoreSpriteChannel(uint chunkIndex, uint descriptorCount, const byte *frameMap,
 		uint frameMapSize, byte frameIndex) {
-	if (chunkIndex >= IntroResourceSet::kResourceChunkCount || frameMapSize == 0)
+	if (chunkIndex >= kResourceChunkCount || frameMapSize == 0)
 		return;
 
 	const byte mappedFrame = frameMap[MIN<uint>(frameIndex, frameMapSize - 1)];
-	restoreSpriteBackground(_resources.arena, _resources.chunkOffsets[chunkIndex], 0,
+	restoreSpriteBackground(_resources._arena, _resources._chunkOffsets[chunkIndex], 0,
 		descriptorCount, mappedFrame, _staticFramebuffer.surface(), _sceneFramebuffer.surface(),
 		_channelCanvasOffset);
 }
 
 void Scene9170::drawSpriteChannel(uint chunkIndex, uint descriptorCount, const byte *frameMap,
 		uint frameMapSize, byte frameIndex) {
-	if (chunkIndex >= IntroResourceSet::kResourceChunkCount || frameMapSize == 0)
+	if (chunkIndex >= kResourceChunkCount || frameMapSize == 0)
 		return;
 
 	const byte mappedFrame = frameMap[MIN<uint>(frameIndex, frameMapSize - 1)];
-	drawStripSpriteFrame(_resources.arena, _resources.chunkOffsets[chunkIndex], 0,
+	drawStripSpriteFrame(_resources._arena, _resources._chunkOffsets[chunkIndex], 0,
 		descriptorCount, mappedFrame, _sceneFramebuffer.surface(), _channelCanvasOffset);
 }
 
@@ -431,13 +413,10 @@ void Scene9170::scrollTo(uint targetRowOffset, int step) {
 
 void Scene9170::waitWithAnimations(uint32 millis, byte speakerGroup, bool animateAmbient,
 		bool presentChanges) {
-	uint32 elapsed = 0;
 	uint32 speakerElapsed = 0;
 	uint32 effectElapsed = 0;
-	while (elapsed < millis && !_skipRequested && !Engine::shouldQuit()) {
-		if (pollEvents())
-			return;
-
+	TimedPresentationLoop loop(*this, millis);
+	while (loop.beginFrame()) {
 		bool dirty = false;
 		if (speakerElapsed >= kScene9170SpeechFrameMillis) {
 			speakerElapsed %= kScene9170SpeechFrameMillis;
@@ -456,12 +435,11 @@ void Scene9170::waitWithAnimations(uint32 millis, byte speakerGroup, bool animat
 				presentFrame();
 		}
 
-		const uint32 slice = MIN<uint32>(millis - elapsed, 10);
-		g_system->delayMillis(slice);
-		elapsed += slice;
+		const uint32 slice = loop.finishFrame();
 		speakerElapsed += slice;
 		effectElapsed += slice;
 	}
+	consumeStepAdvanceRequest();
 }
 
 void Scene9170::fadeInPalette() {
@@ -528,26 +506,18 @@ void Scene9170::runSpeechCue(uint16 textRecordId, byte continuationCount, uint16
 	const byte lineCount = MAX<byte>(1, continuationCount);
 	for (byte part = 0; part < lineCount && !_skipRequested && !Engine::shouldQuit(); ++part) {
 		const Common::String text = _text.largeTextRecord(textRecordId + part);
-		if (!text.empty()) {
-			_subtitle.visible = true;
-			_subtitle.colorIndex = kScene9170BlueSpeechColor;
-			wrapSubtitleText(text, centerX, _subtitle.lines);
-			calculateSubtitleBounds(centerX, topY);
-		}
+		showAnchoredSubtitle(text, kScene9170BlueSpeechColor, centerX, topY);
 
 		const uint16 sampleId = voiceSampleId == 0 ? 0 : voiceSampleId + part;
 		const bool started = sampleId != 0 && _speech.playSample(sampleId, 100);
 		const uint32 duration = started ? MAX<uint32>(_speech.lastSampleDurationMillis(), 750) :
 			MAX<uint32>(1200, _subtitle.lines.size() * 1100);
-		uint32 elapsed = 0;
 		uint32 speechElapsed = 0;
 		uint32 effectElapsed = 0;
 		composeFrame();
 		presentFrame();
-		while (elapsed < duration && !_skipRequested && !Engine::shouldQuit()) {
-			if (pollEvents())
-				return;
-
+		TimedPresentationLoop loop(*this, duration);
+		while (loop.beginFrame()) {
 			bool dirty = false;
 			if (speechElapsed >= kScene9170SpeechFrameMillis) {
 				speechElapsed %= kScene9170SpeechFrameMillis;
@@ -565,14 +535,15 @@ void Scene9170::runSpeechCue(uint16 textRecordId, byte continuationCount, uint16
 				presentFrame();
 			}
 
-			const uint32 slice = MIN<uint32>(duration - elapsed, 10);
-			g_system->delayMillis(slice);
-			elapsed += slice;
+			const uint32 slice = loop.finishFrame();
 			speechElapsed += slice;
 			effectElapsed += slice;
 		}
-
 		_speech.stop();
+		consumeStepAdvanceRequest();
+		if (_skipRequested || Engine::shouldQuit())
+			return;
+
 		resetSpeakerFrame(speakerGroup);
 		clearSubtitle();
 		composeFrame();
@@ -720,99 +691,16 @@ uint Scene9170::presentRowOffset() const {
 	return _rowOffset + (_shakeActive ? _shakeRowOffset : 0);
 }
 
+int Scene9170::subtitleViewportYOffset() const {
+	return _rowOffset == 0x0a0 || _rowOffset == 0x140 ? _rowOffset : 0;
+}
+
 void Scene9170::stopAudio() {
 	_speech.stop();
 	_ambientSpeech.stop();
 	_sound.stop();
 	_ambientSound.stop();
 	_music->stop();
-}
-
-void Scene9170::clearSubtitle() {
-	_subtitle.visible = false;
-	_subtitle.lines.clear();
-}
-
-void Scene9170::drawFrameOverlays() {
-	if (!_subtitle.visible || !_vm->font() || !_vm->font()->isLoaded())
-		return;
-
-	HollywoodFont *font = _vm->font();
-	font->setShadowColor(0);
-	for (uint lineIndex = 0; lineIndex < _subtitle.lines.size(); ++lineIndex) {
-		const Common::String &line = _subtitle.lines[lineIndex];
-		const int lineWidth = subtitleTextWidth(line);
-		int x = (int)_subtitle.centerX - (lineWidth >> 1);
-		if (x < 0)
-			x = 0;
-		if (x + lineWidth > HollywoodEngine::kScreenWidth)
-			x = MAX<int>(0, HollywoodEngine::kScreenWidth - lineWidth);
-		int y = (int)_subtitle.topY + lineIndex * kScene9170SpeechLineHeight;
-		if (_rowOffset == 0x0a0 || _rowOffset == 0x140)
-			y -= (int)_rowOffset;
-		font->drawString(_screen.surfacePtr(), line, x, y, lineWidth, _subtitle.colorIndex,
-			Graphics::kTextAlignLeft, 0, false, true);
-	}
-}
-
-void Scene9170::wrapSubtitleText(const Common::String &text, uint16 anchorSceneX,
-		Common::Array<Common::String> &lines) const {
-	lines.clear();
-	if (text.empty())
-		return;
-
-	const int anchorX = CLIP<int>(anchorSceneX, 10, HollywoodEngine::kScreenWidth - 10);
-	const int edgeDistance = MIN<int>(anchorX, HollywoodEngine::kScreenWidth - anchorX);
-	uint maxChars = edgeDistance < 0xa0 ? edgeDistance * 0x32 / 0xa0 : 0x32;
-	maxChars = MAX<uint>(maxChars, 0x18);
-	const uint lineWidthReduction = maxChars < 0x2a ? (maxChars > 0x20 ? 2 : 1) : 3;
-	const char *source = text.c_str();
-	const uint textLength = text.size();
-	uint cursor = 0;
-	while (cursor < textLength && lines.size() < 10) {
-		uint end = textLength;
-		if (cursor + maxChars < textLength) {
-			end = cursor + maxChars;
-			while (end > cursor && (byte)source[end] != 0x20 && source[end] != 0)
-				--end;
-			while (end > cursor && (byte)source[end - 1] == 0x20)
-				--end;
-			if (end == cursor)
-				end = MIN<uint>(textLength, cursor + maxChars);
-		}
-		lines.push_back(Common::String(source + cursor, end - cursor));
-		cursor = end;
-		while (cursor < textLength && (byte)source[cursor] == 0x20)
-			++cursor;
-		maxChars = maxChars > lineWidthReduction ? maxChars - lineWidthReduction : 1;
-	}
-}
-
-void Scene9170::calculateSubtitleBounds(uint16 anchorCenterX, uint16 anchorTopY) {
-	uint maxWidth = 0;
-	for (uint lineIndex = 0; lineIndex < _subtitle.lines.size(); ++lineIndex)
-		maxWidth = MAX<uint>(maxWidth, subtitleTextWidth(_subtitle.lines[lineIndex]));
-
-	const int width = (int)maxWidth;
-	const int halfWidth = width >> 1;
-	int centerX = anchorCenterX;
-	if (centerX - halfWidth - 1 + width > 0x27e) {
-		centerX = 0x27d - halfWidth;
-		if ((maxWidth & 1) == 0)
-			centerX = 0x27e - halfWidth;
-	}
-	if (centerX - halfWidth < 1)
-		centerX = halfWidth + 1;
-
-	_subtitle.centerX = centerX;
-	_subtitle.topY = MAX<int>(1, (int)anchorTopY - _subtitle.lines.size() * kScene9170SpeechLineHeight);
-}
-
-uint Scene9170::subtitleTextWidth(const Common::String &text) const {
-	if (!_vm->font() || !_vm->font()->isLoaded())
-		return 0;
-
-	return _vm->font()->getStringWidth(text) + 2;
 }
 
 } // End of namespace Hollywood

@@ -29,7 +29,6 @@
 #include "common/types.h"
 
 #include "hollywood/gameplay/hotspots.h"
-#include "hollywood/gameplay/inventory_media.h"
 
 namespace Graphics {
 struct Surface;
@@ -38,6 +37,9 @@ struct Surface;
 namespace Hollywood {
 
 class HollywoodEngine;
+enum InventoryMediaId : int;
+
+extern const uint16 kGameplayVerbPanelStripXOffsets[9];
 
 struct GameplayLoopCursorState {
 	uint16 cursorX;

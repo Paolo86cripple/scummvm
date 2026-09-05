@@ -34,9 +34,7 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
+	void drawCustomForegroundComposite(int activeWorldX, int activeWorldY) override;
 	void runCustomEntrySequence() override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
@@ -50,9 +48,9 @@ private:
 	void resetAnimationLayers();
 	void rebuildWalkableMask();
 	void copyCaptionRow(byte sourceRow, byte destinationRow);
+	void setForegroundActorFrame(byte frameIndex);
 	void advanceForegroundActorLayer(uint32 delta);
 	void advanceDialogueActorLayer(uint32 delta);
-	void updateForegroundActorIdleSpeech(uint32 delta);
 	bool canStartForegroundActorIdleSpeech() const;
 	void startForegroundActorIdleSpeech(byte frameIndex);
 	void finishForegroundActorIdleSpeech();
@@ -70,17 +68,12 @@ private:
 
 	TimedAnimationChannel _foregroundActorChannel;
 	TimedAnimationChannel _dialogueActorChannel;
-	ResourceSpriteLayer _backgroundLayer;
-	ResourceSpriteLayer _foregroundActorLayer;
 	uint _backgroundTrack;
 	byte _foregroundActorMode;
 	byte _foregroundActorIdleCounter;
 	byte _foregroundActorIdleSpeechFrame;
-	bool _foregroundActorIdleSpeechActive;
 	bool _foregroundActorManualSequenceActive;
 	bool _dialogueMenuActive;
-	uint32 _foregroundActorIdleSpeechTimer;
-	uint32 _foregroundActorIdleSpeechDuration;
 };
 
 } // End of namespace Hollywood

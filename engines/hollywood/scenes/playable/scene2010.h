@@ -34,9 +34,6 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
@@ -48,7 +45,6 @@ private:
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetAnimationLayers();
@@ -62,9 +58,6 @@ private:
 	void runPatchedEntrySequence();
 	void runLongSequenceToScene2100();
 
-	ResourceSpriteLayer _scriptLayer;
-	SceneAnimationStratum _scriptLayerStratum;
-	ResourceSpriteLayer _gatekeeperLayer;
 	uint32 _gatekeeperIdleAccumulator;
 	bool _gatekeeperSequenceActive;
 };

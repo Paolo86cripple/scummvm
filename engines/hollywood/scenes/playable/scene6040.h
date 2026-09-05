@@ -34,10 +34,7 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
+	void drawCustomForegroundComposite(int activeWorldX, int activeWorldY) override;
 	void runCustomEntrySequence() override;
 	void prepareCustomGameplayLoop() override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
@@ -49,13 +46,11 @@ private:
 	void runPaintCanPickup();
 	void runWireInspectionAnimation();
 	void runCutWireWithTool();
-	void runWirePickup();
+	void runLidRemoval();
 	void rememberOriginalColorMap();
 	void replaceColorMapItemFromOriginal(byte sourceItem, byte destinationItem);
 
 	Common::Array<byte> _originalColorToItemMap;
-	ResourceSpriteLayer _leftToggleLayer;
-	ResourceSpriteLayer _rightToggleLayer;
 	uint _leftToggleTrack;
 	uint _rightToggleTrack;
 };

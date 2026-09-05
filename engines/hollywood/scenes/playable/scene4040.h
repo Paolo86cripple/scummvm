@@ -34,12 +34,9 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+	void drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
@@ -69,8 +66,6 @@ private:
 	void replaceColorMapItem(byte sourceItem, byte destinationItem);
 
 	TimedAnimationChannel _randomBackgroundChannel;
-	ResourceSpriteLayer _cyclicBackgroundLayer;
-	ResourceSpriteLayer _randomBackgroundLayer;
 	uint _cyclicBackgroundTrack;
 	byte _randomBackgroundState;
 	byte _randomBackgroundRepeatCount;

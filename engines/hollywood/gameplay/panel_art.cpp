@@ -19,8 +19,6 @@
  *
  */
 
-#include "hollywood/gameplay/panel_art.h"
-
 #include "common/endian.h"
 #include "common/file.h"
 #include "common/formats/winexe.h"
@@ -29,10 +27,13 @@
 #include "common/textconsole.h"
 #include "graphics/surface.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/font.h"
 #include "hollywood/game_strings.h"
+#include "hollywood/gameplay/dialogue_menu.h"
+#include "hollywood/gameplay/game_loop.h"
 #include "hollywood/gameplay/game_state.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/gameplay/panel_art.h"
 
 namespace Hollywood {
 
@@ -101,9 +102,6 @@ const byte kPanelDialogueMenuHighlightColor = 0xf9;
 const byte kPanelSelectedColorDelta = 9;
 const byte kPanelArrowEnabledColor = 0xf1;
 const byte kPanelArrowDisabledColor = 0xf0;
-const uint16 kPanelVerbStripXOffsets[9] = {
-	0xff, 0, 8, 97, 186, 276, 366, 456, 545
-};
 const uint16 kPanelVerbStripLabelCenters[9] = {
 	0, 0, 0x33, 0x8c, 0xe5, 0x13f, 0x199, 499, 0x24c
 };
@@ -390,13 +388,13 @@ bool GameplayPanelArt::applyInteractiveObjectPalette(Common::Array<byte> &palett
 	return true;
 }
 
-void GameplayPanelArt::drawVerbPanel(Graphics::Surface &surface, const Graphics::Surface &sceneBackground,
+void GameplayPanelArt::drawVerbPanel(Graphics::Surface &surface, const Graphics::Surface &sceneComposite,
 		uint16 viewportXOffset, uint16 viewportYOffset, const GameplayPanelState &panelState,
 		HollywoodFont *font) const {
 	if (!_loaded)
 		return;
 
-	copySceneCaptionBand(surface, sceneBackground, viewportXOffset, viewportYOffset, kPanelVerbCaptionY);
+	copySceneCaptionBand(surface, sceneComposite, viewportXOffset, viewportYOffset, kPanelVerbCaptionY);
 	copyBottomPanelRows(surface, 0, kPanelVerbContentY, HollywoodEngine::kScreenHeight - kPanelVerbContentY);
 	drawVerbStripLabels(surface, kPanelVerbContentY, font);
 	applySelectedVerbStrip(surface, kPanelVerbContentY, panelState.currentStrip);
@@ -404,12 +402,12 @@ void GameplayPanelArt::drawVerbPanel(Graphics::Surface &surface, const Graphics:
 }
 
 void GameplayPanelArt::drawDialogueInventoryPanel(Graphics::Surface &surface,
-		const Graphics::Surface &sceneBackground, uint16 viewportXOffset, uint16 viewportYOffset,
+		const Graphics::Surface &sceneComposite, uint16 viewportXOffset, uint16 viewportYOffset,
 		const GameplayPanelState &panelState, const GameplayState &gameState, HollywoodFont *font) const {
 	if (!_loaded)
 		return;
 
-	copySceneCaptionBand(surface, sceneBackground, viewportXOffset, viewportYOffset, kPanelDialogueCaptionY);
+	copySceneCaptionBand(surface, sceneComposite, viewportXOffset, viewportYOffset, kPanelDialogueCaptionY);
 	copyBottomPanelRows(surface, 0, kPanelDialogueContentY,
 		HollywoodEngine::kScreenHeight - kPanelDialogueContentY);
 	applyInventoryArrowState(surface, gameState);
@@ -466,21 +464,21 @@ void GameplayPanelArt::drawDialogueMenuPanel(Graphics::Surface &surface,
 }
 
 void GameplayPanelArt::copySceneCaptionBand(Graphics::Surface &surface,
-		const Graphics::Surface &sceneBackground, uint16 viewportXOffset, uint16 viewportYOffset,
+		const Graphics::Surface &sceneComposite, uint16 viewportXOffset, uint16 viewportYOffset,
 		uint16 screenY) const {
-	if (surface.format.bytesPerPixel != 1 || sceneBackground.format.bytesPerPixel != 1)
+	if (surface.format.bytesPerPixel != 1 || sceneComposite.format.bytesPerPixel != 1)
 		return;
 
 	for (uint row = 0; row < kPanelCaptionBandHeight; ++row) {
 		const uint sceneY = viewportYOffset + screenY + row;
 		if (sceneY >= HollywoodEngine::kSceneBufferHeight ||
-				sceneY >= (uint)sceneBackground.h ||
-				viewportXOffset + HollywoodEngine::kScreenWidth > (uint)sceneBackground.w ||
+				sceneY >= (uint)sceneComposite.h ||
+				viewportXOffset + HollywoodEngine::kScreenWidth > (uint)sceneComposite.w ||
 				screenY + row >= (uint)surface.h)
 			continue;
 
 		memcpy(surface.getBasePtr(0, screenY + row),
-			sceneBackground.getBasePtr(viewportXOffset, sceneY),
+			sceneComposite.getBasePtr(viewportXOffset, sceneY),
 			HollywoodEngine::kScreenWidth);
 	}
 }
@@ -640,7 +638,7 @@ void GameplayPanelArt::applySelectedVerbStrip(Graphics::Surface &surface, int sc
 	if (surface.format.bytesPerPixel != 1 || stripIndex < 2 || stripIndex > 8)
 		return;
 
-	const int left = kPanelVerbStripXOffsets[stripIndex];
+	const int left = kGameplayVerbPanelStripXOffsets[stripIndex];
 	const int top = screenY + kPanelVerbStripTopInBuffer;
 	for (int row = 0; row < kPanelVerbStripHeight; ++row) {
 		const int y = top + row;

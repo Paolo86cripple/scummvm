@@ -19,11 +19,10 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene1060.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene1060.h"
 
 namespace Hollywood {
 
@@ -80,8 +79,6 @@ const byte kScene1060FlySlimeIdleFrame = 0;
 const byte kScene1060TicketLastPickupFrame = 0x1e;
 const byte kScene1060FlySlimeLastFrame = 0x24;
 const byte kScene1060TicketPickupStateFrame = 4;
-const byte kScene1060TicketPickupHook = 1;
-const byte kScene1060SkullcrackerExchangeHook = 2;
 const byte kScene1060TicketPickupAdvanceLimitFrame = 0x20;
 const byte kScene1060TicketPickupResetFrame = 8;
 const byte kScene1060JuniorExchangeFirstOverlayFrame = 10;
@@ -129,10 +126,6 @@ const byte kScene1060FlyDoctorFrameMap[] = {
 
 const byte kScene1060SmallTriggerFrameMap[] = { 0, 0, 1, 2, 3, 4, 5, 6 };
 
-const byte kScene1060TicketPickupFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
-};
-
 const byte kScene1060JuniorExchangeFrameMap[] = {
 	11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28
 };
@@ -146,6 +139,11 @@ const byte kScene1060SkullcrackerHandoffFrameMap[] = {
 	10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 1,
 	2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 11, 11,
 	11, 11, 11, 11, 11, 11, 11, 11, 11
+};
+
+const byte kScene1060JuniorHandoffFrameMap[] = {
+	29, 29, 30, 30, 31, 31, 32, 32, 33, 33, 34, 34,
+	35, 35, 36, 36, 37, 37, 38, 38, 39, 39, 40
 };
 
 const byte kScene1060FlySlimeExchangeFrameMap[] = {
@@ -177,7 +175,7 @@ const SceneLayerSpec kScene1060LayerSpecs[] = {
 		kScene1060SmallTriggerFrameMap, ARRAYSIZE(kScene1060SmallTriggerFrameMap), true, 0}
 };
 
-static PlayableSceneConfig scene1060Config() {
+PlayableSceneConfig scene1060Config() {
 	PlayableSceneConfig config(1060,
 		SceneResourceLayout(15, 5, 14),
 		SceneViewport(kScene1060ViewportXOffset, kScene1060ViewportMinXOffset, kScene1060ViewportMaxXOffset),
@@ -212,8 +210,7 @@ Scene1060::Scene1060(HollywoodEngine *vm) :
 		_juniorPoseSequenceActive(false),
 		_juniorConversationActive(false) {
 	_sceneLayers.configure(kScene1060LayerSpecs);
-	_smallLoopTrack = _realtimeAnimationTracks.addLoop(smallLoopLayer(),
-		kScene1060FrameMillis, 5);
+	_smallLoopTrack = _realtimeAnimationTracks.addLoop(kSmallLoopLayer, kScene1060FrameMillis, 5);
 }
 
 void Scene1060::initializeCustomPreviewState() {
@@ -342,18 +339,18 @@ bool Scene1060::applyCustomSceneStateToHotspotsAndPatches(byte selector) {
 	memcpy(_fullPaletteRegionMask.data(), _paletteMaskOriginal.data(), _fullPaletteRegionMask.size());
 
 	GameplayState &state = _vm->gameState();
-	flyDoctorLayer().chunkIndex = state.scene1060DrFlyState == 2 ? 14 : 6;
+	flyDoctorLayer().chunkIndex = state.scene1060DrMoscaState == 2 ? 14 : 6;
 
-	if (state.scene1060DrFlyState == 1)
+	if (state.scene1060DrMoscaState == 1)
 		copyStageSmallRow(10, 7);
 
-	if (state.scene1060DrFlyState == 2)
+	if (state.scene1060DrMoscaState == 2)
 		replaceColorMapItem(7, 4);
 
 	if (state.scene1060PartyRemainsState == 1)
 		replaceColorMapItem(8, 3);
 
-	if (state.scene1060DrFlyState < 2 && !state.scene1060FlySlimeHotspotActive)
+	if (state.scene1060DrMoscaState < 2 && !state.scene1060FlySlimeHotspotActive)
 		replaceColorMapItem(7, 4);
 
 	if (state.scene1060PocketPaperTaken)
@@ -398,22 +395,6 @@ AmbientAudioProfile Scene1060::ambientAudioProfile() const {
 	return profile;
 }
 
-void Scene1060::handleAnimationFrameHook(byte hookId, uint frame) {
-	if (hookId == kScene1060TicketPickupHook && frame == kScene1060TicketPickupStateFrame) {
-		GameplayState &state = _vm->gameState();
-		state.scene1060DrFlyState = 2;
-		state.scene1060FlySlimeHotspotActive = false;
-		applySceneStateToHotspotsAndPatches(1);
-		return;
-	}
-
-	if (hookId == kScene1060SkullcrackerExchangeHook &&
-			frame >= kScene1060JuniorExchangeFirstOverlayFrame &&
-			(frame - kScene1060JuniorExchangeFirstOverlayFrame) % 2 == 0 &&
-			largeBackgroundLayer().frameIndex < kScene1060JuniorExchangeFinalFrame)
-		largeBackgroundLayer().setFrame(largeBackgroundLayer().frameIndex + 1);
-}
-
 void Scene1060::resetAnimationLayers() {
 	GameplayState &state = _vm->gameState();
 	_largeBackgroundChannel.reset(0, kScene1060LargeBackgroundFrameMillis);
@@ -427,7 +408,7 @@ void Scene1060::resetAnimationLayers() {
 
 	_sceneLayers.reset();
 	largeBackgroundLayer().reset(juniorIdleFrame());
-	flyDoctorLayer().chunkIndex = state.scene1060DrFlyState == 2 ? 14 : 6;
+	flyDoctorLayer().chunkIndex = state.scene1060DrMoscaState == 2 ? 14 : 6;
 	_largeBackgroundMode = 0;
 	_largeBackgroundIdleCounter = 0;
 	_flyDoctorMode = kScene1060FlyDoctorModeIdle;
@@ -613,7 +594,7 @@ void Scene1060::advanceFlyDoctorIdle(uint32 delta) {
 
 void Scene1060::advanceFlySlimeDrip(uint32 delta) {
 	GameplayState &state = _vm->gameState();
-	if (state.scene1060DrFlyState >= 2) {
+	if (state.scene1060DrMoscaState >= 2) {
 		if (flyDoctorLayer().frameIndex > kScene1060FlyDoctorIdleFrameCount - 1)
 			flyDoctorLayer().setFrame(0);
 		return;
@@ -816,10 +797,10 @@ void Scene1060::runDrMoscaConversation() {
 	bool finished = false;
 
 	beginSecondarySpeechLine(kScene1060DrMoscaDialogueStageId,
-		state.scene1060DrFlyConversationSeen ? 1 : 0);
+		state.scene1060DrMoscaConversationSeen ? 1 : 0);
 	prepareDrMoscaConversation();
-	beginDrMoscaPrimarySpeech(state.scene1060DrFlyConversationSeen ? 1 : 0);
-	state.scene1060DrFlyConversationSeen = true;
+	beginDrMoscaPrimarySpeech(state.scene1060DrMoscaConversationSeen ? 1 : 0);
+	state.scene1060DrMoscaConversationSeen = true;
 
 	while (!finished && !Engine::shouldQuit() && !_vm->isSceneRestartRequested()) {
 		DialogueMenu menu(_vm, this);
@@ -938,47 +919,40 @@ void Scene1060::initializeDrMoscaDialogueRecords(Common::Array<DialogueChoiceRec
 	records[0].playerTextRowId = 2;
 	records[0].responseFrameIndex = 2;
 	records[0].disableAfterUse = 1;
-	records[0].reserved = 0xff;
 
 	records[1].enabled = 1;
 	records[1].transitionMode = 3;
 	records[1].playerTextRowId = 3;
 	records[1].responseFrameIndex = 3;
 	records[1].disableAfterUse = 1;
-	records[1].reserved = 0xff;
 
 	records[2].enabled = 1;
 	records[2].transitionMode = 3;
 	records[2].playerTextRowId = 4;
 	records[2].responseFrameIndex = 4;
 	records[2].disableAfterUse = 1;
-	records[2].reserved = 0xff;
 
 	records[3].enabled = 1;
 	records[3].transitionMode = 1;
 	records[3].playerTextRowId = 5;
 	records[3].responseFrameIndex = 5;
 	records[3].disableAfterUse = 1;
-	records[3].reserved = 0xff;
 
 	records[4].enabled = 1;
 	records[4].transitionMode = 3;
 	records[4].playerTextRowId = 6;
 	records[4].responseFrameIndex = 6;
 	records[4].disableAfterUse = 1;
-	records[4].reserved = 0xff;
 
 	records[5].enabled = 1;
 	records[5].transitionMode = 0;
 	records[5].playerTextRowId = 7;
 	records[5].responseFrameIndex = 7;
-	records[5].reserved = 0xff;
 
 	records[70].enabled = 1;
 	records[70].transitionMode = 2;
 	records[70].playerTextRowId = 8;
 	records[70].responseFrameIndex = 8;
-	records[70].reserved = 0xff;
 }
 
 void Scene1060::initializeInvisibleManDialogueRecords(Common::Array<DialogueChoiceRecord> &records) const {
@@ -990,48 +964,41 @@ void Scene1060::initializeInvisibleManDialogueRecords(Common::Array<DialogueChoi
 	records[0].playerTextRowId = 2;
 	records[0].responseFrameIndex = 2;
 	records[0].disableAfterUse = 1;
-	records[0].reserved = 0xff;
 
 	records[1].enabled = 1;
 	records[1].transitionMode = 3;
 	records[1].playerTextRowId = 3;
 	records[1].responseFrameIndex = 3;
 	records[1].disableAfterUse = 1;
-	records[1].reserved = 0xff;
 
 	records[2].enabled = 1;
 	records[2].transitionMode = 3;
 	records[2].playerTextRowId = 4;
 	records[2].responseFrameIndex = 4;
 	records[2].disableAfterUse = 1;
-	records[2].reserved = 0xff;
 
 	records[3].enabled = 1;
 	records[3].transitionMode = 0;
 	records[3].playerTextRowId = 5;
 	records[3].responseFrameIndex = 5;
 	records[3].disableAfterUse = 1;
-	records[3].reserved = 0xff;
 
 	records[70].enabled = _vm->gameState().scene1060PocketPaperTaken ? 0 : 1;
 	records[70].transitionMode = 3;
 	records[70].playerTextRowId = 6;
 	records[70].responseFrameIndex = 6;
 	records[70].disableAfterUse = 2;
-	records[70].reserved = 0xff;
 
 	records[71].enabled = 1;
 	records[71].transitionMode = 3;
 	records[71].playerTextRowId = 7;
 	records[71].responseFrameIndex = 7;
 	records[71].disableAfterUse = 1;
-	records[71].reserved = 0xff;
 
 	records[72].enabled = 1;
 	records[72].transitionMode = 2;
 	records[72].playerTextRowId = 8;
 	records[72].responseFrameIndex = 8;
-	records[72].reserved = 0xff;
 }
 
 void Scene1060::beginDrMoscaPrimarySpeech(byte frameIndex) {
@@ -1093,7 +1060,7 @@ void Scene1060::runPocketPaperPickupSequence() {
 
 void Scene1060::handleCloakroomTicketPickup() {
 	GameplayState &state = _vm->gameState();
-	if (state.scene1060DrFlyState == 2 || hasInventoryItem(0x22))
+	if (state.scene1060DrMoscaState == 2 || hasInventoryItem(0x22))
 		return;
 
 	if (!state.scene1060FlySlimeHotspotActive || flyDoctorLayer().frameIndex > kScene1060TicketLastPickupFrame) {
@@ -1104,11 +1071,13 @@ void Scene1060::handleCloakroomTicketPickup() {
 	_ticketPickupSequenceActive = true;
 	BlockingSequence sequence(*this);
 	sequence.actorReplacement(ActionOverlaySpec(10, kScene1060TicketPickupDescriptorCount,
-		kScene1060TicketPickupFrameMap, ARRAYSIZE(kScene1060TicketPickupFrameMap), kScene1060FrameMillis)
-		.hookAt(kScene1060TicketPickupStateFrame, kScene1060TicketPickupHook));
+		kScene1060FrameMillis).holdFirstFrame()
+		.commitAt(kScene1060TicketPickupStateFrame, state.scene1060DrMoscaState, (byte)2)
+		.commitAt(kScene1060TicketPickupStateFrame, state.scene1060FlySlimeHotspotActive, false)
+		.patchAt(kScene1060TicketPickupStateFrame, 1));
 	_ticketPickupSequenceActive = false;
-	if (state.scene1060DrFlyState != 2) {
-		sequence.commit(state.scene1060DrFlyState, (byte)2)
+	if (state.scene1060DrMoscaState != 2) {
+		sequence.commit(state.scene1060DrMoscaState, (byte)2)
 			.commit(state.scene1060FlySlimeHotspotActive, false)
 			.framebufferPatch(1);
 	}
@@ -1136,7 +1105,10 @@ void Scene1060::handleSkullcrackerExchange() {
 		.secondarySpeech(14, 1)
 		.actorReplacement(ActionOverlaySpec(12, kScene1060SkullcrackerExchangeDescriptorCount,
 			kScene1060SkullcrackerHandoffFrameMap, ARRAYSIZE(kScene1060SkullcrackerHandoffFrameMap),
-			kScene1060FrameMillis).hookEveryFrame(kScene1060SkullcrackerExchangeHook));
+			kScene1060FrameMillis)
+			.mappedLayerFrames(kLargeBackgroundLayer, kScene1060JuniorHandoffFrameMap,
+				ARRAYSIZE(kScene1060JuniorHandoffFrameMap),
+				kScene1060JuniorExchangeFirstOverlayFrame));
 	largeBackgroundLayer().setFrame(kScene1060JuniorExchangeFinalFrame);
 	_juniorPoseSequenceActive = false;
 
@@ -1164,9 +1136,9 @@ void Scene1060::handleFlySlimeExchange() {
 
 void Scene1060::handlePocketPaperLook() {
 	GameplayState &state = _vm->gameState();
-	if (state.scene1060DrFlyState == 0) {
+	if (state.scene1060DrMoscaState == 0) {
 		beginSecondarySpeechLine(9, 0);
-		state.scene1060DrFlyState = 1;
+		state.scene1060DrMoscaState = 1;
 		applySceneStateToHotspotsAndPatches(1);
 		return;
 	}

@@ -27,15 +27,16 @@
 #include "hollywood/graphics.h"
 #include "hollywood/music.h"
 #include "hollywood/resource.h"
+#include "hollywood/scenes/presentation_scene.h"
 
 namespace Hollywood {
 
 class HollywoodEngine;
 
-class Scene3110 {
+class Scene3110 : public PresentationScene {
 public:
 	Scene3110(HollywoodEngine *vm);
-	~Scene3110();
+	~Scene3110() override;
 
 	bool play();
 
@@ -46,18 +47,7 @@ private:
 		const byte *frameMap;
 		uint frameMapSize;
 		uint firstTick;
-		uint frameMillis;
-		bool visibleBeforeStart;
 		bool holdLastFrame;
-	};
-
-	struct SoundCue {
-		uint tick;
-		uint slot;
-		uint16 cueId;
-		byte volumePercent;
-		bool loop;
-		bool stop;
 	};
 
 	struct MachineRoomState {
@@ -82,8 +72,6 @@ private:
 		bool finalOverlayDirty;
 	};
 
-	bool loadChunk(uint index, Common::Array<byte> &destination, uint fixedSize = 0);
-	bool loadChunk(uint index, IndexedSurfaceBuffer &destination, uint fixedSize);
 	bool loadFramebufferAndPalette(uint framebufferChunk, uint paletteChunk, uint paletteReadSize = kPaletteSize);
 	bool prepareScene(uint framebufferChunk, uint paletteChunk, uint paletteReadSize,
 		const SpriteTrack *tracks, uint trackCount);
@@ -113,13 +101,9 @@ private:
 	void advanceLeftElectricalArc(MachineRoomState &state);
 	void advanceRightElectricalArc(MachineRoomState &state);
 	void advanceMachineRoomPalette(MachineRoomState &state, uint32 elapsedMillis);
-	void revealSavedFramebufferBand(uint sweepOffset, byte bandWidth);
-	void runSpriteSequence(uint frameCount, uint frameMillis, uint16 viewportX,
-		const SpriteTrack *tracks, uint trackCount,
-		const SoundCue *soundCues = nullptr, uint soundCueCount = 0);
+	void runSpriteSequence(const AnimationFrameRange &range, uint16 viewportX,
+		const SpriteTrack *tracks, uint trackCount);
 	void drawSpriteSequenceFrame(uint tick, const SpriteTrack *tracks, uint trackCount);
-	void drawOriginalSpriteFrame(const Common::Array<byte> &resource, uint descriptorCount,
-		uint descriptorIndex, Graphics::Surface &destination) const;
 	uint frameForTrack(const SpriteTrack &track, uint tick) const;
 	void initializeMemoryEffectPalette();
 	void applyMemoryPaletteBand(uint tick);
@@ -127,37 +111,27 @@ private:
 	void adjustMemoryPalettePulseRanges(int delta);
 	void restoreMemoryPalettePulseRanges();
 	uint16 nextMemoryRandom15Bit();
-	void applySoundCues(uint tick, const SoundCue *soundCues, uint soundCueCount);
 	void playSound(uint slot, uint16 cueId, byte volumePercent, bool loop);
 	void stopSound(uint slot);
 	void stopSounds();
-	void presentFrame(uint16 viewportX);
-	bool delay(uint32 millis);
-	bool pollEvents();
+	void handleAnimationFrameEvent(const AnimationFrameEvent &event, uint frame) override;
+	void presentAnimationFrame() override;
+	void stopAudio() override;
 
-	enum {
-		kResourceChunkCount = 40,
-		kFrameBufferSize = 0x78000
-	};
-
-	HollywoodEngine *_vm;
-	ResourceChunkTable _chunkTable;
-	Common::Array<byte> _palette;
 	Common::Array<byte> _exteriorStormPalette;
 	Common::Array<byte> _memoryPulseSavedPalette;
 	IndexedSurfaceBuffer _baseFramebuffer;
-	IndexedSurfaceBuffer _sceneFramebuffer;
-	IndexedSurfaceBuffer _savedFramebuffer;
 	Common::Array<byte> _chunks[kResourceChunkCount];
-	Graphics::ManagedSurface _screen;
-	Palette6Bit _displayPalette;
 	SoundBank0Player _sound0;
 	SoundBank0Player _sound1;
 	SoundBank0Player _sound2;
+	const SpriteTrack *_spriteSequenceTracks;
+	uint _spriteSequenceTrackCount;
+	uint16 _spriteSequenceViewportX;
+	byte _spriteSequenceTick;
 	uint32 _memoryRandomState;
 	byte _memoryPulseLevel;
 	bool _memoryPulseActive;
-	bool _skipRequested;
 };
 
 } // End of namespace Hollywood

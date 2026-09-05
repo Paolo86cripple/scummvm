@@ -19,11 +19,10 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene2090.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene2090.h"
 
 namespace Hollywood {
 
@@ -54,7 +53,6 @@ const byte kScene2090FinaleLastForegroundFrame = 0x35;
 const byte kScene2090RequiredItem2A = 0x2a;
 const byte kScene2090RequiredItem2C = 0x2c;
 const byte kScene2090RequiredItem2E = 0x2e;
-const byte kScene2090FinaleSpeechHook = 1;
 const byte kScene2090PaletteCycleFirstColor = 0xa0;
 const byte kScene2090PaletteCycleLastColor = 0xaf;
 const int kScene2090CurtainStartOffset = 0xdc;
@@ -72,11 +70,6 @@ const byte kScene2090ForegroundFrameMap[] = {
 	35, 53, 54, 55, 56, 57, 58
 };
 
-static_assert(ARRAYSIZE(kScene2090ForegroundFrameMap) == 0x4d,
-	"Scene 2090 foreground frame map size changed");
-static_assert(kScene2090ForegroundDescriptorCount > 58,
-	"Scene 2090 foreground descriptor count is too small");
-
 const uint kScene2090ForegroundLayer = 0;
 const SceneLayerSpec kScene2090LayerSpecs[] = {
 	{kSceneAnimationActorReplacement, kScene2090ForegroundChunk,
@@ -84,7 +77,7 @@ const SceneLayerSpec kScene2090LayerSpecs[] = {
 		ARRAYSIZE(kScene2090ForegroundFrameMap), false, 0}
 };
 
-static PlayableSceneConfig scene2090Config() {
+PlayableSceneConfig scene2090Config() {
 	PlayableSceneConfig config(2090,
 		SceneResourceLayout(8, 5, 7),
 		SceneViewport(kScene2090ViewportXOffset, kScene2090ViewportXOffset, kScene2090ViewportXOffset),
@@ -94,6 +87,7 @@ static PlayableSceneConfig scene2090Config() {
 	config.setActorPathStepDeltas(kActorPathStepDeltaTableSet5A);
 	config.walkablePaletteMaxRegion = 20;
 	config.useActorDepthTest = true;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
@@ -134,17 +128,11 @@ void Scene2090::runCustomEntrySequence() {
 	}
 }
 
-bool Scene2090::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
-}
-
-bool Scene2090::shouldRunExitSideEffectsAfterLoop() const {
-	const uint16 stateId = _vm->gameState().mainFlowStateId;
-	return !Engine::shouldQuit() && stateId != 0xff &&
-		stateId != kScene2020ReturnState && !isMainFlowStateInScene(stateId);
-}
-
 void Scene2090::runExitSideEffectsAfterLoop() {
+	if (!didLeaveSceneAfterLoop() ||
+		_vm->gameState().mainFlowStateId == kScene2020ReturnState)
+		return;
+
 	fadePaletteToBlack();
 }
 
@@ -312,18 +300,19 @@ void Scene2090::runEntryFromScene2020() {
 		return;
 
 	setRitualPaletteCycle(true);
-	const bool firstPartComplete = playAndPresentAnimationFrames(
-		_sceneLayers.layer(kScene2090ForegroundLayer),
+	BlockingSequence sequence(*this);
+	sequence.presentedLayerFrames(kScene2090ForegroundLayer,
 		AnimationFrameRange(kScene2090SpecialEntryStartForegroundFrame + 1,
 			kScene2090SpecialEntryMidForegroundFrame, kScene2090SlowFrameMillis).unskippable());
 	setRitualPaletteCycle(false);
-	if (!firstPartComplete)
+	if (!sequence.completed())
 		return;
-	if (!playAndPresentAnimationTransition(_sceneLayers.layer(kScene2090ForegroundLayer),
-			AnimationTransition(kScene2090SpecialEntryMidForegroundFrame + 1,
-				kScene2090SpecialEntryFinalForegroundFrame,
-				kScene2090SpecialEntryFinalForegroundFrame,
-				kScene2090SlowFrameMillis).unskippable()))
+	sequence.presentedLayerTransition(kScene2090ForegroundLayer,
+		AnimationTransition(kScene2090SpecialEntryMidForegroundFrame + 1,
+			kScene2090SpecialEntryFinalForegroundFrame,
+			kScene2090SpecialEntryFinalForegroundFrame,
+			kScene2090SlowFrameMillis).unskippable());
+	if (!sequence.completed())
 		return;
 
 	if (hasInventoryItem(kScene2090RequiredItem2A))
@@ -336,7 +325,7 @@ void Scene2090::runEntryFromScene2020() {
 	resetForegroundLayer(false, 0);
 	drawPlayableComposite();
 	presentFrame();
-	beginSecondarySpeechLine(4, 9);
+	sequence.secondarySpeech(4, 9);
 }
 
 void Scene2090::runEntryPathWithFinalFacing(int startX, int startY, byte startFacing,
@@ -376,57 +365,45 @@ void Scene2090::runAltarCeremony() {
 		return;
 	}
 
-	walkActiveActorTo(0x151, 0x0df, 1, 0, false);
-	beginSecondarySpeechLine(4, 3);
-	beginSecondarySpeechLine(4, 4);
-	beginSecondarySpeechLine(4, 5);
-	beginSecondarySpeechLine(4, 6);
+	BlockingSequence sequence(*this);
+	sequence.actorPath(SceneActorPose(0x151, 0x0df, 1))
+		.secondarySpeech(4, 3)
+		.secondarySpeech(4, 4)
+		.secondarySpeech(4, 5)
+		.secondarySpeech(4, 6);
 
 	resetForegroundLayer(true, 0);
-	if (!playAndPresentAnimationTransition(_sceneLayers.layer(kScene2090ForegroundLayer),
-			AnimationTransition(1, kScene2090FinaleFirstForegroundStopFrame,
-				kScene2090FinaleFirstForegroundStopFrame,
-				kScene2090FrameMillis).unskippable()))
+	sequence.presentedLayerTransition(kScene2090ForegroundLayer,
+		AnimationTransition(1, kScene2090FinaleFirstForegroundStopFrame,
+			kScene2090FinaleFirstForegroundStopFrame,
+			kScene2090FrameMillis).unskippable());
+	if (!sequence.completed())
 		return;
 
-	beginSecondarySpeechLine(4, 7);
-	_soundBank0.playSample(0x0e, 100);
+	sequence.secondarySpeech(4, 7)
+		.sound(0x0e);
 	setRitualPaletteCycle(true);
 	ResourceSpriteLayer &foregroundLayer = _sceneLayers.layer(kScene2090ForegroundLayer);
-	const bool finaleComplete = playAndPresentAnimationFrames(foregroundLayer,
+	sequence.presentedLayerFrames(foregroundLayer,
 		AnimationFrameRange(kScene2090FinaleFirstForegroundStopFrame + 1,
 			kScene2090FinaleLastForegroundFrame - 1, kScene2090SlowFrameMillis)
-			.hookAt(kScene2090FinaleSpeechTriggerFrame, kScene2090FinaleSpeechHook)
+			.secondarySpeechAt(kScene2090FinaleSpeechTriggerFrame, 4, 8)
 			.unskippable());
-	if (finaleComplete) {
+	if (sequence.completed()) {
 		foregroundLayer.setFrame(kScene2090FinaleLastForegroundFrame);
 		drawPlayableComposite();
 		presentFrame();
 	}
 	setRitualPaletteCycle(false);
-	if (!finaleComplete)
+	if (!sequence.completed())
 		return;
-	waitForStartedSpeechAndClear(1200);
+	waitForRealtimeSpeech();
 	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
 		return;
 
 	runCurtainClearToBlack();
-	_soundBank0.stop();
-	_vm->gameState().mainFlowStateId = kScene2020ReturnState;
-}
-
-void Scene2090::handleAnimationFrameHook(byte hookId, uint frame) {
-	if (hookId == kScene2090FinaleSpeechHook && frame == kScene2090FinaleSpeechTriggerFrame)
-		startSecondarySpeechLine(4, 8);
-}
-
-void Scene2090::waitForStartedSpeechAndClear(uint32 fallbackMillis) {
-	waitForSpeechOrDelay(fallbackMillis, false);
-
-	_speech.stop();
-	clearSpeechOverlay();
-	drawPlayableComposite();
-	presentFrame();
+	sequence.stopSound()
+		.commit(_vm->gameState().mainFlowStateId, kScene2020ReturnState);
 }
 
 void Scene2090::setRitualPaletteCycle(bool active) {

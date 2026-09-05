@@ -19,12 +19,9 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene4000.h"
-
-#include "common/system.h"
-
-#include "hollywood/graphics.h"
 #include "hollywood/hollywood.h"
+#include "hollywood/graphics.h"
+#include "hollywood/scenes/playable/scene4000.h"
 
 namespace Hollywood {
 
@@ -129,16 +126,11 @@ void Scene4000::runPresentation() {
 	uint phase = 0;
 	uint32 phaseAccumulator = 0;
 	uint32 clipAccumulator = 0;
-	uint32 lastMillis = g_system->getMillis();
+	uint32 delta = 0;
 	bool frameDirty = false;
+	TimedPresentationLoop loop(*this, TimedPresentationLoop::kUntilStopped);
 
-	while (phase < kScene4000EndPhase && !_skipRequested && !Engine::shouldQuit()) {
-		if (pollEvents())
-			break;
-
-		const uint32 now = g_system->getMillis();
-		const uint32 delta = now - lastMillis;
-		lastMillis = now;
+	while (phase < kScene4000EndPhase && loop.beginFrame()) {
 		phaseAccumulator += delta;
 		if (_clipActive)
 			clipAccumulator += delta;
@@ -158,7 +150,7 @@ void Scene4000::runPresentation() {
 			phaseAccumulator -= kScene4000PhaseMillis;
 			++phase;
 			if (phase == kScene4000PatchPhase) {
-				drawResourceBlockList(_resourceArena, _resourceChunkOffsets[2],
+				drawResourceBlockList(_resources._arena, _resources._chunkOffsets[2],
 					_sceneFramebuffer.managedSurface());
 				presentFrame();
 			}
@@ -187,7 +179,7 @@ void Scene4000::runPresentation() {
 			frameDirty = false;
 		}
 
-		g_system->delayMillis(10);
+		delta = loop.finishFrame();
 	}
 
 	stopSoundCues();

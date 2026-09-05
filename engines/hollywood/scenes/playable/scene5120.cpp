@@ -19,12 +19,11 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene5120.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
 #include "hollywood/resource.h"
+#include "hollywood/scenes/playable/scene5120.h"
 
 namespace Hollywood {
 
@@ -62,45 +61,22 @@ const byte kScene5120BombMagnetPillboxInventoryItem = 0x0b;
 const byte kScene5120BombPillboxInventoryItem = 0x0c;
 const byte kScene5120CocktailPaletteIndex = 0xa0;
 
-enum {
-	kScene5120PatchTongs = 1
-};
-
 const uint kScene5120MovingWallLayer = 0;
 const uint kScene5120MainProjectionLayer = 1;
 const uint kScene5120SideLoopLayer = 2;
 const uint kScene5120ToggleLayer = 3;
 const uint kScene5120RandomDetailLayer = 4;
 const uint kScene5120TransformationLayer = 5;
+const uint kScene5120ElevatorLayer = 6;
+const uint kScene5120ProjectorSpeechLayer = 7;
 
 const byte kScene5120WerewolfSpeechGroup = 0;
 const byte kScene5120ProjectorSpeechGroup = 1;
-
-const byte kScene5120ElevatorOpenFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17
-};
-
-const byte kScene5120ElevatorCloseFrameMap[] = {
-	17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
-};
-
-const byte kScene5120TongsPickupFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-};
 
 const byte kScene5120PillboxFillFrameMap[] = {
 	11, 11, 10, 9, 8, 7, 6, 5,
 	4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
 	5, 6, 7, 8, 9, 10, 11
-};
-
-const byte kScene5120ProjectorInstallFrameMap[] = {
-	11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 11
-};
-
-const byte kScene5120ProjectorFirstFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8,
-	9, 10, 11, 12, 13, 14, 15, 16, 17
 };
 
 const byte kScene5120ProjectorSecondFrameMap[] = {
@@ -115,7 +91,7 @@ const byte kScene5120MainProjectionFrameMap[] = {
 	0, 0, 1, 2, 3, 4
 };
 
-static PlayableSceneConfig scene5120Config() {
+PlayableSceneConfig scene5120Config() {
 	PlayableSceneConfig config(5120,
 		SceneResourceLayout(5, 5, 0x15),
 		SceneViewport(kScene5120ViewportXOffset, kScene5120ViewportXOffset, kScene5120ViewportXOffset),
@@ -123,13 +99,12 @@ static PlayableSceneConfig scene5120Config() {
 	config.setActorResources(kScene5120ActorBankTableEntry, kScene5120ActorPaletteTableEntry);
 	config.setTextResources(0, kScene5120SpeechCueDescriptorTableOffset);
 	config.walkablePaletteMaxRegion = 20;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
 Scene5120::Scene5120(HollywoodEngine *vm) :
 		PlayableScene(vm, scene5120Config()),
-		_elevatorLayer(),
-		_projectorSpeechLayer(),
 		_sideLoopTrack(RealtimeAnimationTracks::kInvalidTrack),
 		_toggleTrack(RealtimeAnimationTracks::kInvalidTrack),
 		_randomDetailTrack(RealtimeAnimationTracks::kInvalidTrack),
@@ -164,13 +139,13 @@ void Scene5120::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 	const bool foregroundActorMode = actorDrawOrderMode == 2 || actorDrawOrderMode == 7 || actorDrawOrderMode == 8;
 	const bool actionVisible = _actionOverlayPlayer.isVisible();
 	const bool actionBehindActors = actionVisible &&
-		_actionOverlayPlayer.stratum == kSceneAnimationBehindActors;
+		_actionOverlayPlayer._stratum == kSceneAnimationBehindActors;
 	const bool actionReplacesActor = actionVisible &&
-		_actionOverlayPlayer.stratum == kSceneAnimationActorReplacement;
+		_actionOverlayPlayer._stratum == kSceneAnimationActorReplacement;
 
 	if (_projectorSpeechActive) {
 		copyBaseFramebufferToSceneFramebuffer();
-		drawResourceSpriteLayer(_projectorSpeechLayer);
+		drawResourceSpriteLayer(_sceneLayers.layer(kScene5120ProjectorSpeechLayer));
 		return;
 	}
 
@@ -197,11 +172,7 @@ void Scene5120::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 		drawTransformedRoomLayers();
 	if (actionVisible && !actionBehindActors && !actionReplacesActor)
 		drawActionOverlayLayer();
-	drawResourceSpriteLayer(_elevatorLayer);
-}
-
-bool Scene5120::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
+	drawResourceSpriteLayer(_sceneLayers.layer(kScene5120ElevatorLayer));
 }
 
 void Scene5120::runCustomEntrySequence() {
@@ -425,10 +396,6 @@ bool Scene5120::shouldConvertSavedFramebufferFF() const {
 	return true;
 }
 
-bool Scene5120::shouldRunExitSideEffectsAfterLoop() const {
-	return true;
-}
-
 void Scene5120::runExitSideEffectsAfterLoop() {
 	fadePaletteToBlack();
 }
@@ -454,6 +421,14 @@ byte Scene5120::primarySpeechAnimationBaseFrame(byte animationGroup) const {
 	return 0;
 }
 
+byte Scene5120::primarySpeechAnimationInitialFrame(byte animationGroup, byte baseFrame) const {
+	if (animationGroup != kScene5120WerewolfSpeechGroup)
+		return baseFrame;
+
+	const byte frame = _sceneLayers.layerFrame(kScene5120MainProjectionLayer);
+	return frame < primarySpeechAnimationFrameCount(animationGroup) ? frame : baseFrame;
+}
+
 byte Scene5120::primarySpeechAnimationFrameCount(byte animationGroup) const {
 	(void)animationGroup;
 	return 5;
@@ -466,20 +441,11 @@ uint32 Scene5120::primarySpeechAnimationFrameMillis(byte animationGroup) const {
 
 void Scene5120::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) {
 	if (animationGroup == kScene5120ProjectorSpeechGroup) {
-		_projectorSpeechLayer.setFrame(frameIndex);
+		_sceneLayers.setLayerFrame(kScene5120ProjectorSpeechLayer, frameIndex);
 		return;
 	}
 
 	_sceneLayers.setVisibleLayerFrame(kScene5120MainProjectionLayer, frameIndex);
-}
-
-void Scene5120::handleAnimationFrameHook(byte hookId, uint frame) {
-	(void)frame;
-	if (hookId != kScene5120PatchTongs)
-		return;
-
-	if (_sceneChunkTable.isValidChunk(6))
-		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[6], _baseFramebuffer);
 }
 
 void Scene5120::handleLeftClick(const GameplayLoopCursorState &state) {
@@ -489,11 +455,10 @@ void Scene5120::handleLeftClick(const GameplayLoopCursorState &state) {
 
 void Scene5120::runFirstEntrySequence() {
 	setActiveActorPose(0x08e, 0x0f5, 2);
-	_elevatorLayer.visible = true;
-	_elevatorLayer.reset(0);
+	_sceneLayers.showLayerAtFrame(kScene5120ElevatorLayer, 0);
 	drawPlayableComposite();
 	if (fadePaletteFromBlack()) {
-		_elevatorLayer.visible = false;
+		_sceneLayers.setLayerVisible(kScene5120ElevatorLayer, false);
 		return;
 	}
 
@@ -533,13 +498,13 @@ void Scene5120::runAlternateEntrySequence() {
 }
 
 void Scene5120::runElevatorDoorClip(bool opening) {
-	_elevatorLayer.visible = false;
-	ActionOverlaySpec spec(8, kScene5120ElevatorDescriptorCount,
-		opening ? kScene5120ElevatorOpenFrameMap : kScene5120ElevatorCloseFrameMap,
-		ARRAYSIZE(kScene5120ElevatorOpenFrameMap), kScene5120ElevatorFrameMillis);
-	runSceneOverlay(spec.noRedrawAtEnd());
-	_elevatorLayer.visible = true;
-	_elevatorLayer.setFrame(opening ? kScene5120ElevatorDescriptorCount - 1 : 0);
+	_sceneLayers.setLayerVisible(kScene5120ElevatorLayer, false);
+	ActionOverlaySpec spec(8, kScene5120ElevatorDescriptorCount, kScene5120ElevatorFrameMillis);
+	if (!opening)
+		spec.reverse();
+	runSceneOverlay(spec);
+	_sceneLayers.showLayerAtFrame(kScene5120ElevatorLayer,
+		opening ? kScene5120ElevatorDescriptorCount - 1 : 0);
 }
 
 void Scene5120::runElevatorReturnSequence() {
@@ -566,13 +531,14 @@ void Scene5120::runTongsPickup() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(20, kScene5120TongsPickupDescriptorCount,
-		kScene5120TongsPickupFrameMap, ARRAYSIZE(kScene5120TongsPickupFrameMap), kScene5120ActionFrameMillis)
-		.hookAt(10, kScene5120PatchTongs));
-	state.scene5120TongsTaken = true;
-	applySceneStateToHotspotsAndPatches(1);
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(20, kScene5120TongsPickupDescriptorCount,
+			kScene5120ActionFrameMillis).holdFirstFrame()
+			.resourcePatchAt(10, 6))
+		.commit(state.scene5120TongsTaken, true)
+		.framebufferPatch(1);
 	addInventoryItem(kScene5120TongsInventoryItem);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 	beginSharedInventorySpeechLine(0x14, randomSharedInventorySpeechFrame(4));
 }
 
@@ -594,16 +560,17 @@ void Scene5120::runCocktailFillPillbox() {
 		return;
 	}
 
-	beginSecondarySpeechLine(25, 0);
-	runActorReplacement(ActionOverlaySpec(21, kScene5120PillboxFillDescriptorCount,
-		kScene5120PillboxFillFrameMap, ARRAYSIZE(kScene5120PillboxFillFrameMap), kScene5120ActionFrameMillis));
-	state.scene5120CocktailState = 3;
-	applySceneStateToHotspotsAndPatches(2);
+	BlockingSequence sequence(*this);
+	sequence.secondarySpeech(25, 0)
+		.actorReplacement(ActionOverlaySpec(21, kScene5120PillboxFillDescriptorCount,
+			kScene5120PillboxFillFrameMap, ARRAYSIZE(kScene5120PillboxFillFrameMap), kScene5120ActionFrameMillis))
+		.commit(state.scene5120CocktailState, (byte)3)
+		.framebufferPatch(2);
 	removeInventoryItem(pillboxItem);
 	addInventoryItem(pillboxItem == kScene5120MagnetPillboxInventoryItem ?
 		kScene5120BombMagnetPillboxInventoryItem : kScene5120BombPillboxInventoryItem);
-	_soundBank0.playSample(1, 100);
-	beginSecondarySpeechLine(25, 1);
+	sequence.sound(1)
+		.secondarySpeech(25, 1);
 }
 
 void Scene5120::runFilmProjectorSequence() {
@@ -621,8 +588,7 @@ void Scene5120::runFilmProjectorSequence() {
 	runElevatorDoorClip(false);
 	_soundBank0.playSample(0x1e, 100, true);
 	runActorReplacement(ActionOverlaySpec(18, kScene5120ProjectorInstallDescriptorCount,
-		kScene5120ProjectorInstallFrameMap, ARRAYSIZE(kScene5120ProjectorInstallFrameMap),
-		kScene5120ActionFrameMillis));
+		kScene5120ActionFrameMillis).bookendWithLastFrame().reverse());
 	removeInventoryItem(kScene5120FilmInventoryItem);
 	_ambientSoundBank0.playSample(1, 100);
 	beginSecondarySpeechLine(26, 0);
@@ -634,21 +600,19 @@ void Scene5120::runFilmProjectorSequence() {
 	}
 	runElevatorDoorClip(true);
 	runActorReplacement(ActionOverlaySpec(17, kScene5120ProjectorDescriptorCount,
-		kScene5120ProjectorFirstFrameMap, ARRAYSIZE(kScene5120ProjectorFirstFrameMap),
-		kScene5120ActionFrameMillis).noRedrawAtEnd());
+		kScene5120ActionFrameMillis));
 	_soundBank0.stop();
 
 	_projectorSpeechActive = true;
-	_projectorSpeechLayer.visible = true;
-	_projectorSpeechLayer.reset(0);
+	_sceneLayers.showLayerAtFrame(kScene5120ProjectorSpeechLayer, 0);
 	beginPrimarySpeechLineWithAnimationGroup(26, 1, 0x10b, 0x0047,
 		0x17, 0x33, 0x2c, kScene5120ProjectorSpeechGroup);
 	_projectorSpeechActive = false;
-	_projectorSpeechLayer.visible = false;
+	_sceneLayers.setLayerVisible(kScene5120ProjectorSpeechLayer, false);
 
 	runActorReplacement(ActionOverlaySpec(17, kScene5120ProjectorDescriptorCount,
 		kScene5120ProjectorSecondFrameMap, ARRAYSIZE(kScene5120ProjectorSecondFrameMap),
-		kScene5120ActionFrameMillis).noRedrawAtEnd());
+		kScene5120ActionFrameMillis));
 	if (!runRoomTransformationSequence())
 		return;
 
@@ -675,9 +639,6 @@ void Scene5120::runUseShaker() {
 
 void Scene5120::initializeTransformedRoomLayers() {
 	_sceneLayers.clear();
-	_elevatorLayer.configure(8, kScene5120ElevatorDescriptorCount,
-		kScene5120ElevatorOpenFrameMap, ARRAYSIZE(kScene5120ElevatorOpenFrameMap));
-	_elevatorLayer.visible = false;
 	_sceneLayers.configureLayer(kScene5120MovingWallLayer,
 		kSceneAnimationScenePlaced, 9, 5, nullptr, 0);
 	_sceneLayers.configureLayer(kScene5120MainProjectionLayer,
@@ -692,16 +653,16 @@ void Scene5120::initializeTransformedRoomLayers() {
 	_sceneLayers.configureLayer(kScene5120TransformationLayer,
 		kSceneAnimationScenePlaced, 19,
 		kScene5120TransformationDescriptorCount, nullptr, 0, false);
-	_projectorSpeechLayer.configure(16, kScene5120ProjectorSpeechDescriptorCount, nullptr, 0);
-	_projectorSpeechLayer.visible = false;
-	_sideLoopTrack = _realtimeAnimationTracks.addPingPong(
-		_sceneLayers.layer(kScene5120SideLoopLayer),
-		kScene5120SideLoopFrameMillis, 0, 3, false);
-	_toggleTrack = _realtimeAnimationTracks.addLoop(
-		_sceneLayers.layer(kScene5120ToggleLayer),
-		kScene5120ToggleFrameMillis, 2, false);
-	_randomDetailTrack = _realtimeAnimationTracks.addRandom(
-		_sceneLayers.layer(kScene5120RandomDetailLayer),
+	_sceneLayers.configureLayer(kScene5120ElevatorLayer,
+		kSceneAnimationScenePlaced, 8, kScene5120ElevatorDescriptorCount,
+		nullptr, 0, false);
+	_sceneLayers.configureLayer(kScene5120ProjectorSpeechLayer,
+		kSceneAnimationScenePlaced, 16, kScene5120ProjectorSpeechDescriptorCount,
+		nullptr, 0, false);
+	_sideLoopTrack = _realtimeAnimationTracks.addPingPong(kScene5120SideLoopLayer, kScene5120SideLoopFrameMillis,
+		0, 3, false);
+	_toggleTrack = _realtimeAnimationTracks.addLoop(kScene5120ToggleLayer, kScene5120ToggleFrameMillis, 2, false);
+	_randomDetailTrack = _realtimeAnimationTracks.addRandom(kScene5120RandomDetailLayer,
 		kScene5120RandomDetailFrameMillis, 0, 5, true, false);
 	resetTransformedRoomLayers();
 }
@@ -727,8 +688,8 @@ void Scene5120::resetTransformedRoomLayers() {
 	_sceneLayers.setLayerVisible(kScene5120RandomDetailLayer, true);
 	_sceneLayers.setLayerVisible(kScene5120TransformationLayer, false);
 	_sceneLayers.setLayerFrame(kScene5120TransformationLayer, 0);
-	_projectorSpeechLayer.visible = false;
-	_projectorSpeechLayer.reset(0);
+	_sceneLayers.resetLayer(kScene5120ProjectorSpeechLayer, 0);
+	_sceneLayers.setLayerVisible(kScene5120ProjectorSpeechLayer, false);
 	_projectorSpeechActive = false;
 	_roomTransformationActive = false;
 	_transformationOverlayStarted = false;
@@ -878,7 +839,7 @@ void Scene5120::drawTransformedRoomLayers() {
 	if (_vm->gameState().scene5110SalonTransformState < 2 && !_roomTransformationActive)
 		return;
 
-	drawLayerStack(_sceneLayers, kSceneAnimationScenePlaced);
+	drawLayerStack(kSceneAnimationScenePlaced);
 }
 
 void Scene5120::drawStaticForegroundLayers(byte actorDrawOrderMode) {

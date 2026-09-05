@@ -34,8 +34,7 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+	void drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
 	void prepareCustomGameplayLoop() override;
@@ -47,7 +46,6 @@ private:
 	uint32 primarySpeechAnimationFrameMillis(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
 	void primarySpeechAnimationRestored(byte animationGroup, byte baseFrame) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 
 	void resetAnimationLayers();
 	void rebuildWalkableMask();
@@ -72,8 +70,6 @@ private:
 	TimedAnimationChannel _alternateChannel;
 	TimedAnimationChannel _dialogueChannel;
 	TimedAnimationChannel _paletteCycleChannel;
-	ResourceSpriteLayer _cabinLayer;
-	ResourceSpriteLayer _alternateLayer;
 	bool _alternateAnimationActive;
 	bool _conversationActive;
 	bool _resolutionSequenceActive;

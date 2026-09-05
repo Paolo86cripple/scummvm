@@ -19,13 +19,12 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene6040.h"
-
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene6040.h"
 
 namespace Hollywood {
 
@@ -40,15 +39,17 @@ const uint32 kScene6040FrameMillis = 75;
 const uint32 kScene6040LeftToggleMillis = 500;
 const uint32 kScene6040RightToggleMillis = 625;
 const uint kScene6040ToggleDescriptorCount = 2;
+const uint kScene6040LeftToggleLayer = 0;
+const uint kScene6040RightToggleLayer = 1;
 const uint kScene6040WireOverlayDescriptorCount = 12;
 const uint kScene6040PaintOverlayDescriptorCount = 10;
 const byte kScene6040PaintInventoryItem = 0x60;
-const byte kScene6040LooseWireInventoryItem = 0x61;
+const byte kScene6040LidNameInventoryItem = 0x61;
 const byte kScene6040CutWireInventoryItem = 0x5f;
-
-const byte kScene6040PaintPickupFrameMap[] = {
-	9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-};
+const byte kScene6040LidHotspotItem = 11;
+const uint kScene6040LidLookVerbRecordIndex = 92;
+const uint kScene6040LidUseVerbRecordIndex = 93;
+const uint kScene6040LidRemovalSpeechStage = 207;
 
 const byte kScene6040WireInspectFrameMap[] = {
 	0x0b, 0, 1, 2, 3, 4, 3, 2, 3, 4,
@@ -60,11 +61,14 @@ const byte kScene6040WireCutFrameMap[] = {
 	3, 4, 3, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0x0b
 };
 
-const byte kScene6040WirePickupFrameMap[] = {
-	0x0b, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0x0b
+const SceneLayerSpec kScene6040LayerSpecs[] = {
+	{kSceneAnimationBehindActors, 12, kScene6040ToggleDescriptorCount,
+		nullptr, 0, true, 0},
+	{kSceneAnimationBehindActors, 13, kScene6040ToggleDescriptorCount,
+		nullptr, 0, true, 0}
 };
 
-static PlayableSceneConfig scene6040Config() {
+PlayableSceneConfig scene6040Config() {
 	PlayableSceneConfig config(6040,
 		SceneResourceLayout(14, 5, 13),
 		SceneViewport(kScene6040ViewportXOffset, kScene6040ViewportXOffset, kScene6040ViewportMaxXOffset),
@@ -72,22 +76,20 @@ static PlayableSceneConfig scene6040Config() {
 	config.setActorResources(kScene6040ActorBankTableEntry, kScene6040ActorPaletteTableEntry);
 	config.setTextResources(kScene6040Resource003RowsOffsetIndex, kScene6040SpeechCueDescriptorTableOffset);
 	config.walkablePaletteMaxRegion = 20;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
 Scene6040::Scene6040(HollywoodEngine *vm) :
 		PlayableScene(vm, scene6040Config()),
 		_originalColorToItemMap(),
-		_leftToggleLayer(),
-		_rightToggleLayer(),
 		_leftToggleTrack(RealtimeAnimationTracks::kInvalidTrack),
 		_rightToggleTrack(RealtimeAnimationTracks::kInvalidTrack) {
-	_leftToggleLayer.configure(12, kScene6040ToggleDescriptorCount, nullptr, 0);
-	_rightToggleLayer.configure(13, kScene6040ToggleDescriptorCount, nullptr, 0);
-	_leftToggleTrack = _realtimeAnimationTracks.addLoop(_leftToggleLayer,
-		kScene6040LeftToggleMillis, kScene6040ToggleDescriptorCount);
-	_rightToggleTrack = _realtimeAnimationTracks.addLoop(_rightToggleLayer,
-		kScene6040RightToggleMillis, kScene6040ToggleDescriptorCount);
+	_sceneLayers.configure(kScene6040LayerSpecs);
+	_leftToggleTrack = _realtimeAnimationTracks.addLoop(kScene6040LeftToggleLayer, kScene6040LeftToggleMillis,
+		kScene6040ToggleDescriptorCount);
+	_rightToggleTrack = _realtimeAnimationTracks.addLoop(kScene6040RightToggleLayer, kScene6040RightToggleMillis,
+		kScene6040ToggleDescriptorCount);
 }
 
 void Scene6040::initializeCustomPreviewState() {
@@ -96,22 +98,9 @@ void Scene6040::initializeCustomPreviewState() {
 	setActiveActorPose(0x172, 0x1c2, 2);
 }
 
-void Scene6040::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawResourceSpriteLayer(_leftToggleLayer);
-	drawResourceSpriteLayer(_rightToggleLayer);
-	drawActionOverlayLayer();
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
+void Scene6040::drawCustomForegroundComposite(int activeWorldX, int activeWorldY) {
+	(void)activeWorldX;
 	drawForegroundBlocks(activeWorldY);
-}
-
-bool Scene6040::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
 }
 
 void Scene6040::runCustomEntrySequence() {
@@ -133,9 +122,6 @@ void Scene6040::prepareCustomGameplayLoop() {
 
 bool Scene6040::dispatchCustomSceneAction(uint16 handlerId) {
 	switch (handlerId) {
-	case 205: // Mirar tapa/resto pequeno (look at small remnant): Ron inventory-style description.
-		beginStaticSecondarySpeechLine(0xc0, 0);
-		return true;
 	case 301: // Ir a exterior (go to exterior): return to the studio lot.
 		_vm->gameState().mainFlowStateId = kScene6010ReturnFromScene6040State;
 		return true;
@@ -181,8 +167,12 @@ bool Scene6040::dispatchCustomSceneAction(uint16 handlerId) {
 	case 315: // Usar herramienta cortante con alambre (use cutting tool with wire).
 		runCutWireWithTool();
 		return true;
-	case 316: // Coger trozo de alambre suelto (take loosened wire piece).
-		runWirePickup();
+	case 316: // Restored: Quitar tapa (remove lid).
+		runLidRemoval();
+		return true;
+	case 317: // Restored: Mirar tapa (look at lid).
+		if (_vm->restoredContentEnabled() && _vm->gameState().scene6040WireState == 0)
+			beginStaticSecondarySpeechLine(0x1c, 1);
 		return true;
 	default:
 		return false;
@@ -190,43 +180,58 @@ bool Scene6040::dispatchCustomSceneAction(uint16 handlerId) {
 }
 
 bool Scene6040::applyCustomSceneStateToHotspotsAndPatches(byte selector) {
-	(void)selector;
 	if (_paletteMaskOriginal.empty())
+		return true;
+	if (selector != 1 && selector != 2 && selector != 0xff)
 		return true;
 
 	rememberOriginalColorMap();
-	restoreBaseFramebufferFromOriginal();
-	memcpy(_paletteMask.data(), _paletteMaskOriginal.data(), _paletteMask.size());
-	memcpy(_fullPaletteRegionMask.data(), _paletteMaskOriginal.data(), _fullPaletteRegionMask.size());
+	if (selector == 0xff) {
+		restoreBaseFramebufferFromOriginal();
+		_paletteMask = _paletteMaskOriginal;
+		rebuildWalkablePaletteMask();
+	}
 
 	GameplayState &state = _vm->gameState();
-	if (state.scene6040PaintCanTaken || hasInventoryItem(kScene6040PaintInventoryItem)) {
-		state.scene6040PaintCanTaken = true;
-		if (_sceneChunkTable.isValidChunk(8))
-			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[8], _baseFramebuffer);
-		replaceColorMapItemFromOriginal(12, 5);
-		replaceColorMapItemFromOriginal(9, 0);
-	} else {
-		replaceColorMapItemFromOriginal(12, 9);
+	if (selector == 1 || selector == 0xff) {
+		if (state.scene6040PaintCanTaken || hasInventoryItem(kScene6040PaintInventoryItem)) {
+			state.scene6040PaintCanTaken = true;
+			if (_sceneChunkTable.isValidChunk(8))
+				drawResourceBlockList(_resourceArena, _resourceChunkOffsets[8], _baseFramebuffer);
+			replaceColorMapItemFromOriginal(12, 5);
+			replaceColorMapItemFromOriginal(9, 0);
+		} else {
+			replaceColorMapItemFromOriginal(12, 9);
+		}
 	}
 
-	if (state.scene6040WireState == 0) {
-		replaceColorMapItemFromOriginal(10, 11);
-	} else if (state.scene6040WireState == 1) {
-		if (_sceneChunkTable.isValidChunk(9))
-			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[9], _baseFramebuffer);
-		replaceColorMapItemFromOriginal(10, 10);
-		replaceColorMapItemFromOriginal(11, 0);
-	} else {
-		state.scene6040WireState = 2;
-		if (_sceneChunkTable.isValidChunk(7))
-			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[7], _baseFramebuffer);
-		replaceColorMapItemFromOriginal(10, 0);
-		replaceColorMapItemFromOriginal(11, 0);
+	if (selector == 2 || selector == 0xff) {
+		// The original release skips the lid without awarding it.
+		const byte wireState = state.scene6040WireState == 0 && !_vm->restoredContentEnabled() ?
+			1 : state.scene6040WireState;
+		if (wireState == 0) {
+			replaceColorMapItemFromOriginal(10, 11);
+		} else if (wireState == 1) {
+			if (_sceneChunkTable.isValidChunk(9))
+				drawResourceBlockList(_resourceArena, _resourceChunkOffsets[9], _baseFramebuffer);
+			replaceColorMapItemFromOriginal(10, 10);
+			replaceColorMapItemFromOriginal(11, 0);
+		} else if (wireState == 2) {
+			if (_sceneChunkTable.isValidChunk(7))
+				drawResourceBlockList(_resourceArena, _resourceChunkOffsets[7], _baseFramebuffer);
+			replaceColorMapItemFromOriginal(10, 0);
+			replaceColorMapItemFromOriginal(11, 0);
+		}
 	}
 
-	rebuildWalkablePaletteMask();
 	_hotspots.load(_paletteMask, _metadata, _stage003SmallRows);
+	// The lid's action records survive, but its scene name row is missing.
+	if (_vm->restoredContentEnabled() && state.scene6040WireState == 0) {
+		_hotspots.setItemName(kScene6040LidHotspotItem, inventoryItemName(0, kScene6040LidNameInventoryItem));
+		_hotspots.setVerbActionHandlerByGlobalRecordIndex(kScene6040LidLookVerbRecordIndex, 317);
+		_hotspots.setVerbActionHandlerByGlobalRecordIndex(kScene6040LidUseVerbRecordIndex, 316);
+		_hotspots.setVerbMovementModeByGlobalRecordIndex(kScene6040LidUseVerbRecordIndex, 1);
+	}
 	return true;
 }
 
@@ -242,10 +247,9 @@ AmbientAudioProfile Scene6040::ambientAudioProfile() const {
 }
 
 void Scene6040::resetAnimationLayers() {
+	_sceneLayers.reset();
 	_realtimeAnimationTracks.reset(_leftToggleTrack);
 	_realtimeAnimationTracks.reset(_rightToggleTrack);
-	_leftToggleLayer.visible = true;
-	_rightToggleLayer.visible = true;
 }
 
 void Scene6040::drawForegroundBlocks(int activeWorldY) {
@@ -262,52 +266,74 @@ void Scene6040::runPaintCanPickup() {
 		return;
 	}
 
-	state.scene6040PaintCanTaken = true;
-	runActorReplacement(ActionOverlaySpec(11, kScene6040PaintOverlayDescriptorCount,
-		kScene6040PaintPickupFrameMap, ARRAYSIZE(kScene6040PaintPickupFrameMap), kScene6040FrameMillis)
-		.patchAt(5, 1));
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(11, kScene6040PaintOverlayDescriptorCount, kScene6040FrameMillis)
+			.bookendWithLastFrame().unskippable().noFinalFrameDelay()
+			.resourcePatchAt(5, 8))
+		.commit(state.scene6040PaintCanTaken, true)
+		.framebufferPatch(1);
+	if (!sequence.completed())
+		return;
+
 	addInventoryItem(kScene6040PaintInventoryItem);
 	_soundBank0.playSample(1, 100);
 	dispatchGenericSceneAction(21);
 }
 
 void Scene6040::runWireInspectionAnimation() {
-	runActorReplacement(ActionOverlaySpec(10, kScene6040WireOverlayDescriptorCount,
-		kScene6040WireInspectFrameMap, ARRAYSIZE(kScene6040WireInspectFrameMap), kScene6040FrameMillis));
-	beginSecondarySpeechLine(10, 0);
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(10, kScene6040WireOverlayDescriptorCount,
+			kScene6040WireInspectFrameMap, ARRAYSIZE(kScene6040WireInspectFrameMap), kScene6040FrameMillis)
+			.unskippable().noFinalFrameDelay())
+		.secondarySpeech(10, 0);
 }
 
 void Scene6040::runCutWireWithTool() {
 	GameplayState &state = _vm->gameState();
-	if (state.scene6040WireState != 1) {
-		beginSecondarySpeechLine(2, 0);
+	if (state.scene6040WireState == 2 || hasInventoryItem(kScene6040CutWireInventoryItem)) {
+		dispatchGenericSceneAction(6);
+		return;
+	}
+	if (state.multiToolKnifeState != 1 ||
+			(state.scene6040WireState == 0 && _vm->restoredContentEnabled())) {
+		dispatchGenericSceneAction(2);
 		return;
 	}
 
-	beginSecondarySpeechLine(12, 0);
-	state.scene6040WireState = 2;
-	runActorReplacement(ActionOverlaySpec(10, kScene6040WireOverlayDescriptorCount,
-		kScene6040WireCutFrameMap, ARRAYSIZE(kScene6040WireCutFrameMap), kScene6040FrameMillis)
-		.patchAt(19, 2));
-	removeInventoryItem(kScene6040LooseWireInventoryItem);
+	BlockingSequence sequence(*this);
+	sequence.secondarySpeech(12, 0)
+		.actorReplacement(ActionOverlaySpec(10, kScene6040WireOverlayDescriptorCount,
+			kScene6040WireCutFrameMap, ARRAYSIZE(kScene6040WireCutFrameMap), kScene6040FrameMillis)
+			.unskippable().noFinalFrameDelay().resourcePatchAt(19, 7))
+		.commit(state.scene6040WireState, (byte)2)
+		.framebufferPatch(2);
+	if (!sequence.completed())
+		return;
+
 	addInventoryItem(kScene6040CutWireInventoryItem);
 	_soundBank0.playSample(1, 100);
 }
 
-void Scene6040::runWirePickup() {
+void Scene6040::runLidRemoval() {
 	GameplayState &state = _vm->gameState();
-	if (state.scene6040WireState != 0 || hasInventoryItem(kScene6040LooseWireInventoryItem)) {
-		dispatchGenericSceneAction(6);
+	if (!_vm->restoredContentEnabled() || state.scene6040WireState != 0)
 		return;
-	}
 
-	state.scene6040WireState = 1;
-	runActorReplacement(ActionOverlaySpec(10, kScene6040WireOverlayDescriptorCount,
-		kScene6040WirePickupFrameMap, ARRAYSIZE(kScene6040WirePickupFrameMap), kScene6040FrameMillis)
-		.patchAt(6, 2));
-	addInventoryItem(kScene6040LooseWireInventoryItem);
-	_soundBank0.playSample(1, 100);
-	dispatchGenericSceneAction(21);
+	BlockingSequence sequence(*this);
+	// Borrow Ron's "No la voy a necesitar" without changing this room's captions.
+	SceneTextStore removalText;
+	if (removalText.loadStage("RESOURCE.003", sceneDebugName(), kScene6040LidRemovalSpeechStage)) {
+		_textStore._stageBlock.swap(removalText._stageBlock);
+		_textStore._stageLargeRows.swap(removalText._stageLargeRows);
+		sequence.secondarySpeech(3, 0);
+		_textStore._stageBlock.swap(removalText._stageBlock);
+		_textStore._stageLargeRows.swap(removalText._stageLargeRows);
+	}
+	sequence.actorReplacement(ActionOverlaySpec(10, kScene6040WireOverlayDescriptorCount,
+			kScene6040WireInspectFrameMap, ARRAYSIZE(kScene6040WireInspectFrameMap), kScene6040FrameMillis)
+			.unskippable().noFinalFrameDelay().resourcePatchAt(13, 9))
+		.commit(state.scene6040WireState, (byte)1)
+		.framebufferPatch(2);
 }
 
 void Scene6040::rememberOriginalColorMap() {

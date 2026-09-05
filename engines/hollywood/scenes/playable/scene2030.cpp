@@ -19,14 +19,11 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene2030.h"
-
-#include "common/system.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/dialogue_menu.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene2030.h"
 #include "hollywood/scenes/resource_delta_clip_player.h"
 
 namespace Hollywood {
@@ -93,7 +90,8 @@ enum Scene2030MerchantSpeechGroup {
 
 enum Scene2030RealtimeSpeechId {
 	kScene2030RightMerchantCalloutSpeech = 1,
-	kScene2030LeftMerchantCalloutSpeech = 2
+	kScene2030LeftMerchantCalloutSpeech = 2,
+	kScene2030MerchantInteractionSpeech = 3
 };
 
 const byte kScene2030LeftMerchantFrameMap[] = {
@@ -142,13 +140,6 @@ const byte kScene2030LeftMerchantPurchasePoseFrameMap[] = {
 	40, 41, 42, 43, 44, 44, 44, 44, 44
 };
 
-static_assert(ARRAYSIZE(kScene2030RightMerchantBuyOverlayFrameMap) ==
-	ARRAYSIZE(kScene2030RightMerchantBuyPoseFrameMap),
-	"Scene 2030 right-merchant handoff frame maps differ in size");
-static_assert(ARRAYSIZE(kScene2030LeftMerchantPurchaseOverlayFrameMap) ==
-	ARRAYSIZE(kScene2030LeftMerchantPurchasePoseFrameMap),
-	"Scene 2030 left-merchant handoff frame maps differ in size");
-
 struct Scene2030SynchronizedOverlayTarget {
 	Scene2030SynchronizedOverlayTarget(ActionOverlayPlayer &newOverlay,
 			ResourceSpriteLayer &newMerchantLayer, TimedAnimationChannel &newMerchantChannel,
@@ -176,7 +167,7 @@ struct Scene2030SynchronizedOverlayTarget {
 	uint frameCount;
 };
 
-static PlayableSceneConfig scene2030Config() {
+PlayableSceneConfig scene2030Config() {
 	PlayableSceneConfig config(2030,
 		SceneResourceLayout(11, 5, 10),
 		SceneViewport(kScene2030ViewportXOffset, kScene2030ViewportXOffset, kScene2030ViewportXOffset),
@@ -185,6 +176,7 @@ static PlayableSceneConfig scene2030Config() {
 	config.setTextResources(kScene2030Resource003RowsOffsetIndex, kScene2030SpeechCueDescriptorTableOffset);
 	config.walkablePaletteMaxRegion = 6;
 	config.useActorDepthTest = true;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
@@ -242,16 +234,10 @@ void Scene2030::runCustomEntrySequence() {
 	}
 }
 
-bool Scene2030::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
-}
-
-bool Scene2030::shouldRunExitSideEffectsAfterLoop() const {
-	const uint16 stateId = _vm->gameState().mainFlowStateId;
-	return !Engine::shouldQuit() && stateId != 0xff && !isMainFlowStateInScene(stateId);
-}
-
 void Scene2030::runExitSideEffectsAfterLoop() {
+	if (!didLeaveSceneAfterLoop())
+		return;
+
 	fadePaletteToBlack();
 }
 
@@ -264,7 +250,16 @@ void Scene2030::advanceCustomGameplayLoop(uint32 delta) {
 	updateRandomMerchantCallouts(delta);
 }
 
+void Scene2030::advanceTransitionAnimation(uint32 delta) {
+	advanceMerchantLayers(delta);
+	updateAmbientAudioAndMusicCues(delta);
+}
+
 void Scene2030::realtimeSpeechEnded(byte speechId, bool completed) {
+	if (speechId != kScene2030RightMerchantCalloutSpeech &&
+			speechId != kScene2030LeftMerchantCalloutSpeech)
+		return;
+
 	if (!completed) {
 		resetMerchantCalloutState();
 		return;
@@ -284,8 +279,6 @@ void Scene2030::realtimeSpeechEnded(byte speechId, bool completed) {
 }
 
 bool Scene2030::dispatchCustomSceneAction(uint16 handlerId) {
-	stopMerchantCalloutSpeech();
-
 	switch (handlerId) {
 	case 301: // Ir a esfinge (go to sphinx): transition toward scene 2040.
 		runSphinxExitTransition();
@@ -327,7 +320,7 @@ bool Scene2030::dispatchCustomSceneAction(uint16 handlerId) {
 		runRightMerchantSaleSequence(kScene2030RightMerchantSaleItemB, kScene2030RightMerchantSaleValueB, 3, 6);
 		return true;
 	case 314: // Ir a avioneta (go to airplane): open travel destination selector.
-		_vm->gameState().requestTravelScreenSelection(2);
+		requestTravelScreenSelection(2);
 		return true;
 	default:
 		return false;
@@ -592,10 +585,14 @@ bool Scene2030::startMerchantCalloutSpeech(bool rightMerchant) {
 }
 
 void Scene2030::stopMerchantCalloutSpeech() {
-	if (isRealtimeSpeechActive())
-		stopRealtimeSpeech();
-	else
+	if (!isRealtimeSpeechActive()) {
 		resetMerchantCalloutState();
+		return;
+	}
+
+	if (realtimeSpeechId() == kScene2030RightMerchantCalloutSpeech ||
+			realtimeSpeechId() == kScene2030LeftMerchantCalloutSpeech)
+		stopRealtimeSpeech();
 }
 
 void Scene2030::resetMerchantCalloutState() {
@@ -658,23 +655,12 @@ void Scene2030::closeMerchantAfterInteraction(bool rightMerchant) {
 }
 
 void Scene2030::waitForMerchantState(bool rightMerchant, byte targetState) {
-	uint32 lastMillis = g_system->getMillis();
 	while (!Engine::shouldQuit() && !_vm->isSceneRestartRequested()) {
-		if (pollEvents(true))
-			break;
-
 		const byte state = rightMerchant ? _rightMerchantState : _leftMerchantState;
 		if (state == targetState)
 			break;
-
-		const uint32 now = g_system->getMillis();
-		const uint32 delta = now - lastMillis;
-		lastMillis = now;
-		advanceMerchantLayers(delta);
-		updateAmbientAudioAndMusicCues(delta);
-		drawPlayableComposite();
-		presentFrame();
-		g_system->delayMillis(10);
+		if (waitSceneMillis(10))
+			break;
 	}
 }
 
@@ -692,31 +678,11 @@ void Scene2030::beginSecondarySpeechLineAndOpenMerchant(uint16 rowIndex, byte fr
 		return;
 	}
 
-	const uint32 startMillis = g_system->getMillis();
-	const bool started = startSecondarySpeechLine(rowIndex, frameIndex);
-	const bool hasSubtitle = !_speechOverlay.lines.empty();
-	const uint32 durationMillis = started ? MAX<uint32>(_speech.lastSampleDurationMillis(), 750) :
-		MAX<uint32>(1200, (uint32)_speechOverlay.lines.size() * 1100);
-
+	const bool started = startRealtimeSecondarySpeechLine(rowIndex, frameIndex,
+		kScene2030MerchantInteractionSpeech);
 	openMerchantForInteraction(rightMerchant);
-	if (started || hasSubtitle)
-		waitForStartedSecondarySpeech(startMillis, durationMillis);
-}
-
-void Scene2030::waitForStartedSecondarySpeech(uint32 startMillis, uint32 durationMillis) {
-	while (!Engine::shouldQuit() && !_vm->isSceneRestartRequested()) {
-		const bool speechActive = _speech.isPlaying();
-		const uint32 elapsed = g_system->getMillis() - startMillis;
-		if (!speechActive && elapsed >= durationMillis)
-			break;
-
-		const uint32 slice = speechActive ? 50 : MIN<uint32>(50, durationMillis - elapsed);
-		if (waitSceneMillis(slice))
-			break;
-	}
-
-	_speech.stop();
-	clearSpeechOverlay();
+	if (started)
+		waitForRealtimeSpeech();
 }
 
 void Scene2030::runMerchantPrimarySpeechLine(uint16 rowIndex, byte frameIndex, bool rightMerchant) {
@@ -782,42 +748,16 @@ void Scene2030::runTransitionClip(uint chunkIndex, bool includeActiveActor, bool
 	transitionBackground.copyRectToSurface(_sceneFramebuffer.rawSurface(), 0, 0,
 		Common::Rect(0, 0, HollywoodEngine::kSceneBufferWidth, HollywoodEngine::kSceneBufferHeight));
 
-	uint32 frameAccumulator = 0;
-	uint32 lastMillis = g_system->getMillis();
-	byte frameIndex = 0;
-
-	drawTransitionClipFrame(chunkIndex, frameIndex, *transitionBackground.surfacePtr());
-	if (fadeIn) {
-		if (fadePaletteFromBlack())
-			return;
-	} else {
-		presentFrame();
-	}
-
-	while (frameIndex < kScene2030TransitionFinalFrame && !Engine::shouldQuit() && !_vm->isSceneRestartRequested()) {
-		if (pollEvents(true))
-			break;
-
-		const uint32 now = g_system->getMillis();
-		const uint32 delta = now - lastMillis;
-		lastMillis = now;
-		frameAccumulator += delta;
-		advanceMerchantLayers(delta);
-		updateAmbientAudioAndMusicCues(delta);
-
-		bool frameDirty = false;
-		while (frameAccumulator >= kScene2030TransitionFrameMillis && frameIndex < kScene2030TransitionFinalFrame) {
-			frameAccumulator -= kScene2030TransitionFrameMillis;
-			++frameIndex;
-			drawTransitionClipFrame(chunkIndex, frameIndex, *transitionBackground.surfacePtr());
-			frameDirty = true;
+	Graphics::Surface &background = *transitionBackground.surfacePtr();
+	bool fadePending = fadeIn;
+	playTransitionFrames([this, chunkIndex, &background, &fadePending](byte frame) {
+		drawTransitionClipFrame(chunkIndex, frame, background);
+		if (fadePending) {
+			fadePending = false;
+			fadePaletteFromBlack();
 		}
-
-		if (frameDirty)
-			presentFrame();
-
-		g_system->delayMillis(10);
-	}
+	}, 0, kScene2030TransitionFinalFrame, kScene2030TransitionFrameMillis,
+		kCumulativeTransitionFrames);
 }
 
 void Scene2030::drawTransitionClipFrame(uint chunkIndex, byte frameIndex, Graphics::Surface &transitionBackground) {
@@ -833,7 +773,7 @@ void Scene2030::drawClipFrameDeltaToSurface(uint chunkIndex, uint tableEntryCoun
 	if (!_sceneChunkTable.isValidChunk(chunkIndex))
 		return;
 
-	ResourceDeltaClipPlayer::drawFrame(_resourceArena, _resourceChunkOffsets[chunkIndex],
+	drawResourceDeltaClipFrame(_resourceArena, _resourceChunkOffsets[chunkIndex],
 		_sceneChunkTable.sizes[chunkIndex], tableEntryCount, frameIndex,
 		(byte *)destination.getPixels(), destination.w, destination.h, destination.pitch,
 		destination.pitch * destination.h);
@@ -908,15 +848,15 @@ void Scene2030::runMerchantShopDialogue() {
 
 void Scene2030::initializeMerchantShopDialogueRecords(Common::Array<DialogueChoiceRecord> &records) const {
 	records.resize(kScene2030ShopDialogueChoiceRecordCount);
-	setMerchantShopDialogueRecord(records, 0, 1, 0, 1, 1, 1, 2, 0xff);
-	setMerchantShopDialogueRecord(records, 1, 1, 0, 1, 2, 2, 2, 0xff);
-	setMerchantShopDialogueRecord(records, 2, 1, 0, 1, 7, 6, 2, 0xff);
-	setMerchantShopDialogueRecord(records, 3, 1, 0, 3, 8, 7, 1, 0xff);
-	setMerchantShopDialogueRecord(records, 4, 1, 0, 1, 9, 8, 2, 0xff);
-	setMerchantShopDialogueRecord(records, 5, 1, 0, 0, 3, 3, 0, 0);
-	setMerchantShopDialogueRecord(records, 70, 1, 0, 0, 4, 4, 1, 0xff);
-	setMerchantShopDialogueRecord(records, 71, 0, 0, 0, 5, 5, 3, 0xff);
-	setMerchantShopDialogueRecord(records, 72, 1, 0, 0, 6, 3, 1, 0xff);
+	setMerchantShopDialogueRecord(records, 0, 1, 0, 1, 1, 1, 2);
+	setMerchantShopDialogueRecord(records, 1, 1, 0, 1, 2, 2, 2);
+	setMerchantShopDialogueRecord(records, 2, 1, 0, 1, 7, 6, 2);
+	setMerchantShopDialogueRecord(records, 3, 1, 0, 3, 8, 7, 1);
+	setMerchantShopDialogueRecord(records, 4, 1, 0, 1, 9, 8, 2);
+	setMerchantShopDialogueRecord(records, 5, 1, 0, 0, 3, 3, 0);
+	setMerchantShopDialogueRecord(records, 70, 1, 0, 0, 4, 4, 1);
+	setMerchantShopDialogueRecord(records, 71, 0, 0, 0, 5, 5, 3);
+	setMerchantShopDialogueRecord(records, 72, 1, 0, 0, 6, 3, 1);
 
 	const GameplayState &state = _vm->gameState();
 	if (state.scene2030SeedOfferState != 1) {
@@ -929,7 +869,7 @@ void Scene2030::initializeMerchantShopDialogueRecords(Common::Array<DialogueChoi
 
 void Scene2030::setMerchantShopDialogueRecord(Common::Array<DialogueChoiceRecord> &records, uint index,
 		byte enabled, byte nextNodeIndex, byte transitionMode, byte playerTextRowId,
-		byte responseFrameIndex, byte disableAfterUse, byte reserved) const {
+		byte responseFrameIndex, byte disableAfterUse) const {
 	if (index >= records.size())
 		return;
 
@@ -940,7 +880,6 @@ void Scene2030::setMerchantShopDialogueRecord(Common::Array<DialogueChoiceRecord
 	record.playerTextRowId = playerTextRowId;
 	record.responseFrameIndex = responseFrameIndex;
 	record.disableAfterUse = disableAfterUse;
-	record.reserved = reserved;
 }
 
 uint16 Scene2030::merchantShopProductPrice(byte productRowId) const {

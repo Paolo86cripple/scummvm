@@ -19,13 +19,10 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene3020.h"
-
-#include "common/system.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene3020.h"
 
 namespace Hollywood {
 
@@ -48,21 +45,9 @@ const uint kScene3020ReturnTransitionDescriptorCount = 0x43;
 const byte kScene3020ReturnTransitionFinalFrame = 0x42;
 const byte kScene3020PickupInventoryItem = 0x31;
 
-const byte kScene3020LoopFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-	10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-	20, 21, 22, 23, 24, 25, 26, 27, 28, 29
-};
-
-const byte kScene3020PickupFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6,
-	7, 8, 9, 10, 11, 12, 13
-};
-
 const uint kScene3020LoopLayer = 0;
 const SceneLayerSpec kScene3020LayerSpecs[] = {
-	{kSceneAnimationBehindActors, 7, kScene3020LoopDescriptorCount,
-		kScene3020LoopFrameMap, ARRAYSIZE(kScene3020LoopFrameMap), true, 0}
+	{kSceneAnimationBehindActors, 7, kScene3020LoopDescriptorCount, nullptr, 0, true, 0}
 };
 
 PlayableSceneConfig scene3020Config() {
@@ -76,14 +61,12 @@ PlayableSceneConfig scene3020Config() {
 	config.walkablePaletteMaxRegion = 20;
 	return config;
 }
-
 Scene3020::Scene3020(HollywoodEngine *vm) :
 		PlayableScene(vm, scene3020Config()),
 		_loopTrack(RealtimeAnimationTracks::kInvalidTrack) {
 	_sceneLayers.configure(kScene3020LayerSpecs);
-	_loopTrack = _realtimeAnimationTracks.addFrameMap(
-		_sceneLayers.layer(kScene3020LoopLayer),
-		kScene3020LoopFrameMillis, _vm->gameState().windmillBladesMoving);
+	_loopTrack = _realtimeAnimationTracks.addLoop(kScene3020LoopLayer, kScene3020LoopFrameMillis,
+		kScene3020LoopDescriptorCount, _vm->gameState().windmillBladesMoving);
 }
 
 void Scene3020::initializeCustomPreviewState() {
@@ -104,16 +87,8 @@ void Scene3020::initializeCustomPreviewState() {
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 }
 
-void Scene3020::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawLayerStack(_sceneLayers, kSceneAnimationBehindActors);
-	drawActionOverlayLayer();
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
+void Scene3020::drawCustomForegroundComposite(int activeWorldX, int activeWorldY) {
+	(void)activeWorldX;
 	drawForegroundBlocks(activeWorldY);
 }
 
@@ -290,43 +265,14 @@ void Scene3020::runDescriptorTransitionClip(uint chunkIndex, uint descriptorCoun
 	if (!loadVariableChunk(chunkIndex, clipData))
 		return;
 
-	uint32 frameAccumulator = 0;
-	uint32 lastMillis = g_system->getMillis();
-	byte frameIndex = 0;
-
-	drawDescriptorTransitionFrame(clipData, descriptorCount, frameIndex);
-	presentFrame();
-
-	while (frameIndex < finalFrameIndex && !Engine::shouldQuit() && !_vm->isSceneRestartRequested()) {
-		if (pollEvents(true))
-			break;
-
-		const uint32 now = g_system->getMillis();
-		const uint32 delta = now - lastMillis;
-		lastMillis = now;
-		frameAccumulator += delta;
-		_realtimeAnimationTracks.advance(_loopTrack, delta, _random);
-		updateAmbientAudioAndMusicCues(delta);
-
-		bool frameDirty = false;
-		while (frameAccumulator >= kScene3020TransitionFrameMillis && frameIndex < finalFrameIndex) {
-			frameAccumulator -= kScene3020TransitionFrameMillis;
-			++frameIndex;
-			frameDirty = true;
-		}
-
-		if (frameDirty) {
-			drawDescriptorTransitionFrame(clipData, descriptorCount, frameIndex);
-			presentFrame();
-		}
-
-		g_system->delayMillis(10);
-	}
+	playTransitionFrames([this, &clipData, descriptorCount](byte frame) {
+		drawDescriptorTransitionFrame(clipData, descriptorCount, frame);
+	}, 0, finalFrameIndex, kScene3020TransitionFrameMillis, kIndependentTransitionFrames);
 }
 
 void Scene3020::drawDescriptorTransitionFrame(const Common::Array<byte> &clipData, uint descriptorCount, byte frameIndex) {
 	copyBaseFramebufferToSceneFramebuffer();
-	drawLayerStack(_sceneLayers, kSceneAnimationBehindActors);
+	drawLayerStack(kSceneAnimationBehindActors);
 	// The continuation descriptors contain Ron and their own occlusion.
 	drawStripSpriteFrame(clipData, 0, 0, descriptorCount, frameIndex, _sceneFramebuffer);
 }
@@ -337,9 +283,9 @@ void Scene3020::runPickupMace() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(9, kScene3020PickupDescriptorCount,
-		kScene3020PickupFrameMap, ARRAYSIZE(kScene3020PickupFrameMap), kScene3020PickupFrameMillis)
-		.patchAt(7, 1));
+	runActorReplacement(ActionOverlaySpec(9, kScene3020PickupDescriptorCount, kScene3020PickupFrameMillis)
+		.holdFirstFrame()
+		.resourcePatchAt(7, 8));
 	_vm->gameState().scene3020MaceTaken = true;
 	applySceneStateToHotspotsAndPatches(1);
 	addInventoryItem(kScene3020PickupInventoryItem);

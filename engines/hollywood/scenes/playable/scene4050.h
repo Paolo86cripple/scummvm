@@ -34,12 +34,7 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
@@ -47,12 +42,10 @@ private:
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	bool shouldDrawSecondaryActorInPlayableComposite() const override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetAnimationLayers();
-	void restoreSceneObjectPaletteRange();
-	void drawSceneLayers();
+	void restoreResourceLayerPalette();
 	void advanceFlagPalette(uint32 delta);
 	void rotateFlagPalette();
 	void advanceRonLayer(uint32 delta);
@@ -72,9 +65,6 @@ private:
 	TimedAnimationChannel _flagPaletteChannel;
 	TimedAnimationChannel _ronSpeechChannel;
 	TimedAnimationChannel _ronIdleChannel;
-	ResourceSpriteLayer _backgroundLayer;
-	ResourceSpriteLayer _ronLayer;
-	ResourceSpriteLayer _d09ReturnTransitionLayer;
 	uint _backgroundTrack;
 	uint32 _ambientEffectTimerAccumulator;
 	byte _previousContinuousAmbientCue;

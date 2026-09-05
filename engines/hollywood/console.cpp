@@ -19,13 +19,13 @@
  *
  */
 
-#include "hollywood/console.h"
-
 #include "common/str.h"
 #include "common/util.h"
 
-#include "hollywood/gameplay/game_state.h"
 #include "hollywood/hollywood.h"
+#include "hollywood/console.h"
+#include "hollywood/gameplay/frankenstein_reward.h"
+#include "hollywood/gameplay/game_state.h"
 #include "hollywood/scenes/scene_registry.h"
 
 namespace Hollywood {
@@ -48,15 +48,11 @@ const byte kKarnakOilItem = 0x43;
 const byte kKarnakShovelItem = 0x50;
 const byte kKarnakMagnifierItem = 0x5a;
 
-const byte kFrankieBodyAssemblyItems[] = {
-	0x30, 0x42, 0x4c
-};
-
 const byte kFrankieSerumItems[] = {
 	0x44, 0x3e, 0x38, 0x5d, 0x57
 };
 
-static bool addInventoryItemIfMissing(GameplayState &state, byte owner, byte itemId) {
+bool addInventoryItemIfMissing(GameplayState &state, byte owner, byte itemId) {
 	if (state.hasInventoryItem(owner, itemId))
 		return false;
 
@@ -108,9 +104,9 @@ bool Console::cmdGet(int argc, const char **argv) {
 			addedCount += addInventoryItemIfMissing(state, owner, kFrankieDiaryItem);
 
 		if (state.scene3070FrankensteinBodyState == 0) {
-			for (uint i = 0; i < ARRAYSIZE(kFrankieBodyAssemblyItems); ++i)
+			for (uint i = 0; i < kFrankensteinPartCount; ++i)
 				addedCount += addInventoryItemIfMissing(state, owner,
-					kFrankieBodyAssemblyItems[i]);
+					kFrankensteinPartItems[i]);
 		}
 		if (state.scene3070FrankensteinBodyState < 2)
 			addedCount += addInventoryItemIfMissing(state, owner, kFrankieBrainItem);
@@ -252,7 +248,7 @@ bool Console::cmdSolve(int argc, const char **argv) {
 
 bool Console::parseItemId(const char *argument, uint &itemId) {
 	char *endPtr = nullptr;
-	const long parsedValue = strtol(argument, &endPtr, 0);
+	const int32 parsedValue = strtol(argument, &endPtr, 0);
 	if (endPtr == argument || *endPtr != 0 || parsedValue < 0)
 		return false;
 

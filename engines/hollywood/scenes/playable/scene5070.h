@@ -34,10 +34,7 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
+	void drawCustomForegroundComposite(int activeWorldX, int activeWorldY) override;
 	void runCustomEntrySequence() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
@@ -47,10 +44,7 @@ private:
 		int &requestedFacing, bool &restoredStepDeltas) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
-	byte ambientSoundCueVolume(byte cueId, byte defaultVolumePercent) const override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 
 	void runMineCartEntryClip();
 	void runExitToMineSwitches();

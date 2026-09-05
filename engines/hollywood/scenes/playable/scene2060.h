@@ -34,7 +34,6 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
@@ -46,7 +45,6 @@ private:
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	byte paletteRegionAt(int x, int y) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 

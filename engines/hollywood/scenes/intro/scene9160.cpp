@@ -19,14 +19,12 @@
  *
  */
 
-#include "hollywood/scenes/intro/scene9160.h"
-
 #include "common/debug.h"
-#include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/intro/scene9160.h"
 
 namespace Hollywood {
 
@@ -46,8 +44,7 @@ const byte kScene9160ScrollDeltaByStep[] = {
 };
 
 Scene9160::Scene9160(HollywoodEngine *vm) :
-		IntroSceneBase(vm, "Scene 9160", kScene9160TallFramebufferSize, kFrameBufferSize),
-		_resources(),
+		PresentationScene(vm, "Scene 9160", kScene9160TallFramebufferSize, kSceneBufferByteCount),
 		_music(vm->introMusic()),
 		_paletteResource(),
 		_panelA(),
@@ -101,8 +98,8 @@ bool Scene9160::load() {
 		return false;
 
 	_lastOverlayChunk = 2;
-	while (_lastOverlayChunk + 1 < IntroResourceSet::kResourceChunkCount &&
-			_resources.chunkTable.isValidChunk(_lastOverlayChunk + 1))
+	while (_lastOverlayChunk + 1 < kResourceChunkCount &&
+			_resources._chunkTable.isValidChunk(_lastOverlayChunk + 1))
 		++_lastOverlayChunk;
 	if (_lastOverlayChunk < 4) {
 		warning("%s is missing the initial %s credit overlays", kScene9160ArchiveName, _debugName);
@@ -114,7 +111,7 @@ bool Scene9160::load() {
 
 	if (!loadVariableChunk(0, _panelA) ||
 			!loadVariableChunk(1, _panelB) ||
-			!loadChunk(2, _paletteResource, kPaletteSize))
+			!loadFixedChunk(2, _paletteResource, kPaletteSize))
 		return false;
 
 	sanitizePanel(_panelA);
@@ -142,14 +139,6 @@ bool Scene9160::loadVariableChunk(uint index, Common::Array<byte> &destination) 
 	return true;
 }
 
-bool Scene9160::loadChunk(uint index, Common::Array<byte> &destination, uint fixedSize) {
-	return _resources.loadFixedChunk(_debugName, index, destination, fixedSize);
-}
-
-bool Scene9160::loadArenaChunk(uint index) {
-	return _resources.loadArenaChunk(_debugName, index, index);
-}
-
 void Scene9160::sanitizePanel(Common::Array<byte> &panel) {
 	const uint count = MIN<uint>(panel.size(), kScene9160PanelSize);
 	for (uint i = 0; i < count; ++i) {
@@ -174,7 +163,7 @@ void Scene9160::drawOverlayChunk(uint chunkIndex, int yOffset) {
 	if (chunkIndex < kScene9160FirstOverlayChunk || chunkIndex > _lastOverlayChunk)
 		return;
 
-	drawResourceBlockList(_resources.arena, _resources.chunkOffsets[chunkIndex],
+	drawResourceBlockList(_resources._arena, _resources._chunkOffsets[chunkIndex],
 		_sceneFramebuffer.surface(), yOffset);
 }
 
@@ -242,25 +231,21 @@ void Scene9160::fadeOutPalette() {
 }
 
 bool Scene9160::waitBeforeScroll() {
-	uint32 elapsed = 0;
-	while (elapsed < kScene9160WaitMillis && !_skipRequested && !Engine::shouldQuit()) {
-		if (pollEvents())
-			return true;
+	TimedPresentationLoop loop(*this, kScene9160WaitMillis, 50);
+	while (loop.beginFrame()) {
 		presentFrame();
-		const uint32 slice = MIN<uint32>(kScene9160WaitMillis - elapsed, 50);
-		g_system->delayMillis(slice);
-		elapsed += slice;
+		loop.finishFrame();
 	}
 
+	consumeStepAdvanceRequest();
 	return _skipRequested || Engine::shouldQuit();
 }
 
 bool Scene9160::waitForMusicEnd() {
 	while (_music->isPlaying() && !_skipRequested && !Engine::shouldQuit()) {
-		if (pollEvents())
-			return true;
 		presentFrame();
-		g_system->delayMillis(50);
+		if (delay(50))
+			return true;
 	}
 
 	return _skipRequested || Engine::shouldQuit();

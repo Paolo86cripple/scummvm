@@ -48,7 +48,6 @@ private:
 	bool customizeRouteFinal(byte currentRegion, byte targetRegion, const ActorPathBuildState &state,
 		int targetX, int targetY, int &requestedFacing, bool &restoredStepDeltas) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	bool shouldAnimatePrimarySpeechLine() const override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
@@ -70,14 +69,10 @@ private:
 	void runBrainInstallation();
 	void runBodyAssembly();
 	void addSerumIngredient(byte itemId, uint16 speechRow, bool speakBefore, bool useSyringeAnimation);
-	void applyActionPatchChunk(uint chunkIndex);
 	bool runCurtainRevealFromBlack();
 	void runCurtainClearToBlack();
 	void drawForegroundBlocks(int activeWorldY, byte actorDrawOrderMode, bool drawNearForeground);
 
-	ResourceSpriteLayer _interludeLeftLayer;
-	ResourceSpriteLayer _interludeRightLayer;
-	ResourceSpriteLayer _lateCutsceneLayer;
 	bool _interludeActive;
 	bool _interludeAlternatePose;
 	bool _lateCutsceneActive;

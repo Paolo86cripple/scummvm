@@ -35,9 +35,7 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
+	void drawCustomForegroundComposite(int activeWorldX, int activeWorldY) override;
 	void runCustomEntrySequence() override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
@@ -88,10 +86,7 @@ private:
 	TimedAnimationChannel _spencerIdleChannel;
 	TimedAnimationChannel _spencerLongChannel;
 	TimedAnimationChannel _spencerTransitionChannel;
-	ResourceSpriteLayer _backLayer;
-	ResourceSpriteLayer _ghostLayer;
-	ResourceSpriteLayer _spencerLayer;
-	byte _backLayerMode;
+	byte _backLayerResumeFrame;
 	byte _ghostMode;
 	byte _spencerMode;
 	byte _spencerAmbientState;

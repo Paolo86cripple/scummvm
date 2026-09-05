@@ -35,8 +35,6 @@ public:
 private:
 	void initializeCustomPreviewState() override;
 	void runCustomEntrySequence() override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
@@ -46,7 +44,6 @@ private:
 	bool customizeRouteFinal(byte currentRegion, byte targetRegion, const ActorPathBuildState &state,
 		int targetX, int targetY, int &requestedFacing, bool &restoredStepDeltas) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetForegroundLayer(bool visible, byte frameIndex);
@@ -56,7 +53,6 @@ private:
 		int targetX, int targetY, byte finalFacing, byte finalCel);
 	void runBackTransitionToScene2080();
 	void runAltarCeremony();
-	void waitForStartedSpeechAndClear(uint32 fallbackMillis);
 	void setRitualPaletteCycle(bool active);
 	void rotateRitualPalette();
 	bool runCurtainRevealFromBlack();

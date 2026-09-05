@@ -19,11 +19,10 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene1040.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene1040.h"
 
 namespace Hollywood {
 
@@ -48,8 +47,6 @@ const uint kScene1040CordOverlayDescriptorCount = 0x19;
 const uint kScene1040GorillaCordOverlayChunk = 0x10;
 const uint kScene1040GorillaCordOverlayDescriptorCount = 0x0b;
 const int kScene1040ForegroundYThreshold = 0x15f;
-const byte kScene1040CordSetupSoundHook = 1;
-const byte kScene1040CordPickupPatchHook = 2;
 const byte kScene1040FirstAmbientSoundCue = 0x25;
 const byte kScene1040AmbientSoundCueCount = 7;
 const byte kScene1040FirstAmbientMusicCue = 0x0b;
@@ -63,20 +60,6 @@ const byte kScene1040GorillaFrameMap[] = {
 	5, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
 	7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 6, 5,
 	4
-};
-
-const byte kScene1040DoorFrameMap[] = { 1, 1, 2, 3 };
-
-const byte kScene1040BalloonFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6,
-	7, 8, 9, 10, 11, 12
-};
-
-const byte kScene1040CordFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6,
-	7, 8, 9, 10, 11, 12, 13, 14,
-	15, 16, 17, 18, 19, 20, 21, 22,
-	23, 24
 };
 
 const byte kScene1040GorillaCordSetupFrameMap[] = {
@@ -93,7 +76,7 @@ const SceneLayerSpec kScene1040LayerSpecs[] = {
 		kScene1040GorillaFrameMap, ARRAYSIZE(kScene1040GorillaFrameMap), true, 0}
 };
 
-static PlayableSceneConfig scene1040Config() {
+PlayableSceneConfig scene1040Config() {
 	PlayableSceneConfig config(1040,
 		SceneResourceLayout(17, 5, 16),
 		SceneViewport(kScene1040ViewportXOffset, kScene1040ViewportMinXOffset, kScene1040ViewportMaxXOffset),
@@ -134,16 +117,8 @@ void Scene1040::initializeCustomPreviewState() {
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 }
 
-void Scene1040::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawLayerStack(_sceneLayers, kSceneAnimationBehindActors);
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	drawActionOverlayLayer();
+void Scene1040::drawCustomForegroundComposite(int activeWorldX, int activeWorldY) {
+	(void)activeWorldX;
 	drawForegroundBlocks(activeWorldY);
 	if (_sceneChunkTable.isValidChunk(5))
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[5], _sceneFramebuffer);
@@ -300,26 +275,10 @@ AmbientAudioProfile Scene1040::ambientAudioProfile() const {
 		kScene1040AmbientMusicProbabilityModulus);
 }
 
-void Scene1040::handleAnimationFrameHook(byte hookId, uint frame) {
-	if (hookId == kScene1040CordPickupPatchHook) {
-		if (frame == 0 && _sceneChunkTable.isValidChunk(14))
-			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[14], _baseFramebuffer);
-		return;
-	}
-
-	if (hookId != kScene1040CordSetupSoundHook)
-		return;
-
-	if (frame == 8)
-		_soundBank0.playSampleLooping(0x23, 75);
-	else if (frame == 28)
-		_soundBank0.stop();
-}
-
 void Scene1040::runDoorToCloakroomAction() {
 	BlockingSequence(*this)
-		.actorReplacement(8, kScene1040DoorOverlayDescriptorCount,
-			kScene1040DoorFrameMap, ARRAYSIZE(kScene1040DoorFrameMap), kScene1040FrameMillis)
+		.actorReplacement(ActionOverlaySpec(8, kScene1040DoorOverlayDescriptorCount,
+			kScene1040FrameMillis).holdFrame(1).startAt(1))
 		.sound(3)
 		.commit(_vm->gameState().scene1040CloakroomDoorOpened, true)
 		.commit(_vm->gameState().mainFlowStateId, kScene1040ExitState1050);
@@ -337,8 +296,8 @@ void Scene1040::handleCordPickup() {
 
 	BlockingSequence sequence(*this);
 	sequence.actorReplacement(ActionOverlaySpec(12, kScene1040CordOverlayDescriptorCount,
-		kScene1040CordFrameMap, ARRAYSIZE(kScene1040CordFrameMap), kScene1040FrameMillis)
-		.hookAt(0, kScene1040CordPickupPatchHook))
+		kScene1040FrameMillis).holdFirstFrame()
+		.resourcePatchAt(0, 14))
 		.commit(state.scene1040GorillaCordState, (byte)2)
 		.framebufferPatch(2);
 	addInventoryItem(0x1b);
@@ -352,8 +311,8 @@ void Scene1040::handleBalloonPickup() {
 
 	BlockingSequence sequence(*this);
 	sequence.actorReplacement(ActionOverlaySpec(9, kScene1040BalloonOverlayDescriptorCount,
-		kScene1040BalloonFrameMap, ARRAYSIZE(kScene1040BalloonFrameMap), kScene1040FrameMillis)
-		.patchAt(7, 3))
+		kScene1040FrameMillis).holdFirstFrame()
+		.resourcePatchAt(7, 10))
 		.commit(_vm->gameState().scene1040BalloonTaken, true)
 		.framebufferPatch(3);
 	addInventoryItem(0x1c);
@@ -375,7 +334,8 @@ void Scene1040::handleGorillaCordSetup() {
 			kScene1040GorillaCordOverlayDescriptorCount,
 			kScene1040GorillaCordSetupFrameMap, ARRAYSIZE(kScene1040GorillaCordSetupFrameMap),
 			kScene1040FrameMillis)
-			.hookEveryFrame(kScene1040CordSetupSoundHook))
+			.loopingSoundAt(8, 0x23, 75)
+			.stopSoundAt(28))
 		.stopSound()
 		.secondarySpeech(13, 0)
 		.commit(state.scene1040GorillaCordState, (byte)1)

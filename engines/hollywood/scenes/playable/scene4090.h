@@ -34,15 +34,13 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+	void drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	void runCustomEntrySequence() override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
+	void advanceFullscreenAnimation(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
@@ -68,7 +66,6 @@ private:
 	void runCoffinSwapSequence();
 	bool runCoffinInsertSequence();
 	bool playCoffinDeltaClip(uint chunkIndex);
-	bool waitCoffinDeltaFrame(uint32 millis);
 	bool advanceCoffinPaletteCycle(uint32 delta);
 	void rotateCoffinPaletteCycle();
 	bool runCurtainReveal(const Graphics::ManagedSurface &source,
@@ -78,7 +75,6 @@ private:
 		byte bandWidth);
 	void runFinalCutscene();
 
-	ResourceSpriteLayer _scriptLayer;
 	uint _randomAmbientTrack;
 	TimedAnimationChannel _organBodyChannel;
 	Common::Array<byte> _originalColorToItemMap;

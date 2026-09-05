@@ -19,10 +19,9 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene6060.h"
-
-#include "hollywood/gameplay/game_state.h"
 #include "hollywood/hollywood.h"
+#include "hollywood/gameplay/game_state.h"
+#include "hollywood/scenes/playable/scene6060.h"
 
 namespace Hollywood {
 
@@ -39,7 +38,7 @@ const uint kScene6060ActorPaletteTableEntry = 0x00cc;
 const uint kScene6060Resource003RowsOffsetIndex = 0x0000;
 const uint32 kScene6060SpeechCueDescriptorTableOffset = 0x1135;
 
-static PlayableSceneConfig scene6060Config() {
+PlayableSceneConfig scene6060Config() {
 	PlayableSceneConfig config(6060,
 		SceneResourceLayout(5, 5, 4),
 		SceneViewport(kScene6060EntryFromLobbyViewportX, kScene6060ViewportMinX, kScene6060ViewportMaxX),
@@ -149,12 +148,10 @@ bool Scene6060::shouldUseActorDepthTest(int actorWorldX, int actorWorldY) const 
 	return actorWorldX <= 0x1a2 || actorWorldX >= 0x283;
 }
 
-bool Scene6060::shouldRunExitSideEffectsAfterLoop() const {
-	const uint16 stateId = _vm->gameState().mainFlowStateId;
-	return !Engine::shouldQuit() && stateId != 0xff && !isMainFlowStateInScene(stateId);
-}
-
 void Scene6060::runExitSideEffectsAfterLoop() {
+	if (!didLeaveSceneAfterLoop())
+		return;
+
 	fadePaletteToBlack();
 }
 

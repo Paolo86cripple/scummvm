@@ -19,10 +19,9 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene4100.h"
-
-#include "hollywood/gameplay/game_state.h"
 #include "hollywood/hollywood.h"
+#include "hollywood/gameplay/game_state.h"
+#include "hollywood/scenes/playable/scene4100.h"
 
 namespace Hollywood {
 
@@ -55,11 +54,7 @@ const int kScene4100MaximumWalkY = 0x01bc;
 const uint kScene4100SpecialStepDeltaSourceOffset = 0x3c;
 const uint kScene4100SpecialStepDeltaCount = 0x0c;
 
-const byte kScene4100DoorFrameMap[] = {
-	0, 0, 1, 2
-};
-
-static PlayableSceneConfig scene4100Config() {
+PlayableSceneConfig scene4100Config() {
 	PlayableSceneConfig config(4100,
 		SceneResourceLayout(5, 5, 7),
 		SceneViewport(kScene4100ViewportXOffset, kScene4100ViewportMinXOffset, kScene4100ViewportMaxXOffset),
@@ -69,6 +64,7 @@ static PlayableSceneConfig scene4100Config() {
 	config.setActorPathStepDeltas(kActorPathStepDeltaTableSet5A);
 	config.walkablePaletteMaxRegion = 20;
 	config.useActorDepthTest = true;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
@@ -118,10 +114,6 @@ void Scene4100::initializeCustomPreviewState() {
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 }
 
-bool Scene4100::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
-}
-
 void Scene4100::runCustomEntrySequence() {
 	applyD10PaletteDimming();
 	resetPaletteCycle();
@@ -160,12 +152,10 @@ void Scene4100::runCustomEntrySequence() {
 	}
 }
 
-bool Scene4100::shouldRunExitSideEffectsAfterLoop() const {
-	const uint16 stateId = _vm->gameState().mainFlowStateId;
-	return !Engine::shouldQuit() && stateId != 0xff && !isMainFlowStateInScene(stateId);
-}
-
 void Scene4100::runExitSideEffectsAfterLoop() {
+	if (!didLeaveSceneAfterLoop())
+		return;
+
 	fadePaletteToBlack();
 	stopAmbientSoundCues();
 }
@@ -388,9 +378,7 @@ void Scene4100::copySpecialStepDeltas(uint destinationOffset) {
 }
 
 void Scene4100::runDoorTransition(uint chunkIndex, uint descriptorCount, uint16 targetState) {
-	runActorReplacement(ActionOverlaySpec(chunkIndex, descriptorCount,
-		kScene4100DoorFrameMap, ARRAYSIZE(kScene4100DoorFrameMap), kScene4100FrameMillis)
-		.frameRange(1, ARRAYSIZE(kScene4100DoorFrameMap)));
+	runActorReplacement(ActionOverlaySpec(chunkIndex, descriptorCount, kScene4100FrameMillis));
 	_soundBank0.playSample(3, 100);
 	_vm->gameState().mainFlowStateId = targetState;
 }

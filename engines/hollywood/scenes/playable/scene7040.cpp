@@ -19,13 +19,12 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene7040.h"
-
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene7040.h"
 
 namespace Hollywood {
 
@@ -86,8 +85,6 @@ const byte kScene7040ActionSpeechGroupB = 4;
 const byte kScene7040FrankieSpeechGroupA = 5;
 const byte kScene7040FrankieSpeechGroupB = 6;
 const byte kScene7040PrimarySpeechFrameCount = 5;
-const byte kScene7040Chunk14ActionHook = 1;
-const byte kScene7040Chunk14AltHook = 2;
 const uint kScene7040Chunk17Layer = 0;
 const uint kScene7040Chunk16Layer = 1;
 const uint kScene7040Chunk12Layer = 2;
@@ -108,20 +105,20 @@ const byte kScene7040Chunk11FrameMap[] = {
 	27, 1, 0, 0, 0, 0, 0, 0
 };
 const byte kScene7040Chunk14ActionFrameMap[] = {
-	49, 49, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
-	14, 15, 16, 17, 14, 18, 19, 20, 21, 25, 26, 27, 28, 29, 30, 31,
-	32, 33, 34, 35, 36, 34, 33, 36, 35, 34, 35, 36, 34, 33, 36, 35,
-	33, 36, 35, 33, 34, 35, 36, 34, 33, 34, 35, 36, 34, 33, 36, 35,
-	34, 33, 34, 35, 36, 34, 33, 36, 35, 34, 35, 36, 34, 33, 36, 35,
-	33, 36, 35, 33, 34, 35, 36, 34, 33, 34, 35, 36, 34, 33, 36, 35,
-	34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 21, 22, 23, 24, 21, 37,
-	38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 0, 0, 0, 0
+	0, 49, 49, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+	13, 14, 15, 16, 17, 14, 18, 19, 20, 21, 25, 26, 27, 28, 29, 30,
+	31, 32, 33, 34, 35, 36, 34, 33, 36, 35, 34, 35, 36, 34, 33, 36,
+	35, 33, 36, 35, 33, 34, 35, 36, 34, 33, 34, 35, 36, 34, 33, 36,
+	35, 34, 33, 34, 35, 36, 34, 33, 36, 35, 34, 35, 36, 34, 33, 36,
+	35, 33, 36, 35, 33, 34, 35, 36, 34, 33, 34, 35, 36, 34, 33, 36,
+	35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 21, 22, 23, 24, 21,
+	37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 0, 0, 0
 };
 const byte kScene7040Chunk14AltFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-	16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-	27, 26, 25, 24, 19, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42,
-	43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 55, 55, 0
+	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+	15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+	31, 27, 26, 25, 24, 19, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
+	42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 55, 55
 };
 const byte kScene7040Chunk16PostItemFrameMap[] = {
 	0, 0, 1, 2, 3, 4, 5, 6, 5, 4, 5, 6, 5, 4, 5, 6,
@@ -134,10 +131,6 @@ const byte kScene7040MajorHotspotFrameMap[] = {
 	9, 10, 11, 11, 11, 11, 12, 13, 14, 15, 16, 17, 18, 18,
 	18, 18, 18, 18, 18, 18, 18, 19, 20, 21, 22, 23, 24, 25,
 	26, 27
-};
-const byte kScene7040Chunk10ExitFrameMap[] = { 0, 0, 1, 2, 3, 4 };
-const byte kScene7040Chunk18PickupItem0FFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 };
 const SceneLayerSpec kScene7040AnimationLayerSpecs[] = {
 	{ kSceneAnimationBehindActors, 17, kScene7040Chunk17DescriptorCount, nullptr, 0, false, 0 },
@@ -154,7 +147,7 @@ const SceneLayerSpec kScene7040AnimationLayerSpecs[] = {
 		ARRAYSIZE(kScene7040Chunk14AltFrameMap), false, 0 }
 };
 
-static PlayableSceneConfig scene7040Config() {
+PlayableSceneConfig scene7040Config() {
 	PlayableSceneConfig config(7040,
 		SceneResourceLayout(20, 5, 18),
 		SceneViewport(0xc8),
@@ -181,10 +174,6 @@ bool Scene7040::isAlternatePaletteResourceActive() const {
 }
 
 bool Scene7040::shouldConvertSavedFramebufferFF() const {
-	return true;
-}
-
-bool Scene7040::shouldRunExitSideEffectsAfterLoop() const {
 	return true;
 }
 
@@ -229,7 +218,7 @@ void Scene7040::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 		if (!isAlternatePaletteResourceActive())
 			drawResourceSpriteLayer(_sceneLayers.layer(kScene7040Chunk11Layer));
 	} else {
-		drawLayerStack(_sceneLayers, kSceneAnimationBehindActors);
+		drawLayerStack(kSceneAnimationBehindActors);
 		drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
 			drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
 	}
@@ -268,34 +257,35 @@ void Scene7040::runCustomEntrySequence() {
 		kScene7040Entry7040RepeatTargetY : kScene7040Entry7040FirstTargetY;
 	runEntryPath(kScene7040Entry7040StartX, kScene7040Entry7040StartY,
 		kScene7040Entry7040Facing, targetX, targetY);
-	if (!seenJosephGuestListGreeting && !shouldStopJosephGuestListGreeting())
+	if (!seenJosephGuestListGreeting && !shouldAbortJosephGuestListGreeting()) {
+		state.seenJosephGuestListGreeting = true;
 		runJosephGuestListGreeting();
+	}
 }
 
 void Scene7040::runJosephGuestListGreeting() {
 	beginSecondarySpeechLine(kScene7040DialogueStageId, 6);
-	if (shouldStopJosephGuestListGreeting())
+	if (shouldAbortJosephGuestListGreeting())
 		return;
 	_preItemIdleAnimation.state = 2;
 	waitPreItemIdleSequence();
-	if (shouldStopJosephGuestListGreeting())
+	if (shouldAbortJosephGuestListGreeting())
 		return;
 	_preItemIdleAnimation.state = 3;
 	beginPrimarySpeechLine(kScene7040DialoguePrimaryRow, 6, kScene7040DialoguePrimaryCenterX,
 		kScene7040DialoguePrimaryTopY, kScene7040DialoguePrimaryRed, kScene7040DialoguePrimaryGreen,
 		kScene7040DialoguePrimaryBlue);
-	if (shouldStopJosephGuestListGreeting())
+	if (shouldAbortJosephGuestListGreeting())
 		return;
 	beginSecondarySpeechLine(kScene7040DialogueStageId, 7);
-	if (shouldStopJosephGuestListGreeting())
+	if (shouldAbortJosephGuestListGreeting())
 		return;
 	beginPrimarySpeechLine(kScene7040DialoguePrimaryRow, 7, kScene7040DialoguePrimaryCenterX,
 		kScene7040DialoguePrimaryTopY, kScene7040DialoguePrimaryRed, kScene7040DialoguePrimaryGreen,
 		kScene7040DialoguePrimaryBlue);
-	if (shouldStopJosephGuestListGreeting())
+	if (shouldAbortJosephGuestListGreeting())
 		return;
 	_preItemIdleAnimation.reset();
-	_vm->gameState().seenJosephGuestListGreeting = true;
 }
 
 void Scene7040::waitPreItemIdleSequence() {
@@ -305,12 +295,17 @@ void Scene7040::waitPreItemIdleSequence() {
 	}
 }
 
-bool Scene7040::shouldStopJosephGuestListGreeting() {
-	if (!_skipRequested && !Engine::shouldQuit() && !_vm->isSceneRestartRequested())
-		return false;
+bool Scene7040::shouldAbortJosephGuestListGreeting() {
+	if (Engine::shouldQuit() || _vm->isSceneRestartRequested()) {
+		_preItemIdleAnimation.reset();
+		return true;
+	}
 
-	_preItemIdleAnimation.reset();
-	return true;
+	if (_skipRequested) {
+		consumeStepAdvanceRequest();
+		_skipRequested = false;
+	}
+	return false;
 }
 
 void Scene7040::prepareCustomGameplayLoop() {
@@ -481,13 +476,6 @@ void Scene7040::primarySpeechAnimationRestored(byte animationGroup, byte baseFra
 	presentFrame();
 }
 
-void Scene7040::handleAnimationFrameHook(byte hookId, uint frame) {
-	if (hookId == kScene7040Chunk14ActionHook)
-		applyChunk14ActionSideEffects((byte)(frame - 1));
-	else if (hookId == kScene7040Chunk14AltHook)
-		applyChunk14AltSideEffects((byte)(frame - 1));
-}
-
 void Scene7040::advanceChunk11PreItemIdleAnimation(uint32 delta) {
 	_preItemIdleAnimation.advance(_random, delta);
 }
@@ -613,20 +601,17 @@ void Scene7040::handleActionSlot02MajorHotspotAction() {
 	if (state.officeStatueActionProgress == 2) {
 		runActorReplacement(ActionOverlaySpec(13, kScene7040Chunk13DescriptorCount,
 			kScene7040MajorHotspotFrameMap, ARRAYSIZE(kScene7040MajorHotspotFrameMap), kScene7040Chunk14FrameMillis)
-			.noRedrawAtEnd()
 			.endAt(0x2d));
 		_soundBank0.playSample(0x15, 100);
 		runMajorHotspotFrankensteinBranch();
 		setChunk12OverlayVisible(true);
 		runActorReplacement(ActionOverlaySpec(13, kScene7040Chunk13DescriptorCount,
 			kScene7040MajorHotspotFrameMap, ARRAYSIZE(kScene7040MajorHotspotFrameMap), kScene7040Chunk14FrameMillis)
-			.noRedrawAtEnd()
 			.frameRange(0x35, ARRAYSIZE(kScene7040MajorHotspotFrameMap)));
 	} else {
 		runActorReplacement(ActionOverlaySpec(13, kScene7040Chunk13DescriptorCount,
 			kScene7040MajorHotspotFrameMap, ARRAYSIZE(kScene7040MajorHotspotFrameMap), kScene7040Chunk14FrameMillis)
-			.soundAt(0x2c, 0x15)
-			.noRedrawAtEnd());
+			.soundAt(0x2c, 0x15));
 	}
 	setChunk12OverlayVisible(false);
 
@@ -660,11 +645,13 @@ void Scene7040::handleActionSlot05ExitProgressSpeech() {
 }
 
 void Scene7040::handleActionSlot06TransitionToG05() {
-	runActorReplacement(10, kScene7040Chunk10DescriptorCount, kScene7040Chunk10ExitFrameMap,
-		ARRAYSIZE(kScene7040Chunk10ExitFrameMap), kScene7040Chunk14FrameMillis);
-	_vm->gameState().openedOfficeClosetDoor = true;
-	_soundBank0.playSample(3, 100);
-	_vm->gameState().mainFlowStateId = kScene7040ExitState7050;
+	GameplayState &state = _vm->gameState();
+	BlockingSequence(*this)
+		.actorReplacement(ActionOverlaySpec(10, kScene7040Chunk10DescriptorCount,
+			kScene7040Chunk14FrameMillis).holdFirstFrame())
+		.commit(state.openedOfficeClosetDoor, true)
+		.sound(3)
+		.commit(state.mainFlowStateId, kScene7040ExitState7050);
 }
 
 void Scene7040::handleActionSlot09PickupItem0FThenExit() {
@@ -678,14 +665,15 @@ void Scene7040::handleActionSlot09PickupItem0FThenExit() {
 		return;
 	}
 
-	beginSecondarySpeechLine(8, 1);
-	runActorReplacement(18, kScene7040Chunk18DescriptorCount, kScene7040Chunk18PickupItem0FFrameMap,
-		ARRAYSIZE(kScene7040Chunk18PickupItem0FFrameMap), kScene7040Chunk14FrameMillis);
+	BlockingSequence sequence(*this);
+	sequence.secondarySpeech(8, 1)
+		.actorReplacement(ActionOverlaySpec(18, kScene7040Chunk18DescriptorCount,
+			kScene7040Chunk14FrameMillis));
 	addInventoryItem(0x0f);
-	_soundBank0.playSample(1, 100);
-	state.officeNotePickupState = 2;
-	beginSecondarySpeechLine(8, 2);
-	walkActiveActorTo(600, 0x132, kScene7040InvalidFacing, 0);
+	sequence.sound(1)
+		.commit(state.officeNotePickupState, (byte)2)
+		.secondarySpeech(8, 2)
+		.actorPath(SceneActorPose(600, 0x132, kScene7040InvalidFacing));
 	handleActionSlot06TransitionToG05();
 }
 
@@ -795,32 +783,27 @@ void Scene7040::initializeDialogueRecords(Common::Array<DialogueChoiceRecord> &r
 	records[0].playerTextRowId = 1;
 	records[0].responseFrameIndex = 1;
 	records[0].disableAfterUse = 1;
-	records[0].reserved = 0xff;
 
 	records[1].transitionMode = 3;
 	records[1].playerTextRowId = 2;
 	records[1].responseFrameIndex = 2;
 	records[1].disableAfterUse = 1;
-	records[1].reserved = 0xff;
 
 	records[2].enabled = 1;
 	records[2].transitionMode = 3;
 	records[2].playerTextRowId = 3;
 	records[2].responseFrameIndex = 3;
 	records[2].disableAfterUse = 1;
-	records[2].reserved = 0xff;
 
 	records[3].transitionMode = 3;
 	records[3].playerTextRowId = 4;
 	records[3].responseFrameIndex = 4;
 	records[3].disableAfterUse = 1;
-	records[3].reserved = 0xff;
 
 	records[4].enabled = 1;
 	records[4].transitionMode = 0;
 	records[4].playerTextRowId = 5;
 	records[4].responseFrameIndex = 5;
-	records[4].reserved = 0xff;
 
 	const GameplayState &state = _vm->gameState();
 	if (state.officeStatueActionProgress != 0)
@@ -913,84 +896,43 @@ void Scene7040::runChunk11Range(byte firstFrame, byte endFrame) {
 
 void Scene7040::runChunk14ActionRange(byte firstFrame, byte endFrame) {
 	setChunk14ActionVisible(true);
-	playAnimationFrames(_sceneLayers, kScene7040Chunk14ActionLayer,
+	playAnimationFrames(kScene7040Chunk14ActionLayer,
 		AnimationFrameRange(firstFrame + 1, endFrame, kScene7040Chunk14FrameMillis)
-			.hookEveryFrame(kScene7040Chunk14ActionHook));
+			.soundAt(1, 3)
+			.layerVisibleAt(1, kScene7040Chunk12Layer, true)
+			.layerFrameAt(1, kScene7040Chunk12Layer, 1)
+			.layerVisibleAt(2, kScene7040Chunk12Layer, true)
+			.layerFrameAt(2, kScene7040Chunk12Layer, 2)
+			.layerVisibleAt(9, kScene7040Chunk12Layer, true)
+			.layerFrameAt(9, kScene7040Chunk12Layer, 1)
+			.soundAt(0x0a, 4)
+			.layerVisibleAt(0x0a, kScene7040Chunk12Layer, true)
+			.layerFrameAt(0x0a, kScene7040Chunk12Layer, 0)
+			.layerVisibleAt(0x0b, kScene7040Chunk12Layer, false)
+			.soundAt(0x23, 0x16, 50)
+			.stopSoundAt(0x6b));
 }
 
 void Scene7040::runChunk14AltRange(uint chunkIndex, byte firstFrame, byte endFrame) {
 	configureChunk14AltLayer(chunkIndex, true);
-	playAnimationFrames(_sceneLayers, kScene7040Chunk14AltLayer,
+	GameplayState &state = _vm->gameState();
+	playAnimationFrames(kScene7040Chunk14AltLayer,
 		AnimationFrameRange(firstFrame + 1, endFrame, kScene7040Chunk14FrameMillis)
-			.hookEveryFrame(kScene7040Chunk14AltHook));
-}
-
-void Scene7040::applyChunk14ActionSideEffects(byte frameIndex) {
-	switch (frameIndex) {
-	case 0:
-		_soundBank0.playSample(3, 100);
-		setChunk12OverlayVisible(true);
-		setChunk12OverlayFrame(1);
-		break;
-	case 1:
-		setChunk12OverlayVisible(true);
-		setChunk12OverlayFrame(2);
-		break;
-	case 8:
-		setChunk12OverlayVisible(true);
-		setChunk12OverlayFrame(1);
-		break;
-	case 9:
-		_soundBank0.playSample(4, 100);
-		setChunk12OverlayVisible(true);
-		setChunk12OverlayFrame(0);
-		break;
-	case 0x0a:
-		setChunk12OverlayVisible(false);
-		break;
-	case 0x22:
-		_soundBank0.playSample(0x16, 50);
-		break;
-	case 0x6a:
-		_soundBank0.stop();
-		break;
-	default:
-		break;
-	}
-}
-
-void Scene7040::applyChunk14AltSideEffects(byte frameIndex) {
-	switch (frameIndex) {
-	case 0x2b:
-		_soundBank0.playSample(0x17, 50);
-		_vm->gameState().officeNotePickupState = 0;
-		applySceneStateToHotspotsAndPatches(3);
-		break;
-	case 0x37:
-		_soundBank0.playSample(3, 100);
-		setChunk12OverlayVisible(true);
-		setChunk12OverlayFrame(1);
-		break;
-	case 0x38:
-		setChunk12OverlayVisible(true);
-		setChunk12OverlayFrame(2);
-		break;
-	case 0x3d:
-		_soundBank0.playSample(3, 100);
-		setChunk12OverlayVisible(true);
-		setChunk12OverlayFrame(1);
-		break;
-	case 0x3e:
-		_soundBank0.playSample(4, 100);
-		setChunk12OverlayVisible(true);
-		setChunk12OverlayFrame(0);
-		break;
-	case 0x3f:
-		setChunk12OverlayVisible(false);
-		break;
-	default:
-		break;
-	}
+			.soundAt(0x2c, 0x17, 50)
+			.commitAt(0x2c, state.officeNotePickupState, (byte)0)
+			.patchAt(0x2c, 3)
+			.soundAt(0x38, 3)
+			.layerVisibleAt(0x38, kScene7040Chunk12Layer, true)
+			.layerFrameAt(0x38, kScene7040Chunk12Layer, 1)
+			.layerVisibleAt(0x39, kScene7040Chunk12Layer, true)
+			.layerFrameAt(0x39, kScene7040Chunk12Layer, 2)
+			.soundAt(0x3e, 3)
+			.layerVisibleAt(0x3e, kScene7040Chunk12Layer, true)
+			.layerFrameAt(0x3e, kScene7040Chunk12Layer, 1)
+			.soundAt(0x3f, 4)
+			.layerVisibleAt(0x3f, kScene7040Chunk12Layer, true)
+			.layerFrameAt(0x3f, kScene7040Chunk12Layer, 0)
+			.layerVisibleAt(0x40, kScene7040Chunk12Layer, false));
 }
 
 void Scene7040::configureAnimationLayers() {
@@ -1032,9 +974,10 @@ void Scene7040::setChunk14ActionFrame(byte frameIndex) {
 }
 
 void Scene7040::configureChunk14AltLayer(uint chunkIndex, bool visible) {
-	_sceneLayers.configureLayerResource(kScene7040Chunk14AltLayer, chunkIndex,
+	_sceneLayers.setLayerResource(kScene7040Chunk14AltLayer, chunkIndex,
 		kScene7040Chunk14AltDescriptorCount, kScene7040Chunk14AltFrameMap,
-		ARRAYSIZE(kScene7040Chunk14AltFrameMap), visible);
+		ARRAYSIZE(kScene7040Chunk14AltFrameMap));
+	_sceneLayers.setLayerVisible(kScene7040Chunk14AltLayer, visible);
 }
 
 void Scene7040::setChunk14AltVisible(bool visible) {

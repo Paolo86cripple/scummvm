@@ -26,15 +26,16 @@
 #include "common/file.h"
 #include "common/str.h"
 
-#include "hollywood/graphics.h"
 #include "hollywood/music.h"
 #include "hollywood/resource.h"
+#include "hollywood/scenes/presentation_scene.h"
+#include "hollywood/scenes/scene_text_store.h"
 
 namespace Hollywood {
 
 class HollywoodEngine;
 
-class Scene9010 {
+class Scene9010 : public PresentationScene {
 public:
 	Scene9010(HollywoodEngine *vm);
 
@@ -44,12 +45,6 @@ public:
 	const Common::Array<byte> &transitionPalette() const { return _paletteCurrent; }
 
 private:
-	struct PopupDescriptor {
-		uint16 textRecordId;
-		byte continuationCount;
-		uint16 voiceSampleId;
-	};
-
 	struct SpeechTextStyle {
 		uint16 centerX;
 		uint16 topY;
@@ -57,14 +52,6 @@ private:
 		byte red;
 		byte green;
 		byte blue;
-	};
-
-	struct SubtitleOverlay {
-		bool visible;
-		byte colorIndex;
-		uint16 centerX;
-		uint16 topY;
-		Common::Array<Common::String> lines;
 	};
 
 	enum I02FramePayloadFormat {
@@ -77,10 +64,7 @@ private:
 	bool playScene9010();
 
 	bool loadScene9010Resources();
-	bool loadI01Chunk(uint index, Common::Array<byte> &destination, uint fixedSize);
-	bool loadI01Chunk(uint index, IndexedSurfaceBuffer &destination, uint fixedSize);
 	bool loadI02StillFrameResource();
-	bool loadStage003Descriptors();
 	bool validateI02AnimationResources();
 
 	bool runPoseTransition(bool targetAlternatePose);
@@ -95,71 +79,37 @@ private:
 	void drawI02FramePayload(const Common::Array<byte> &payload);
 	void drawRawI02ScreenRows(const Common::Array<byte> &payload);
 	void drawRawI02SceneRows(const Common::Array<byte> &payload);
-	void drawResourceBlockList(const Common::Array<byte> &blockList);
 	byte nextTalkingFrameVariant();
 
 	void drawCharacterFrame(byte frameIndex);
-	void restoreSpriteBackground(uint16 descriptorIndex);
-	void drawStripSpriteFrame(uint16 descriptorIndex);
 
 	void updateScene9010PaletteFade();
-	bool fadeInPalette(uint32 stepMillis);
-	bool fadeOutPalette(uint32 stepMillis);
-	void presentFrame(uint rowOffset = 0, uint xOffset = 0);
-	void beginSubtitle(const PopupDescriptor &popup, uint segmentIndex);
-	void clearSubtitle();
-	void drawSubtitleOverlay();
-	void wrapActorSpeechText(const Common::String &text, uint16 anchorSceneX, Common::Array<Common::String> &lines) const;
-	Common::String getStage003LargeTextRecord(uint16 recordId) const;
-	uint actorSpeechTextWidth(const Common::String &text) const;
-	void calculatePrimarySubtitleBounds(const Common::Array<Common::String> &lines,
-		const SpeechTextStyle &speechTextStyle, uint16 &centerX, uint16 &topY) const;
-	PopupDescriptor getStage003PopupDescriptor(byte descriptorIndex) const;
+	void beginSubtitle(const SceneSpeechCue &popup, uint segmentIndex);
 	SpeechTextStyle getCurrentSpeechTextStyle() const;
 
-	bool pollEvents();
-	bool delay(uint32 millis);
 	bool delayScene9010(uint32 millis);
-	void stopAudio();
+	void stopAudio() override;
 
 	uint16 readUint16(const Common::Array<byte> &source, uint offset) const;
 	uint32 readUint32(const Common::Array<byte> &source, uint offset) const;
 
 	enum {
-		kFrameDecodeBufferSize = 0x78000,
 		kSceneFramebufferSize = 0x100000,
-		kPaletteSize = 0x300,
-		kRawScreenFrameSize = HollywoodEngine::kScreenWidth * HollywoodEngine::kScreenHeight,
-		kRawSceneFrameSize = HollywoodEngine::kSceneBufferWidth * HollywoodEngine::kSceneBufferHeight,
-		kStage003DescriptorTableSize = 0x186a0,
-		kStage003SmallRowSize = 0x29,
-		kStage003LargeRowSize = 0x141,
-		kStage003LargeRowBaseIndex = 500,
-		kCharacterFrameDescriptorCount = 17,
-		kFrameDescriptorSize = 14,
-		kOriginalSpeechLineHeight = 20
+		kRawScreenFrameSize = 0x4b000,
+		kRawSceneFrameSize = kSceneBufferByteCount,
+		kCharacterFrameDescriptorCount = 17
 	};
 
-	HollywoodEngine *_vm;
 	MusicPlayer _music;
 	SpeechPlayer _speech;
-	ResourceChunkTable _i01ChunkTable;
+	SceneTextStore _text;
 	Common::Array<byte> _paletteSource;
-	Common::Array<byte> _paletteCurrent;
-	Common::Array<byte> _resourceArena;
+	Common::Array<byte> _characterSpriteResource;
 	Common::Array<byte> _i02PaletteTable;
 	Common::Array<byte> _i02FramePayload;
 	I02FramePayloadFormat _i02FramePayloadFormat;
 	bool _i02SingleFrameOnly;
 	IndexedSurfaceBuffer _frameDecodeBuffer;
-	IndexedSurfaceBuffer _sceneFramebuffer;
-	Graphics::ManagedSurface _screen;
-	Palette6Bit _displayPalette;
-	Common::Array<byte> _stage003DecodeKey;
-	Common::Array<byte> _stage003Descriptors;
-	Common::Array<byte> _stage003LargeRows;
-	SubtitleOverlay _subtitle;
-	bool _skipRequested;
 	bool _alternatePoseActive;
 	byte _characterFrameIndex;
 	byte _lastTalkingFrameVariant;

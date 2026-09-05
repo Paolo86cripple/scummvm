@@ -43,8 +43,7 @@ public:
 private:
 	uint framebufferResourceChunkIndex() const override;
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+	void drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
@@ -58,7 +57,6 @@ private:
 	byte primarySpeechAnimationFrameCount(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
 	void primarySpeechAnimationRestored(byte animationGroup, byte baseFrame) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 
 	bool alternateBackgroundActive() const;
 	void initializeRoomIdleLayer();
@@ -108,7 +106,6 @@ private:
 	TimedAnimationChannel _roomIdleChannel;
 	TimedAnimationChannel _paletteCycleChannel;
 	TimedAnimationChannel _secondaryAmbientChannel;
-	ResourceSpriteLayer _roomIdleLayer;
 	Graphics::ManagedSurface _normalBaseFramebuffer;
 	bool _normalBaseFramebufferInitialized;
 	byte _heckerAnimationState;
@@ -118,8 +115,6 @@ private:
 	bool _heckerManualSequenceActive;
 	bool _heckerPoseTransitionPending;
 	bool _roomAnimationPaused;
-	uint _destinationSoundStartFrame;
-	uint _destinationSoundStopFrame;
 };
 
 } // End of namespace Hollywood

@@ -19,14 +19,13 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene5100.h"
-
 #include "engines/engine.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
 #include "hollywood/resource.h"
+#include "hollywood/scenes/playable/scene5100.h"
 
 namespace Hollywood {
 
@@ -59,11 +58,22 @@ const byte kScene5100CartSpeedBuckets[] = {
 	9, 9, 9, 9, 9, 9
 };
 
-const byte kScene5100AmbientSoundVolumes[] = {
-	10, 10, 10, 2, 10, 10, 10, 100
+enum Scene5100LayerId {
+	kScene5100MineCartLayer,
+	kScene5100ElevatorTravelLayer,
+	kScene5100ElevatorDoorLayer
 };
 
-static PlayableSceneConfig scene5100Config() {
+const SceneLayerSpec kScene5100LayerSpecs[] = {
+	{kSceneAnimationInFrontOfActors, 8, kScene5100FirstEntryDescriptorCount,
+		nullptr, 0, false, 0},
+	{kSceneAnimationInFrontOfActors, 9, kScene5100ReturnEntryDescriptorCount,
+		nullptr, 0, false, 0},
+	{kSceneAnimationInFrontOfActors, 7, kScene5100ElevatorDoorDescriptorCount,
+		nullptr, 0, false, 0}
+};
+
+PlayableSceneConfig scene5100Config() {
 	PlayableSceneConfig config(5100,
 		SceneResourceLayout(5, 5, 9),
 		SceneViewport(kScene5100ViewportXOffset, kScene5100ViewportXOffset, kScene5100ViewportXOffset),
@@ -71,31 +81,21 @@ static PlayableSceneConfig scene5100Config() {
 	config.setActorResources(kScene5100ActorBankTableEntry, kScene5100ActorPaletteTableEntry);
 	config.setTextResources(0, kScene5100SpeechCueDescriptorTableOffset);
 	config.walkablePaletteMaxRegion = 1;
-	config.useActorDepthTest = false;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
 Scene5100::Scene5100(HollywoodEngine *vm) :
 		PlayableScene(vm, scene5100Config()),
-		_mineCartLayer(),
-		_elevatorDoorLayer(),
-		_elevatorTravelLayer(),
 		_elevatorDoorChannel(),
 		_mineCartRumbleActive(false),
 		_elevatorDoorClosing(false) {
-	_mineCartLayer.configure(8, kScene5100FirstEntryDescriptorCount, nullptr, 0);
-	_elevatorDoorLayer.configure(7, kScene5100ElevatorDoorDescriptorCount, nullptr, 0);
-	_elevatorTravelLayer.configure(9, kScene5100ReturnEntryDescriptorCount, nullptr, 0);
+	_sceneLayers.configure(kScene5100LayerSpecs);
 }
 
 void Scene5100::initializeCustomPreviewState() {
 	initializeDefaultPreviewState();
-	_mineCartLayer.visible = false;
-	_mineCartLayer.reset(0);
-	_elevatorDoorLayer.visible = false;
-	_elevatorDoorLayer.reset(0);
-	_elevatorTravelLayer.visible = false;
-	_elevatorTravelLayer.reset(0);
+	_sceneLayers.reset();
 	_elevatorDoorChannel.reset(0, kScene5100ElevatorFrameMillis);
 	_mineCartRumbleActive = false;
 	_elevatorDoorClosing = false;
@@ -114,26 +114,13 @@ void Scene5100::initializeCustomPreviewState() {
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 }
 
-void Scene5100::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	drawActionOverlayLayer();
-	drawResourceSpriteLayer(_mineCartLayer);
-	drawResourceSpriteLayer(_elevatorTravelLayer);
-	drawResourceSpriteLayer(_elevatorDoorLayer);
+void Scene5100::drawCustomForegroundComposite(int activeWorldX, int activeWorldY) {
+	(void)activeWorldX;
+	(void)activeWorldY;
 	if (_sceneChunkTable.isValidChunk(5))
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[5], _sceneFramebuffer);
 	if (_sceneChunkTable.isValidChunk(6))
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[6], _sceneFramebuffer);
-}
-
-bool Scene5100::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
 }
 
 void Scene5100::runCustomEntrySequence() {
@@ -225,22 +212,12 @@ bool Scene5100::applyCustomSceneStateToHotspotsAndPatches(byte selector) {
 	return true;
 }
 
-bool Scene5100::shouldRunExitSideEffectsAfterLoop() const {
-	return true;
-}
-
 void Scene5100::runExitSideEffectsAfterLoop() {
 	fadePaletteToBlack();
 }
 
 AmbientAudioProfile Scene5100::ambientAudioProfile() const {
-	return createRandomAmbientAudioProfile(0x0d, 8, 10, 25, 0x0b, 5, 100, 50);
-}
-
-byte Scene5100::ambientSoundCueVolume(byte cueId, byte defaultVolumePercent) const {
-	if (cueId >= 0x0d && cueId <= 0x14)
-		return kScene5100AmbientSoundVolumes[cueId - 0x0d];
-	return defaultVolumePercent;
+	return createMineAmbientAudioProfile();
 }
 
 void Scene5100::handleLeftClick(const GameplayLoopCursorState &state) {
@@ -256,15 +233,14 @@ bool Scene5100::runFirstEntryClip() {
 
 	const bool previousHideActiveActor = _hideActiveActor;
 	_hideActiveActor = true;
-	_mineCartLayer.visible = true;
-	_mineCartLayer.reset(0);
+	_sceneLayers.showLayerAtFrame(kScene5100MineCartLayer, 0);
 	ensureAmbientSoundCuePlaying(1, 0x0c, 10);
 	_mineCartRumbleActive = true;
 	_soundBank0.playSample(0x18, 100);
 	drawPlayableComposite();
 	if (fadePaletteFromBlack()) {
 		_mineCartRumbleActive = false;
-		_mineCartLayer.visible = false;
+		_sceneLayers.setLayerVisible(kScene5100MineCartLayer, false);
 		_hideActiveActor = previousHideActiveActor;
 		return false;
 	}
@@ -274,12 +250,12 @@ bool Scene5100::runFirstEntryClip() {
 			(13 - kScene5100CartSpeedBuckets[frame - 1]);
 		if (waitSceneMillis(frameMillis, false)) {
 			_mineCartRumbleActive = false;
-			_mineCartLayer.visible = false;
+			_sceneLayers.setLayerVisible(kScene5100MineCartLayer, false);
 			_hideActiveActor = previousHideActiveActor;
 			return false;
 		}
 
-		_mineCartLayer.setFrame((byte)frame);
+		_sceneLayers.setLayerFrame(kScene5100MineCartLayer, (byte)frame);
 		if (frame == 0x1a) {
 			_mineCartRumbleActive = false;
 			_soundBank0.playSample(0x16, 100);
@@ -289,7 +265,7 @@ bool Scene5100::runFirstEntryClip() {
 	}
 
 	_mineCartRumbleActive = false;
-	_mineCartLayer.visible = false;
+	_sceneLayers.setLayerVisible(kScene5100MineCartLayer, false);
 	_hideActiveActor = previousHideActiveActor;
 	return true;
 }
@@ -302,28 +278,28 @@ bool Scene5100::runReturnEntryClip() {
 
 	const bool previousHideActiveActor = _hideActiveActor;
 	_hideActiveActor = true;
-	_elevatorDoorLayer.visible = false;
-	_elevatorTravelLayer.visible = true;
-	_elevatorTravelLayer.reset(kScene5100ReturnEntryDescriptorCount - 1);
+	_sceneLayers.setLayerVisible(kScene5100ElevatorDoorLayer, false);
+	_sceneLayers.showLayerAtFrame(kScene5100ElevatorTravelLayer,
+		kScene5100ReturnEntryDescriptorCount - 1);
 	drawPlayableComposite();
 	if (fadePaletteFromBlack()) {
-		_elevatorTravelLayer.visible = false;
+		_sceneLayers.setLayerVisible(kScene5100ElevatorTravelLayer, false);
 		_hideActiveActor = previousHideActiveActor;
 		return false;
 	}
 
-	if (!playAndPresentAnimationFrames(_elevatorTravelLayer,
+	if (!playAndPresentAnimationFrames(kScene5100ElevatorTravelLayer,
 			AnimationFrameRange(kScene5100ReturnEntryDescriptorCount - 1, 0,
 				kScene5100ElevatorFrameMillis).unskippable())) {
-		_elevatorTravelLayer.visible = false;
+		_sceneLayers.setLayerVisible(kScene5100ElevatorTravelLayer, false);
 		_hideActiveActor = previousHideActiveActor;
 		return false;
 	}
 
-	_elevatorTravelLayer.visible = false;
+	_sceneLayers.setLayerVisible(kScene5100ElevatorTravelLayer, false);
 	_hideActiveActor = previousHideActiveActor;
-	_elevatorDoorLayer.visible = true;
-	_elevatorDoorLayer.reset(kScene5100ElevatorDoorDescriptorCount - 1);
+	_sceneLayers.showLayerAtFrame(kScene5100ElevatorDoorLayer,
+		kScene5100ElevatorDoorDescriptorCount - 1);
 	drawPlayableComposite();
 	presentFrame();
 	return true;
@@ -333,19 +309,18 @@ bool Scene5100::runElevatorDoorClose() {
 	_soundBank0.playSample(0x1d, 100, true);
 	if (!_sceneChunkTable.isValidChunk(7))
 		return true;
+	ResourceSpriteLayer &doorLayer = _sceneLayers.layer(kScene5100ElevatorDoorLayer);
 
-	if (_elevatorDoorLayer.visible && !_elevatorDoorClosing &&
-			_elevatorDoorLayer.frameIndex == kScene5100ElevatorDoorDescriptorCount - 1)
+	if (doorLayer.visible && !_elevatorDoorClosing &&
+			doorLayer.frameIndex == kScene5100ElevatorDoorDescriptorCount - 1)
 		return true;
 
 	byte firstFrame = 0;
-	if (_elevatorDoorLayer.visible)
-		firstFrame = MIN<byte>(_elevatorDoorLayer.frameIndex,
+	if (doorLayer.visible)
+		firstFrame = MIN<byte>(doorLayer.frameIndex,
 			kScene5100ElevatorDoorDescriptorCount - 1);
-	else {
-		_elevatorDoorLayer.visible = true;
-		_elevatorDoorLayer.reset(0);
-	}
+	else
+		_sceneLayers.showLayerAtFrame(kScene5100ElevatorDoorLayer, 0);
 
 	if (_elevatorDoorClosing) {
 		const uint32 elapsed = MIN<uint32>(_elevatorDoorChannel.timerAccumulator,
@@ -356,13 +331,13 @@ bool Scene5100::runElevatorDoorClose() {
 		if (firstFrame == kScene5100ElevatorDoorDescriptorCount - 1)
 			return true;
 		++firstFrame;
-		_elevatorDoorLayer.setFrame(firstFrame);
+		doorLayer.setFrame(firstFrame);
 		drawPlayableComposite();
 		presentFrame();
 	}
 
 	_elevatorDoorClosing = false;
-	const bool completed = playAndPresentAnimationFrames(_elevatorDoorLayer,
+	const bool completed = playAndPresentAnimationFrames(kScene5100ElevatorDoorLayer,
 		AnimationFrameRange(firstFrame, kScene5100ElevatorDoorDescriptorCount - 1,
 			kScene5100ElevatorFrameMillis).unskippable());
 	_elevatorDoorChannel.reset(kScene5100ElevatorDoorDescriptorCount - 1,
@@ -375,17 +350,17 @@ bool Scene5100::runElevatorDoorOpen() {
 		return true;
 
 	_elevatorDoorClosing = false;
-	_elevatorDoorLayer.visible = true;
-	_elevatorDoorLayer.reset(kScene5100ElevatorDoorDescriptorCount - 1);
+	_sceneLayers.showLayerAtFrame(kScene5100ElevatorDoorLayer,
+		kScene5100ElevatorDoorDescriptorCount - 1);
 	_soundBank0.playSample(0x1d, 100, true);
 	if (waitSceneMillis(kScene5100ElevatorOpenLeadInMillis, false))
 		return false;
 
-	const bool completed = playAndPresentAnimationFrames(_elevatorDoorLayer,
+	const bool completed = playAndPresentAnimationFrames(kScene5100ElevatorDoorLayer,
 		AnimationFrameRange(kScene5100ElevatorDoorDescriptorCount - 1, 0,
 			kScene5100ElevatorFrameMillis).unskippable());
 	_soundBank0.stop();
-	_elevatorDoorLayer.visible = false;
+	_sceneLayers.setLayerVisible(kScene5100ElevatorDoorLayer, false);
 	return completed;
 }
 
@@ -398,11 +373,10 @@ bool Scene5100::runElevatorTravel() {
 		return true;
 
 	_elevatorDoorClosing = false;
-	_elevatorDoorLayer.visible = false;
-	_elevatorTravelLayer.visible = true;
-	_elevatorTravelLayer.reset(0);
+	_sceneLayers.setLayerVisible(kScene5100ElevatorDoorLayer, false);
+	_sceneLayers.showLayerAtFrame(kScene5100ElevatorTravelLayer, 0);
 	_hideActiveActor = true;
-	return playAndPresentAnimationFrames(_elevatorTravelLayer,
+	return playAndPresentAnimationFrames(kScene5100ElevatorTravelLayer,
 		AnimationFrameRange(0, kScene5100ReturnEntryDescriptorCount - 1,
 			kScene5100ElevatorFrameMillis).unskippable().noFinalFrameDelay());
 }
@@ -435,10 +409,12 @@ void Scene5100::runReturnToMineSwitches() {
 }
 
 void Scene5100::advanceElevatorDoor(uint32 delta) {
+	ResourceSpriteLayer &doorLayer = _sceneLayers.layer(kScene5100ElevatorDoorLayer);
 	if (!_elevatorDoorClosing) {
-		if (!_elevatorDoorLayer.visible && _activeActorDrawOrderMode == 2 && _activeActorFacing == 5) {
-			_elevatorDoorLayer.visible = true;
-			_elevatorDoorLayer.reset(0);
+		// The implicit close accompanies the scripted walk out of the elevator.
+		if (!doorLayer.visible && _actorPathPlaybackActive && !_playerDirectedActorPathActive &&
+				_activeActorDrawOrderMode == 2 && _activeActorFacing == 5) {
+			_sceneLayers.showLayerAtFrame(kScene5100ElevatorDoorLayer, 0);
 			_elevatorDoorChannel.reset(0, kScene5100ElevatorFrameMillis);
 			_elevatorDoorClosing = true;
 		}
@@ -447,12 +423,12 @@ void Scene5100::advanceElevatorDoor(uint32 delta) {
 
 	const uint frameCount = _elevatorDoorChannel.consumeFrames(delta);
 	for (uint frame = 0; frame < frameCount; ++frame) {
-		if (_elevatorDoorLayer.frameIndex == kScene5100ElevatorDoorDescriptorCount - 1) {
+		if (doorLayer.frameIndex == kScene5100ElevatorDoorDescriptorCount - 1) {
 			_elevatorDoorClosing = false;
 			break;
 		}
-		_elevatorDoorLayer.setFrame(_elevatorDoorLayer.frameIndex + 1);
-		_elevatorDoorChannel.frameIndex = _elevatorDoorLayer.frameIndex;
+		doorLayer.setFrame(doorLayer.frameIndex + 1);
+		_elevatorDoorChannel.frameIndex = doorLayer.frameIndex;
 	}
 }
 

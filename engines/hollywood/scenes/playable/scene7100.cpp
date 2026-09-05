@@ -19,14 +19,13 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene7100.h"
-
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
 #include "hollywood/resource.h"
+#include "hollywood/scenes/playable/scene7100.h"
 
 namespace Hollywood {
 
@@ -69,12 +68,6 @@ const byte kScene7100PrimaryAltFrameMap[] = {
 const byte kScene7100Chunk8FrameMap[] = {
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 17, 18, 19
 };
-const byte kScene7100Chunk7FrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
-};
-const byte kScene7100PickupItem15FrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0
-};
 const byte kScene7100Handler315FrameMap[] = {
 	0, 1, 2, 3, 4, 4, 4, 4, 4
 };
@@ -110,11 +103,7 @@ const byte kScene7100TransferFrameMap[] = {
 const byte kScene7100TransferRonFrameMap[] = {
 	0, 0, 0, 0, 0, 5, 6, 7, 6, 5, 6, 5, 0
 };
-const byte kScene7100RatTrapStateHook = 1;
-const byte kScene7100RatPickupStateHook = 2;
-const byte kScene7100RatPickupEnvironmentHook = 3;
-const byte kScene7100PlateRemovalStateHook = 4;
-const byte kScene7100TransferRonFrameHook = 5;
+const byte kScene7100TransferRonFrameHook = 1;
 const byte kScene7100FirstTransferableSueItem = 0x14;
 const byte kScene7100RonInventoryOwner = 0;
 const byte kScene7100SueInventoryOwner = 1;
@@ -131,38 +120,38 @@ struct Scene7100DialogueSeedRecord {
 	byte playerTextRowId;
 	byte responseFrameIndex;
 	byte disableAfterUse;
-	byte reserved;
 };
 
 const Scene7100DialogueSeedRecord kScene7100RonDialogueSeedRecords[] = {
-	{ 0, 1, 0, 0, 4, 4, 1, 0xff },
-	{ 1, 1, 0, 3, 1, 1, 1, 0xff },
-	{ 2, 1, 0, 3, 2, 2, 1, 0xff },
-	{ 3, 1, 0, 3, 3, 3, 1, 0xff },
-	{ 4, 1, 0, 3, 5, 5, 1, 0xff },
-	{ 5, 1, 0, 0, 6, 6, 1, 0xff }
+	{ 0, 1, 0, 0, 4, 4, 1 },
+	{ 1, 1, 0, 3, 1, 1, 1 },
+	{ 2, 1, 0, 3, 2, 2, 1 },
+	{ 3, 1, 0, 3, 3, 3, 1 },
+	{ 4, 1, 0, 3, 5, 5, 1 },
+	{ 5, 1, 0, 0, 6, 6, 1 }
 };
 
 const Scene7100DialogueSeedRecord kScene7100RescueDialogueSeedRecords[] = {
-	{ 0, 1, 0, 3, 0, 1, 1, 0xff },
-	{ 1, 1, 0, 3, 1, 2, 1, 0xff },
-	{ 2, 1, 0, 3, 2, 3, 1, 0xff },
-	{ 3, 1, 0, 3, 3, 4, 1, 0xff },
-	{ 4, 1, 0, 1, 4, 5, 1, 0xff },
-	{ 5, 1, 0, 0, 5, 0xff, 1, 0xff },
-	{ 70, 1, 0, 3, 6, 7, 1, 0xff },
-	{ 71, 1, 0, 3, 8, 9, 1, 0xff },
-	{ 72, 1, 0, 3, 10, 11, 1, 0xff },
-	{ 73, 1, 0, 3, 11, 12, 1, 0xff },
-	{ 74, 0, 0, 0, 7, 8, 1, 0xff },
-	{ 75, 1, 0, 2, 9, 10, 1, 0xff }
+	{ 0, 1, 0, 3, 0, 1, 1 },
+	{ 1, 1, 0, 3, 1, 2, 1 },
+	{ 2, 1, 0, 3, 2, 3, 1 },
+	{ 3, 1, 0, 3, 3, 4, 1 },
+	{ 4, 1, 0, 1, 4, 5, 1 },
+	{ 5, 1, 0, 0, 5, 0xff, 1 },
+	{ 70, 1, 0, 3, 6, 7, 1 },
+	{ 71, 1, 0, 3, 8, 9, 1 },
+	{ 72, 1, 0, 3, 10, 11, 1 },
+	{ 73, 1, 0, 3, 11, 12, 1 },
+	{ 74, 0, 0, 0, 7, 8, 1 },
+	{ 75, 1, 0, 2, 9, 10, 1 }
 };
 
-static PlayableSceneConfig scene7100Config() {
+PlayableSceneConfig scene7100Config() {
 	PlayableSceneConfig config(7100,
 		SceneResourceLayout(21, 5, 20),
-		SceneViewport(kScene7100ViewportXOffset),
+		SceneViewport(kScene7100ViewportXOffset, 0, kScene7100ViewportXOffset),
 		SceneActorPose(kScene7100EntryX, kScene7100EntryY, kScene7100EntryFacing));
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
@@ -233,14 +222,14 @@ void Scene7100::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 	drawPrimaryNpc();
 	drawEnvironmentOverlayBeforeActor();
 	if (_actionOverlayPlayer.isVisible() &&
-			_actionOverlayPlayer.stratum == kSceneAnimationBehindActors) {
+			_actionOverlayPlayer._stratum == kSceneAnimationBehindActors) {
 		drawActionOverlayLayer();
 	}
 	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
 		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
 	if (_actionOverlayPlayer.isVisible() &&
-			(_actionOverlayPlayer.stratum == kSceneAnimationActorReplacement ||
-			 _actionOverlayPlayer.stratum == kSceneAnimationScenePlaced)) {
+			(_actionOverlayPlayer._stratum == kSceneAnimationActorReplacement ||
+			 _actionOverlayPlayer._stratum == kSceneAnimationScenePlaced)) {
 		drawActionOverlayLayer();
 	}
 
@@ -248,7 +237,7 @@ void Scene7100::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 	drawResourceBlockList(_resourceArena, _resourceChunkOffsets[foregroundChunk], _sceneFramebuffer);
 	drawEnvironmentOverlayAfterForeground();
 	if (_actionOverlayPlayer.isVisible() &&
-			_actionOverlayPlayer.stratum == kSceneAnimationInFrontOfActors) {
+			_actionOverlayPlayer._stratum == kSceneAnimationInFrontOfActors) {
 		drawActionOverlayLayer();
 	}
 }
@@ -261,10 +250,6 @@ void Scene7100::runCustomEntrySequence() {
 		drawPlayableComposite();
 		runCurtainRevealFromBlack();
 	}
-}
-
-bool Scene7100::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
 }
 
 void Scene7100::prepareCustomGameplayLoop() {
@@ -479,23 +464,7 @@ void Scene7100::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIn
 }
 
 void Scene7100::handleAnimationFrameHook(byte hookId, uint frame) {
-	GameplayState &state = _vm->gameState();
 	switch (hookId) {
-	case kScene7100RatTrapStateHook:
-		state.cellPlateRatProgress = 1;
-		applySceneStateToHotspotsAndPatches(2);
-		break;
-	case kScene7100RatPickupStateHook:
-		state.cellPlateRatProgress = 2;
-		applySceneStateToHotspotsAndPatches(2);
-		break;
-	case kScene7100RatPickupEnvironmentHook:
-		_environmentState = 5;
-		break;
-	case kScene7100PlateRemovalStateHook:
-		state.cellPlateRemoved = true;
-		applySceneStateToHotspotsAndPatches(4);
-		break;
 	case kScene7100TransferRonFrameHook:
 		_primaryMode = 0;
 		_primaryFrame = kScene7100TransferRonFrameMap[
@@ -607,8 +576,8 @@ void Scene7100::drawEnvironmentOverlayAfterForeground() {
 		drawStripSpriteFrame(_resourceArena, _resourceChunkOffsets[8], 0,
 			kScene7100Chunk8DescriptorCount, frame, _sceneFramebuffer);
 	} else if (_environmentState == 1) {
-		const byte frame = _environmentFrame < ARRAYSIZE(kScene7100Chunk7FrameMap) ?
-			kScene7100Chunk7FrameMap[_environmentFrame] : 0;
+		const byte frame = _environmentFrame < kScene7100Chunk7DescriptorCount ?
+			_environmentFrame : 0;
 		drawStripSpriteFrame(_resourceArena, _resourceChunkOffsets[7], 0,
 			kScene7100Chunk7DescriptorCount, frame, _sceneFramebuffer);
 	}
@@ -757,7 +726,6 @@ void Scene7100::initializeRonDialogueRecords(Common::Array<DialogueChoiceRecord>
 		record.playerTextRowId = seed.playerTextRowId;
 		record.responseFrameIndex = seed.responseFrameIndex;
 		record.disableAfterUse = seed.disableAfterUse;
-		record.reserved = seed.reserved;
 	}
 }
 
@@ -897,7 +865,6 @@ void Scene7100::initializeRescueDialogueRecords(
 		record.playerTextRowId = seed.playerTextRowId;
 		record.responseFrameIndex = seed.responseFrameIndex;
 		record.disableAfterUse = seed.disableAfterUse;
-		record.reserved = seed.reserved;
 	}
 }
 
@@ -983,9 +950,8 @@ void Scene7100::runCurtainClearToBlack() {
 void Scene7100::handlePickupItem15() {
 	BlockingSequence sequence(*this);
 	sequence.secondarySpeech(4, 0)
-		.actorReplacement(16, kScene7100Chunk16DescriptorCount,
-			kScene7100PickupItem15FrameMap, ARRAYSIZE(kScene7100PickupItem15FrameMap),
-			kScene7100FrameMillis);
+		.actorReplacement(ActionOverlaySpec(16, kScene7100Chunk16DescriptorCount,
+			kScene7100FrameMillis).returnToFirstFrame());
 	addInventoryItem(0x15);
 	sequence.sound(1)
 		.commit(_vm->gameState().posterOnCellWall, false)
@@ -1019,7 +985,8 @@ void Scene7100::handlePlateOnMousetrap() {
 		.actorReplacement(ActionOverlaySpec(19, kScene7100Chunk19DescriptorCount,
 			kScene7100Extended337FrameMap, ARRAYSIZE(kScene7100Extended337FrameMap),
 			kScene7100FrameMillis)
-			.hookAt(0x18, kScene7100RatTrapStateHook));
+			.commitAt(0x18, _vm->gameState().cellPlateRatProgress, (byte)1)
+			.patchAt(0x18, 2));
 	if (_vm->gameState().cellPlateRatProgress != 1) {
 		_vm->gameState().cellPlateRatProgress = 1;
 		applySceneStateToHotspotsAndPatches(2);
@@ -1035,7 +1002,8 @@ void Scene7100::handleCaptureRat() {
 		.actorReplacement(ActionOverlaySpec(19, kScene7100Chunk19DescriptorCount,
 			kScene7100Item16FirstFrameMap, ARRAYSIZE(kScene7100Item16FirstFrameMap),
 			kScene7100FrameMillis)
-			.hookAt(0x1f, kScene7100RatPickupStateHook));
+			.commitAt(0x1f, _vm->gameState().cellPlateRatProgress, (byte)2)
+			.patchAt(0x1f, 2));
 	if (_vm->gameState().cellPlateRatProgress != 2) {
 		_vm->gameState().cellPlateRatProgress = 2;
 		applySceneStateToHotspotsAndPatches(2);
@@ -1045,17 +1013,16 @@ void Scene7100::handleCaptureRat() {
 		runSceneOverlay(ActionOverlaySpec(8, kScene7100Chunk8DescriptorCount,
 			kScene7100Chunk8ScriptFrameMap, ARRAYSIZE(kScene7100Chunk8ScriptFrameMap),
 			kScene7100FrameMillis)
-			.soundAt(0x0e, 0x16)
-			.noRedrawAtEnd());
+			.soundAt(0x0e, 0x16));
 	}
-	sequence.secondarySpeech(0x1a, 1)
-		.commit(_environmentState, (byte)4)
+	sequence.commit(_environmentState, (byte)4)
+		.secondarySpeech(0x1a, 1)
 		.actorPath(SceneActorPose(0x0ad, 0x17b, 5))
 		.secondarySpeech(0x10, 0)
 		.actorReplacement(ActionOverlaySpec(20, kScene7100Chunk20DescriptorCount,
 			kScene7100Item16SecondFrameMap, ARRAYSIZE(kScene7100Item16SecondFrameMap),
 			kScene7100FrameMillis)
-			.hookAt(0x18, kScene7100RatPickupEnvironmentHook));
+			.commitAt(0x18, _environmentState, (byte)5));
 	_environmentState = 5;
 	addInventoryItem(0x16);
 	sequence.sound(1)
@@ -1076,7 +1043,8 @@ void Scene7100::handleRemovePlate() {
 	sequence.actorReplacement(ActionOverlaySpec(18, kScene7100Chunk18DescriptorCount,
 		kScene7100Item14FrameMap, ARRAYSIZE(kScene7100Item14FrameMap),
 		kScene7100FrameMillis)
-		.hookAt(0x24, kScene7100PlateRemovalStateHook));
+		.commitAt(0x24, _vm->gameState().cellPlateRemoved, true)
+		.patchAt(0x24, 4));
 	if (!_vm->gameState().cellPlateRemoved) {
 		_vm->gameState().cellPlateRemoved = true;
 		applySceneStateToHotspotsAndPatches(4);
@@ -1088,7 +1056,6 @@ void Scene7100::handleRemovePlate() {
 }
 
 void Scene7100::handleInventoryTransferAction() {
-	stopRealtimeSpeech();
 	const byte sueItemId = _lastInventoryPrimaryItemId;
 	const uint mappingIndex = sueItemId - kScene7100FirstTransferableSueItem;
 	if (mappingIndex >= ARRAYSIZE(kScene7100RonItemBySueItem)) {
@@ -1096,6 +1063,7 @@ void Scene7100::handleInventoryTransferAction() {
 		return;
 	}
 
+	stopRealtimeSpeech();
 	_manualPrimaryAnimationActive = true;
 	_primaryMode = 0;
 	_primaryFrame = 0;

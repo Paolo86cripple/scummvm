@@ -19,11 +19,10 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene5060.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene5060.h"
 
 namespace Hollywood {
 
@@ -44,27 +43,13 @@ const byte kScene5060GasFilledInventoryItem = 0x4d;
 const byte kScene5060GasSpeechBaseFrame = 6;
 const byte kScene5060GasSpeechFrameCount = 4;
 
-enum Scene5060AnimationHookId {
-	kScene5060GasSpeechHook = 1,
-	kScene5060MineCartStopRumbleHook,
-	kScene5060RockBackgroundPatchHook
-};
-
-const byte kScene5060RockPickupFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
-};
-
 const byte kScene5060GasFrameMap[] = {
 	0, 0, 1, 2, 3, 4, 4, 5, 6, 7, 25, 24, 23, 22, 21, 19,
 	18, 8, 9, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16,
 	17, 17, 18, 19, 20, 21, 22, 23, 24, 25, 4, 3, 2, 1, 0
 };
 
-const byte kScene5060AmbientSoundVolumes[] = {
-	10, 10, 10, 2, 10, 10, 10, 100
-};
-
-static Common::Array<byte> sequentialFrameMap(uint frameCount) {
+Common::Array<byte> sequentialFrameMap(uint frameCount) {
 	Common::Array<byte> frameMap;
 	frameMap.resize(frameCount);
 	for (uint i = 0; i < frameMap.size(); ++i)
@@ -81,6 +66,7 @@ PlayableSceneConfig scene5060Config() {
 	config.setTextResources(0, kScene5060SpeechCueDescriptorTableOffset);
 	config.walkablePaletteMaxRegion = 20;
 	config.useActorDepthTest = true;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
@@ -96,8 +82,15 @@ void Scene5060::initializeCustomPreviewState() {
 	setActiveActorPose(0x1fe, 0x17c, 4);
 }
 
-bool Scene5060::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
+void Scene5060::prepareCustomComposite(bool drawActors, byte activeFacing,
+		int activeWorldX, int activeWorldY, byte actorDrawOrderMode) {
+	(void)drawActors;
+	(void)activeFacing;
+	(void)activeWorldX;
+	(void)activeWorldY;
+
+	if (_drawActorDepthYThresholds.size() > 2)
+		_drawActorDepthYThresholds[2] = actorDrawOrderMode < 6 ? 0 : 0x03e7;
 }
 
 void Scene5060::runCustomEntrySequence() {
@@ -228,17 +221,7 @@ bool Scene5060::applyCustomSceneStateToHotspotsAndPatches(byte selector) {
 }
 
 AmbientAudioProfile Scene5060::ambientAudioProfile() const {
-	return createRandomAmbientAudioProfile(0x0d, 8, 10, 25, 0x0b, 5, 100, 50);
-}
-
-byte Scene5060::ambientSoundCueVolume(byte cueId, byte defaultVolumePercent) const {
-	if (cueId >= 0x0d && cueId <= 0x14)
-		return kScene5060AmbientSoundVolumes[cueId - 0x0d];
-	return defaultVolumePercent;
-}
-
-bool Scene5060::shouldRunExitSideEffectsAfterLoop() const {
-	return true;
+	return createMineAmbientAudioProfile();
 }
 
 void Scene5060::runExitSideEffectsAfterLoop() {
@@ -251,7 +234,7 @@ void Scene5060::runMineCartEntryClip() {
 		frameMap.data(), frameMap.size(), kScene5060MineCartFrameMillis)
 		.startAt(1)
 		.soundAt(0x3c, 0x16)
-		.hookAt(0x3c, kScene5060MineCartStopRumbleHook)
+		.commitAt(0x3c, _mineCartRumbleActive, false)
 		.noFinalFrameDelay());
 }
 
@@ -268,15 +251,16 @@ void Scene5060::runRockPickup() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(7, kScene5060RockPickupDescriptorCount,
-		kScene5060RockPickupFrameMap, ARRAYSIZE(kScene5060RockPickupFrameMap), kScene5060FrameMillis)
-		.startAt(1)
-		.hookAt(6, kScene5060RockBackgroundPatchHook)
-		.noFinalFrameDelay());
-	state.scene5060RockTaken = true;
-	applySceneStateToHotspotsAndPatches(1);
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(7, kScene5060RockPickupDescriptorCount,
+			kScene5060FrameMillis).holdFirstFrame()
+			.startAt(1)
+			.resourcePatchAt(6, 8)
+			.noFinalFrameDelay())
+		.commit(state.scene5060RockTaken, true)
+		.framebufferPatch(1);
 	addInventoryItem(kScene5060RockInventoryItem);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 }
 
 void Scene5060::runGasInventoryAction() {
@@ -297,22 +281,22 @@ void Scene5060::runGasInventoryAction() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(6, kScene5060GasDescriptorCount,
-		kScene5060GasFrameMap, ARRAYSIZE(kScene5060GasFrameMap), kScene5060FrameMillis)
-		.frameRange(1, 6)
-		.hookAt(5, kScene5060GasSpeechHook)
-		.noFinalFrameDelay()
-		.noRedrawAtEnd());
-	runActorReplacement(ActionOverlaySpec(6, kScene5060GasDescriptorCount,
-		kScene5060GasFrameMap, ARRAYSIZE(kScene5060GasFrameMap), kScene5060FrameMillis)
-		.startAt(10)
-		.noFinalFrameDelay());
-	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(6, kScene5060GasDescriptorCount,
+			kScene5060GasFrameMap, ARRAYSIZE(kScene5060GasFrameMap), kScene5060FrameMillis)
+			.frameRange(1, 6)
+			.primarySpeechAt(5, 3, 0, 0x0154, 0x00ca, 0x3f, 0x3f, 0x3f)
+			.noFinalFrameDelay())
+		.actorReplacement(ActionOverlaySpec(6, kScene5060GasDescriptorCount,
+			kScene5060GasFrameMap, ARRAYSIZE(kScene5060GasFrameMap), kScene5060FrameMillis)
+			.startAt(10)
+			.noFinalFrameDelay());
+	if (!sequence.completed())
 		return;
 
 	removeInventoryItem(sourceItem);
 	addInventoryItem(kScene5060GasFilledInventoryItem);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 }
 
 byte Scene5060::primarySpeechAnimationBaseFrame(byte animationGroup) const {
@@ -333,26 +317,6 @@ uint32 Scene5060::primarySpeechAnimationFrameMillis(byte animationGroup) const {
 void Scene5060::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) {
 	(void)animationGroup;
 	_actionOverlayPlayer.setFrame(frameIndex);
-}
-
-void Scene5060::handleAnimationFrameHook(byte hookId, uint frame) {
-	(void)frame;
-
-	switch (hookId) {
-	case kScene5060GasSpeechHook:
-		beginPrimarySpeechLine(3, 0, 0x0154, 0x00ca, 0x3f, 0x3f, 0x3f);
-		return;
-	case kScene5060MineCartStopRumbleHook:
-		_mineCartRumbleActive = false;
-		return;
-	case kScene5060RockBackgroundPatchHook:
-		if (_sceneChunkTable.isValidChunk(8))
-			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[8], _baseFramebuffer);
-		return;
-	default:
-		PlayableScene::handleAnimationFrameHook(hookId, frame);
-		return;
-	}
 }
 
 void Scene5060::rebuildWalkableMask() {

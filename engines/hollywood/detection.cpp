@@ -20,14 +20,13 @@
  */
 
 #include "base/plugins.h"
-
 #include "common/file.h"
-
 #include "engines/advancedDetector.h"
 #include "engines/game.h"
 
+#include "hollywood/debug.h"
 #include "hollywood/detection.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/graphics.h"
 
 namespace Hollywood {
 
@@ -130,7 +129,7 @@ const ADGameDescription gameDescriptions[] = {
 	AD_TABLE_END_MARKER
 };
 
-static const ADGameDescription fallbackWindowsDescription = {
+const ADGameDescription fallbackWindowsDescription = {
 	"hollywood",
 	"",
 	AD_ENTRY1(nullptr, nullptr),
@@ -140,7 +139,7 @@ static const ADGameDescription fallbackWindowsDescription = {
 	GUIO2(GAMEOPTION_RESTORED_CONTENT, GUIO_NOMIDI)
 };
 
-static const ADGameDescription fallbackDosDescription = {
+const ADGameDescription fallbackDosDescription = {
 	"hollywood",
 	"Unknown DOS version",
 	AD_ENTRY1(nullptr, nullptr),
@@ -150,7 +149,7 @@ static const ADGameDescription fallbackDosDescription = {
 	GUIO2(GAMEOPTION_RESTORED_CONTENT, GUIO_NOMIDI)
 };
 
-static const ADFileBasedFallback fileBasedFallback[] = {
+const ADFileBasedFallback fileBasedFallback[] = {
 	{ &fallbackDosDescription, { "MONSTERS.EXE", "RESOURCE.000", "RESOURCE.003", "RESOURCE.004", nullptr } },
 	{ nullptr, { nullptr } }
 };
@@ -166,7 +165,6 @@ enum Resource000FallbackEntry {
 const uint kFallbackResource000HeaderByteCount = 1;
 const uint kFallbackResource000OffsetTableSize = 400;
 const uint kFallbackResource000SizeTableSize = 400;
-const uint kFallbackOptionsFramebufferSize = 0x78000;
 const uint kFallbackMinimumInventoryPagesSize = 0x7e000;
 const uint kFallbackMinimumBottomPanelSize = 0x41d8;
 const uint kFallbackMinimumDialoguePanelSourceSize = 45 * 1024;
@@ -207,7 +205,7 @@ bool hasValidResource000StartupLayout(const AdvancedMetaEngineBase::FileMap &all
 	if ((uint32)file.size() < startupTablesSize)
 		return false;
 
-	if (!hasResource000Entry(file, kFallbackOptionsFramebufferEntry, kFallbackOptionsFramebufferSize))
+	if (!hasResource000Entry(file, kFallbackOptionsFramebufferEntry, kSceneBufferByteCount))
 		return false;
 	if (!hasResource000Entry(file, kFallbackInventoryPagesEntry, kFallbackMinimumInventoryPagesSize))
 		return false;

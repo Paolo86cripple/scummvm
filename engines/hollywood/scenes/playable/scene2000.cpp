@@ -19,11 +19,8 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene2000.h"
-
-#include "common/system.h"
-
 #include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene2000.h"
 
 namespace Hollywood {
 
@@ -108,7 +105,7 @@ uint Scene2000::sceneArenaLastChunk() const {
 }
 
 void Scene2000::adjustPaletteAfterLoad() {
-	if (_paletteResource.size() >= 0x300) {
+	if (_paletteResource.size() >= kPaletteSize) {
 		_paletteResource[0x2fd] = 0;
 		_paletteResource[0x2fe] = 0;
 		_paletteResource[0x2ff] = 0;
@@ -125,18 +122,13 @@ void Scene2000::runPresentation() {
 	uint32 paletteAccumulator = 0;
 	uint32 spriteAccumulator = 0;
 	uint32 clipAccumulator = 0;
-	uint32 lastMillis = g_system->getMillis();
+	uint32 delta = 0;
 	bool spriteDirty = false;
+	TimedPresentationLoop loop(*this, TimedPresentationLoop::kUntilStopped);
 
 	_presentationSound.playSample(0x29, 30);
 
-	while (tick < kScene2000EndTick && !_skipRequested && !Engine::shouldQuit()) {
-		if (pollEvents())
-			break;
-
-		const uint32 now = g_system->getMillis();
-		const uint32 delta = now - lastMillis;
-		lastMillis = now;
+	while (tick < kScene2000EndTick && loop.beginFrame()) {
 		phaseAccumulator += delta;
 		paletteAccumulator += delta;
 		spriteAccumulator += delta;
@@ -158,7 +150,7 @@ void Scene2000::runPresentation() {
 			++tick;
 
 			if (tick == kScene2000PatchTick) {
-				drawResourceBlockList(_resourceArena, _resourceChunkOffsets[3],
+				drawResourceBlockList(_resources._arena, _resources._chunkOffsets[3],
 					_sceneFramebuffer.managedSurface());
 			}
 
@@ -190,7 +182,7 @@ void Scene2000::runPresentation() {
 			spriteDirty = false;
 		}
 
-		g_system->delayMillis(10);
+		delta = loop.finishFrame();
 	}
 
 	_presentationSound.stop();
@@ -207,13 +199,13 @@ void Scene2000::advanceSmallSprites() {
 }
 
 void Scene2000::drawPresentationFrame(byte previousClipMapIndex) {
-	restoreSpriteBackground(_resourceArena, _resourceChunkOffsets[2], 0,
+	restoreSpriteBackground(_resources._arena, _resources._chunkOffsets[2], 0,
 		kScene2000SmallSpriteDescriptorCount, 0, _baseFramebuffer.surface(),
 		_sceneFramebuffer.surface());
 
 	for (uint i = 0; i < ARRAYSIZE(_spriteStates); ++i) {
 		const byte descriptor = (byte)(_spriteStates[i] + i * 5);
-		drawStripSpriteFrame(_resourceArena, _resourceChunkOffsets[2], 0,
+		drawStripSpriteFrame(_resources._arena, _resources._chunkOffsets[2], 0,
 			kScene2000SmallSpriteDescriptorCount, descriptor, _sceneFramebuffer.managedSurface());
 	}
 	for (uint clipMapIndex = previousClipMapIndex + 1; clipMapIndex <= _clipMapIndex; ++clipMapIndex) {

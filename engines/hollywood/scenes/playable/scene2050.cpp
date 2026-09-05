@@ -19,14 +19,13 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene2050.h"
-
 #include "common/events.h"
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene2050.h"
 
 namespace Hollywood {
 
@@ -76,12 +75,6 @@ const int kScene2050WalkMinX = 0x0c2;
 const int kScene2050WalkMaxX = 0x29a;
 const int kScene2050WalkMaxY = 0x1df;
 
-const byte kScene2050AmbientFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
-	13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-	24, 25
-};
-
 const byte kScene2050MuralClipForwardFrameMap[] = {
 	1, 2, 3, 4, 5, 6, 7
 };
@@ -107,10 +100,6 @@ const byte kScene2050LabyrinthWalkFrameMap[] = {
 	24, 25, 26, 27, 28, 29, 30
 };
 
-static_assert(ARRAYSIZE(kScene2050AmbientFrameMap) == 0x1a, "Scene 2050 ambient frame map size changed");
-static_assert(ARRAYSIZE(kScene2050SealDiscoveryFrameMap) == 53, "Scene 2050 seal discovery frame map size changed");
-static_assert(ARRAYSIZE(kScene2050LabyrinthWalkFrameMap) == 47, "Scene 2050 labyrinth walk frame map size changed");
-
 class Scene2050DeltaFrameTarget {
 public:
 	explicit Scene2050DeltaFrameTarget(byte &frame) : _frame(frame) {}
@@ -124,10 +113,10 @@ private:
 const uint kScene2050AmbientLayer = 0;
 const SceneLayerSpec kScene2050LayerSpecs[] = {
 	{kSceneAnimationBehindActors, 10, kScene2050AmbientDescriptorCount,
-		kScene2050AmbientFrameMap, ARRAYSIZE(kScene2050AmbientFrameMap), true, 0}
+		nullptr, 0, true, 0}
 };
 
-static PlayableSceneConfig scene2050Config() {
+PlayableSceneConfig scene2050Config() {
 	PlayableSceneConfig config(2050,
 		SceneResourceLayout(15, 5, 14),
 		SceneViewport(kScene2050ViewportXOffset, kScene2050ViewportXOffset, kScene2050ViewportXOffset),
@@ -150,13 +139,10 @@ Scene2050::Scene2050(HollywoodEngine *vm) :
 		_sealDiscoveryActive(false),
 		_sealDiscoveryFrame(0),
 		_sealDiscoveryActorPathFrameIndex(0),
-		_sealDiscoverySpeechStarted(false),
-		_sealDiscoverySpeechStartMillis(0),
-		_sealDiscoverySpeechDurationMillis(0) {
+		_sealDiscoverySpeechStarted(false) {
 	_sceneLayers.configure(kScene2050LayerSpecs);
-	_ambientTrack = _realtimeAnimationTracks.addFrameMap(
-		_sceneLayers.layer(kScene2050AmbientLayer),
-		kScene2050AmbientFrameMillis);
+	_ambientTrack = _realtimeAnimationTracks.addLoop(kScene2050AmbientLayer,
+		kScene2050AmbientFrameMillis, kScene2050AmbientDescriptorCount);
 }
 
 void Scene2050::initializeCustomPreviewState() {
@@ -178,16 +164,9 @@ void Scene2050::initializeCustomPreviewState() {
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 }
 
-void Scene2050::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawLayerStack(_sceneLayers, kSceneAnimationBehindActors);
-	drawActionOverlayLayer();
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
+void Scene2050::drawCustomForegroundComposite(int activeWorldX, int activeWorldY) {
+	(void)activeWorldX;
+	(void)activeWorldY;
 	if (_sealDiscoveryActive)
 		drawSealDiscoveryDeltaLayer();
 }
@@ -394,7 +373,7 @@ void Scene2050::runLongLabyrinthWalkClip() {
 	ActionOverlaySpec spec(12, kScene2050LabyrinthWalkDescriptorCount,
 		kScene2050LabyrinthWalkFrameMap, ARRAYSIZE(kScene2050LabyrinthWalkFrameMap),
 		kScene2050OverlayFrameMillis);
-	spec.startAt(1).hookEveryFrame(kScene2050LabyrinthFootstepHook).noRedrawAtEnd();
+	spec.startAt(1).hookEveryFrame(kScene2050LabyrinthFootstepHook);
 	runActorReplacement(spec);
 }
 
@@ -449,7 +428,6 @@ void Scene2050::runMuralClipForward() {
 	ActionOverlaySpec spec(9, kScene2050MuralClipDescriptorCount,
 		kScene2050MuralClipForwardFrameMap, ARRAYSIZE(kScene2050MuralClipForwardFrameMap),
 		kScene2050OverlayFrameMillis);
-	spec.noRedrawAtEnd();
 	runActorReplacement(spec);
 }
 
@@ -457,7 +435,6 @@ void Scene2050::runMuralClipBackward() {
 	ActionOverlaySpec spec(9, kScene2050MuralClipDescriptorCount,
 		kScene2050MuralClipBackwardFrameMap, ARRAYSIZE(kScene2050MuralClipBackwardFrameMap),
 		kScene2050OverlayFrameMillis);
-	spec.noRedrawAtEnd();
 	runActorReplacement(spec);
 }
 
@@ -529,8 +506,10 @@ void Scene2050::runMuralPuzzleSubscreen() {
 			case Common::EVENT_KEYDOWN:
 				if (event.kbd.keycode == Common::KEYCODE_ESCAPE) {
 					done = true;
-				} else if (event.kbd.keycode == Common::KEYCODE_RETURN ||
-						event.kbd.keycode == Common::KEYCODE_SPACE) {
+				} else if (!event.kbdRepeat &&
+						(event.kbd.keycode == Common::KEYCODE_RETURN ||
+						 event.kbd.keycode == Common::KEYCODE_KP_ENTER ||
+						 event.kbd.keycode == Common::KEYCODE_SPACE)) {
 					handleMuralTileClick(muralTileAtScreenPoint(
 						_vm->cursor()->surfaceX(), _vm->cursor()->surfaceY()), done);
 				}
@@ -591,8 +570,6 @@ void Scene2050::runSealDiscoverySequence() {
 	_sealDiscoveryFrame = 0;
 	_sealDiscoveryActorPathFrameIndex = 0;
 	_sealDiscoverySpeechStarted = false;
-	_sealDiscoverySpeechStartMillis = 0;
-	_sealDiscoverySpeechDurationMillis = 0;
 
 	Scene2050DeltaFrameTarget target(_sealDiscoveryFrame);
 	AnimationFrameRange range(1, ARRAYSIZE(kScene2050SealDiscoveryFrameMap) - 1,
@@ -603,14 +580,8 @@ void Scene2050::runSealDiscoverySequence() {
 
 	_actorPathPlaybackActive = false;
 	_soundBank0.playSample(kScene2050SealDiscoveryEndSound, 50);
-	if (_sealDiscoverySpeechStarted) {
-		const uint32 elapsed = g_system->getMillis() - _sealDiscoverySpeechStartMillis;
-		const uint32 remaining = elapsed < _sealDiscoverySpeechDurationMillis ?
-			_sealDiscoverySpeechDurationMillis - elapsed : 0;
-		waitForSpeechOrDelay(remaining, false);
-		_speech.stop();
-		clearSpeechOverlay();
-	}
+	if (_sealDiscoverySpeechStarted)
+		waitForRealtimeSpeech();
 
 	_sealDiscoveryActive = false;
 	drawPlayableComposite();
@@ -662,11 +633,7 @@ void Scene2050::handleAnimationFrameHook(byte hookId, uint frame) {
 		return;
 
 	_sealDiscoverySpeechStarted = true;
-	const bool speechAudioStarted = startSecondarySpeechLine(6, 0);
-	_sealDiscoverySpeechStartMillis = g_system->getMillis();
-	_sealDiscoverySpeechDurationMillis = speechAudioStarted ?
-		MAX<uint32>(_speech.lastSampleDurationMillis(), 750) :
-		MAX<uint32>(1200, _speechOverlay.lines.size() * 1100);
+	startRealtimeSecondarySpeechLine(6, 0, 0);
 }
 
 void Scene2050::drawSealDiscoveryDeltaLayer() {

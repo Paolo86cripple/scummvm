@@ -22,7 +22,7 @@
 #ifndef HOLLYWOOD_SCENES_PLAYABLE_SCENE4030_H
 #define HOLLYWOOD_SCENES_PLAYABLE_SCENE4030_H
 
-#include "hollywood/scenes/playable/animation_channels.h"
+#include "hollywood/scenes/animation_channels.h"
 #include "hollywood/scenes/playable/playable_scene.h"
 
 namespace Graphics {
@@ -39,19 +39,14 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
+	void drawCustomBackgroundComposite(int activeWorldX, int activeWorldY) override;
 	void runCustomEntrySequence() override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 
 	void initializeSpriteLayers();
 	void advanceBackgroundAnimations(uint32 delta);
@@ -74,10 +69,6 @@ private:
 	void removeColorMapItem(byte itemId);
 	void replaceColorMapItem(byte sourceItem, byte destinationItem);
 
-	ResourceSpriteLayer _leftPropLayer;
-	ResourceSpriteLayer _rightPropLayer;
-	ResourceSpriteLayer _secondaryActionLayer;
-	ResourceSpriteLayer _primaryActionLayer;
 	uint _leftPropTrack;
 	TimedAnimationChannel _rightPropChannel;
 	TimedAnimationChannel _markerChannel;

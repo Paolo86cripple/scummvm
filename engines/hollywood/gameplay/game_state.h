@@ -173,8 +173,8 @@ struct GameplayState {
 		scene1050JackLookedAt = false;
 		scene1050CharlieBogWerewolfClueHeard = false;
 		scene1060EntryLineSeen = false;
-		scene1060DrFlyState = 0;
-		scene1060DrFlyConversationSeen = false;
+		scene1060DrMoscaState = 0;
+		scene1060DrMoscaConversationSeen = false;
 		scene1060PocketPaperTaken = false;
 		scene1060InvisibleManConversationSeen = false;
 		scene1060PartyRemainsState = 0;
@@ -191,7 +191,7 @@ struct GameplayState {
 		scene1080EntryLineSeen = false;
 		scene1080FrancoisProgressState = 0;
 		scene1090EntryLineSeen = false;
-		scene1090LightsOn = false;
+		scene1090LightsOff = true;
 		scene1090WrappedBrainState = 0;
 		scene2010EntryLineSeen = false;
 		scene2010LongSequenceFirstSpeechSeen = false;
@@ -413,7 +413,8 @@ struct GameplayState {
 	// The original shares one reward index across all three trophy caches. These
 	// accessors keep the existing serialized fields synchronized.
 	byte frankensteinPartRewardIndex() const {
-		return MAX<byte>(scene2110TreasureGrantIndex, scene5050PickupIndex);
+		return scene2110TreasureGrantIndex > scene5050PickupIndex ?
+			scene2110TreasureGrantIndex : scene5050PickupIndex;
 	}
 
 	void setFrankensteinPartRewardIndex(byte index) {
@@ -434,10 +435,29 @@ struct GameplayState {
 		mainFlowStateId = 0x1b62;
 	}
 
+	byte multiToolKnifeResourcePage() const {
+		switch (multiToolKnifeState) {
+		case 1:
+			return 0x1e;
+		case 3:
+			return 0x2d;
+		case 5:
+			return 0x7d;
+		case 7:
+			return 0x0e;
+		case 9:
+			return 0x18;
+		default:
+			return 0x68;
+		}
+	}
+
 	void initializeRonItemResourcePages() {
 		if (kInventoryOwnerCount == 0)
 			return;
 
+		// The wire's saved resource page also records whether it has been bent.
+		const bool wireBent = inventoryItemResourcePageByOwnerAndItemId[0][0x5f] == 0x40;
 		for (uint itemId = 0; itemId < kInventoryOwnerSlotStride; ++itemId)
 			inventoryItemResourcePageByOwnerAndItemId[0][itemId] = kInvalidInventoryItemResourcePage;
 
@@ -485,7 +505,7 @@ struct GameplayState {
 		inventoryItemResourcePageByOwnerAndItemId[0][0x2a] = 0x28;
 		inventoryItemResourcePageByOwnerAndItemId[0][0x2b] = 0x2c;
 		inventoryItemResourcePageByOwnerAndItemId[0][0x2c] = 0x0c;
-		inventoryItemResourcePageByOwnerAndItemId[0][0x2d] = 0x68;
+		inventoryItemResourcePageByOwnerAndItemId[0][0x2d] = multiToolKnifeResourcePage();
 		inventoryItemResourcePageByOwnerAndItemId[0][0x2e] = 0x27;
 		inventoryItemResourcePageByOwnerAndItemId[0][0x2f] = 0x0f;
 		inventoryItemResourcePageByOwnerAndItemId[0][0x30] = 0x5a;
@@ -535,7 +555,7 @@ struct GameplayState {
 		inventoryItemResourcePageByOwnerAndItemId[0][0x5c] = 0x64;
 		inventoryItemResourcePageByOwnerAndItemId[0][0x5d] = 0x45;
 		inventoryItemResourcePageByOwnerAndItemId[0][0x5e] = 0x35;
-		inventoryItemResourcePageByOwnerAndItemId[0][0x5f] = 0x32;
+		inventoryItemResourcePageByOwnerAndItemId[0][0x5f] = wireBent ? 0x40 : 0x32;
 		inventoryItemResourcePageByOwnerAndItemId[0][0x60] = 0x52;
 		inventoryItemResourcePageByOwnerAndItemId[0][0x61] = 0x65;
 		inventoryItemResourcePageByOwnerAndItemId[0][0x62] = 0x34;
@@ -582,8 +602,7 @@ struct GameplayState {
 		for (uint slot = 0; slot < kTravelScreenSlotCount; ++slot)
 			travelScreenSlotIds[slot] = kTravelScreenDisabledSlot;
 
-		// Verified in LoadResource000StartupTablesAndRuntimeGlobals: Ron starts
-		// with destination 0 and destination 5 visible in the notebook.
+		// Hollywood and Hannover are available from the start.
 		travelScreenSlotIds[0] = 0;
 		travelScreenSlotIds[1] = 5;
 	}
@@ -644,7 +663,7 @@ struct GameplayState {
 		inventoryItemResourcePageByOwnerAndItemId[1][0x17] = 0x03;
 		inventoryItemResourcePageByOwnerAndItemId[1][0x18] = 0x61;
 		inventoryItemResourcePageByOwnerAndItemId[1][0x19] = 0x26;
-		inventoryItemResourcePageByOwnerAndItemId[1][0x1a] = 0x68;
+		inventoryItemResourcePageByOwnerAndItemId[1][0x1a] = multiToolKnifeResourcePage();
 		inventoryItemResourcePageByOwnerAndItemId[1][0x1b] = 0x2f;
 		inventoryItemResourcePageByOwnerAndItemId[1][0x1c] = 0x3f;
 		inventoryItemResourcePageByOwnerAndItemId[1][0x1d] = 0x14;
@@ -693,7 +712,8 @@ struct GameplayState {
 		if (owner >= kInventoryOwnerCount || itemId == 0 || itemId >= kInventoryOwnerSlotStride)
 			return 0;
 
-		const byte itemCount = MIN<byte>(inventoryItemCountByOwner[owner], kInventoryLastSlot);
+		const byte itemCount = inventoryItemCountByOwner[owner] < kInventoryLastSlot ?
+			inventoryItemCountByOwner[owner] : kInventoryLastSlot;
 		for (byte slot = kInventoryFirstSlot; slot <= itemCount; ++slot) {
 			if (inventorySlotItemIdByOwner[owner][slot] == itemId)
 				return slot;
@@ -948,8 +968,8 @@ struct GameplayState {
 	bool scene1050JackLookedAt;
 	bool scene1050CharlieBogWerewolfClueHeard;
 	bool scene1060EntryLineSeen;
-	byte scene1060DrFlyState;
-	bool scene1060DrFlyConversationSeen;
+	byte scene1060DrMoscaState;
+	bool scene1060DrMoscaConversationSeen;
 	bool scene1060PocketPaperTaken;
 	bool scene1060InvisibleManConversationSeen;
 	byte scene1060PartyRemainsState;
@@ -966,7 +986,7 @@ struct GameplayState {
 	bool scene1080EntryLineSeen;
 	byte scene1080FrancoisProgressState;
 	bool scene1090EntryLineSeen;
-	bool scene1090LightsOn;
+	bool scene1090LightsOff;
 	byte scene1090WrappedBrainState;
 	bool scene2010EntryLineSeen;
 	bool scene2010LongSequenceFirstSpeechSeen;
@@ -1034,7 +1054,7 @@ struct GameplayState {
 	byte scene6030CoffeeState;
 	bool scene6040EntryLineSeen;
 	bool scene6040PaintCanTaken;
-	byte scene6040WireState;
+	byte scene6040WireState; // 0: lid present, 1: wire exposed, 2: wire taken.
 	bool scene6050MuseumInteriorUnlocked;
 	bool scene6050GuardPresent;
 	bool scene6050GuardAllowsEntry;

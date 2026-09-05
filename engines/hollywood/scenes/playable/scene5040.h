@@ -34,10 +34,10 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+	void prepareCustomComposite(bool drawActors, byte activeFacing, int activeWorldX,
+		int activeWorldY, byte actorDrawOrderMode) override;
+	void drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	void runCustomEntrySequence() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
 	void advancePrimarySpeechAnimation(uint32 delta) override;
@@ -45,11 +45,8 @@ private:
 	bool customizeRouteFinal(byte currentRegion, byte targetRegion, const ActorPathBuildState &state,
 		int targetX, int targetY, int &requestedFacing, bool &restoredStepDeltas) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	AmbientAudioProfile ambientAudioProfile() const override;
-	byte ambientSoundCueVolume(byte cueId, byte defaultVolumePercent) const override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
 	byte primarySpeechAnimationFrameCount(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
@@ -82,10 +79,8 @@ private:
 	void beginKarlMiningSpeechLine(byte frameIndex);
 	void copyStageSmallRow(byte destinationRow, byte sourceRow);
 	void remapSceneColors(byte sourceColor, byte itemId);
-	void clearSceneItemFromColorMap(byte itemId);
 
 	TimedAnimationChannel _karlIdleChannel;
-	ResourceSpriteLayer _karlLayer;
 	byte _karlIdleFrame;
 	byte _karlIdleMode;
 	byte _karlStrikeRepeatCount;

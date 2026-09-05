@@ -19,14 +19,13 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene7070.h"
-
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
 #include "hollywood/resource.h"
+#include "hollywood/scenes/playable/scene7070.h"
 
 namespace Hollywood {
 
@@ -63,9 +62,6 @@ const int kScene7070DrawerHotspotLeft = 0x114;
 const int kScene7070DrawerHotspotTop = 0x10e;
 const int kScene7070DrawerHotspotRight = 0x148;
 const int kScene7070DrawerHotspotBottom = 0x124;
-const byte kScene7070ExitDoorFrameMap[] = {
-	0, 0, 1, 2, 3
-};
 const byte kScene7070Chunk12ItemFrameMap[] = {
 	0, 0x21, 0x20, 0x1f, 0x23, 0x22, 0x16, 0x17, 0x18, 0x19,
 	0x1a, 0x1b, 0x1c, 0x1d, 0x1f, 0x20, 0x21, 0
@@ -83,7 +79,7 @@ const byte kScene7070UseItem13FrameMap[] = {
 	15, 16, 17, 18, 19, 20, 21, 0x1f, 0x20, 0x21, 0
 };
 
-static PlayableSceneConfig scene7070Config() {
+PlayableSceneConfig scene7070Config() {
 	PlayableSceneConfig config(7070,
 		SceneResourceLayout(13, 5, 12),
 		SceneViewport(kScene7070ViewportXOffset),
@@ -120,18 +116,7 @@ void Scene7070::initializeCustomPreviewState() {
 	applySceneStateToHotspotsAndPatches(0xff);
 }
 
-void Scene7070::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-
-	drawActionOverlayLayer();
-
+void Scene7070::drawCustomForegroundComposite(int activeWorldX, int activeWorldY) {
 	if (activeWorldX < 0x0fa) {
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[6], _sceneFramebuffer);
 	} else if (activeWorldY < 0x134) {
@@ -319,9 +304,8 @@ void Scene7070::handleExitDoorAction() {
 	const uint16 exitState = state.gramophoneCrankState < 3 ?
 		kScene7070ExitToG08State : kScene7070ExitToG09State;
 	BlockingSequence(*this)
-		.actorReplacement(8, kScene7070Chunk8DescriptorCount,
-			kScene7070ExitDoorFrameMap, ARRAYSIZE(kScene7070ExitDoorFrameMap),
-			kScene7070OverlayFrameMillis)
+		.actorReplacement(ActionOverlaySpec(8, kScene7070Chunk8DescriptorCount,
+			kScene7070OverlayFrameMillis).holdFirstFrame())
 		.sound(3)
 		.commit(state.gramophoneRoomDoorState, (byte)2)
 		.commit(state.mainFlowStateId, exitState);
@@ -333,7 +317,10 @@ void Scene7070::handleChunk12ItemAction() {
 	sequence.actorReplacement(ActionOverlaySpec(12, kScene7070Chunk12DescriptorCount,
 		kScene7070Chunk12ItemFrameMap, ARRAYSIZE(kScene7070Chunk12ItemFrameMap),
 		kScene7070OverlayFrameMillis)
-		.soundAt(6, 0x19));
+		.resourcePatchAt(6, 11)
+		.soundAt(6, 0x19)
+		.soundAt(6, 0x1a, 100, 2)
+		.resourcePatchAt(0x0e, 10));
 
 	if (state.gramophoneCrankState == 1) {
 		sequence.secondarySpeech(0x0e, 0)

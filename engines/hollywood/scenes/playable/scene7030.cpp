@@ -19,12 +19,11 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene7030.h"
-
 #include "common/debug.h"
 
-#include "hollywood/gameplay/game_state.h"
 #include "hollywood/hollywood.h"
+#include "hollywood/gameplay/game_state.h"
+#include "hollywood/scenes/playable/scene7030.h"
 
 namespace Hollywood {
 
@@ -57,7 +56,6 @@ const byte kScene7030BaseAmbientSoundCue = 0x0b;
 const byte kScene7030SecondaryAmbientSoundCue = 0x0c;
 const uint kScene7030ColorToItemMapOffset = 0x100;
 const uint kScene7030ColorMapSize = 0x100;
-const byte kScene7030PunchBowlGlassPatchHook = 1;
 const uint kScene7030Chunk6IdleLayerA = 0;
 const uint kScene7030Chunk6IdleLayerB = 1;
 const uint kScene7030Chunk6IdleLayerC = 2;
@@ -66,9 +64,6 @@ const uint kScene7030Chunk5Layer = 4;
 const byte kScene7030Chunk5FrameMap[] = {
 	0, 0, 1, 2, 3, 4, 3, 2, 3, 4, 3, 2, 1, 0, 5, 6,
 	7, 8, 7, 6, 7, 8, 7, 6, 5
-};
-const byte kScene7030Chunk7PickupBoneFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
 };
 const byte kScene7030Chunk10PickupItem0CFrameMap[] = {
 	0, 1, 2, 3, 4, 5, 6, 7, 7, 8, 9, 0
@@ -96,7 +91,7 @@ const byte kScene7030Route6StepDeltas[] = {
 	5, 5, 5, 6, 2, 3, 4, 8, 10, 6, 3, 5
 };
 
-static PlayableSceneConfig scene7030Config() {
+PlayableSceneConfig scene7030Config() {
 	PlayableSceneConfig config(7030,
 		SceneResourceLayout(12, 5, 11),
 		SceneViewport(kScene7030ViewportXOffset),
@@ -160,17 +155,13 @@ void Scene7030::initializeCustomPreviewState() {
 	applySceneStateToHotspotsAndPatches(0xff);
 }
 
-void Scene7030::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	copyBaseFramebufferToSceneFramebuffer();
-	drawLayerStack(_sceneLayers, kSceneAnimationBehindActors);
-
+void Scene7030::prepareCustomComposite(bool drawActors, byte activeFacing,
+		int activeWorldX, int activeWorldY, byte actorDrawOrderMode) {
+	(void)drawActors;
+	(void)activeFacing;
+	(void)activeWorldX;
+	(void)activeWorldY;
 	updateActorDepthThresholds(actorDrawOrderMode);
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-
-	drawActionOverlayLayer();
 }
 
 bool Scene7030::shouldDrawSecondaryActorInPlayableComposite() const {
@@ -444,21 +435,11 @@ byte Scene7030::chunk5Frame() const {
 	return _sceneLayers.layerFrame(kScene7030Chunk5Layer);
 }
 
-void Scene7030::runPunchBowlPatchOverlay(uint chunkIndex, uint descriptorCount, const byte *frameMap,
-		uint frameMapSize, uint32 frameMillis, int statePatchFrame) {
-	const byte hookId = statePatchFrame >= 0 ? kScene7030PunchBowlGlassPatchHook : 0;
-	runActorReplacement(ActionOverlaySpec(chunkIndex, descriptorCount,
-		frameMap, frameMapSize, frameMillis)
-		.hookAt(statePatchFrame, hookId));
-}
-
-void Scene7030::handleAnimationFrameHook(byte hookId, uint frame) {
-	(void)frame;
-
-	if (hookId == kScene7030PunchBowlGlassPatchHook) {
-		_sceneStateFlags[2] = 0;
-		applySceneStateToHotspotsAndPatches(2);
-	}
+void Scene7030::runPunchBowlPatchOverlay(ActionOverlaySpec spec, int statePatchFrame) {
+	if (statePatchFrame >= 0)
+		spec.commitAt(statePatchFrame, _sceneStateFlags[2], (byte)0)
+			.patchAt(statePatchFrame, 2);
+	runActorReplacement(spec);
 }
 
 void Scene7030::handleActionSlot00TransitionToG04() {
@@ -508,14 +489,12 @@ void Scene7030::handleActionSlot10CommonSpeech() {
 }
 
 void Scene7030::handleActionHandler313ExchangeItem0CFor0D() {
-	const bool speechStarted = startSecondarySpeechLine(10, 0);
-	runPunchBowlPatchOverlay(11, kScene7030Chunk11DescriptorCount,
+	const bool speechStarted = startRealtimeSecondarySpeechLine(10, 0, 0);
+	runPunchBowlPatchOverlay(ActionOverlaySpec(11, kScene7030Chunk11DescriptorCount,
 		kScene7030Chunk11ExchangeItem0CFrameMap, ARRAYSIZE(kScene7030Chunk11ExchangeItem0CFrameMap),
-		kScene7030Chunk5FrameMillis);
+		kScene7030Chunk5FrameMillis));
 	if (speechStarted)
-		waitForSpeechOrDelay(0, false);
-	clearSpeechOverlay();
-	_speech.stop();
+		waitForRealtimeSpeech();
 	removeInventoryItem(0x0c);
 	addInventoryItem(0x0d);
 	_vm->gameState().inventoryPanelDirty = true;
@@ -533,9 +512,8 @@ void Scene7030::handleActionHandler314PickupBone() {
 	}
 
 	beginSecondarySpeechLine(5, 0);
-	runPunchBowlPatchOverlay(7, kScene7030Chunk7DescriptorCount,
-		kScene7030Chunk7PickupBoneFrameMap, ARRAYSIZE(kScene7030Chunk7PickupBoneFrameMap),
-		kScene7030Chunk5FrameMillis);
+	runPunchBowlPatchOverlay(ActionOverlaySpec(7, kScene7030Chunk7DescriptorCount,
+		kScene7030Chunk5FrameMillis).holdFirstFrame());
 	addInventoryItem(0x0b);
 	_vm->gameState().inventoryPanelDirty = true;
 	_soundBank0.playSample(1, 100);
@@ -545,15 +523,12 @@ void Scene7030::handleActionHandler314PickupBone() {
 }
 
 void Scene7030::handleActionHandler315PickupItem0C() {
-	if (_sceneStateFlags[2] == 1) {
+	if (_sceneStateFlags[2] == 1)
 		handleActionSlot08CommonSpeech();
-		clearSpeechOverlay();
-		_speech.stop();
-	}
 
-	runPunchBowlPatchOverlay(10, kScene7030Chunk10DescriptorCount,
+	runPunchBowlPatchOverlay(ActionOverlaySpec(10, kScene7030Chunk10DescriptorCount,
 		kScene7030Chunk10PickupItem0CFrameMap, ARRAYSIZE(kScene7030Chunk10PickupItem0CFrameMap),
-		kScene7030Chunk5FrameMillis, 3);
+		kScene7030Chunk5FrameMillis), 3);
 	_vm->gameState().punchBowlGlassPatchState = _sceneStateFlags[2];
 	addInventoryItem(0x0c);
 	_vm->gameState().inventoryPanelDirty = true;

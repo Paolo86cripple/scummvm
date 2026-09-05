@@ -19,14 +19,13 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene7090.h"
-
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
 #include "hollywood/resource.h"
+#include "hollywood/scenes/playable/scene7090.h"
 
 namespace Hollywood {
 
@@ -48,16 +47,7 @@ const int kScene7090GatedActionTargetY = 0x11b;
 const byte kScene7090GatedActionTargetFacing = 5;
 const int kScene7090GatedActionReturnX = 0x281;
 const int kScene7090GatedActionReturnY = 0x10d;
-const byte kScene7090GatedActionHook = 1;
-const byte kScene7090BackToG07FrameMap[] = {
-	0, 1, 2, 3
-};
-const byte kScene7090GatedActionFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
-	12, 13, 14, 15, 16, 17, 18, 19, 20, 21
-};
-
-static PlayableSceneConfig scene7090Config() {
+PlayableSceneConfig scene7090Config() {
 	PlayableSceneConfig config(7090,
 		SceneResourceLayout(11, 5, 10),
 		SceneViewport(kScene7090ViewportXOffset),
@@ -86,21 +76,15 @@ void Scene7090::initializeCustomPreviewState() {
 	darkenActorPaletteRange();
 }
 
-void Scene7090::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-
+void Scene7090::drawCustomBackgroundComposite(int activeWorldX, int activeWorldY) {
+	(void)activeWorldX;
+	(void)activeWorldY;
 	if (_prePatchChunk7Visible)
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[7], _sceneFramebuffer);
+}
 
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-
-	drawActionOverlayLayer();
-
+void Scene7090::drawCustomForegroundComposite(int activeWorldX, int activeWorldY) {
+	(void)activeWorldX;
 	if (activeWorldY < kScene7090ForegroundYThreshold)
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[5], _sceneFramebuffer);
 	drawResourceBlockList(_resourceArena, _resourceChunkOffsets[6], _sceneFramebuffer);
@@ -261,7 +245,6 @@ AmbientAudioProfile Scene7090::ambientAudioProfile() const {
 void Scene7090::handleBackToG07() {
 	BlockingSequence(*this)
 		.actorReplacement(ActionOverlaySpec(9, kScene7090Chunk9DescriptorCount,
-			kScene7090BackToG07FrameMap, ARRAYSIZE(kScene7090BackToG07FrameMap),
 			kScene7090FrameMillis))
 		.sound(3)
 		.commit(_vm->gameState().mainFlowStateId, kScene7090BackToG07State);
@@ -287,10 +270,9 @@ void Scene7090::handleGatedAction() {
 			kScene7090GatedActionTargetY, kScene7090GatedActionTargetFacing))
 		.commit(_prePatchChunk7Visible, true)
 		.actorReplacement(ActionOverlaySpec(10, kScene7090Chunk10DescriptorCount,
-			kScene7090GatedActionFrameMap, ARRAYSIZE(kScene7090GatedActionFrameMap),
 			kScene7090FrameMillis)
-			.hookEveryFrame(kScene7090GatedActionHook)
-			.noRedrawAtEnd())
+			.soundAt(3, 0x1b)
+			.stopSoundAt(0x12))
 		.commit(_prePatchChunk7Visible, false)
 		.commit(state.movedBedroomArmor, true)
 		.commit(state.hannoverCourtyardDialogueState, (byte)2)
@@ -298,15 +280,6 @@ void Scene7090::handleGatedAction() {
 		.actorPath(SceneActorPose(kScene7090GatedActionReturnX,
 			kScene7090GatedActionReturnY, kScene7090GatedActionTargetFacing))
 		.secondarySpeech(10, 2);
-}
-
-void Scene7090::handleAnimationFrameHook(byte hookId, uint frame) {
-	if (hookId == kScene7090GatedActionHook) {
-		if (frame == 3)
-			_soundBank0.playSample(0x1b, 100);
-		else if (frame == 0x12)
-			_soundBank0.stop();
-	}
 }
 
 } // End of namespace Hollywood

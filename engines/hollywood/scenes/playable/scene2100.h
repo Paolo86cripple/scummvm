@@ -33,16 +33,18 @@ public:
 	Scene2100(HollywoodEngine *vm);
 
 private:
+	enum LayerId {
+		kMummyLayer,
+		kAuxLayer,
+		kFrontLayer
+	};
+
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
+	bool shouldDrawSecondaryActorInPlayableComposite() const override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
@@ -50,7 +52,6 @@ private:
 	uint32 primarySpeechAnimationFrameMillis(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
 	void primarySpeechAnimationRestored(byte animationGroup, byte baseFrame) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetAnimationLayers();
@@ -58,9 +59,6 @@ private:
 	void advanceMummyIdle(uint32 delta);
 	void advanceDoorCeremony(uint32 delta);
 	void advanceSpecialSpeechAnimation(uint32 delta);
-	void startManualActorPath(int targetX, int targetY, byte finalFacing, byte finalCel);
-	void advanceManualActorPath(uint32 delta);
-	void finishManualActorPath();
 	bool isRaStaffAvailable() const;
 	void runEntryFromScene2010();
 	void runEntryFromScene2110();
@@ -74,27 +72,24 @@ private:
 	void initializeMummyDialogueRecords(Common::Array<DialogueChoiceRecord> &records) const;
 	void setDialogueRecord(Common::Array<DialogueChoiceRecord> &records, uint index,
 		byte enabled, byte nextNodeIndex, byte transitionMode, byte playerTextRowId,
-		byte responseFrameIndex, byte disableAfterUse, byte reserved) const;
+		byte responseFrameIndex, byte disableAfterUse) const;
 	void runMummyPrimarySpeechLine(byte frameIndex);
 	void runPrincessArrivalPrimarySpeechLine(byte frameIndex);
-	void runMummyFrameSetTransition(ResourceSpriteLayer &layer, bool opening, byte closingFinalFrame);
+	void runMummyFrameSetTransition(uint layerId, bool opening, byte closingFinalFrame);
 	void beginMummyDialogueSecondarySpeechLine(uint16 rowIndex, byte frameIndex);
 	void runTreasureIntroductionSequence();
 	void runSpecialTransitionSpeech();
 	void runStoneDoorToTreasureRoom();
 	void runRaStaffPickup();
 	void removeColorMapItemFromOriginal(byte itemId);
+	ResourceSpriteLayer &mummyLayer() { return _sceneLayers.layer(kMummyLayer); }
+	ResourceSpriteLayer &frontLayer() { return _sceneLayers.layer(kFrontLayer); }
 
 	TimedAnimationChannel _foregroundChannel;
 	TimedAnimationChannel _auxChannel;
-	TimedAnimationChannel _manualActorPathChannel;
-	ResourceSpriteLayer _mummyLayer;
-	ResourceSpriteLayer _frontLayer;
-	ResourceSpriteLayer _auxLayer;
 	bool _foregroundAlternateFrameSet;
 	bool _mummySpeechUsesFrontLayer;
 	bool _suppressMummySpeechAnimation;
-	bool _auxLayerInFront;
 	bool _returnLayerAnimationActive;
 	bool _mummyIdleEnabled;
 	bool _doorCeremonyAnimationActive;
@@ -103,8 +98,6 @@ private:
 	bool _specialSpeechAnimationActive;
 	bool _specialSpeechFinishing;
 	byte _specialSpeechVariant;
-	bool _manualActorPathActive;
-	uint _manualActorPathFrameIndex;
 };
 
 } // End of namespace Hollywood

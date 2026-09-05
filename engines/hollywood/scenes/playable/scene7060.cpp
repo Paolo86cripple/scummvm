@@ -19,13 +19,12 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene7060.h"
-
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene7060.h"
 
 namespace Hollywood {
 
@@ -88,7 +87,7 @@ const byte kScene7060ShortExitFrameMap[] = {
 	0, 9, 8, 7
 };
 
-static PlayableSceneConfig scene7060Config() {
+PlayableSceneConfig scene7060Config() {
 	PlayableSceneConfig config(7060,
 		SceneResourceLayout(11, 5, 10),
 		SceneViewport(kScene7060ViewportXOffset, kScene7060ViewportXOffset, kScene7060ViewportMaxXOffset),
@@ -339,7 +338,7 @@ byte Scene7060::primarySpeechAnimationBaseFrame(byte animationGroup) const {
 
 void Scene7060::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) {
 	(void)animationGroup;
-	_chunk6Animation.setFrame(frameIndex);
+	_chunk6Animation.setStateAndFrame(0, frameIndex);
 }
 
 void Scene7060::initializeChunk6FrameMap() {
@@ -356,8 +355,8 @@ void Scene7060::applyChunk6KeyTakenFrameMap() {
 	if (_chunk6FrameMap.size() <= 70)
 		return;
 
-	// Ghidra: HandleG06Chunk7PickupItem11 mutates these global frame-map bytes.
-	// Reapply it on scene reload when item 0x11 is already in Sue's inventory.
+	// Taking the key mutates the shared frame map. Reapply those changes on
+	// scene reload when Sue already carries it.
 	_chunk6FrameMap[33] = _chunk6FrameMap[58];
 	_chunk6FrameMap[37] = _chunk6FrameMap[62];
 	_chunk6FrameMap[41] = _chunk6FrameMap[66];
@@ -477,39 +476,35 @@ void Scene7060::initializeDialogueRecords(Common::Array<DialogueChoiceRecord> &r
 	records[0].playerTextRowId = 2;
 	records[0].responseFrameIndex = 2;
 	records[0].disableAfterUse = 1;
-	records[0].reserved = 0xff;
 
 	records[1].enabled = 1;
 	records[1].transitionMode = 3;
 	records[1].playerTextRowId = 3;
 	records[1].responseFrameIndex = 3;
 	records[1].disableAfterUse = 1;
-	records[1].reserved = 0xff;
 
 	records[2].enabled = 1;
 	records[2].transitionMode = 3;
 	records[2].playerTextRowId = 4;
 	records[2].responseFrameIndex = 4;
 	records[2].disableAfterUse = 1;
-	records[2].reserved = 0xff;
 
 	records[3].enabled = 1;
 	records[3].transitionMode = 3;
 	records[3].playerTextRowId = 5;
 	records[3].responseFrameIndex = 5;
 	records[3].disableAfterUse = 1;
-	records[3].reserved = 0xff;
 
 	records[4].enabled = 1;
 	records[4].transitionMode = 0;
 	records[4].playerTextRowId = 6;
 	records[4].responseFrameIndex = 6;
-	records[4].reserved = 0xff;
 }
 
 void Scene7060::runDialogueMenuRow98() {
 	Common::Array<DialogueChoiceRecord> records;
 	initializeDialogueRecords(records);
+	_chunk6RandomIdlePaused = true;
 
 	byte depthIndex = 0;
 	byte nodeIndex = 0;
@@ -534,6 +529,7 @@ void Scene7060::runDialogueMenuRow98() {
 		if (selectedChoice == DialogueMenu::kCancelledChoice) {
 			beginSecondarySpeechLine(kScene7060DialogueStageId, 6);
 			beginPrimaryDialogueSpeech(6);
+			_chunk6RandomIdlePaused = false;
 			return;
 		}
 
@@ -570,6 +566,8 @@ void Scene7060::runDialogueMenuRow98() {
 			break;
 		}
 	}
+
+	_chunk6RandomIdlePaused = false;
 }
 
 void Scene7060::beginPrimaryDialogueSpeech(byte frameIndex) {

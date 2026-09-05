@@ -19,13 +19,12 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene4030.h"
-
 #include "graphics/managed_surface.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene4030.h"
 #include "hollywood/scenes/resource_delta_clip_player.h"
 
 namespace Hollywood {
@@ -83,7 +82,13 @@ const byte kScene4030BoneSceneItem = 11;
 const byte kScene4030LeverSceneItem = 12;
 const uint32 kScene4030MarkerFrameMillis = 125;
 const byte kScene4030MarkerColor = 0xb3;
-const byte kScene4030InstallPatchHook = 1;
+
+enum {
+	kScene4030LeftPropLayer,
+	kScene4030RightPropLayer,
+	kScene4030SecondaryActionLayer,
+	kScene4030PrimaryActionLayer
+};
 
 struct Scene4030MarkerPoint {
 	uint16 x;
@@ -100,11 +105,6 @@ const Scene4030MarkerPoint kScene4030MarkerPoints[][2] = {
 	{ { 0x366, 0x067 }, { 0x36a, 0x067 } }
 };
 
-const byte kScene4030RopePickupFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8,
-	9, 10, 11, 12, 13
-};
-
 const byte kScene4030BoneRevealFrameMap[] = {
 	0, 0, 1, 2, 3, 4, 5, 6, 7, 8,
 	9, 10, 11, 10, 9, 10, 11, 10, 9, 10,
@@ -117,11 +117,6 @@ const byte kScene4030BoneRevealSecondaryFrameMap[] = {
 	9, 10, 11, 12
 };
 
-const byte kScene4030BonePickupFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8,
-	9, 10, 11, 12
-};
-
 const byte kScene4030LeverInstallFrameMap[] = {
 	11, 10, 9, 8, 7, 6, 5, 4, 3, 2,
 	2, 2, 1, 0, 11
@@ -129,10 +124,6 @@ const byte kScene4030LeverInstallFrameMap[] = {
 
 const byte kScene4030EntryOverlayFrameMap[] = {
 	7, 7, 6, 5, 4, 3, 2, 1, 0
-};
-
-const byte kScene4030StairExitFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7
 };
 
 const byte kScene4030MechanismPrimaryFrameMap[] = {
@@ -150,6 +141,15 @@ const byte kScene4030RightPropFrameRemap[] = {
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
 	9, 10, 9, 10, 11, 12, 13, 14, 15, 16,
 	17, 18, 19, 20, 21, 22, 23
+};
+
+const SceneLayerSpec kScene4030LayerSpecs[] = {
+	{ kSceneAnimationBehindActors, 7, kScene4030LeftPropDescriptorCount,
+		nullptr, 0, true, 0 },
+	{ kSceneAnimationInFrontOfActors, 8, kScene4030RightPropDescriptorCount,
+		kScene4030RightPropFrameRemap, ARRAYSIZE(kScene4030RightPropFrameRemap), true, 0 },
+	{ kSceneAnimationInFrontOfActors, 0, 0, nullptr, 0, false, 0 },
+	{ kSceneAnimationInFrontOfActors, 0, 0, nullptr, 0, false, 0 }
 };
 
 const byte kScene4030TowerExitFootstepFrames[] = {
@@ -195,22 +195,19 @@ PlayableSceneConfig scene4030Config() {
 	config.setActorPathStepDeltas(kActorPathStepDeltaTableSet87);
 	config.walkablePaletteMaxRegion = 20;
 	config.useActorDepthTest = true;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
 Scene4030::Scene4030(HollywoodEngine *vm) :
 		PlayableScene(vm, scene4030Config()),
-		_leftPropLayer(),
-		_rightPropLayer(),
-		_secondaryActionLayer(),
-		_primaryActionLayer(),
 		_leftPropTrack(RealtimeAnimationTracks::kInvalidTrack),
 		_rightPropChannel(),
 		_markerChannel(),
 		_originalStageSmallRows(),
 		_rightPropState(0) {
-	_leftPropLayer.configure(7, kScene4030LeftPropDescriptorCount, nullptr, 0);
-	_leftPropTrack = _realtimeAnimationTracks.addLoop(_leftPropLayer,
+	_sceneLayers.configure(kScene4030LayerSpecs);
+	_leftPropTrack = _realtimeAnimationTracks.addLoop(kScene4030LeftPropLayer,
 		kScene4030PropFrameMillis, kScene4030LeftPropDescriptorCount);
 	memset(_markerDark, 0, sizeof(_markerDark));
 }
@@ -234,21 +231,10 @@ void Scene4030::initializeCustomPreviewState() {
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 }
 
-void Scene4030::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
+void Scene4030::drawCustomBackgroundComposite(int activeWorldX, int activeWorldY) {
+	(void)activeWorldX;
 	(void)activeWorldY;
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
 	drawMarkerPixels();
-	drawResourceSpriteLayer(_leftPropLayer);
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	drawResourceSpriteLayer(_rightPropLayer);
-	drawResourceSpriteLayer(_secondaryActionLayer);
-	drawResourceSpriteLayer(_primaryActionLayer);
-	drawActionOverlayLayer();
 }
 
 void Scene4030::runCustomEntrySequence() {
@@ -259,7 +245,8 @@ void Scene4030::runCustomEntrySequence() {
 
 		const bool previousHideActiveActor = _actionOverlayPlayer.beginActorReplacement(
 			kScene4030EntryOverlayChunk, kScene4030EntryOverlayDescriptorCount,
-			kScene4030EntryOverlayFrameMap, ARRAYSIZE(kScene4030EntryOverlayFrameMap));
+			kScene4030EntryOverlayFrameMap, ARRAYSIZE(kScene4030EntryOverlayFrameMap),
+			kSceneAnimationScenePlaced);
 		_actionOverlayPlayer.setFrame(0);
 		drawPlayableComposite();
 		presentFrame();
@@ -267,7 +254,8 @@ void Scene4030::runCustomEntrySequence() {
 		_actionOverlayPlayer.finish(previousHideActiveActor);
 		runActorReplacement(ActionOverlaySpec(kScene4030EntryOverlayChunk, kScene4030EntryOverlayDescriptorCount,
 			kScene4030EntryOverlayFrameMap, ARRAYSIZE(kScene4030EntryOverlayFrameMap), kScene4030FrameMillis)
-			.startAt(1));
+			.startAt(1)
+			.drawAt(kSceneAnimationScenePlaced));
 
 		if (!state.scene4030InitialEntryLineSeen) {
 			_activeActorFacing = kScene4030EntrySpeechFacing;
@@ -290,14 +278,6 @@ void Scene4030::runCustomEntrySequence() {
 	}
 	drawPlayableComposite();
 	presentFrame();
-}
-
-bool Scene4030::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
-}
-
-bool Scene4030::shouldRunExitSideEffectsAfterLoop() const {
-	return true;
 }
 
 void Scene4030::runExitSideEffectsAfterLoop() {
@@ -353,11 +333,11 @@ bool Scene4030::dispatchCustomSceneAction(uint16 handlerId) {
 		beginSecondarySpeechLine(10, 0);
 		return true;
 	case 313: // Usar escalera (use stairs): return toward the moat.
-		runActorReplacement(ActionOverlaySpec(kScene4030EntryOverlayChunk,
-			kScene4030EntryOverlayDescriptorCount, kScene4030StairExitFrameMap,
-			ARRAYSIZE(kScene4030StairExitFrameMap), kScene4030FrameMillis));
-		_vm->gameState().mainFlowStateId = _vm->isDemo() ?
-			kScene4010DemoReturnState : kScene4020ReturnState;
+		BlockingSequence(*this)
+			.actorReplacement(ActionOverlaySpec(kScene4030EntryOverlayChunk,
+				kScene4030EntryOverlayDescriptorCount, kScene4030FrameMillis).holdFirstFrame())
+			.commit(_vm->gameState().mainFlowStateId, _vm->isDemo() ?
+				kScene4010DemoReturnState : kScene4020ReturnState);
 		return true;
 	case 314: // Mirar/usar/abrir puerta (look/use/open door): punishment cell warning.
 		beginSecondarySpeechLine(11, 0);
@@ -482,29 +462,12 @@ AmbientAudioProfile Scene4030::ambientAudioProfile() const {
 	return profile;
 }
 
-void Scene4030::handleAnimationFrameHook(byte hookId, uint frame) {
-	(void)frame;
-	if (hookId == kScene4030InstallPatchHook && _sceneChunkTable.isValidChunk(16)) {
-		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[16], _baseFramebuffer);
-		return;
-	}
-	PlayableScene::handleAnimationFrameHook(hookId, frame);
-}
-
 void Scene4030::initializeSpriteLayers() {
+	_sceneLayers.configure(kScene4030LayerSpecs);
 	_realtimeAnimationTracks.reset(_leftPropTrack);
-	_leftPropLayer.visible = true;
-
-	_rightPropLayer.configure(8, kScene4030RightPropDescriptorCount,
-		kScene4030RightPropFrameRemap, ARRAYSIZE(kScene4030RightPropFrameRemap));
-	_rightPropLayer.visible = true;
-	_rightPropLayer.setFrame(0);
-	_rightPropLayer.hasPreviousDescriptor = false;
 	_rightPropChannel.reset(0, kScene4030PropFrameMillis);
 	_rightPropState = 0;
 
-	clearResourceLayer(_secondaryActionLayer);
-	clearResourceLayer(_primaryActionLayer);
 	_markerChannel.reset(0, kScene4030MarkerFrameMillis);
 	memset(_markerDark, 0, sizeof(_markerDark));
 }
@@ -518,11 +481,12 @@ void Scene4030::advanceBackgroundAnimations(uint32 delta) {
 }
 
 void Scene4030::advanceRightPropLayer(uint frameCount) {
+	ResourceSpriteLayer &rightPropLayer = _sceneLayers.layer(kScene4030RightPropLayer);
 	for (uint i = 0; i < frameCount; ++i) {
 		switch (_rightPropState) {
 		case 0:
-			if (_rightPropLayer.frameIndex < 10)
-				_rightPropLayer.setFrame(_rightPropLayer.frameIndex + 1);
+			if (rightPropLayer.frameIndex < 10)
+				rightPropLayer.setFrame(rightPropLayer.frameIndex + 1);
 			else
 				_rightPropState = 1;
 			break;
@@ -530,37 +494,37 @@ void Scene4030::advanceRightPropLayer(uint frameCount) {
 			if (_random.getRandomNumber(0x18) == 0) {
 				_rightPropState = 2;
 			} else if (_random.getRandomNumber(0x27) == 0) {
-				_rightPropLayer.setFrame(0x0d);
+				rightPropLayer.setFrame(0x0d);
 				_rightPropState = 3;
 			}
 			break;
 		case 2:
-			if (_rightPropLayer.frameIndex < 0x0c) {
-				_rightPropLayer.setFrame(_rightPropLayer.frameIndex + 1);
+			if (rightPropLayer.frameIndex < 0x0c) {
+				rightPropLayer.setFrame(rightPropLayer.frameIndex + 1);
 			} else {
-				_rightPropLayer.setFrame(10);
+				rightPropLayer.setFrame(10);
 				_rightPropState = 1;
 			}
 			break;
 		case 3:
-			if (_rightPropLayer.frameIndex < 0x1a)
-				_rightPropLayer.setFrame(_rightPropLayer.frameIndex + 1);
+			if (rightPropLayer.frameIndex < 0x1a)
+				rightPropLayer.setFrame(rightPropLayer.frameIndex + 1);
 			else
 				_rightPropState = 4;
 			break;
 		case 4:
 			if (_random.getRandomNumber(0x27) == 0) {
-				_rightPropLayer.setFrame(0);
+				rightPropLayer.setFrame(0);
 				_rightPropState = 0;
 			}
 			break;
 		default:
-			_rightPropLayer.setFrame(0);
+			rightPropLayer.setFrame(0);
 			_rightPropState = 0;
 			break;
 		}
 	}
-	_rightPropChannel.frameIndex = _rightPropLayer.frameIndex;
+	_rightPropChannel.frameIndex = rightPropLayer.frameIndex;
 }
 
 void Scene4030::advanceMarkerPixels(uint32 delta) {
@@ -650,13 +614,13 @@ void Scene4030::drawTowerTransitionFrame(const Graphics::ManagedSurface &transit
 	_sceneFramebuffer.copyRectToSurface(transitionBackground.rawSurface(), 0, 0,
 		Common::Rect(0, 0, HollywoodEngine::kSceneBufferWidth, HollywoodEngine::kSceneBufferHeight));
 	drawMarkerPixels();
-	drawResourceSpriteLayer(_leftPropLayer);
-	drawResourceSpriteLayer(_rightPropLayer);
+	drawResourceSpriteLayer(_sceneLayers.layer(kScene4030LeftPropLayer));
+	drawResourceSpriteLayer(_sceneLayers.layer(kScene4030RightPropLayer));
 }
 
 bool Scene4030::drawClipFrameDeltaToSurface(const Common::Array<byte> &clipData, uint tableEntryCount,
 		byte frameIndex, Graphics::ManagedSurface &destination) {
-	return ResourceDeltaClipPlayer::drawFrame(clipData, 0, clipData.size(), tableEntryCount,
+	return drawResourceDeltaClipFrame(clipData, 0, clipData.size(), tableEntryCount,
 		frameIndex, framebufferPixels(destination), destination.w, destination.h,
 		destination.pitch, destination.pitch * destination.h);
 }
@@ -669,12 +633,14 @@ void Scene4030::takeRope() {
 	}
 
 	beginSharedInventorySpeechLine(0x14, randomSharedInventorySpeechFrame(4));
-	state.scene4030RopeTaken = true;
-	runActorReplacement(ActionOverlaySpec(kScene4030RopePickupChunk, kScene4030RopePickupDescriptorCount,
-		kScene4030RopePickupFrameMap, ARRAYSIZE(kScene4030RopePickupFrameMap), kScene4030FrameMillis)
-		.patchAt(4, 4));
+	BlockingSequence sequence(*this);
+	sequence.commit(state.scene4030RopeTaken, true)
+		.actorReplacement(ActionOverlaySpec(kScene4030RopePickupChunk,
+			kScene4030RopePickupDescriptorCount, kScene4030FrameMillis)
+			.holdFirstFrame()
+			.patchAt(4, 4));
 	addInventoryItem(kScene4030RopeItem);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 }
 
 void Scene4030::talkToSkeleton() {
@@ -690,26 +656,27 @@ void Scene4030::talkToSkeleton() {
 }
 
 void Scene4030::playBoneRevealAnimation() {
-	_primaryActionLayer.configure(kScene4030BoneRevealChunk, kScene4030BoneRevealDescriptorCount,
+	_sceneLayers.setLayerResource(kScene4030PrimaryActionLayer,
+		kScene4030BoneRevealChunk, kScene4030BoneRevealDescriptorCount,
 		kScene4030BoneRevealFrameMap, ARRAYSIZE(kScene4030BoneRevealFrameMap));
-	_primaryActionLayer.visible = true;
-	_secondaryActionLayer.configure(kScene4030BoneRevealSecondaryChunk,
+	_sceneLayers.showLayerAtFrame(kScene4030PrimaryActionLayer, 0);
+	_sceneLayers.setLayerResource(kScene4030SecondaryActionLayer, kScene4030BoneRevealSecondaryChunk,
 		kScene4030BoneRevealSecondaryDescriptorCount, kScene4030BoneRevealSecondaryFrameMap,
 		ARRAYSIZE(kScene4030BoneRevealSecondaryFrameMap));
-	_secondaryActionLayer.visible = false;
+	_sceneLayers.setLayerVisible(kScene4030SecondaryActionLayer, false);
 
 	const bool previousHideActiveActor = _hideActiveActor;
 	_hideActiveActor = true;
 	bool stateApplied = false;
 	for (uint frame = 0; frame <= 34 && !Engine::shouldQuit() &&
 			!_vm->isSceneRestartRequested(); ++frame) {
-		_primaryActionLayer.setFrame((byte)MIN<uint>(frame,
+		_sceneLayers.setLayerFrame(kScene4030PrimaryActionLayer, (byte)MIN<uint>(frame,
 			ARRAYSIZE(kScene4030BoneRevealFrameMap) - 1));
 		if (frame >= 22) {
 			const byte secondaryFrame = (byte)MIN<uint>(frame - 21,
 				ARRAYSIZE(kScene4030BoneRevealSecondaryFrameMap) - 1);
-			_secondaryActionLayer.visible = true;
-			_secondaryActionLayer.setFrame(secondaryFrame);
+			_sceneLayers.setLayerVisible(kScene4030SecondaryActionLayer, true);
+			_sceneLayers.setLayerFrame(kScene4030SecondaryActionLayer, secondaryFrame);
 			if (secondaryFrame == 2)
 				_soundBank0.playSample(0x3a, 25);
 			if (secondaryFrame == 13) {
@@ -726,8 +693,8 @@ void Scene4030::playBoneRevealAnimation() {
 		_vm->gameState().scene4030LooseBoneState = 1;
 		applySceneStateToHotspotsAndPatches(3);
 	}
-	clearResourceLayer(_secondaryActionLayer);
-	clearResourceLayer(_primaryActionLayer);
+	clearSceneLayer(kScene4030SecondaryActionLayer);
+	clearSceneLayer(kScene4030PrimaryActionLayer);
 	_hideActiveActor = previousHideActiveActor;
 	drawPlayableComposite();
 	presentFrame();
@@ -740,13 +707,16 @@ void Scene4030::takeBone() {
 		return;
 	}
 
-	state.scene4030LooseBoneState = 2;
-	runActorReplacement(ActionOverlaySpec(kScene4030BonePickupChunk, kScene4030BonePickupDescriptorCount,
-		kScene4030BonePickupFrameMap, ARRAYSIZE(kScene4030BonePickupFrameMap), kScene4030FrameMillis)
-		.patchAt(7, 3));
+	BlockingSequence sequence(*this);
+	sequence.commit(state.scene4030LooseBoneState, (byte)2)
+		.actorReplacement(ActionOverlaySpec(kScene4030BonePickupChunk,
+			kScene4030BonePickupDescriptorCount, kScene4030FrameMillis)
+			.holdFirstFrame()
+			.patchAt(7, 3));
 	addInventoryItem(kScene4030BoneItem);
-	_soundBank0.playSample(1, 100);
-	beginSharedInventorySpeechLine(0x14, randomSharedInventorySpeechFrame(4));
+	sequence.sound(1);
+	if (sequence.completed())
+		beginSharedInventorySpeechLine(0x14, randomSharedInventorySpeechFrame(4));
 }
 
 void Scene4030::installImprovisedLever() {
@@ -760,14 +730,16 @@ void Scene4030::installImprovisedLever() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(kScene4030LeverInstallChunk, kScene4030LeverInstallDescriptorCount,
-		kScene4030LeverInstallFrameMap, ARRAYSIZE(kScene4030LeverInstallFrameMap), kScene4030FrameMillis)
-		.hookAt(9, kScene4030InstallPatchHook));
-	state.scene4030ImprovisedLeverInstalled = true;
-	applySceneStateToHotspotsAndPatches(2);
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(kScene4030LeverInstallChunk,
+			kScene4030LeverInstallDescriptorCount, kScene4030LeverInstallFrameMap,
+			ARRAYSIZE(kScene4030LeverInstallFrameMap), kScene4030FrameMillis)
+			.resourcePatchAt(9, 16))
+		.commit(state.scene4030ImprovisedLeverInstalled, true)
+		.framebufferPatch(2);
 	removeInventoryItem(kScene4030LeverItem);
-	_soundBank0.playSample(1, 100);
-	beginSecondarySpeechLine(22, 0);
+	sequence.sound(1)
+		.secondarySpeech(22, 0);
 }
 
 void Scene4030::updateIronMaidenMechanism() {
@@ -781,31 +753,33 @@ void Scene4030::updateIronMaidenMechanism() {
 		(state.scene4030RopeTaken ? 1 : 0);
 	state.scene4030IronMaidenOpen = !state.scene4030IronMaidenOpen;
 	playIronMaidenMechanismAnimation(secondaryFrameGroup);
+	applySceneStateToHotspotsAndPatches(1);
 	if (!state.scene4030MechanismRemarkSeen) {
 		beginSecondarySpeechLine(19, 0);
 		state.scene4030MechanismRemarkSeen = true;
 	}
-	applySceneStateToHotspotsAndPatches(1);
 }
 
 void Scene4030::playIronMaidenMechanismAnimation(byte secondaryFrameGroup) {
-	_primaryActionLayer.configure(kScene4030LeverInstallChunk, kScene4030LeverInstallDescriptorCount,
+	_sceneLayers.setLayerResource(kScene4030PrimaryActionLayer,
+		kScene4030LeverInstallChunk, kScene4030LeverInstallDescriptorCount,
 		kScene4030MechanismPrimaryFrameMap, ARRAYSIZE(kScene4030MechanismPrimaryFrameMap));
-	_primaryActionLayer.visible = true;
-	_secondaryActionLayer.configure(kScene4030MechanismSecondaryChunk,
+	_sceneLayers.showLayerAtFrame(kScene4030PrimaryActionLayer, 0);
+	_sceneLayers.setLayerResource(kScene4030SecondaryActionLayer, kScene4030MechanismSecondaryChunk,
 		kScene4030MechanismSecondaryDescriptorCount,
 		kScene4030MechanismSecondaryFrameGroups[secondaryFrameGroup],
 		ARRAYSIZE(kScene4030MechanismSecondaryFrameGroups[secondaryFrameGroup]));
-	_secondaryActionLayer.visible = false;
+	_sceneLayers.setLayerVisible(kScene4030SecondaryActionLayer, false);
 
 	const bool previousHideActiveActor = _hideActiveActor;
 	_hideActiveActor = true;
 	for (uint frame = 0; frame < ARRAYSIZE(kScene4030MechanismPrimaryFrameMap) &&
 			!Engine::shouldQuit() && !_vm->isSceneRestartRequested(); ++frame) {
-		_primaryActionLayer.setFrame((byte)frame);
+		_sceneLayers.setLayerFrame(kScene4030PrimaryActionLayer, (byte)frame);
 		if (frame >= 6) {
-			_secondaryActionLayer.visible = true;
-			_secondaryActionLayer.setFrame((byte)MIN<uint>(frame - 6, 2));
+			_sceneLayers.setLayerVisible(kScene4030SecondaryActionLayer, true);
+			_sceneLayers.setLayerFrame(kScene4030SecondaryActionLayer,
+				(byte)MIN<uint>(frame - 6, 2));
 			if (frame == 6)
 				_soundBank0.playSample(0x2b, 100);
 		}
@@ -813,11 +787,9 @@ void Scene4030::playIronMaidenMechanismAnimation(byte secondaryFrameGroup) {
 			break;
 	}
 
-	clearResourceLayer(_secondaryActionLayer);
-	clearResourceLayer(_primaryActionLayer);
+	clearSceneLayer(kScene4030SecondaryActionLayer);
+	clearSceneLayer(kScene4030PrimaryActionLayer);
 	_hideActiveActor = previousHideActiveActor;
-	drawPlayableComposite();
-	presentFrame();
 }
 
 void Scene4030::copyStageItemName(byte destinationItem, byte sourceItem) {

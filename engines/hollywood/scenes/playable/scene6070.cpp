@@ -2,7 +2,7 @@
  *
  * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
- * file for details.
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -11,20 +11,21 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
-
-#include "hollywood/scenes/playable/scene6070.h"
 
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene6070.h"
+#include "hollywood/scenes/shared_frame_sequences.h"
 
 namespace Hollywood {
 
@@ -65,9 +66,16 @@ const byte kScene6070State609SueSpeechGroup = 3;
 const byte kScene6070SueIdleSpeechGroup = 4;
 const byte kScene6070SueIdleSpeechId = 1;
 const byte kScene6070RonRetortSpeechId = 2;
-const byte kScene6070TransferFrameHook = 1;
 const uint kScene6070FixedGiveHandlerIndex = 0x110;
 const uint16 kScene6070FixedGiveHandlerDefault = 0x79;
+
+enum {
+	kScene6070SueLayer,
+	kScene6070ArrivalLayer,
+	kScene6070State609SueLayer,
+	kScene6070State609PropLayer,
+	kScene6070State609NpcLayer
+};
 
 const byte kScene6070ArrivalFrameMap[] = {
 	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 12, 12,
@@ -81,12 +89,19 @@ const byte kScene6070TransferFrameMap[] = {
 const byte kScene6070TransferSueFrameMap[] = {
 	14, 14, 14, 14, 14, 14, 14, 14, 19, 20, 21, 22, 23, 24, 14};
 
-const byte kScene6070State609PropFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
-	7, 6, 5, 0, 13, 14, 15, 16, 17, 18, 19, 0};
-
 const byte kScene6070State609NpcFrameMap[] = {
 	0, 5, 6, 7, 8, 9, 10, 11, 12, 7, 6, 5, 0};
+
+const SceneLayerSpec kScene6070LayerSpecs[] = {
+	{ kSceneAnimationBehindActors, 8, 25, nullptr, 0, false, 14 },
+	{ kSceneAnimationBehindActors, 9, 0x34, kScene6070ArrivalFrameMap,
+		ARRAYSIZE(kScene6070ArrivalFrameMap), false, 0 },
+	{ kSceneAnimationInFrontOfActors, 13, 5, nullptr, 0, false, 0 },
+	{ kSceneAnimationInFrontOfActors, 12, 0x14, kDualPoseSpeakerFrames,
+		kDualPoseSpeakerFrameCount, false, 0 },
+	{ kSceneAnimationInFrontOfActors, 11, 0x0d, kScene6070State609NpcFrameMap,
+		ARRAYSIZE(kScene6070State609NpcFrameMap), false, 0 }
+};
 
 struct Scene6070DialogueSeedRecord {
 	uint16 index;
@@ -106,11 +121,11 @@ const Scene6070DialogueSeedRecord kScene6070SueDialogueSeedRecords[] = {
 	{4, 1, 0, 3, 7, 7, 1},
 	{5, 1, 0, 0, 9, 9, 1}};
 
-static bool isScene6070AlternateCutscene(const HollywoodEngine *vm) {
+bool isScene6070AlternateCutscene(const HollywoodEngine *vm) {
 	return vm->gameState().mainFlowStateId == kScene6070AlternateCutsceneState;
 }
 
-static uint16 scene6070InitialViewport(const HollywoodEngine *vm) {
+uint16 scene6070InitialViewport(const HollywoodEngine *vm) {
 	switch (vm->gameState().mainFlowStateId) {
 	case kScene6070FirstState:
 		return kScene6070ViewportFromScene6050;
@@ -122,7 +137,7 @@ static uint16 scene6070InitialViewport(const HollywoodEngine *vm) {
 	}
 }
 
-static PlayableSceneConfig scene6070Config(HollywoodEngine *vm) {
+PlayableSceneConfig scene6070Config(HollywoodEngine *vm) {
 	PlayableSceneConfig config(6070,
 		SceneResourceLayout(15, 5, 13),
 		SceneViewport(scene6070InitialViewport(vm), kScene6070ViewportMinX, kScene6070ViewportMaxX),
@@ -137,11 +152,6 @@ static PlayableSceneConfig scene6070Config(HollywoodEngine *vm) {
 Scene6070::Scene6070(HollywoodEngine *vm) :
 		PlayableScene(vm, scene6070Config(vm)),
 		_originalColorToItemMap(),
-		_sueLayer(),
-		_arrivalLayer(),
-		_state609SueLayer(),
-		_state609PropLayer(),
-		_state609NpcLayer(),
 		_sueIdleChannel(),
 		_state609PropTrack(RealtimeAnimationTracks::kInvalidTrack),
 		_sueSpeechTimerAccumulator(0),
@@ -151,15 +161,8 @@ Scene6070::Scene6070(HollywoodEngine *vm) :
 		_manualSequenceActive(false),
 		_pendingRonRetort(false),
 		_state609PropAlternatePose(false) {
-	_sueLayer.configure(8, 25, nullptr, 0);
-	_arrivalLayer.configure(9, 0x34, kScene6070ArrivalFrameMap,
-							ARRAYSIZE(kScene6070ArrivalFrameMap));
-	_state609SueLayer.configure(13, 5, nullptr, 0);
-	_state609PropLayer.configure(12, 0x14, kScene6070State609PropFrameMap,
-								 ARRAYSIZE(kScene6070State609PropFrameMap));
-	_state609NpcLayer.configure(11, 0x0d, kScene6070State609NpcFrameMap,
-								ARRAYSIZE(kScene6070State609NpcFrameMap));
-	_state609PropTrack = _realtimeAnimationTracks.addRange(_state609PropLayer,
+	_sceneLayers.configure(kScene6070LayerSpecs);
+	_state609PropTrack = _realtimeAnimationTracks.addRange(kScene6070State609PropLayer,
 		kScene6070State609SlowFrameMillis, 17, 24, false);
 }
 
@@ -209,37 +212,13 @@ void Scene6070::initializeCustomPreviewState() {
 		break;
 	}
 
-	resetSceneLayers();
 	initializeDefaultPreviewState();
+	resetSceneLayers();
 }
 
-void Scene6070::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel,
-									int activeWorldX, int activeWorldY, bool drawSecondaryActor, byte secondaryFacing,
-									byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-									byte actorDrawOrderMode) {
-	copyBaseFramebufferToSceneFramebuffer();
-
-	if (isScene6070AlternateCutscene(_vm)) {
-		drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel,
-										  activeWorldX, activeWorldY, drawSecondaryActor, secondaryFacing,
-										  secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-		drawResourceSpriteLayer(_state609SueLayer);
-		drawResourceSpriteLayer(_state609PropLayer);
-		drawResourceSpriteLayer(_state609NpcLayer);
-		return;
-	}
-
-	drawResourceSpriteLayer(_sueLayer);
-	drawResourceSpriteLayer(_arrivalLayer);
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel,
-									  activeWorldX, activeWorldY, drawSecondaryActor, secondaryFacing,
-									  secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	drawActionOverlayLayer();
-
-	const int orderX = drawActiveActor ? activeWorldX : _activeActorWorldX;
-	const int orderY = drawActiveActor ? activeWorldY : _activeActorWorldY;
-	const byte orderMode = drawActiveActor ? actorDrawOrderMode : _activeActorDrawOrderMode;
-	drawNormalForeground(orderX, orderY, orderMode);
+void Scene6070::drawCustomForegroundComposite(int activeWorldX, int activeWorldY) {
+	if (!isScene6070AlternateCutscene(_vm))
+		drawNormalForeground(activeWorldX, activeWorldY, _activeActorDrawOrderMode);
 }
 
 void Scene6070::runCustomEntrySequence() {
@@ -275,7 +254,8 @@ bool Scene6070::shouldPresentPreviewBeforeEntrySequence() const {
 }
 
 void Scene6070::prepareCustomGameplayLoop() {
-	_sueIdleChannel.reset(_sueLayer.frameIndex, kScene6070SueFrameMillis);
+	_sueIdleChannel.reset(_sceneLayers.layerFrame(kScene6070SueLayer),
+		kScene6070SueFrameMillis);
 	_realtimeAnimationTracks.resetTimer(_state609PropTrack);
 	_sueSpeechTimerAccumulator = 0;
 }
@@ -315,12 +295,15 @@ bool Scene6070::dispatchCustomSceneAction(uint16 handlerId) {
 		return true;
 	case 309: // Usar/Abrir puerta de la celda (use/open the cell door).
 		if (state.scene6070CellDoorOpen)
-			dispatchGenericSceneAction(8);
+			beginStaticSecondarySpeechLine(8, 0);
 		else
 			beginSecondarySpeechLine(2, 0);
 		return true;
 	case 310: // Cerrar puerta de la celda (close the cell door).
-		dispatchGenericSceneAction(state.scene6070CellDoorOpen ? 19 : 11);
+		if (state.scene6070CellDoorOpen)
+			beginStaticSecondarySpeechLine(0x13, (byte)_random.getRandomNumber(1));
+		else
+			beginStaticSecondarySpeechLine(0x0b, 0);
 		return true;
 	case 311: // Ir por puerta de la celda (go through the cell door).
 		if (state.scene6070CellDoorOpen)
@@ -427,7 +410,8 @@ bool Scene6070::applyCustomSceneStateToHotspotsAndPatches(byte selector) {
 		_hotspots.setVerbMovementModeByGlobalRecordIndex(0x0c, 0);
 	}
 
-	_sueLayer.visible = state.scene6070SuePresent && !isScene6070AlternateCutscene(_vm);
+	_sceneLayers.setLayerVisible(kScene6070SueLayer,
+		state.scene6070SuePresent && !isScene6070AlternateCutscene(_vm));
 	if (state.mainFlowStateId == kScene6070FirstState &&
 		kScene6070FixedGiveHandlerIndex < GameplayState::kFixedInventoryActionTableEntryCount) {
 		state.fixedInventoryVerbHandlerIdsByItemAndStrip[kScene6070FixedGiveHandlerIndex] = 1;
@@ -461,16 +445,16 @@ byte Scene6070::primarySpeechVolumePercent(byte animationGroup) const {
 void Scene6070::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) {
 	switch (animationGroup) {
 	case kScene6070State609PropSpeechGroup:
-		_state609PropLayer.setFrame(frameIndex);
+		_sceneLayers.setLayerFrame(kScene6070State609PropLayer, frameIndex);
 		break;
 	case kScene6070State609NpcSpeechGroup:
-		_state609NpcLayer.setFrame(frameIndex);
+		_sceneLayers.setLayerFrame(kScene6070State609NpcLayer, frameIndex);
 		break;
 	case kScene6070State609SueSpeechGroup:
-		_state609SueLayer.setFrame(frameIndex);
+		_sceneLayers.setLayerFrame(kScene6070State609SueLayer, frameIndex);
 		break;
 	default:
-		_sueLayer.setFrame(frameIndex);
+		_sceneLayers.setLayerFrame(kScene6070SueLayer, frameIndex);
 		break;
 	}
 }
@@ -488,19 +472,10 @@ void Scene6070::primarySpeechAnimationRestored(byte animationGroup, byte baseFra
 	}
 }
 
-void Scene6070::handleAnimationFrameHook(byte hookId, uint frame) {
-	if (hookId != kScene6070TransferFrameHook ||
-		frame >= ARRAYSIZE(kScene6070TransferSueFrameMap))
-		return;
-	_sueLayer.setFrame(kScene6070TransferSueFrameMap[frame]);
-}
-
-bool Scene6070::shouldRunExitSideEffectsAfterLoop() const {
-	const uint16 stateId = _vm->gameState().mainFlowStateId;
-	return !Engine::shouldQuit() && stateId != 0xff && !isMainFlowStateInScene(stateId);
-}
-
 void Scene6070::runExitSideEffectsAfterLoop() {
+	if (!didLeaveSceneAfterLoop())
+		return;
+
 	GameplayState &state = _vm->gameState();
 	if (kScene6070FixedGiveHandlerIndex < GameplayState::kFixedInventoryActionTableEntryCount) {
 		state.fixedInventoryVerbHandlerIdsByItemAndStrip[kScene6070FixedGiveHandlerIndex] =
@@ -523,18 +498,13 @@ AmbientAudioProfile Scene6070::ambientAudioProfile() const {
 }
 
 void Scene6070::resetSceneLayers() {
-	_sueLayer.reset(14);
-	_sueLayer.visible = _vm->gameState().scene6070SuePresent &&
-						!isScene6070AlternateCutscene(_vm);
-	_arrivalLayer.reset(0);
-	_arrivalLayer.visible = false;
-	_state609SueLayer.reset(0);
-	_state609PropLayer.reset(0);
-	_state609NpcLayer.reset(0);
+	_sceneLayers.configure(kScene6070LayerSpecs);
 	const bool alternate = isScene6070AlternateCutscene(_vm);
-	_state609SueLayer.visible = alternate;
-	_state609PropLayer.visible = alternate;
-	_state609NpcLayer.visible = alternate;
+	_sceneLayers.setLayerVisible(kScene6070SueLayer,
+		_vm->gameState().scene6070SuePresent && !alternate);
+	_sceneLayers.setLayerVisible(kScene6070State609SueLayer, alternate);
+	_sceneLayers.setLayerVisible(kScene6070State609PropLayer, alternate);
+	_sceneLayers.setLayerVisible(kScene6070State609NpcLayer, alternate);
 	_sueIdleChannel.reset(14, kScene6070SueFrameMillis);
 	_realtimeAnimationTracks.setActive(_state609PropTrack, false);
 	_realtimeAnimationTracks.resetTimer(_state609PropTrack);
@@ -548,7 +518,8 @@ void Scene6070::resetSceneLayers() {
 }
 
 void Scene6070::advanceSueIdle(uint32 delta) {
-	if (!_sueLayer.visible || _sueMode != 0 || _manualSequenceActive)
+	ResourceSpriteLayer &sueLayer = _sceneLayers.layer(kScene6070SueLayer);
+	if (!sueLayer.visible || _sueMode != 0 || _manualSequenceActive)
 		return;
 
 	_sueSpeechTimerAccumulator += delta;
@@ -570,10 +541,10 @@ void Scene6070::advanceSueIdle(uint32 delta) {
 
 	const uint ticks = _sueIdleChannel.consumeFrames(delta);
 	for (uint tick = 0; tick < ticks; ++tick) {
-		if (_sueLayer.frameIndex == 18)
-			_sueLayer.setFrame(14);
+		if (sueLayer.frameIndex == 18)
+			sueLayer.setFrame(14);
 		else if (!_primaryDialogueSpeechActive && _random.getRandomNumber(14) == 0)
-			_sueLayer.setFrame(18);
+			sueLayer.setFrame(18);
 
 		if (_pendingRonRetort && !_primaryDialogueSpeechActive &&
 			!_speechOverlay.visible && !_actorPathPlaybackActive) {
@@ -613,8 +584,8 @@ void Scene6070::runArrivalCutscene() {
 	walkActiveActorTo(0x288, 0x19a, 5, 0);
 	waitSceneMillis(2000, false);
 
-	_arrivalLayer.visible = true;
-	playAnimationFrames(_arrivalLayer,
+	_sceneLayers.setLayerVisible(kScene6070ArrivalLayer, true);
+	playAnimationFrames(kScene6070ArrivalLayer,
 		AnimationFrameRange(0, ARRAYSIZE(kScene6070ArrivalFrameMap) - 1,
 			kScene6070OverlayFrameMillis));
 	runCurtainClearToBlack();
@@ -627,31 +598,31 @@ void Scene6070::runState609Cutscene() {
 	drawPlayableComposite();
 	presentFrame();
 
-	playAnimationFrames(_state609PropLayer,
+	playAnimationFrames(kScene6070State609PropLayer,
 		AnimationFrameRange(4, 8, kScene6070State609SlowFrameMillis));
 	_state609PropAlternatePose = true;
 	beginPrimarySpeechLineWithAnimationGroup(15, 0, 0x17c, 0x0a8,
 											 0x20, 0x32, 0, kScene6070State609PropSpeechGroup);
-	playAnimationFrames(_state609PropLayer,
+	playAnimationFrames(kScene6070State609PropLayer,
 		AnimationFrameRange(12, 16, kScene6070State609SlowFrameMillis));
-	_state609PropLayer.setFrame(0);
+	_sceneLayers.setLayerFrame(kScene6070State609PropLayer, 0);
 	_state609PropAlternatePose = false;
 
 	_realtimeAnimationTracks.reset(_state609PropTrack);
 	_realtimeAnimationTracks.setActive(_state609PropTrack, true);
-	playAnimationFrames(_state609NpcLayer,
+	playAnimationFrames(kScene6070State609NpcLayer,
 		AnimationFrameRange(1, 4, kScene6070State609FastFrameMillis));
 	beginPrimarySpeechLineWithAnimationGroup(15, 1, 0x1c8, 0x096,
 											 0x28, 0x16, 0x0b, kScene6070State609NpcSpeechGroup);
-	playAnimationFrames(_state609NpcLayer,
+	playAnimationFrames(kScene6070State609NpcLayer,
 		AnimationFrameRange(9, 12, kScene6070State609FastFrameMillis));
-	_state609NpcLayer.setFrame(0);
+	_sceneLayers.setLayerFrame(kScene6070State609NpcLayer, 0);
 
 	beginSecondarySpeechLine(15, 2);
 	beginPrimarySpeechLineWithAnimationGroup(15, 3, 0x102, 0x096,
 											 0x3f, 0x28, 0x32, kScene6070State609SueSpeechGroup);
 	_realtimeAnimationTracks.setActive(_state609PropTrack, false);
-	_state609PropLayer.setFrame(0);
+	_sceneLayers.setLayerFrame(kScene6070State609PropLayer, 0);
 	beginPrimarySpeechLineWithAnimationGroup(15, 4, 0x186, 0x096,
 											 0x20, 0x32, 0, kScene6070State609PropSpeechGroup);
 
@@ -665,7 +636,7 @@ void Scene6070::runSueDialogue() {
 	Common::Array<DialogueChoiceRecord> records;
 	initializeSueDialogueRecords(records);
 	_sueMode = 1;
-	_sueLayer.setFrame(14);
+	_sceneLayers.setLayerFrame(kScene6070SueLayer, 14);
 
 	byte depthIndex = 0;
 	byte nodeIndex = 0;
@@ -703,7 +674,7 @@ void Scene6070::runSueDialogue() {
 	}
 
 	_sueMode = 0;
-	_sueLayer.setFrame(14);
+	_sceneLayers.setLayerFrame(kScene6070SueLayer, 14);
 }
 
 void Scene6070::initializeSueDialogueRecords(
@@ -719,7 +690,6 @@ void Scene6070::initializeSueDialogueRecords(
 		record.playerTextRowId = seed.playerTextRowId;
 		record.responseFrameIndex = seed.responseFrameIndex;
 		record.disableAfterUse = seed.disableAfterUse;
-		record.reserved = 0xff;
 	}
 }
 
@@ -737,7 +707,7 @@ void Scene6070::runSueDiscovery() {
 		beginSecondarySpeechLine(98, 0);
 	state.scene6070SuePresent = true;
 	applySceneStateToHotspotsAndPatches(0);
-	playAnimationFrames(_sueLayer,
+	playAnimationFrames(kScene6070SueLayer,
 		AnimationFrameRange(0, 14, kScene6070DiscoveryFrameMillis));
 	_sueMode = 1;
 	beginPrimarySpeechLineWithAnimationGroup(99, 0, 0x0e2, 0x08c,
@@ -752,7 +722,7 @@ void Scene6070::runSueDiscovery() {
 	beginPrimarySpeechLineWithAnimationGroup(99, 3, 0x0e2, 0x08c,
 											 0x3f, 0x28, 0x32, kScene6070SueSpeechGroup);
 	_sueMode = 0;
-	_sueLayer.setFrame(14);
+	_sceneLayers.setLayerFrame(kScene6070SueLayer, 14);
 	_manualSequenceActive = false;
 }
 
@@ -769,18 +739,20 @@ void Scene6070::handleGiveItemToSue() {
 		return;
 	}
 
-	beginSecondarySpeechLine(6, 0);
-	_manualSequenceActive = true;
-	runActorReplacement(ActionOverlaySpec(10, 0x0c, kScene6070TransferFrameMap,
-									   ARRAYSIZE(kScene6070TransferFrameMap), kScene6070OverlayFrameMillis)
-						 .hookEveryFrame(kScene6070TransferFrameHook));
-	_sueLayer.setFrame(14);
-	_manualSequenceActive = false;
+	BlockingSequence sequence(*this);
+	sequence.secondarySpeech(6, 0)
+		.commit(_manualSequenceActive, true)
+		.actorReplacement(ActionOverlaySpec(10, 0x0c, kScene6070TransferFrameMap,
+			ARRAYSIZE(kScene6070TransferFrameMap), kScene6070OverlayFrameMillis)
+			.mappedLayerFrames(kScene6070SueLayer, kScene6070TransferSueFrameMap,
+				ARRAYSIZE(kScene6070TransferSueFrameMap)))
+		.commit(_manualSequenceActive, false);
+	_sceneLayers.setLayerFrame(kScene6070SueLayer, 14);
 
 	GameplayState &state = _vm->gameState();
 	state.removeInventoryItem(0, ronItem);
 	state.addInventoryItem(1, sueItem);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 }
 
 byte Scene6070::sueInventoryItemForRonItem(byte itemId) const {

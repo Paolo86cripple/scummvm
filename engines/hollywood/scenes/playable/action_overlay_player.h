@@ -24,34 +24,43 @@
 
 #include "common/types.h"
 
-#include "hollywood/scenes/playable/animation_layers.h"
+#include "hollywood/scenes/animation_layers.h"
 
 namespace Hollywood {
 
-// Tracks a temporary overlay at its declared scene-composition stratum.
+/**
+ * Stores a temporary resource overlay outside the regular scene layer stack.
+ *
+ * PlayableScene draws it at the selected stratum. Actor-replacement playback
+ * hides the active actor until finish() restores the previous state.
+ */
 class ActionOverlayPlayer {
 public:
 	ActionOverlayPlayer();
 
 	void reset();
-	bool beginActorReplacement(uint newChunkIndex, uint newDescriptorCount, const byte *frameMap,
-		uint frameMapSize) {
+	bool beginActorReplacement(uint newChunkIndex, uint newDescriptorCount,
+		const byte *frameMap, uint frameMapSize,
+		SceneAnimationStratum drawStratum = kSceneAnimationActorReplacement,
+		bool restoreBackground = false) {
 		return begin(newChunkIndex, newDescriptorCount, frameMap, frameMapSize,
-			kSceneAnimationActorReplacement);
+			drawStratum, true, restoreBackground);
 	}
 	void setFrame(uint frame);
 	void finish(bool previousHideActiveActor);
-	bool isVisible() const { return layer.visible; }
-	bool replacesActor() const { return isVisible() && stratum == kSceneAnimationActorReplacement; }
+	bool isVisible() const { return _layer.visible; }
+	bool replacesActor() const { return isVisible() && _hideActiveActor; }
 
-	ResourceSpriteLayer layer;
-	SceneAnimationStratum stratum;
-	bool hideActiveActor;
+	ResourceSpriteLayer _layer;
+	SceneAnimationStratum _stratum;
+	bool _hideActiveActor;
+	bool _restoreBackgroundBeforeDraw;
 
 private:
 	friend class PlayableScene;
-	bool begin(uint newChunkIndex, uint newDescriptorCount, const byte *frameMap, uint frameMapSize,
-		SceneAnimationStratum stratum);
+	bool begin(uint newChunkIndex, uint newDescriptorCount, const byte *frameMap,
+		uint frameMapSize, SceneAnimationStratum stratum, bool hideActiveActor,
+		bool restoreBackground);
 };
 
 } // End of namespace Hollywood

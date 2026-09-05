@@ -52,6 +52,7 @@ private:
 	void runOverlaySequence(uint chunkIndex, uint descriptorCount, const byte *frameMap,
 		uint frameMapSize, uint32 frameMillis, int patchFrame = -1);
 	void runOverlaySequence(const ActionOverlaySpec &spec);
+	void runLeverOverlay(bool reverse);
 	void runQuasimodoGrateCutscene();
 	void runGrateLiftShake();
 	void runQuasimodoLayerTransition(byte fromFrame, byte toFrame);
@@ -71,8 +72,6 @@ private:
 
 	bool isFirstEntryState() const;
 	bool isSpecialOverlayEntryState() const;
-
-	ResourceSpriteLayer _quasimodoLayer;
 };
 
 } // End of namespace Hollywood

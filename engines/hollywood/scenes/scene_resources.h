@@ -19,8 +19,8 @@
  *
  */
 
-#ifndef HOLLYWOOD_SCENES_PLAYABLE_SCENE_RESOURCES_H
-#define HOLLYWOOD_SCENES_PLAYABLE_SCENE_RESOURCES_H
+#ifndef HOLLYWOOD_SCENES_SCENE_RESOURCES_H
+#define HOLLYWOOD_SCENES_SCENE_RESOURCES_H
 
 #include "common/array.h"
 #include "common/types.h"
@@ -33,34 +33,55 @@ class ManagedSurface;
 
 namespace Hollywood {
 
-// Owns scene archive chunks and generic chunk loading helpers.
+class IndexedSurfaceBuffer;
+
+/**
+ * Owns an open scene archive and storage for its loaded chunks.
+ *
+ * Fixed chunks load into caller-owned buffers. Regular arena chunks append to
+ * _arena; _chunkOffsets maps local indexes and aliases into that storage.
+ */
 class SceneResources {
 public:
 	SceneResources();
 
-	void clearChunkOffsets();
 	bool loadChunkTable(const char *archiveName);
+	bool validateChunk(const char *archiveName, const char *sceneDebugName,
+		uint index) const;
+	bool validateChunkRange(const char *archiveName, const char *sceneDebugName,
+		uint firstChunk, uint lastChunk) const;
 	bool validateRequiredChunks(const char *archiveName, const char *sceneDebugName,
 		uint requiredChunkCount, uint framebufferChunkIndex = 0) const;
+	uint32 totalChunkSize(uint firstChunk, uint lastChunk) const;
 	void allocateArena(uint32 byteCount);
 
 	bool loadFixedChunk(const char *sceneDebugName,
 		uint index, Common::Array<byte> &destination, uint fixedSize);
 	bool loadFixedChunk(const char *sceneDebugName,
 		uint index, Graphics::ManagedSurface &destination, uint fixedSize);
+	bool loadFixedChunk(const char *sceneDebugName,
+		uint index, IndexedSurfaceBuffer &destination, uint fixedSize);
 	bool loadVariableChunk(uint index, Common::Array<byte> &destination);
+	bool loadChunkTo(const char *sceneDebugName, uint index,
+		Common::Array<byte> &destination, uint32 destinationOffset);
 	bool loadArenaChunk(const char *sceneDebugName, uint index);
+	bool loadArenaChunk(const char *sceneDebugName, uint archiveIndex,
+		uint localChunkIndex);
+	bool loadArenaChunkAlias(const char *sceneDebugName, uint sourceIndex,
+		uint aliasIndex, uint targetIndex);
 
-	ResourceChunkTable chunkTable;
-	uint32 chunkOffsets[HollywoodEngine::kResourceChunkCount];
-	uint32 arenaCursor;
-	Common::Array<byte> arena;
-	Common::Array<byte> metadata;
+	ResourceChunkTable _chunkTable;
+	uint32 _chunkOffsets[kResourceChunkCount];
+	uint32 _arenaCursor;
+	Common::Array<byte> _arena;
+	Common::Array<byte> _metadata;
 
 private:
+	void clearChunkOffsets();
+
 	ChunkArchive _archive;
 };
 
 } // End of namespace Hollywood
 
-#endif // HOLLYWOOD_SCENES_PLAYABLE_SCENE_RESOURCES_H
+#endif // HOLLYWOOD_SCENES_SCENE_RESOURCES_H

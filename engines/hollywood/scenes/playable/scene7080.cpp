@@ -19,14 +19,13 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene7080.h"
-
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
 #include "hollywood/resource.h"
+#include "hollywood/scenes/playable/scene7080.h"
 
 namespace Hollywood {
 
@@ -40,15 +39,11 @@ const uint16 kScene7080Chunk7DescriptorCount = 0x0b;
 const uint32 kScene7080FrameMillis = 75;
 const byte kScene7080TableItemColorId = 6;
 const byte kScene7080PostPickupTableItemId = 4;
-const byte kScene7080CrankPickupHook = 1;
-const byte kScene7080BackToG07FrameMap[] = {
-	0, 1, 2, 3
-};
 const byte kScene7080PickupItem13FrameMap[] = {
 	0, 6, 7, 8, 9, 10, 1, 2, 3, 3, 4, 5, 0
 };
 
-static PlayableSceneConfig scene7080Config() {
+PlayableSceneConfig scene7080Config() {
 	PlayableSceneConfig config(7080,
 		SceneResourceLayout(9, 5, 8),
 		SceneViewport(kScene7080ViewportXOffset),
@@ -74,18 +69,9 @@ void Scene7080::initializeCustomPreviewState() {
 	applySceneStateToHotspotsAndPatches(0xff);
 }
 
-void Scene7080::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-
-	drawActionOverlayLayer();
-
+void Scene7080::drawCustomForegroundComposite(int activeWorldX, int activeWorldY) {
+	(void)activeWorldX;
+	(void)activeWorldY;
 	drawResourceBlockList(_resourceArena, _resourceChunkOffsets[5], _sceneFramebuffer);
 }
 
@@ -179,31 +165,23 @@ AmbientAudioProfile Scene7080::ambientAudioProfile() const {
 	return createLoopingAmbientAudioProfile(50);
 }
 
-void Scene7080::handleAnimationFrameHook(byte hookId, uint frame) {
-	(void)frame;
-
-	if (hookId == kScene7080CrankPickupHook) {
-		_vm->gameState().crankOnHannoverDesk = false;
-		applySceneStateToHotspotsAndPatches(1);
-	}
-}
-
 void Scene7080::handleBackToG07() {
 	BlockingSequence(*this)
-		.actorReplacement(6, kScene7080Chunk6DescriptorCount,
-			kScene7080BackToG07FrameMap, ARRAYSIZE(kScene7080BackToG07FrameMap),
-			kScene7080FrameMillis)
+		.actorReplacement(ActionOverlaySpec(6, kScene7080Chunk6DescriptorCount,
+			kScene7080FrameMillis))
 		.sound(3)
 		.commit(_vm->gameState().mainFlowStateId, kScene7080BackToG07State);
 }
 
 void Scene7080::handlePickupItem13() {
 	dispatchGenericSceneAction(19);
+	GameplayState &state = _vm->gameState();
 	BlockingSequence sequence(*this);
 	sequence.actorReplacement(ActionOverlaySpec(7, kScene7080Chunk7DescriptorCount,
 		kScene7080PickupItem13FrameMap, ARRAYSIZE(kScene7080PickupItem13FrameMap),
 		kScene7080FrameMillis)
-		.hookAt(3, kScene7080CrankPickupHook));
+		.commitAt(3, state.crankOnHannoverDesk, false)
+		.patchAt(3, 1));
 	addInventoryItem(0x13);
 	sequence.sound(1);
 }

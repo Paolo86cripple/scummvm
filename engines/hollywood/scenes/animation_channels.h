@@ -19,14 +19,14 @@
  *
  */
 
-#ifndef HOLLYWOOD_SCENES_PLAYABLE_ANIMATION_CHANNELS_H
-#define HOLLYWOOD_SCENES_PLAYABLE_ANIMATION_CHANNELS_H
+#ifndef HOLLYWOOD_SCENES_ANIMATION_CHANNELS_H
+#define HOLLYWOOD_SCENES_ANIMATION_CHANNELS_H
 
 #include "common/array.h"
 #include "common/random.h"
 #include "common/types.h"
 
-#include "hollywood/scenes/playable/animation_layers.h"
+#include "hollywood/scenes/animation_layers.h"
 
 namespace Hollywood {
 
@@ -78,10 +78,12 @@ struct TimedAnimationChannel {
  * Advances registered resource layers at a fixed cadence.
  *
  * Tracks only own timing and frame selection. Scenes still own visibility,
- * composition, and animations with frame-specific side effects. Registered
- * layers must remain at stable addresses. They may be reconfigured while their
- * tracks are inactive; their registered range must be valid before activation.
- * Inactive tracks do not accumulate time; reset() restores the first frame.
+ * composition, and animations with frame-specific side effects. Stack layers
+ * are bound by ID and may survive stack storage changes.
+ * addStableRandom() is reserved for fixed-address layers owned outside a stack.
+ * Layers may be reconfigured while their tracks are inactive; their registered
+ * range must be valid before activation. Inactive tracks do not accumulate
+ * time; reset() restores the first frame.
  */
 class RealtimeAnimationTracks {
 public:
@@ -89,42 +91,60 @@ public:
 		kInvalidTrack = 0xffffffff
 	};
 
-	uint addLoop(ResourceSpriteLayer &layer, uint32 frameMillis, uint16 frameCount,
-			bool active = true) {
-		if (frameCount == 0 || frameCount > 0x100)
-			return kInvalidTrack;
-		return addTrack(kCycle, layer, frameMillis, 0, (byte)(frameCount - 1),
-			false, active);
+	explicit RealtimeAnimationTracks(SceneLayerStack &layers) :
+			_layers(layers) {
 	}
 
-	uint addRange(ResourceSpriteLayer &layer, uint32 frameMillis, byte firstFrame,
-			byte lastFrame, bool active = true) {
-		if (firstFrame > lastFrame)
+	uint addLoop(uint layerId, uint32 frameMillis,
+			uint16 frameCount, bool active = true) {
+		if (!_layers.hasLayer(layerId) || frameCount == 0 || frameCount > 0x100)
 			return kInvalidTrack;
-		return addTrack(kCycle, layer, frameMillis, firstFrame, lastFrame, false, active);
+		return addTrack(kCycle, layerId, frameMillis, 0,
+			(byte)(frameCount - 1), false, active);
+	}
+
+	uint addRange(uint layerId, uint32 frameMillis,
+			byte firstFrame, byte lastFrame, bool active = true) {
+		if (!_layers.hasLayer(layerId) || firstFrame > lastFrame)
+			return kInvalidTrack;
+		return addTrack(kCycle, layerId, frameMillis, firstFrame,
+			lastFrame, false, active);
 	}
 
 	// Cycles the logical entries in the layer's configured frame map.
-	uint addFrameMap(ResourceSpriteLayer &layer, uint32 frameMillis, bool active = true) {
+	uint addFrameMap(uint layerId, uint32 frameMillis,
+			bool active = true) {
+		if (!_layers.hasLayer(layerId))
+			return kInvalidTrack;
+		const ResourceSpriteLayer &layer = _layers.layer(layerId);
 		if (layer.frameMap == nullptr || layer.frameMapSize == 0 || layer.frameMapSize > 0x100)
 			return kInvalidTrack;
-		return addTrack(kCycle, layer, frameMillis, 0, (byte)(layer.frameMapSize - 1),
-			false, active);
+		return addTrack(kCycle, layerId, frameMillis, 0,
+			(byte)(layer.frameMapSize - 1), false, active);
 	}
 
-	uint addPingPong(ResourceSpriteLayer &layer, uint32 frameMillis, byte firstFrame,
-			byte lastFrame, bool active = true) {
-		if (firstFrame > lastFrame)
+	uint addPingPong(uint layerId, uint32 frameMillis,
+			byte firstFrame, byte lastFrame, bool active = true) {
+		if (!_layers.hasLayer(layerId) || firstFrame > lastFrame)
 			return kInvalidTrack;
-		return addTrack(kPingPong, layer, frameMillis, firstFrame, lastFrame, false, active);
+		return addTrack(kPingPong, layerId, frameMillis, firstFrame,
+			lastFrame, false, active);
 	}
 
-	uint addRandom(ResourceSpriteLayer &layer, uint32 frameMillis, byte firstFrame,
+	uint addStableRandom(ResourceSpriteLayer &layer, uint32 frameMillis, byte firstFrame,
 			byte lastFrame, bool avoidRepeats, bool active = true) {
 		if (firstFrame > lastFrame)
 			return kInvalidTrack;
 		return addTrack(kRandom, layer, frameMillis, firstFrame, lastFrame,
 			avoidRepeats, active);
+	}
+
+	uint addRandom(uint layerId, uint32 frameMillis,
+			byte firstFrame, byte lastFrame, bool avoidRepeats, bool active = true) {
+		if (!_layers.hasLayer(layerId) || firstFrame > lastFrame)
+			return kInvalidTrack;
+		return addTrack(kRandom, layerId, frameMillis, firstFrame,
+			lastFrame, avoidRepeats, active);
 	}
 
 	bool hasTrack(uint id) const {
@@ -141,13 +161,17 @@ public:
 	}
 
 	void reset(uint id) {
-		if (hasTrack(id))
-			_tracks[id].reset();
+		if (hasTrack(id)) {
+			Track &track = _tracks[id];
+			track.reset(targetLayer(track));
+		}
 	}
 
 	void resetToFrame(uint id, byte frame) {
-		if (hasTrack(id) && frame >= _tracks[id].firstFrame && frame <= _tracks[id].lastFrame)
-			_tracks[id].reset(frame);
+		if (hasTrack(id) && frame >= _tracks[id].firstFrame && frame <= _tracks[id].lastFrame) {
+			Track &track = _tracks[id];
+			track.reset(targetLayer(track), frame);
+		}
 	}
 
 	// Changes the bounds without resetting the timer or live layer state.
@@ -165,19 +189,41 @@ public:
 			_tracks[id].channel.resetTimer();
 	}
 
-	void advance(uint32 delta, Common::RandomSource &random) {
-		for (uint i = 0; i < _tracks.size(); ++i)
-			advance(i, delta, random);
+	// Switches cadence and clears accumulated time without changing the layer.
+	void resetTimer(uint id, uint32 frameMillis) {
+		if (!hasTrack(id) || frameMillis == 0)
+			return;
+		_tracks[id].channel.frameMillis = frameMillis;
+		_tracks[id].channel.resetTimer();
 	}
 
-	void advance(uint id, uint32 delta, Common::RandomSource &random) {
+	// Makes the track advance on its next update, even if that update has no delta.
+	void prime(uint id) {
+		if (hasTrack(id))
+			_tracks[id].channel.timerAccumulator = _tracks[id].channel.frameMillis;
+	}
+
+	bool advance(uint32 delta, Common::RandomSource &random) {
+		bool changed = false;
+		for (uint i = 0; i < _tracks.size(); ++i)
+			changed = advance(i, delta, random) || changed;
+		return changed;
+	}
+
+	bool advance(uint id, uint32 delta, Common::RandomSource &random) {
 		if (!hasTrack(id) || !_tracks[id].active)
-			return;
+			return false;
 
 		Track &track = _tracks[id];
+		ResourceSpriteLayer *target = targetLayer(track);
+		if (target == nullptr) {
+			track.channel.resetTimer();
+			return false;
+		}
 		const uint frames = track.channel.consumeFrames(delta);
 		for (uint frame = 0; frame < frames; ++frame)
-			track.advanceFrame(random);
+			track.advanceFrame(*target, random);
+		return frames != 0;
 	}
 
 private:
@@ -190,7 +236,8 @@ private:
 	struct Track {
 		Track() :
 				mode(kCycle),
-				layer(nullptr),
+				stableLayer(nullptr),
+				layerId(SceneLayerStack::kInvalidLayer),
 				channel(),
 				firstFrame(0),
 				lastFrame(0),
@@ -199,42 +246,43 @@ private:
 				active(false) {
 		}
 
-		void reset() {
-			reset(firstFrame);
+		void reset(ResourceSpriteLayer *target) {
+			reset(target, firstFrame);
 		}
 
-		void reset(byte frame) {
+		void reset(ResourceSpriteLayer *target, byte frame) {
 			forward = true;
 			channel.reset(frame, channel.frameMillis);
-			layer->reset(frame);
+			if (target != nullptr)
+				target->reset(frame);
 		}
 
-		void setFrame(byte frame) {
+		void setFrame(ResourceSpriteLayer &target, byte frame) {
 			channel.frameIndex = frame;
-			layer->setFrame(frame);
+			target.setFrame(frame);
 		}
 
-		void advanceFrame(Common::RandomSource &random) {
-			byte frame = layer->frameIndex;
+		void advanceFrame(ResourceSpriteLayer &target, Common::RandomSource &random) {
+			byte frame = target.frameIndex;
 			switch (mode) {
 			case kCycle:
-				setFrame(frame >= firstFrame && frame < lastFrame ? frame + 1 : firstFrame);
+				setFrame(target, frame >= firstFrame && frame < lastFrame ? frame + 1 : firstFrame);
 				break;
 			case kPingPong:
 				if (firstFrame == lastFrame) {
-					setFrame(firstFrame);
+					setFrame(target, firstFrame);
 				} else if (forward) {
 					if (frame >= lastFrame) {
 						forward = false;
-						setFrame(lastFrame - 1);
+						setFrame(target, lastFrame - 1);
 					} else {
-						setFrame(frame + 1);
+						setFrame(target, frame + 1);
 					}
 				} else if (frame <= firstFrame) {
 					forward = true;
-					setFrame(firstFrame + 1);
+					setFrame(target, firstFrame + 1);
 				} else {
-					setFrame(frame - 1);
+					setFrame(target, frame - 1);
 				}
 				break;
 			case kRandom: {
@@ -247,14 +295,15 @@ private:
 					nextFrame = frame >= firstFrame && frame <= lastFrame ?
 						firstFrame + (byte)((frame - firstFrame + 1) % count) : firstFrame;
 				}
-				setFrame(nextFrame);
+				setFrame(target, nextFrame);
 				break;
 			}
 			}
 		}
 
 		Mode mode;
-		ResourceSpriteLayer *layer;
+		ResourceSpriteLayer *stableLayer;
+		uint layerId;
 		TimedAnimationChannel channel;
 		byte firstFrame;
 		byte lastFrame;
@@ -265,22 +314,43 @@ private:
 
 	uint addTrack(Mode mode, ResourceSpriteLayer &layer, uint32 frameMillis,
 			byte firstFrame, byte lastFrame, bool avoidRepeats, bool active) {
+		return addTrack(mode, &layer, SceneLayerStack::kInvalidLayer,
+			frameMillis, firstFrame, lastFrame, avoidRepeats, active);
+	}
+
+	uint addTrack(Mode mode, uint layerId, uint32 frameMillis,
+			byte firstFrame, byte lastFrame, bool avoidRepeats, bool active) {
+		return addTrack(mode, nullptr, layerId, frameMillis, firstFrame,
+			lastFrame, avoidRepeats, active);
+	}
+
+	uint addTrack(Mode mode, ResourceSpriteLayer *stableLayer, uint layerId,
+			uint32 frameMillis, byte firstFrame, byte lastFrame,
+			bool avoidRepeats, bool active) {
 		if (frameMillis == 0)
 			return kInvalidTrack;
 
 		Track track;
 		track.mode = mode;
-		track.layer = &layer;
+		track.stableLayer = stableLayer;
+		track.layerId = layerId;
 		track.channel.frameMillis = frameMillis;
 		track.firstFrame = firstFrame;
 		track.lastFrame = lastFrame;
 		track.avoidRepeats = avoidRepeats;
 		track.active = active;
-		track.reset();
+		track.reset(targetLayer(track));
 		_tracks.push_back(track);
 		return _tracks.size() - 1;
 	}
 
+	ResourceSpriteLayer *targetLayer(Track &track) {
+		if (track.layerId != SceneLayerStack::kInvalidLayer)
+			return _layers.hasLayer(track.layerId) ? &_layers.layer(track.layerId) : nullptr;
+		return track.stableLayer;
+	}
+
+	SceneLayerStack &_layers;
 	Common::Array<Track> _tracks;
 };
 

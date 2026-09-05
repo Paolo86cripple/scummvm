@@ -41,6 +41,7 @@ private:
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
+	byte customizeSceneActionFacing(uint16 handlerId, byte calculatedFacing) const override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool customizeRouteSegment(byte currentRegion, byte nextRegion, const ActorPathBuildState &state,
 		const ScenePoint &boundary, int &requestedFacing, bool &restoredStepDeltas) override;
@@ -50,15 +51,11 @@ private:
 	bool shouldAnimatePrimarySpeechLine() const override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void applyFirstEntryPalette();
 	void restoreNormalPalette();
 	void runFirstEntryConversation();
-	void startFirstEntryActorPath();
-	void advanceFirstEntryActorPath(uint32 delta);
-	void finishFirstEntryActorPath();
 	void runEntryGestureSequence();
 	void runEntryOpenSequence();
 	void applyActorDepthClipForDrawOrder(byte actorDrawOrderMode);
@@ -67,8 +64,7 @@ private:
 	void drawLargeForegroundActor();
 	void advanceLargeForegroundActor(uint32 delta);
 	void advanceSmallForegroundActor(uint32 delta);
-	void runPickupOverlay(uint chunkIndex, uint descriptorCount, const byte *frameMap,
-		uint frameMapSize, int patchFrame, byte patchState);
+	void runPickupOverlay(ActionOverlaySpec spec, int patchFrame, byte patchState);
 	void handleSceneEventFlag0();
 	void handlePickupPunchBowl();
 	void handlePickupLemonSlice();
@@ -84,17 +80,10 @@ private:
 
 	TimedAnimationChannel _largeForegroundChannel;
 	TimedAnimationChannel _smallForegroundChannel;
-	ResourceSpriteLayer _largeForegroundLayer;
-	ResourceSpriteLayer _smallForegroundLayer;
-	ResourceSpriteLayer _leftEntryActorLayer;
-	ResourceSpriteLayer _rightEntryActorLayer;
 	byte _largeForegroundMode;
 	byte _smallForegroundTickCount;
-	uint _entryActorPathFrameIndex;
-	uint32 _entryActorPathTimerAccumulator;
 	bool _entryActorsVisible;
 	bool _entryActorsAlternatePose;
-	bool _entryActorPathActive;
 };
 
 } // End of namespace Hollywood

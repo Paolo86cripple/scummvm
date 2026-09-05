@@ -19,15 +19,12 @@
  *
  */
 
-#include "hollywood/scenes/intro/scene9180.h"
-
 #include "common/debug.h"
-#include "common/system.h"
 
-#include "hollywood/font.h"
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/intro/scene9180.h"
 
 namespace Hollywood {
 
@@ -42,7 +39,6 @@ const uint kScene9180FlickerIntervalMillis = 75;
 const byte kScene9180SpeechColor = 0xfb;
 const uint16 kScene9180SpeechCenterX = 0x159;
 const uint16 kScene9180SpeechTopY = 0x128;
-const int kScene9180SpeechLineHeight = 20;
 
 const byte kScene9180FrameMap[] = {
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
@@ -57,8 +53,7 @@ const byte kScene9180FrameMap[] = {
 };
 
 Scene9180::Scene9180(HollywoodEngine *vm) :
-		IntroSceneBase(vm, "Scene 9180"),
-		_resources(),
+		PresentationScene(vm, "Scene 9180"),
 		_speech(vm->getLanguage()),
 		_loopSound(),
 		_effectSound(),
@@ -68,18 +63,13 @@ Scene9180::Scene9180(HollywoodEngine *vm) :
 		_normalPalette(),
 		_brightPalette(),
 		_baseFramebuffer(),
-		_subtitle(),
 		_frameMapIndex(0),
 		_flickerModulus(10),
 		_brightPaletteActive(false) {
 	_paletteResource.resize(kPaletteSize);
 	_normalPalette.resize(kPaletteSize);
 	_brightPalette.resize(kPaletteSize);
-	_baseFramebuffer.resize(kFrameBufferSize);
-	_subtitle.visible = false;
-	_subtitle.colorIndex = kScene9180SpeechColor;
-	_subtitle.centerX = 0;
-	_subtitle.topY = 0;
+	_baseFramebuffer.resize(kSceneBufferByteCount);
 }
 
 bool Scene9180::play() {
@@ -105,8 +95,8 @@ bool Scene9180::load() {
 	if (!_resources.validateChunkRange(kScene9180ArchiveName, _debugName, 0, 2))
 		return false;
 
-	if (!loadChunk(0, _baseFramebuffer, kFrameBufferSize) ||
-			!loadChunk(1, _paletteResource, kPaletteSize))
+	if (!loadFixedChunk(0, _baseFramebuffer, kSceneBufferByteCount) ||
+			!loadFixedChunk(1, _paletteResource, kPaletteSize))
 		return false;
 
 	_resources.allocateArena(_resources.totalChunkSize(2, 2));
@@ -122,18 +112,6 @@ bool Scene9180::load() {
 	return true;
 }
 
-bool Scene9180::loadChunk(uint index, IndexedSurfaceBuffer &destination, uint fixedSize) {
-	return _resources.loadFixedChunk(_debugName, index, destination, fixedSize);
-}
-
-bool Scene9180::loadChunk(uint index, Common::Array<byte> &destination, uint fixedSize) {
-	return _resources.loadFixedChunk(_debugName, index, destination, fixedSize);
-}
-
-bool Scene9180::loadArenaChunk(uint index) {
-	return _resources.loadArenaChunk(_debugName, index, index);
-}
-
 void Scene9180::runSequence() {
 	_frameMapIndex = 0;
 	drawComposite();
@@ -147,12 +125,12 @@ void Scene9180::runSequence() {
 
 	waitWithEffects(3000);
 	_flickerModulus = 3;
-	animateFrameRange(0, 0x34, 1);
+	animateFrameRange(0, 0x34);
 	runSpeechLine(0);
-	animateFrameRange(0x58, 0x3a, -1);
+	animateFrameRange(0x58, 0x3a);
 	_frameMapIndex = 0x35;
 	runSpeechLine(1);
-	animateFrameRange(0x3a, 0x58, 1);
+	animateFrameRange(0x3a, 0x58);
 	_frameMapIndex = 0x35;
 	runSpeechLine(2);
 
@@ -178,48 +156,36 @@ void Scene9180::drawFrameIndex(byte frameMapIndex) {
 	if (frameMapIndex >= ARRAYSIZE(kScene9180FrameMap))
 		return;
 
-	drawStripSpriteFrame(_resources.arena, _resources.chunkOffsets[2], 0,
+	drawStripSpriteFrame(_resources._arena, _resources._chunkOffsets[2], 0,
 		kScene9180DescriptorCount, kScene9180FrameMap[frameMapIndex],
 		_sceneFramebuffer.surface());
 }
 
-void Scene9180::animateFrameRange(byte firstFrameMapIndex, byte lastFrameMapIndex, int step) {
-	if (step == 0)
-		return;
+void Scene9180::animateFrameRange(byte firstFrameMapIndex, byte lastFrameMapIndex) {
+	AnimationFrameRange range(firstFrameMapIndex, lastFrameMapIndex,
+		kScene9180AnimationFrameMillis);
+	_animationPlayer.playAndPresent(_frameMapIndex, range);
+}
 
-	int frame = firstFrameMapIndex;
-	while (!_skipRequested && !Engine::shouldQuit()) {
-		if (pollEvents())
-			return;
-		updateFlickerPalette();
-		_frameMapIndex = (byte)frame;
-		drawComposite();
-		presentFrame();
-		if (delay(kScene9180AnimationFrameMillis))
-			return;
-		if (frame == lastFrameMapIndex)
-			break;
-		frame += step;
-	}
+void Scene9180::presentAnimationFrame() {
+	updateFlickerPalette();
+	drawComposite();
+	presentFrame();
 }
 
 void Scene9180::waitWithEffects(uint32 millis) {
-	uint32 elapsed = 0;
 	uint32 flickerElapsed = 0;
-	while (elapsed < millis && !_skipRequested && !Engine::shouldQuit()) {
-		if (pollEvents())
-			return;
+	TimedPresentationLoop loop(*this, millis);
+	while (loop.beginFrame()) {
 		if (flickerElapsed >= kScene9180FlickerIntervalMillis) {
 			flickerElapsed %= kScene9180FlickerIntervalMillis;
 			updateFlickerPalette();
 		}
 		drawComposite();
 		presentFrame();
-		const uint32 slice = MIN<uint32>(millis - elapsed, 10);
-		g_system->delayMillis(slice);
-		elapsed += slice;
-		flickerElapsed += slice;
+		flickerElapsed += loop.finishFrame();
 	}
+	consumeStepAdvanceRequest();
 }
 
 void Scene9180::runSpeechLine(byte frameIndex) {
@@ -239,26 +205,19 @@ void Scene9180::runSpeechCue(uint16 textRecordId, byte continuationCount, uint16
 	const byte lineCount = MAX<byte>(1, continuationCount);
 	for (byte part = 0; part < lineCount && !_skipRequested && !Engine::shouldQuit(); ++part) {
 		const Common::String text = _text.largeTextRecord(textRecordId + part);
-		if (!text.empty()) {
-			_subtitle.visible = true;
-			_subtitle.colorIndex = kScene9180SpeechColor;
-			_subtitle.centerX = kScene9180SpeechCenterX;
-			_subtitle.topY = kScene9180SpeechTopY;
-			wrapSubtitleText(text, kScene9180SpeechCenterX, _subtitle.lines);
-		}
+		showPositionedSubtitle(text, kScene9180SpeechColor,
+			kScene9180SpeechCenterX, kScene9180SpeechTopY,
+			kSpeechOverlayFixedEdgeWrap);
 
 		const uint16 sampleId = voiceSampleId == 0 ? 0 : voiceSampleId + part;
 		const bool started = sampleId != 0 && _speech.playSample(sampleId, 100);
 		const uint32 duration = started ? MAX<uint32>(_speech.lastSampleDurationMillis(), 750) :
 			MAX<uint32>(1200, _subtitle.lines.size() * 1100);
-		uint32 elapsed = 0;
 		uint32 speechElapsed = 0;
 		uint32 flickerElapsed = 0;
 		byte talkFrame = 0;
-		while (elapsed < duration && !_skipRequested && !Engine::shouldQuit()) {
-			if (pollEvents())
-				return;
-
+		TimedPresentationLoop loop(*this, duration);
+		while (loop.beginFrame()) {
 			if (speechElapsed >= kScene9180SpeechFrameMillis) {
 				speechElapsed %= kScene9180SpeechFrameMillis;
 				_frameMapIndex = 0x35 + (talkFrame % 5);
@@ -271,12 +230,14 @@ void Scene9180::runSpeechCue(uint16 textRecordId, byte continuationCount, uint16
 
 			drawComposite();
 			presentFrame();
-			const uint32 slice = MIN<uint32>(duration - elapsed, 10);
-			g_system->delayMillis(slice);
-			elapsed += slice;
+			const uint32 slice = loop.finishFrame();
 			speechElapsed += slice;
 			flickerElapsed += slice;
 		}
+		_speech.stop();
+		consumeStepAdvanceRequest();
+		if (_skipRequested || Engine::shouldQuit())
+			return;
 		_frameMapIndex = 0x35;
 		clearSubtitle();
 		drawComposite();
@@ -374,10 +335,9 @@ void Scene9180::fillBlackPixelsForMemoryFlash() {
 
 void Scene9180::waitForFinalInput() {
 	while (!_skipRequested && !Engine::shouldQuit()) {
-		if (pollEvents())
-			return;
 		presentFrame();
-		g_system->delayMillis(10);
+		if (delay(10))
+			return;
 	}
 }
 
@@ -385,67 +345,6 @@ void Scene9180::stopAudio() {
 	_speech.stop();
 	_loopSound.stop();
 	_effectSound.stop();
-}
-
-void Scene9180::clearSubtitle() {
-	_subtitle.visible = false;
-	_subtitle.lines.clear();
-}
-
-void Scene9180::drawFrameOverlays() {
-	if (!_subtitle.visible || !_vm->font() || !_vm->font()->isLoaded())
-		return;
-
-	HollywoodFont *font = _vm->font();
-	font->setShadowColor(0);
-	for (uint lineIndex = 0; lineIndex < _subtitle.lines.size(); ++lineIndex) {
-		const Common::String &line = _subtitle.lines[lineIndex];
-		const int lineWidth = subtitleTextWidth(line);
-		int x = (int)_subtitle.centerX - (lineWidth >> 1);
-		if (x < 0)
-			x = 0;
-		if (x + lineWidth > HollywoodEngine::kScreenWidth)
-			x = MAX<int>(0, HollywoodEngine::kScreenWidth - lineWidth);
-		const int y = (int)_subtitle.topY + lineIndex * kScene9180SpeechLineHeight;
-		font->drawString(_screen.surfacePtr(), line, x, y, lineWidth, _subtitle.colorIndex,
-			Graphics::kTextAlignLeft, 0, false, true);
-	}
-}
-
-void Scene9180::wrapSubtitleText(const Common::String &text, uint16 anchorSceneX,
-		Common::Array<Common::String> &lines) const {
-	lines.clear();
-	if (text.empty())
-		return;
-
-	uint maxChars = anchorSceneX < 0xa0 || HollywoodEngine::kScreenWidth - anchorSceneX < 0xa0 ? 0x24 : 0x32;
-	const char *source = text.c_str();
-	const uint textLength = text.size();
-	uint cursor = 0;
-	while (cursor < textLength && lines.size() < 10) {
-		uint end = textLength;
-		if (cursor + maxChars < textLength) {
-			end = cursor + maxChars;
-			while (end > cursor && (byte)source[end] != 0x20 && source[end] != 0)
-				--end;
-			while (end > cursor && (byte)source[end - 1] == 0x20)
-				--end;
-			if (end == cursor)
-				end = MIN<uint>(textLength, cursor + maxChars);
-		}
-		lines.push_back(Common::String(source + cursor, end - cursor));
-		cursor = end;
-		while (cursor < textLength && (byte)source[cursor] == 0x20)
-			++cursor;
-		maxChars = maxChars > 2 ? maxChars - 2 : 1;
-	}
-}
-
-uint Scene9180::subtitleTextWidth(const Common::String &text) const {
-	if (!_vm->font() || !_vm->font()->isLoaded())
-		return 0;
-
-	return _vm->font()->getStringWidth(text) + 2;
 }
 
 } // End of namespace Hollywood

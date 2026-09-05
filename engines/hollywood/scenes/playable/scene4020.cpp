@@ -19,10 +19,9 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene4020.h"
-
-#include "hollywood/gameplay/game_state.h"
 #include "hollywood/hollywood.h"
+#include "hollywood/gameplay/game_state.h"
+#include "hollywood/scenes/playable/scene4020.h"
 
 namespace Hollywood {
 
@@ -43,7 +42,6 @@ const uint kScene4020GrateTransitionDescriptorCount = 0x0d;
 const uint kScene4020SkullcrackerChunk = 7;
 const uint kScene4020SkullcrackerDescriptorCount = 0x10;
 const byte kScene4020SkullcrackerItem = 0x20;
-const byte kScene4020SkullcrackerHook = 1;
 
 enum Scene4020LayerId {
 	kScene4020IdleLayer
@@ -52,11 +50,6 @@ enum Scene4020LayerId {
 const byte kScene4020ReturnFromD03FrameMap[] = {
 	12, 11, 10, 9, 8, 7, 6, 5, 4, 3,
 	2, 1, 0
-};
-
-const byte kScene4020EnterD03FrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8,
-	9, 10, 11, 12
 };
 
 const byte kScene4020SkullcrackerFrameMap[] = {
@@ -73,7 +66,7 @@ const SceneLayerSpec kScene4020LayerSpecs[] = {
 		kScene4020IdleDescriptorCount, nullptr, 0, true, 0}
 };
 
-static PlayableSceneConfig scene4020Config() {
+PlayableSceneConfig scene4020Config() {
 	PlayableSceneConfig config(4020,
 		SceneResourceLayout(5, 5, 7),
 		SceneViewport(kScene4020ViewportXOffset, kScene4020ViewportXOffset, kScene4020ViewportXOffset),
@@ -82,6 +75,7 @@ static PlayableSceneConfig scene4020Config() {
 	config.setTextResources(kScene4020Resource003RowsOffsetIndex, kScene4020SpeechCueDescriptorTableOffset);
 	config.walkablePaletteMaxRegion = 2;
 	config.useActorDepthTest = true;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
@@ -89,7 +83,7 @@ Scene4020::Scene4020(HollywoodEngine *vm) :
 		PlayableScene(vm, scene4020Config()),
 		_idleTrack(RealtimeAnimationTracks::kInvalidTrack) {
 	_sceneLayers.configure(kScene4020LayerSpecs);
-	_idleTrack = _realtimeAnimationTracks.addLoop(_sceneLayers.layer(kScene4020IdleLayer),
+	_idleTrack = _realtimeAnimationTracks.addLoop(kScene4020IdleLayer,
 		kScene4020FrameMillis, kScene4020IdleDescriptorCount);
 }
 
@@ -102,16 +96,10 @@ void Scene4020::initializeCustomPreviewState() {
 	else
 		setActiveActorPose(0x50, 0x173, 2);
 }
-bool Scene4020::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
-}
-
-bool Scene4020::shouldRunExitSideEffectsAfterLoop() const {
-	const uint16 stateId = _vm->gameState().mainFlowStateId;
-	return !Engine::shouldQuit() && stateId != 0xff && !isMainFlowStateInScene(stateId);
-}
-
 void Scene4020::runExitSideEffectsAfterLoop() {
+	if (!didLeaveSceneAfterLoop())
+		return;
+
 	fadePaletteToBlack();
 }
 
@@ -196,16 +184,6 @@ bool Scene4020::customizeRouteFinal(byte currentRegion, byte targetRegion, const
 	return restoredStepDeltas;
 }
 
-void Scene4020::handleAnimationFrameHook(byte hookId, uint frame) {
-	if (hookId != kScene4020SkullcrackerHook)
-		return;
-
-	if (frame == 9)
-		_soundBank0.playSampleLooping(0x39, 50);
-	else if (frame == 0x31)
-		_soundBank0.stop();
-}
-
 AmbientAudioProfile Scene4020::ambientAudioProfile() const {
 	AmbientAudioProfile profile;
 	profile.checkMillis = kScene4020AmbientCheckMillis;
@@ -251,7 +229,7 @@ void Scene4020::runEntryFromScene4030() {
 	_actionOverlayPlayer.setFrame(0);
 	drawPlayableComposite();
 	BlockingSequence sequence(*this);
-	sequence.paletteTransition(BlockingSequence::kFadeFromBlack)
+	sequence.fadeFromBlack()
 		.layerFrames(_actionOverlayPlayer,
 			AnimationFrameRange(1, ARRAYSIZE(kScene4020ReturnFromD03FrameMap) - 1,
 				kScene4020FrameMillis));
@@ -269,9 +247,9 @@ void Scene4020::runExitToScene4030() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(kScene4020GrateTransitionChunk, kScene4020GrateTransitionDescriptorCount,
-		kScene4020EnterD03FrameMap, ARRAYSIZE(kScene4020EnterD03FrameMap), kScene4020FrameMillis)
-		.noRedrawAtEnd()
+	runActorReplacement(ActionOverlaySpec(kScene4020GrateTransitionChunk,
+		kScene4020GrateTransitionDescriptorCount, kScene4020FrameMillis)
+		.holdFirstFrame()
 		.startAt(1));
 	_vm->gameState().mainFlowStateId = kScene4030FirstState;
 }
@@ -288,7 +266,8 @@ void Scene4020::useSkullcrackerOnGrate() {
 
 	runActorReplacement(ActionOverlaySpec(kScene4020SkullcrackerChunk, kScene4020SkullcrackerDescriptorCount,
 		kScene4020SkullcrackerFrameMap, ARRAYSIZE(kScene4020SkullcrackerFrameMap), kScene4020FrameMillis)
-		.hookEveryFrame(kScene4020SkullcrackerHook));
+		.loopingSoundAt(9, 0x39, 50)
+		.stopSoundAt(0x31));
 	_soundBank0.stop();
 	removeInventoryItem(kScene4020SkullcrackerItem);
 	_soundBank0.playSample(1, 100);

@@ -49,7 +49,6 @@ private:
 	byte primarySpeechAnimationFrameCount(byte animationGroup) const override;
 	uint32 primarySpeechAnimationFrameMillis(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetAnimationLayers();
@@ -71,14 +70,13 @@ private:
 	void initializePrincessDialogueRecords(Common::Array<DialogueChoiceRecord> &records) const;
 	void setDialogueRecord(Common::Array<DialogueChoiceRecord> &records, uint index,
 		byte enabled, byte nextNodeIndex, byte transitionMode, byte playerTextRowId,
-		byte responseFrameIndex, byte disableAfterUse, byte reserved) const;
+		byte responseFrameIndex, byte disableAfterUse) const;
 	void runHatPickup();
 	void runSunglassesPickup();
 	void runTigerToothPickup();
 	void runSteakOnTigerSequence();
 	void runLabItemOnTigerSequence();
 	bool runTigerItemOverlaySequence(bool withEffect);
-	void drawPickupPatch(byte hookId);
 	void replaceColorMapItem(byte sourceItem, byte destinationItem);
 	void restoreOriginalColorMapItem(byte itemId);
 	void remapOriginalColorMapItems(byte firstSourceItem, byte secondSourceItem, byte destinationItem);

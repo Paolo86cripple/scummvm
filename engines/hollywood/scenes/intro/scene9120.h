@@ -26,14 +26,13 @@
 #include "common/random.h"
 
 #include "hollywood/music.h"
-#include "hollywood/scenes/intro/intro_resource_set.h"
-#include "hollywood/scenes/intro/intro_scene.h"
+#include "hollywood/scenes/presentation_scene.h"
 
 namespace Hollywood {
 
 class HollywoodEngine;
 
-class Scene9120 : public IntroSceneBase {
+class Scene9120 : public PresentationScene {
 public:
 	Scene9120(HollywoodEngine *vm);
 
@@ -41,9 +40,6 @@ public:
 
 private:
 	bool loadResourceI12Assets();
-	bool loadResourceI12Chunk(uint index, Common::Array<byte> &destination, uint fixedSize);
-	bool loadResourceI12Chunk(uint index, IndexedSurfaceBuffer &destination, uint fixedSize);
-	bool loadResourceI12ArenaChunk(uint index);
 
 	void runTimedOverlayPhase();
 	void runHoldScrollAndIdlePhase();
@@ -65,7 +61,6 @@ private:
 	void stopAudio() override;
 
 	enum {
-		kFrameBufferSize = 0x78000,
 		kScene9120FramebufferSize = 0xeb000,
 		kI12RequiredChunkCount = 10,
 		kScene9120InitialYOffset = 0x1cc,
@@ -82,7 +77,6 @@ private:
 	MusicPlayer *_music;
 	SoundBank0Player _soundBank0;
 	Common::RandomSource _random;
-	IntroResourceSet _resources;
 	Common::Array<byte> _paletteResource;
 	IndexedSurfaceBuffer _descriptorBackground;
 	uint32 _overlayAccumulator;

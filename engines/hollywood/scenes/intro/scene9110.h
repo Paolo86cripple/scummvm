@@ -27,14 +27,14 @@
 #include "common/str.h"
 
 #include "hollywood/music.h"
-#include "hollywood/scenes/intro/intro_resource_set.h"
-#include "hollywood/scenes/intro/intro_scene.h"
+#include "hollywood/scenes/presentation_scene.h"
+#include "hollywood/scenes/scene_text_store.h"
 
 namespace Hollywood {
 
 class HollywoodEngine;
 
-class Scene9110 : public IntroSceneBase {
+class Scene9110 : public PresentationScene {
 public:
 	Scene9110(HollywoodEngine *vm);
 
@@ -63,27 +63,8 @@ private:
 		SpeechWaitMode waitMode;
 	};
 
-	struct PopupDescriptor {
-		uint16 textRecordId;
-		byte continuationCount;
-		uint16 voiceSampleId;
-	};
-
-	struct SubtitleOverlay {
-		bool visible;
-		byte colorIndex;
-		uint16 centerX;
-		uint16 topY;
-		Common::Array<Common::String> lines;
-	};
-
 	bool load();
 	bool loadResourceI11Assets();
-	bool loadResourceI11Chunk(uint index, Common::Array<byte> &destination, uint fixedSize);
-	bool loadResourceI11Chunk(uint index, IndexedSurfaceBuffer &destination, uint fixedSize);
-	bool loadResourceI11ArenaChunk(uint index);
-	bool loadStage003Descriptors();
-
 	void initializeCompositeState();
 	void runSpeechSequence();
 	void runSpeechStep(const SpeechStep &step);
@@ -91,58 +72,37 @@ private:
 	bool advanceAnimationTimers(uint32 millis, SpeechWaitMode waitMode);
 	void drawCompositeToFramebuffer();
 	void presentComposite();
-	void drawDescriptorFrame(byte localChunkIndex, byte descriptorCount, byte descriptorIndex);
 	byte nextMouthFrameVariant();
 
-	void beginSubtitle(const PopupDescriptor &popup, const SpeechTextStyle &speechTextStyle);
-	void clearSubtitle();
-	void drawSubtitleOverlay();
-	void wrapActorSpeechText(const Common::String &text, uint16 anchorSceneX, Common::Array<Common::String> &lines) const;
-	Common::String getStage003LargeTextRecord(uint16 recordId) const;
-	uint actorSpeechTextWidth(const Common::String &text) const;
-	void calculatePrimarySubtitleBounds(const Common::Array<Common::String> &lines,
-		const SpeechTextStyle &speechTextStyle, uint16 &centerX, uint16 &topY) const;
-
-	void drawFrameOverlays() override;
+	void beginSubtitle(const SceneSpeechCue &popup, const SpeechTextStyle &speechTextStyle);
 
 	void stopAudio() override;
 
-	PopupDescriptor getStage003PopupDescriptor(uint16 rowIndex, byte frameIndex) const;
-
 	enum {
-		kFrameBufferSize = 0x78000,
 		kI11RequiredChunkCount = 4,
 		kI11Chunk2DescriptorCount = 15,
 		kI11Chunk3DescriptorCount = 8,
-		kStage003DecodeKeySize = 0x141,
-		kStage003StageOffsetTableSize = 0xff4,
-		kStage003DescriptorTableSize = 0x186a0,
-		kStage003SmallRowSize = 0x29,
-		kStage003LargeRowSize = 0x141,
-		kStage003LargeRowBaseIndex = 500,
-		kStage911Index = 911,
-		kOriginalSpeechLineHeight = 20
+		kStage911Index = 911
+	};
+
+	enum {
+		kChunk3Layer = 0,
+		kMouthLayer,
+		kIdleLayer,
+		kCycleLayer
 	};
 
 	MusicPlayer *_music;
 	SpeechPlayer _speech;
+	SceneTextStore _text;
 	Common::RandomSource _random;
-	IntroResourceSet _resources;
 	Common::Array<byte> _paletteResource;
 	IndexedSurfaceBuffer _baseFramebuffer;
-	Common::Array<byte> _stage003DecodeKey;
-	Common::Array<byte> _stage003Descriptors;
-	Common::Array<byte> _stage003LargeRows;
-	SubtitleOverlay _subtitle;
 	uint32 _mouthAccumulator;
-	uint32 _chunk3Accumulator;
 	uint32 _idleAccumulator;
 	uint32 _cycleAccumulator;
 	uint32 _musicFadeAccumulator;
-	byte _chunk2MouthFrame;
-	byte _chunk2IdleFrame;
-	byte _chunk2CycleFrame;
-	byte _chunk3Frame;
+	uint _chunk3Track;
 	byte _chunk2CycleDirection;
 	byte _lastMouthVariant;
 };

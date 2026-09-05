@@ -19,13 +19,10 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene3030.h"
-
-#include "common/system.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene3030.h"
 #include "hollywood/scenes/resource_delta_clip_player.h"
 
 namespace Hollywood {
@@ -43,8 +40,9 @@ const uint32 kScene3030TransitionFrameMillis = 75;
 const uint kScene3030LoopDescriptorCount = 0x0c;
 const uint kScene3030MachineEffectDescriptorCount = 0x19;
 const uint kScene3030MachineActionDescriptorCount = 0x0c;
-const uint kScene3030MachineEffectLayer = 0;
-const uint kScene3030MachineActionLayer = 1;
+const uint kScene3030LoopLayer = 0;
+const uint kScene3030MachineEffectLayer = 1;
+const uint kScene3030MachineActionLayer = 2;
 const uint kScene3030EntryTransitionChunk = 12;
 const uint kScene3030EntryTransitionTableEntryCount = 0x20;
 const byte kScene3030EntryTransitionFinalFrame = 0x1f;
@@ -54,20 +52,19 @@ const byte kScene3030ReturnTransitionFinalFrame = 0x14;
 const byte kScene3030RequiredInventoryItem = 0x1f;
 const byte kScene3030ResultInventoryItem = 0x41;
 
-const byte kScene3030LoopFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
-};
-
-const byte kScene3030MachineEffectFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-	10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-	20, 21, 22, 23, 24
-};
-
 const byte kScene3030MachineActionFrameMap[] = {
 	10, 10, 9, 8, 7, 6, 5, 4, 3, 2,
 	1, 0, 0, 0, 0, 0, 1, 2, 3, 4,
 	5, 6, 7, 8, 9, 10, 11
+};
+
+const SceneLayerSpec kScene3030LayerSpecs[] = {
+	{kSceneAnimationBehindActors, 6, kScene3030LoopDescriptorCount,
+		nullptr, 0, true, 0},
+	{kSceneAnimationScenePlaced, 9, kScene3030MachineEffectDescriptorCount,
+		nullptr, 0, false, 0},
+	{kSceneAnimationScenePlaced, 10, kScene3030MachineActionDescriptorCount,
+		kScene3030MachineActionFrameMap, ARRAYSIZE(kScene3030MachineActionFrameMap), false, 0}
 };
 
 PlayableSceneConfig scene3030Config() {
@@ -81,16 +78,13 @@ PlayableSceneConfig scene3030Config() {
 	config.walkablePaletteMaxRegion = 20;
 	return config;
 }
-
 Scene3030::Scene3030(HollywoodEngine *vm) :
 		PlayableScene(vm, scene3030Config()),
-		_loopLayer(),
 		_loopTrack(RealtimeAnimationTracks::kInvalidTrack),
 		_machineSequenceActive(false) {
-	_loopLayer.configure(6, kScene3030LoopDescriptorCount,
-		kScene3030LoopFrameMap, ARRAYSIZE(kScene3030LoopFrameMap));
-	_loopTrack = _realtimeAnimationTracks.addFrameMap(_loopLayer,
-		kScene3030LoopFrameMillis, _vm->gameState().windmillBladesMoving);
+	_sceneLayers.configure(kScene3030LayerSpecs);
+	_loopTrack = _realtimeAnimationTracks.addLoop(kScene3030LoopLayer, kScene3030LoopFrameMillis,
+		kScene3030LoopDescriptorCount, _vm->gameState().windmillBladesMoving);
 }
 
 void Scene3030::initializeCustomPreviewState() {
@@ -108,9 +102,9 @@ void Scene3030::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 
 	copyBaseFramebufferToSceneFramebuffer();
 	if (_vm->gameState().windmillBladesMoving || _machineSequenceActive)
-		drawResourceSpriteLayer(_loopLayer);
+		drawSceneLayer(kScene3030LoopLayer);
 	if (_machineSequenceActive) {
-		drawLayerStack(_sceneLayers, kSceneAnimationScenePlaced);
+		drawLayerStack(kSceneAnimationScenePlaced);
 		drawForegroundBlocks();
 		return;
 	}
@@ -223,16 +217,9 @@ AmbientAudioProfile Scene3030::ambientAudioProfile() const {
 }
 
 void Scene3030::resetAnimationLayers() {
+	_sceneLayers.reset();
 	_realtimeAnimationTracks.reset(_loopTrack);
 	_realtimeAnimationTracks.setActive(_loopTrack, _vm->gameState().windmillBladesMoving);
-	_loopLayer.visible = true;
-	_sceneLayers.clear();
-	_sceneLayers.configureLayer(kScene3030MachineEffectLayer, kSceneAnimationScenePlaced,
-		9, kScene3030MachineEffectDescriptorCount,
-		kScene3030MachineEffectFrameMap, ARRAYSIZE(kScene3030MachineEffectFrameMap), false);
-	_sceneLayers.configureLayer(kScene3030MachineActionLayer, kSceneAnimationScenePlaced,
-		10, kScene3030MachineActionDescriptorCount,
-		kScene3030MachineActionFrameMap, ARRAYSIZE(kScene3030MachineActionFrameMap), false);
 	_machineSequenceActive = false;
 }
 
@@ -300,39 +287,10 @@ void Scene3030::runDeltaTransitionClip(uint chunkIndex, uint tableEntryCount, by
 	transitionBackground.copyRectToSurface(_sceneFramebuffer.rawSurface(), 0, 0,
 		Common::Rect(0, 0, HollywoodEngine::kSceneBufferWidth, HollywoodEngine::kSceneBufferHeight));
 
-	uint32 frameAccumulator = 0;
-	uint32 lastMillis = g_system->getMillis();
-	byte frameIndex = 0;
-
-	drawDeltaTransitionFrame(clipData, tableEntryCount, frameIndex, *transitionBackground.surfacePtr());
-	presentFrame();
-
-	while (frameIndex < finalFrameIndex && !Engine::shouldQuit() && !_vm->isSceneRestartRequested()) {
-		if (pollEvents(true))
-			break;
-
-		const uint32 now = g_system->getMillis();
-		const uint32 delta = now - lastMillis;
-		lastMillis = now;
-		frameAccumulator += delta;
-		_realtimeAnimationTracks.advance(_loopTrack, delta, _random);
-		updateAmbientAudioAndMusicCues(delta);
-
-		bool frameDirty = false;
-		// Each frame patches the previous result, so catch-up must apply every delta.
-		while (frameAccumulator >= kScene3030TransitionFrameMillis && frameIndex < finalFrameIndex) {
-			frameAccumulator -= kScene3030TransitionFrameMillis;
-			++frameIndex;
-			drawDeltaTransitionFrame(clipData, tableEntryCount, frameIndex,
-				*transitionBackground.surfacePtr());
-			frameDirty = true;
-		}
-
-		if (frameDirty)
-			presentFrame();
-
-		g_system->delayMillis(10);
-	}
+	Graphics::Surface &background = *transitionBackground.surfacePtr();
+	playTransitionFrames([this, &clipData, tableEntryCount, &background](byte frame) {
+		drawDeltaTransitionFrame(clipData, tableEntryCount, frame, background);
+	}, 0, finalFrameIndex, kScene3030TransitionFrameMillis, kCumulativeTransitionFrames);
 }
 
 void Scene3030::drawDeltaTransitionFrame(const Common::Array<byte> &clipData, uint tableEntryCount,
@@ -340,14 +298,14 @@ void Scene3030::drawDeltaTransitionFrame(const Common::Array<byte> &clipData, ui
 	_sceneFramebuffer.copyRectToSurface(transitionBackground, 0, 0,
 		Common::Rect(0, 0, HollywoodEngine::kSceneBufferWidth, HollywoodEngine::kSceneBufferHeight));
 	if (_vm->gameState().windmillBladesMoving)
-		drawResourceSpriteLayer(_loopLayer);
+		drawSceneLayer(kScene3030LoopLayer);
 	drawClipFrameDeltaToSurface(clipData, tableEntryCount, frameIndex, *_sceneFramebuffer.surfacePtr());
 	drawClipFrameDeltaToSurface(clipData, tableEntryCount, frameIndex, transitionBackground);
 }
 
 void Scene3030::drawClipFrameDeltaToSurface(const Common::Array<byte> &clipData, uint tableEntryCount,
 		byte frameIndex, Graphics::Surface &destination) {
-	ResourceDeltaClipPlayer::drawFrame(clipData, 0, clipData.size(), tableEntryCount,
+	drawResourceDeltaClipFrame(clipData, 0, clipData.size(), tableEntryCount,
 		frameIndex, (byte *)destination.getPixels(), destination.w, destination.h,
 		destination.pitch, destination.pitch * destination.h);
 }
@@ -376,7 +334,7 @@ void Scene3030::runMachineActivationSequence() {
 	bool actionReleased = false;
 	// Ron holds frame 15 until the machine effect reaches frame 5.
 	while ((actionFrame + 1 < ARRAYSIZE(kScene3030MachineActionFrameMap) ||
-			effectFrame + 1 < ARRAYSIZE(kScene3030MachineEffectFrameMap)) &&
+			effectFrame + 1 < kScene3030MachineEffectDescriptorCount) &&
 			!Engine::shouldQuit() && !_vm->isSceneRestartRequested()) {
 		if (actionFrame + 1 < ARRAYSIZE(kScene3030MachineActionFrameMap) &&
 				(actionFrame < 15 || actionReleased)) {
@@ -390,7 +348,7 @@ void Scene3030::runMachineActivationSequence() {
 			}
 		}
 
-		if (effectStarted && effectFrame + 1 < ARRAYSIZE(kScene3030MachineEffectFrameMap)) {
+		if (effectStarted && effectFrame + 1 < kScene3030MachineEffectDescriptorCount) {
 			++effectFrame;
 			_sceneLayers.setVisibleLayerFrame(kScene3030MachineEffectLayer, effectFrame);
 			if (effectFrame == 5) {

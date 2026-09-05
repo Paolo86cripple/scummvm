@@ -15,15 +15,16 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this source distribution.  If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 
-#include "hollywood/hollywood.h"
-#include "hollywood/scenes/scene_registry.h"
-
 #include "common/debug.h"
 #include "common/serializer.h"
+
+#include "hollywood/hollywood.h"
+#include "hollywood/debug.h"
+#include "hollywood/scenes/scene_registry.h"
 
 namespace Hollywood {
 
@@ -223,8 +224,8 @@ Common::Error HollywoodEngine::syncGameStream(Common::Serializer &s) {
 	s.syncAsByte(state.travelScreenCurrentChapterId);
 	syncStateBool(s, state.scene1050CharlieBogWerewolfClueHeard);
 	syncStateBool(s, state.scene1060EntryLineSeen);
-	s.syncAsByte(state.scene1060DrFlyState);
-	syncStateBool(s, state.scene1060DrFlyConversationSeen);
+	s.syncAsByte(state.scene1060DrMoscaState);
+	syncStateBool(s, state.scene1060DrMoscaConversationSeen);
 	syncStateBool(s, state.scene1060PocketPaperTaken);
 	syncStateBool(s, state.scene1060InvisibleManConversationSeen);
 	s.syncAsByte(state.scene1060PartyRemainsState);
@@ -241,7 +242,7 @@ Common::Error HollywoodEngine::syncGameStream(Common::Serializer &s) {
 	syncStateBool(s, state.scene1080EntryLineSeen);
 	s.syncAsByte(state.scene1080FrancoisProgressState);
 	syncStateBool(s, state.scene1090EntryLineSeen);
-	syncStateBool(s, state.scene1090LightsOn);
+	syncStateBool(s, state.scene1090LightsOff);
 	s.syncAsByte(state.scene1090WrappedBrainState);
 	syncStateBool(s, state.scene2010EntryLineSeen);
 	syncStateBool(s, state.scene2010LongSequenceFirstSpeechSeen);
@@ -483,7 +484,7 @@ void HollywoodEngine::normalizeLoadedGameState() {
 				state.activeActorWorldY >= kSceneBufferHeight) {
 			state.activeActorPoseValid = false;
 		} else {
-			if (state.activeActorFacing == 0xff || state.activeActorFacing > 4)
+			if (state.activeActorFacing == 0xff || state.activeActorFacing > 5)
 				state.activeActorFacing = 1;
 			if (state.activeViewportXOffset > kSceneBufferWidth - kScreenWidth)
 				state.activeViewportXOffset = 0;
@@ -496,6 +497,23 @@ void HollywoodEngine::normalizeLoadedGameState() {
 		if (state.inventoryItemCountByOwner[owner] != 0 &&
 				state.inventoryFirstVisibleSlotByOwner[owner] == 0)
 			state.inventoryFirstVisibleSlotByOwner[owner] = GameplayState::kInventoryFirstSlot;
+	}
+
+	const int loadedScene = gameplaySceneNumberForState(state.mainFlowStateId);
+	// Older saves could leave this false when the greeting was skipped mid-sequence.
+	if (!state.seenJosephGuestListGreeting &&
+			((loadedScene >= 7040 && loadedScene <= 7100) ||
+			state.frankensteinNoteOverlayMode != 0 ||
+			state.officeStatueActionProgress != 0 ||
+			state.officeNotePickupState != 0 ||
+			state.openedOfficeClosetDoor ||
+			state.spokenToCloakroomAttendant ||
+			state.spokenToBruno ||
+			state.activatedLabExitMachine ||
+			state.seenGramophoneRoomIntro ||
+			state.seenHannoverOfficeIntro ||
+			state.seenHannoverBedroomIntro)) {
+		state.seenJosephGuestListGreeting = true;
 	}
 
 	if (state.humeroBarrierState == 0)
@@ -512,6 +530,8 @@ void HollywoodEngine::normalizeLoadedGameState() {
 		state.scene1040GorillaCordState = 0;
 	if (state.scene6040WireState > 2)
 		state.scene6040WireState = 0;
+	if (state.scene6040WireState == 0 && state.hasInventoryItem(0, 0x5f))
+		state.scene6040WireState = 2;
 	if (state.scene6100CharlieState > 2)
 		state.scene6100CharlieState = 1;
 	if (state.scene3060SecretDoorRevealState > 2)
@@ -560,8 +580,8 @@ void HollywoodEngine::normalizeLoadedGameState() {
 	}
 	if (state.travelScreenCurrentChapterId > 9)
 		state.travelScreenCurrentChapterId = 0;
-	if (state.scene1060DrFlyState > 2)
-		state.scene1060DrFlyState = 0;
+	if (state.scene1060DrMoscaState > 2)
+		state.scene1060DrMoscaState = 0;
 	if (state.scene1060PartyRemainsState > 1)
 		state.scene1060PartyRemainsState = 0;
 	if (state.scene1070SpencerTravelClueProgress > 3)
@@ -570,6 +590,9 @@ void HollywoodEngine::normalizeLoadedGameState() {
 		state.scene1080FrancoisProgressState = 0;
 	if (state.scene1090WrappedBrainState > 2)
 		state.scene1090WrappedBrainState = 0;
+	// Older saves initialized the unvisited pantry with its light on.
+	if (!state.scene1090EntryLineSeen && state.scene1090WrappedBrainState == 0)
+		state.scene1090LightsOff = true;
 	if (state.scene2010TravelReturnSpeechState > 2)
 		state.scene2010TravelReturnSpeechState = 0;
 	if (state.scene2020TigerToothState > 2)

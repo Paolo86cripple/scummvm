@@ -35,8 +35,7 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+	void drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
 	void prepareCustomGameplayLoop() override;
@@ -47,7 +46,6 @@ private:
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 
 	void resetAnimationLayers();
 	void advanceForegroundLayer(uint32 delta);
@@ -67,9 +65,6 @@ private:
 	TimedAnimationChannel _foregroundChannel;
 	TimedAnimationChannel _francoisIdleChannel;
 	TimedAnimationChannel _francoisWorkChannel;
-	ResourceSpriteLayer _foregroundLayer;
-	ResourceSpriteLayer _francoisLayer;
-	ResourceSpriteLayer _francoisActionLayer;
 	byte _foregroundMode;
 	byte _francoisMode;
 	bool _francoisActionActive;

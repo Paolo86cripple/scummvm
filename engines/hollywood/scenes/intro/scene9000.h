@@ -24,15 +24,14 @@
 
 #include "common/array.h"
 
-#include "hollywood/graphics.h"
 #include "hollywood/music.h"
-#include "hollywood/resource.h"
+#include "hollywood/scenes/presentation_scene.h"
 
 namespace Hollywood {
 
 class HollywoodEngine;
 
-class Scene9000 {
+class Scene9000 : public PresentationScene {
 public:
 	Scene9000(HollywoodEngine *vm);
 
@@ -42,22 +41,14 @@ private:
 	bool load();
 	bool loadChunk(uint chunkIndex);
 	bool runChunk();
-	bool pollEvents();
-	bool delay(uint32 millis);
+	void stopAudio() override;
 
 	void resetChunkState();
-	void presentFrame();
-
-	void drawStripSpriteFrame(uint16 descriptorIndex);
-	void restoreSpriteBackground(uint16 descriptorIndex);
-
-	uint16 readUint16(uint offset) const;
-	uint32 readUint32(uint offset) const;
+	void drawAnimationFrame(uint16 descriptorIndex);
 
 	enum {
 		kIntroChunkCount = 4,
 		kIntroFrameDescriptorCount = 21,
-		kIntroFrameDescriptorSize = 14,
 		kAnimatedPaletteByteCount = 0xff * 3,
 		kFrameStepMillis = 50,
 		kPaletteStepMillis = 50,
@@ -65,17 +56,10 @@ private:
 		kHoldStepCount = 4
 	};
 
-	HollywoodEngine *_vm;
 	MusicPlayer _music;
-	ResourceChunkTable _chunkTable;
 	Common::Array<byte> _paletteSource;
-	Common::Array<byte> _paletteCurrent;
-	Common::Array<byte> _resourceArena;
+	Common::Array<byte> _spriteResource;
 	IndexedSurfaceBuffer _frameDecodeBuffer;
-	IndexedSurfaceBuffer _sceneFramebuffer;
-	Graphics::ManagedSurface _screen;
-	Palette6Bit _displayPalette;
-	bool _skipRequested;
 };
 
 } // End of namespace Hollywood

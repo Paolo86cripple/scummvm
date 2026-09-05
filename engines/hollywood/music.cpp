@@ -19,8 +19,6 @@
  *
  */
 
-#include "hollywood/music.h"
-
 #include "audio/audiostream.h"
 #include "audio/decoders/raw.h"
 #include "common/debug.h"
@@ -29,7 +27,8 @@
 #include "common/system.h"
 #include "common/util.h"
 
-#include "hollywood/hollywood.h"
+#include "hollywood/debug.h"
+#include "hollywood/music.h"
 
 namespace Hollywood {
 

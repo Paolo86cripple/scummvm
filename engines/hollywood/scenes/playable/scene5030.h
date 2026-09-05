@@ -33,20 +33,22 @@ public:
 	Scene5030(HollywoodEngine *vm);
 
 private:
+	struct ScoutDialogueRecords {
+		Common::Array<DialogueChoiceRecord> choices;
+		Common::Array<byte> companionReplyFrameIndices;
+	};
+
 	void initializeCustomPreviewState() override;
 	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	void runCustomEntrySequence() override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
-	byte ambientSoundCueVolume(byte cueId, byte defaultVolumePercent) const override;
 	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
 	byte primarySpeechAnimationFrameCount(byte animationGroup) const override;
@@ -81,11 +83,11 @@ private:
 	void runGladysConversation();
 	void runSpecialInventorySequence();
 	void grantDeckOfCards();
-	void initializeVanessaDialogueRecords(Common::Array<DialogueChoiceRecord> &records) const;
-	void initializeGladysDialogueRecords(Common::Array<DialogueChoiceRecord> &records) const;
-	void setDialogueRecord(Common::Array<DialogueChoiceRecord> &records, uint index,
+	void initializeVanessaDialogueRecords(ScoutDialogueRecords &dialogue) const;
+	void initializeGladysDialogueRecords(ScoutDialogueRecords &dialogue) const;
+	void setDialogueRecord(ScoutDialogueRecords &dialogue, uint index,
 		byte nextNodeIndex, byte transitionMode, byte playerTextRowId,
-		byte responseFrameIndex, byte disableAfterUse, byte otherScoutFrameIndex) const;
+		byte responseFrameIndex, byte disableAfterUse, byte companionReplyFrameIndex) const;
 	bool applyDialogueTransition(const DialogueChoiceRecord &record, byte &depthIndex, byte &nodeIndex) const;
 	void beginRonDialogueLine(uint16 rowIndex, byte frameIndex);
 	void beginVanessaSpeechLine(uint16 rowIndex, byte frameIndex);
@@ -100,12 +102,10 @@ private:
 	void copyStageSmallRowLabel(byte destinationRow, byte sourceRow);
 	void clearSceneItemFromColorMap(byte itemId);
 
-	TimedAnimationChannel _chunk8Channel;
+	uint _chunk8Track;
 	TimedAnimationChannel _chunk9Channel;
 	TimedAnimationChannel _chunk10Channel;
 	TimedAnimationChannel _ronDialogueIdleChannel;
-	ResourceSpriteLayer _actorReplacementLayer;
-	ResourceSpriteLayer _alternateVanessaLayer;
 	bool _scoutStopTransitionActive;
 	bool _scoutResumeTransitionActive;
 	bool _scoutTransitionCompletionPending;

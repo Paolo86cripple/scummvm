@@ -37,7 +37,6 @@ private:
 	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	void runCustomEntrySequence() override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
@@ -47,14 +46,13 @@ private:
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	bool shouldConvertSavedFramebufferFF() const override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
+	byte primarySpeechAnimationInitialFrame(byte animationGroup, byte baseFrame) const override;
 	byte primarySpeechAnimationFrameCount(byte animationGroup) const override;
 	uint32 primarySpeechAnimationFrameMillis(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	void handleLeftClick(const GameplayLoopCursorState &state) override;
 
 	void runFirstEntrySequence();
@@ -81,8 +79,6 @@ private:
 	void replaceColorMapItemFromOriginal(byte sourceItem, byte destinationItem);
 	void rebuildWalkableMask();
 
-	ResourceSpriteLayer _elevatorLayer;
-	ResourceSpriteLayer _projectorSpeechLayer;
 	TimedAnimationChannel _movingWallChannel;
 	TimedAnimationChannel _mainProjectionChannel;
 	TimedAnimationChannel _transformationOverlayChannel;

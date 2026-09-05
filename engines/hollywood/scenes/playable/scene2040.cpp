@@ -19,11 +19,10 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene2040.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene2040.h"
 
 namespace Hollywood {
 
@@ -50,29 +49,12 @@ const uint kScene2040EyePaletteChunk = 15;
 const uint kScene2040BaseOpeningDeltaChunk = 18;
 const byte kScene2040EyePaletteFirstColor = 0xf2;
 const byte kScene2040EyePaletteLastColor = 0xf9;
-const byte kScene2040FlowerPickupHook = 1;
-const byte kScene2040SphinxNoseHook = 2;
-const byte kScene2040EyeExchangeFirstHook = 3;
-const byte kScene2040EyeExchangeSecondHook = 4;
+const byte kScene2040EyePaletteHook = 2;
+const uint kScene2040BehindActorLayer = 0;
+const uint kScene2040ForegroundLayer = 1;
 
 const byte kScene2040ForegroundFrameMap[] = {
 	0, 1, 2, 3, 4, 3, 2, 1
-};
-
-const byte kScene2040FlowerPickupFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-};
-
-const byte kScene2040SphinxNoseFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-	11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
-	23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34,
-	35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46,
-	47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
-	59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70,
-	71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82,
-	83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94,
-	95, 96
 };
 
 const byte kScene2040SeedPlantingFrameMap[] = {
@@ -86,22 +68,17 @@ const byte kScene2040EyeExchangeFirstFrameMap[] = {
 	6, 7, 8, 9, 10, 11
 };
 
-const byte kScene2040EyeExchangeSecondFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-	11, 12, 13, 14, 15, 16, 17
-};
-
 const byte kScene2040BaseOpeningFrameMap[] = {
 	8, 8, 7, 6, 5, 4, 3, 3, 3, 3, 3, 2, 1, 0, 9
 };
 
-const byte kScene2040BaseOpeningDeltaFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-	11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-	21, 22, 23, 24, 25, 26, 27, 28
+const SceneLayerSpec kScene2040LayerSpecs[] = {
+	{kSceneAnimationBehindActors, 0, 0, nullptr, 0, false, 0},
+	{kSceneAnimationInFrontOfActors, 5, kScene2040ForegroundDescriptorCount,
+		kScene2040ForegroundFrameMap, ARRAYSIZE(kScene2040ForegroundFrameMap), true, 0}
 };
 
-static PlayableSceneConfig scene2040Config() {
+PlayableSceneConfig scene2040Config() {
 	PlayableSceneConfig config(2040,
 		SceneResourceLayout(19, 5, 18),
 		SceneViewport(kScene2040ViewportXOffset, kScene2040ViewportXOffset, kScene2040ViewportMaxXOffset),
@@ -117,12 +94,9 @@ static PlayableSceneConfig scene2040Config() {
 Scene2040::Scene2040(HollywoodEngine *vm) :
 		PlayableScene(vm, scene2040Config()),
 		_foregroundChannel(),
-		_behindActorLayer(),
-		_foregroundLayer(),
 		_routeStartX(0),
 		_routeStartY(0) {
-	_foregroundLayer.configure(5, kScene2040ForegroundDescriptorCount,
-		kScene2040ForegroundFrameMap, ARRAYSIZE(kScene2040ForegroundFrameMap));
+	_sceneLayers.configure(kScene2040LayerSpecs);
 }
 
 void Scene2040::initializeCustomPreviewState() {
@@ -147,16 +121,13 @@ void Scene2040::initializeCustomPreviewState() {
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 }
 
-void Scene2040::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	copyBaseFramebufferToSceneFramebuffer();
+void Scene2040::prepareCustomComposite(bool drawActors, byte activeFacing,
+		int activeWorldX, int activeWorldY, byte actorDrawOrderMode) {
+	(void)drawActors;
+	(void)activeFacing;
+	(void)activeWorldX;
+	(void)activeWorldY;
 	updateSceneDepthThresholds(actorDrawOrderMode);
-	drawResourceSpriteLayer(_behindActorLayer);
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	drawActionOverlayLayer();
-	drawResourceSpriteLayer(_foregroundLayer);
 }
 
 void Scene2040::updateSceneDepthThresholds(byte actorDrawOrderMode) {
@@ -173,7 +144,7 @@ void Scene2040::runCustomEntrySequence() {
 }
 
 void Scene2040::prepareCustomGameplayLoop() {
-	clearResourceLayer(_behindActorLayer);
+	clearSceneLayer(kScene2040BehindActorLayer);
 	resetForegroundLayer();
 }
 
@@ -212,8 +183,11 @@ bool Scene2040::dispatchCustomSceneAction(uint16 handlerId) {
 	case 308: // Coger flor del Nilo (take Nile flower): pickup after the plant grows.
 		runFlowerPickup();
 		return true;
-	case 309: // Mirar flor del Nilo (look at Nile flower): already collected response.
-		beginSecondarySpeechLine(5, 0);
+	case 309: // Mirar flor del Nilo (look at Nile flower).
+		if (_vm->restoredContentEnabled())
+			beginStaticSecondarySpeechLine(0x7f, 0);
+		else
+			beginSecondarySpeechLine(5, 0);
 		return true;
 	case 310: // Mirar pata de la esfinge (look at sphinx paw): paws covered with sand.
 		beginSecondarySpeechLine(6, 0);
@@ -406,8 +380,8 @@ void Scene2040::rebuildWalkableMask() {
 
 void Scene2040::resetForegroundLayer() {
 	_foregroundChannel.reset(0, kScene2040ForegroundFrameMillis);
-	_foregroundLayer.visible = true;
-	_foregroundLayer.reset(0);
+	_sceneLayers.setLayerVisible(kScene2040ForegroundLayer, true);
+	_sceneLayers.resetLayer(kScene2040ForegroundLayer, 0);
 }
 
 void Scene2040::advanceForegroundLayer(uint32 delta) {
@@ -421,7 +395,7 @@ void Scene2040::advanceForegroundLayer(uint32 delta) {
 		} else if (_random.getRandomNumber(24) == 0) {
 			_foregroundChannel.frameIndex = 1;
 		}
-		_foregroundLayer.setFrame(_foregroundChannel.frameIndex);
+		_sceneLayers.setLayerFrame(kScene2040ForegroundLayer, _foregroundChannel.frameIndex);
 	}
 }
 
@@ -466,9 +440,8 @@ void Scene2040::runExitToInterior() {
 
 void Scene2040::runFlowerPickup() {
 	runActorReplacement(ActionOverlaySpec(13, kScene2040FlowerPickupDescriptorCount,
-		kScene2040FlowerPickupFrameMap, ARRAYSIZE(kScene2040FlowerPickupFrameMap),
-		kScene2040ActionFrameMillis)
-		.hookAt(6, kScene2040FlowerPickupHook));
+		kScene2040ActionFrameMillis).holdFirstFrame()
+		.resourcePatchAt(6, 10));
 	_vm->gameState().scene2040SphinxItemRevealed = 0;
 	applySceneStateToHotspotsAndPatches(2);
 	addInventoryItem(0x2c);
@@ -488,8 +461,13 @@ void Scene2040::runSphinxNoseSequence() {
 
 	if (_sceneChunkTable.isValidChunk(17)) {
 		runActorReplacement(ActionOverlaySpec(17, kScene2040SphinxNoseDescriptorCount,
-			kScene2040SphinxNoseFrameMap, ARRAYSIZE(kScene2040SphinxNoseFrameMap), kScene2040ActionFrameMillis)
-			.hookEveryFrame(kScene2040SphinxNoseHook));
+			kScene2040ActionFrameMillis).holdFirstFrame()
+			.soundAt(18, 0x2c, 50)
+			.soundAt(30, 0x2c, 50)
+			.soundAt(42, 0x2c, 50)
+			.soundAt(54, 0x2c, 50)
+			.soundAt(66, 0x2c, 50)
+			.soundAt(78, 0x2c, 50));
 	}
 
 	state.scene2040SphinxFaceState = 1;
@@ -521,23 +499,27 @@ void Scene2040::runEyeExchangeSequence() {
 	installEyeEffectPalette();
 	runActorReplacement(ActionOverlaySpec(14, kScene2040EyeExchangeFirstDescriptorCount,
 		kScene2040EyeExchangeFirstFrameMap, ARRAYSIZE(kScene2040EyeExchangeFirstFrameMap), kScene2040ActionFrameMillis)
-		.hookEveryFrame(kScene2040EyeExchangeFirstHook));
+		.soundAt(8, 0x20)
+		.stopSoundAt(0x17)
+		.hookEveryFrame(kScene2040EyePaletteHook));
 	_soundBank0.stop();
 	restoreEyeEffectPalette();
 	removeInventoryItem(0x52);
 	addInventoryItem(0x1a);
 	_soundBank0.playSample(1, 100);
 	walkActiveActorTo(0x210, 0x172, 1, 0, false);
-	AnimationFrameRange secondRange(0, ARRAYSIZE(kScene2040EyeExchangeSecondFrameMap) - 1,
+	AnimationFrameRange secondRange(kScene2040EyeExchangeSecondDescriptorCount,
 		kScene2040ActionFrameMillis);
-	secondRange.hookEveryFrame(kScene2040EyeExchangeSecondHook);
-	playResourceLayerSequence(_behindActorLayer, 12, kScene2040EyeExchangeSecondDescriptorCount,
-		kScene2040EyeExchangeSecondFrameMap, ARRAYSIZE(kScene2040EyeExchangeSecondFrameMap), secondRange);
-	_soundBank0.stop();
-	state.scene2040SphinxFaceState = 3;
-	state.scene2040SphinxItemRevealed = 1;
-	applySceneStateToHotspotsAndPatches(0xff);
-	beginSecondarySpeechLine(9, 1);
+	secondRange.holdFirstFrame();
+	secondRange.soundAt(1, 0x1f).stopSoundAt(0x12);
+	BlockingSequence sequence(*this);
+	sequence.resourceLayerFrames(kScene2040BehindActorLayer, 12,
+		kScene2040EyeExchangeSecondDescriptorCount, secondRange)
+		.stopSound()
+		.commit(state.scene2040SphinxFaceState, (byte)3)
+		.commit(state.scene2040SphinxItemRevealed, (byte)1)
+		.framebufferPatch(0xff)
+		.secondarySpeech(9, 1);
 }
 
 void Scene2040::runBaseOpeningSequence() {
@@ -571,13 +553,16 @@ void Scene2040::runBaseOpeningDeltaSequence() {
 		return;
 
 	_soundBank0.playSample(0x2d, 100);
-	for (uint frame = 0; frame < ARRAYSIZE(kScene2040BaseOpeningDeltaFrameMap) &&
+	AnimationFrameRange range(kScene2040BaseOpeningDeltaTableEntryCount,
+		kScene2040ActionFrameMillis);
+	range.holdFirstFrame();
+	for (uint frame = range.firstFrame; frame <= range.lastFrame &&
 			!animationPlaybackShouldStop(); ++frame) {
-		restoreResourceSpriteLayerBackground(_foregroundLayer, _baseFramebuffer);
-		drawResourceSpriteLayer(_foregroundLayer);
+		restoreSceneLayerBackground(kScene2040ForegroundLayer, _baseFramebuffer);
+		drawSceneLayer(kScene2040ForegroundLayer);
 		drawClipFrameDelta(kScene2040BaseOpeningDeltaChunk,
 			kScene2040BaseOpeningDeltaTableEntryCount,
-			kScene2040BaseOpeningDeltaFrameMap[frame]);
+			range.targetFrame(frame));
 		presentFrame();
 		if (waitDeltaClipFrameMillis(kScene2040ActionFrameMillis))
 			break;
@@ -588,36 +573,11 @@ void Scene2040::runBaseOpeningDeltaSequence() {
 }
 
 void Scene2040::handleAnimationFrameHook(byte hookId, uint frame) {
-	switch (hookId) {
-	case kScene2040FlowerPickupHook:
-		if (_sceneChunkTable.isValidChunk(10))
-			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[10], _baseFramebuffer);
-		break;
-	case kScene2040SphinxNoseHook:
-		if (frame < ARRAYSIZE(kScene2040SphinxNoseFrameMap)) {
-			const byte descriptor = kScene2040SphinxNoseFrameMap[frame];
-			if (descriptor == 0x11 || descriptor == 0x1d || descriptor == 0x29 ||
-					descriptor == 0x35 || descriptor == 0x41 || descriptor == 0x4d)
-				_soundBank0.playSample(0x2c, 50);
-		}
-		break;
-	case kScene2040EyeExchangeFirstHook:
-		if (frame == 8)
-			_soundBank0.playSample(0x20, 100);
-		else if (frame == 0x17)
-			_soundBank0.stop();
+	if (hookId == kScene2040EyePaletteHook) {
 		if (frame != 0 && frame % 4 == 0)
 			rotateEyeEffectPalette();
-		break;
-	case kScene2040EyeExchangeSecondHook:
-		if (frame == 1)
-			_soundBank0.playSample(0x1f, 100);
-		else if (frame == 0x12)
-			_soundBank0.stop();
-		break;
-	default:
+	} else {
 		PlayableScene::handleAnimationFrameHook(hookId, frame);
-		break;
 	}
 }
 

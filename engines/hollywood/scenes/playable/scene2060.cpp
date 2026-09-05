@@ -19,15 +19,14 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene2060.h"
-
 #include "common/endian.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/game_strings.h"
 #include "hollywood/gameplay/actor_renderer.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene2060.h"
 
 namespace Hollywood {
 
@@ -105,17 +104,7 @@ const byte kScene2060GuideRoute[][2] = {
 	{0x39, 5}, {0x3f, 3}, {0x40, 5}, {0x46, 3}, {0x47, 3}
 };
 
-static_assert(ARRAYSIZE(kScene2060ActorPathStepDeltaTable) == 72, "Scene 2060 actor path table size changed");
-static_assert(ARRAYSIZE(kScene2060PassageMaskByMazeIndex) == kScene2060MazeIndexCount,
-	"Scene 2060 passage mask table size changed");
-static_assert(ARRAYSIZE(kScene2060PassageBits) == 6, "Scene 2060 passage bit count changed");
-static_assert(ARRAYSIZE(kScene2060OpenPassageChunks) == ARRAYSIZE(kScene2060PassageBits),
-	"Scene 2060 open passage chunk count changed");
-static_assert(ARRAYSIZE(kScene2060ClosedPassageChunks) == ARRAYSIZE(kScene2060PassageBits),
-	"Scene 2060 closed passage chunk count changed");
-static_assert(ARRAYSIZE(kScene2060GuideRoute) == 20, "Scene 2060 guide route size changed");
-
-static PlayableSceneConfig scene2060Config() {
+PlayableSceneConfig scene2060Config() {
 	PlayableSceneConfig config(2060,
 		SceneResourceLayout(32, 5, 31),
 		SceneViewport(kScene2060ViewportXOffset, kScene2060ViewportXOffset, kScene2060ViewportXOffset),
@@ -127,6 +116,7 @@ static PlayableSceneConfig scene2060Config() {
 	config.setActorPathStepDeltas(kScene2060ActorPathStepDeltaTable);
 	config.walkablePaletteMaxRegion = 1;
 	config.useActorDepthTest = true;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
@@ -180,10 +170,6 @@ void Scene2060::initializeCustomPreviewState() {
 	}
 	_activeActorCel = 0;
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
-}
-
-bool Scene2060::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
 }
 
 void Scene2060::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
@@ -333,12 +319,10 @@ bool Scene2060::applyCustomSceneStateToHotspotsAndPatches(byte selector) {
 	return true;
 }
 
-bool Scene2060::shouldRunExitSideEffectsAfterLoop() const {
-	const uint16 stateId = _vm->gameState().mainFlowStateId;
-	return !Engine::shouldQuit() && stateId != 0xff && !isMainFlowStateInScene(stateId);
-}
-
 void Scene2060::runExitSideEffectsAfterLoop() {
+	if (!didLeaveSceneAfterLoop())
+		return;
+
 	fadePaletteToBlack();
 }
 
@@ -749,7 +733,7 @@ void Scene2060::runEntryPathAndGuide(int startX, int startY, byte startFacing,
 	_guideEffectActive = _guideEffectPrepared;
 	_guideFrameIndex = 0;
 
-	while ((_actorPathPlaybackActive || _guideEffectActive) && !_skipRequested && !Engine::shouldQuit()) {
+	while ((_actorPathPlaybackActive || _guideEffectActive) && !Engine::shouldQuit()) {
 		if (_actorPathPlaybackActive) {
 			const ActorPathFrame &frame = _actorPathFrames[actorFrameIndex];
 			_activeActorWorldX = frame.worldX;
@@ -764,7 +748,10 @@ void Scene2060::runEntryPathAndGuide(int startX, int startY, byte startFacing,
 		if (waitSceneMillis(kScene2060ActorPathFrameMillis)) {
 			_actorPathPlaybackActive = false;
 			_guideEffectActive = false;
-			return;
+			if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
+				return;
+			consumeStepAdvanceRequest();
+			break;
 		}
 
 		if (_actorPathPlaybackActive) {
@@ -778,11 +765,13 @@ void Scene2060::runEntryPathAndGuide(int startX, int startY, byte startFacing,
 	}
 	_actorPathPlaybackActive = false;
 	_guideEffectActive = false;
-	if (_skipRequested || animationPlaybackShouldStop())
+	if (animationPlaybackShouldStop())
 		return;
 
 	_activeActorWorldX = targetX;
 	_activeActorWorldY = targetY;
+	if (!_actorPathFrames.empty())
+		_activeActorFacing = _actorPathFrames.back().facing;
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 	_activeActorCel = 0;
 	drawPlayableComposite();

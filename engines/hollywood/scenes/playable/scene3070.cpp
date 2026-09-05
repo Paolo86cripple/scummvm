@@ -19,11 +19,11 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene3070.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene3070.h"
+#include "hollywood/scenes/shared_frame_sequences.h"
 
 namespace Hollywood {
 
@@ -43,6 +43,12 @@ const uint kScene3070Resource003RowsOffsetIndex = 0x0000;
 const uint32 kScene3070SpeechCueDescriptorTableOffset = 0x1135;
 const uint32 kScene3070OverlayFrameMillis = 75;
 const uint kScene3070PatchOverlayDescriptorCount = 9;
+const uint kScene3070InterludeLeftDescriptorCount = 26;
+const uint kScene3070InterludeRightDescriptorCount = 32;
+const uint kScene3070LateCutsceneDescriptorCount = 21;
+const uint kScene3070InterludeLeftLayer = 0;
+const uint kScene3070InterludeRightLayer = 1;
+const uint kScene3070LateCutsceneLayer = 2;
 const byte kScene3070InterludePrimaryRowLeft = 0x21;
 const byte kScene3070InterludePrimaryRowRight = 0x22;
 const byte kScene3070InterludeLeftSpeechGroup = 0;
@@ -63,14 +69,6 @@ const byte kScene3070InterludeRightFrameMap[] = {
 	15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
 };
 
-const byte kScene3070InterludeLeftTransition[] = {
-	0, 0, 0, 0, 5, 6, 7, 8, 9, 10
-};
-
-const byte kScene3070InterludeRightTransition[] = {
-	5, 6, 7, 8, 8, 8, 8, 9, 10, 10
-};
-
 const byte kScene3070LateCutsceneFrameMap[] = {
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19,
 	18, 17, 16, 15, 16, 17, 18, 19, 18, 17, 16, 15, 16, 17, 18, 19,
@@ -78,12 +76,17 @@ const byte kScene3070LateCutsceneFrameMap[] = {
 	8, 9, 10, 11, 20
 };
 
-const byte kScene3070PatchOverlayFrameMap[] = {
-	8, 0, 1, 2, 2, 1, 0, 8
+const SceneLayerSpec kScene3070LayerSpecs[] = {
+	{kSceneAnimationScenePlaced, 36, kScene3070InterludeLeftDescriptorCount,
+		kScene3070InterludeLeftFrameMap, ARRAYSIZE(kScene3070InterludeLeftFrameMap), false, 0},
+	{kSceneAnimationScenePlaced, 35, kScene3070InterludeRightDescriptorCount,
+		kScene3070InterludeRightFrameMap, ARRAYSIZE(kScene3070InterludeRightFrameMap), false, 0},
+	{kSceneAnimationBehindActors, 22, kScene3070LateCutsceneDescriptorCount,
+		kScene3070LateCutsceneFrameMap, ARRAYSIZE(kScene3070LateCutsceneFrameMap), false, 0}
 };
 
-const byte kScene3070ItemPatchPickupFrameMap[] = {
-	8, 0, 1, 2, 3, 4, 5, 6, 7, 8
+const byte kScene3070PatchOverlayFrameMap[] = {
+	8, 0, 1, 2, 2, 1, 0, 8
 };
 
 const byte kScene3070IngredientFrameMap[] = {
@@ -120,10 +123,6 @@ const byte kScene3070BodyAssemblyFrameMap[] = {
 	16, 15, 14, 13, 12, 8, 9, 10, 11
 };
 
-const byte kScene3070BodyAssemblyFinishFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
-};
-
 const byte kScene3070RevivalStartFrameMap[] = {
 	5, 0, 1, 2, 3, 4, 4, 4, 4, 3, 2, 1, 0, 5
 };
@@ -136,11 +135,7 @@ const byte kScene3070RevivalLoopFrameMap[] = {
 	19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4
 };
 
-const byte kScene3070RevivalFinishFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18
-};
-
-static PlayableSceneConfig scene3070Config() {
+PlayableSceneConfig scene3070Config() {
 	PlayableSceneConfig config(3070,
 		SceneResourceLayout(24, 5, 36),
 		SceneViewport(kScene3070ViewportXOffset, kScene3070ViewportMinXOffset, kScene3070ViewportMaxXOffset),
@@ -154,18 +149,10 @@ static PlayableSceneConfig scene3070Config() {
 
 Scene3070::Scene3070(HollywoodEngine *vm) :
 		PlayableScene(vm, scene3070Config()),
-		_interludeLeftLayer(),
-		_interludeRightLayer(),
-		_lateCutsceneLayer(),
 		_interludeActive(false),
 		_interludeAlternatePose(false),
 		_lateCutsceneActive(false) {
-	_interludeLeftLayer.configure(36, 26,
-		kScene3070InterludeLeftFrameMap, ARRAYSIZE(kScene3070InterludeLeftFrameMap));
-	_interludeRightLayer.configure(35, 32,
-		kScene3070InterludeRightFrameMap, ARRAYSIZE(kScene3070InterludeRightFrameMap));
-	_lateCutsceneLayer.configure(22, 21,
-		kScene3070LateCutsceneFrameMap, ARRAYSIZE(kScene3070LateCutsceneFrameMap));
+	_sceneLayers.configure(kScene3070LayerSpecs);
 }
 
 bool Scene3070::shouldLoadArenaChunk(uint index) const {
@@ -196,13 +183,13 @@ void Scene3070::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 		byte actorDrawOrderMode) {
 	copyBaseFramebufferToSceneFramebuffer();
 	if (_interludeActive) {
-		drawResourceSpriteLayer(_interludeLeftLayer);
-		drawResourceSpriteLayer(_interludeRightLayer);
+		drawSceneLayer(kScene3070InterludeLeftLayer);
+		drawSceneLayer(kScene3070InterludeRightLayer);
 		return;
 	}
 
 	if (_lateCutsceneActive)
-		drawResourceSpriteLayer(_lateCutsceneLayer);
+		drawSceneLayer(kScene3070LateCutsceneLayer);
 
 	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
 		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
@@ -468,27 +455,6 @@ bool Scene3070::applyCustomSceneStateToHotspotsAndPatches(byte selector) {
 	return true;
 }
 
-void Scene3070::handleAnimationFrameHook(byte hookId, uint frame) {
-	switch (hookId) {
-	case 1:
-		applyActionPatchChunk(21);
-		break;
-	case 2:
-		_soundBank0.playSample(0x14, 100);
-		_ambientSoundBank0.playSample(0x11, 50, true);
-		applyActionPatchChunk(12);
-		break;
-	case 3:
-		if (frame == 20)
-			_soundBank0.playSample(0x0c, 25, true);
-		else if (frame == 60)
-			_soundBank0.stop();
-		break;
-	default:
-		break;
-	}
-}
-
 bool Scene3070::shouldAnimatePrimarySpeechLine() const {
 	return _interludeActive || _lateCutsceneActive;
 }
@@ -501,11 +467,11 @@ byte Scene3070::primarySpeechAnimationBaseFrame(byte animationGroup) const {
 
 void Scene3070::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) {
 	if (animationGroup == kScene3070InterludeLeftSpeechGroup)
-		_interludeLeftLayer.setFrame(frameIndex);
+		_sceneLayers.setLayerFrame(kScene3070InterludeLeftLayer, frameIndex);
 	else if (animationGroup == kScene3070InterludeRightSpeechGroup)
-		_interludeRightLayer.setFrame(frameIndex);
+		_sceneLayers.setLayerFrame(kScene3070InterludeRightLayer, frameIndex);
 	else if (animationGroup == kScene3070LateSpeechGroup)
-		_lateCutsceneLayer.setFrame(frameIndex);
+		_sceneLayers.setLayerFrame(kScene3070LateCutsceneLayer, frameIndex);
 }
 
 AmbientAudioProfile Scene3070::ambientAudioProfile() const {
@@ -523,12 +489,7 @@ void Scene3070::advanceAmbientAudio(uint32 delta) {
 }
 
 void Scene3070::resetCutsceneLayers() {
-	_interludeLeftLayer.reset(0);
-	_interludeRightLayer.reset(0);
-	_lateCutsceneLayer.reset(0);
-	_interludeLeftLayer.visible = false;
-	_interludeRightLayer.visible = false;
-	_lateCutsceneLayer.visible = false;
+	_sceneLayers.reset();
 	_interludeActive = false;
 	_interludeAlternatePose = false;
 	_lateCutsceneActive = false;
@@ -616,8 +577,8 @@ void Scene3070::runLateCutsceneBranch() {
 	if (_sceneChunkTable.isValidChunk(23))
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[23], _baseFramebuffer);
 	_lateCutsceneActive = true;
-	_lateCutsceneLayer.visible = true;
-	playAnimationFrames(_lateCutsceneLayer,
+	_sceneLayers.setLayerVisible(kScene3070LateCutsceneLayer, true);
+	playAnimationFrames(kScene3070LateCutsceneLayer,
 		AnimationFrameRange(0, 48, kScene3070OverlayFrameMillis));
 	beginPrimarySpeechLineWithAnimationGroup(0x0d, 6, 0x212, 0x09e,
 		0x20, 0x00, 0x3f, kScene3070LateSpeechGroup);
@@ -641,12 +602,14 @@ void Scene3070::runLateCutsceneBranch() {
 void Scene3070::runInterludeCutscene() {
 	const Common::Array<byte> savedPalette = _paletteCurrent;
 	const uint16 savedViewportX = _viewportXOffset;
+	const uint16 savedViewportMinX = _viewportMinXOffset;
+	const uint16 savedViewportMaxX = _viewportMaxXOffset;
 	_vm->gameplayMusic()->stop();
 	_ambientSoundBank0.stop();
 	_soundBank0.stop();
 	fadePaletteToBlack();
 
-	if (!loadFixedChunk(33, _baseFramebuffer, kFrameBufferSize) ||
+	if (!loadFixedChunk(33, _baseFramebuffer, kSceneBufferByteCount) ||
 			!loadFixedChunk(34, _paletteCurrent, kPaletteSize)) {
 		applySceneStateToHotspotsAndPatches(0xff);
 		_paletteCurrent = savedPalette;
@@ -657,11 +620,14 @@ void Scene3070::runInterludeCutscene() {
 	}
 
 	_viewportXOffset = 0x10;
+	// Keep the flashback camera independent of Ron's position in the laboratory.
+	_viewportMinXOffset = _viewportXOffset;
+	_viewportMaxXOffset = _viewportXOffset;
 	_interludeActive = true;
-	_interludeLeftLayer.visible = true;
-	_interludeRightLayer.visible = true;
-	_interludeLeftLayer.setFrame(0);
-	_interludeRightLayer.setFrame(0);
+	_sceneLayers.setLayerVisible(kScene3070InterludeLeftLayer, true);
+	_sceneLayers.setLayerVisible(kScene3070InterludeRightLayer, true);
+	_sceneLayers.setLayerFrame(kScene3070InterludeLeftLayer, 0);
+	_sceneLayers.setLayerFrame(kScene3070InterludeRightLayer, 0);
 	drawPlayableComposite();
 	presentFrame();
 	fadePaletteFromBlack();
@@ -671,9 +637,11 @@ void Scene3070::runInterludeCutscene() {
 	beginPrimarySpeechLineWithAnimationGroup(kScene3070InterludePrimaryRowRight, 0,
 		0x079, 0x086, 0x0a, 0x3f, 0x00, kScene3070InterludeRightSpeechGroup);
 
-	for (uint frame = 0; frame < ARRAYSIZE(kScene3070InterludeLeftTransition); ++frame) {
-		_interludeLeftLayer.setFrame(kScene3070InterludeLeftTransition[frame]);
-		_interludeRightLayer.setFrame(kScene3070InterludeRightTransition[frame]);
+	for (uint frame = 0; frame < kTwoActorGestureFrameCount; ++frame) {
+		_sceneLayers.setLayerFrame(kScene3070InterludeLeftLayer,
+			kTwoActorGestureLeftFrames[frame]);
+		_sceneLayers.setLayerFrame(kScene3070InterludeRightLayer,
+			kTwoActorGestureRightFrames[frame]);
 		if (waitSceneMillis(kScene3070OverlayFrameMillis))
 			break;
 	}
@@ -686,8 +654,8 @@ void Scene3070::runInterludeCutscene() {
 
 	for (byte frame = 16; frame < ARRAYSIZE(kScene3070InterludeRightFrameMap); ++frame) {
 		if (frame < ARRAYSIZE(kScene3070InterludeLeftFrameMap))
-			_interludeLeftLayer.setFrame(frame);
-		_interludeRightLayer.setFrame(frame);
+			_sceneLayers.setLayerFrame(kScene3070InterludeLeftLayer, frame);
+		_sceneLayers.setLayerFrame(kScene3070InterludeRightLayer, frame);
 		if (waitSceneMillis(kScene3070OverlayFrameMillis))
 			break;
 	}
@@ -695,11 +663,13 @@ void Scene3070::runInterludeCutscene() {
 	fadePaletteToBlack();
 	_interludeActive = false;
 	_interludeAlternatePose = false;
-	_interludeLeftLayer.visible = false;
-	_interludeRightLayer.visible = false;
+	_sceneLayers.setLayerVisible(kScene3070InterludeLeftLayer, false);
+	_sceneLayers.setLayerVisible(kScene3070InterludeRightLayer, false);
 	applySceneStateToHotspotsAndPatches(0xff);
 	_paletteCurrent = savedPalette;
 	_viewportXOffset = savedViewportX;
+	_viewportMinXOffset = savedViewportMinX;
+	_viewportMaxXOffset = savedViewportMaxX;
 	drawPlayableComposite();
 	presentFrame();
 	fadePaletteFromBlack();
@@ -712,10 +682,12 @@ void Scene3070::runDoorPatchOverlay(bool open) {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(9, kScene3070PatchOverlayDescriptorCount,
-		kScene3070PatchOverlayFrameMap, ARRAYSIZE(kScene3070PatchOverlayFrameMap), kScene3070OverlayFrameMillis));
-	state.scene3070DrawerOpen = open;
-	applySceneStateToHotspotsAndPatches(0xff);
+	BlockingSequence(*this)
+		.actorReplacement(ActionOverlaySpec(9, kScene3070PatchOverlayDescriptorCount,
+			kScene3070PatchOverlayFrameMap, ARRAYSIZE(kScene3070PatchOverlayFrameMap),
+			kScene3070OverlayFrameMillis))
+		.commit(state.scene3070DrawerOpen, open)
+		.framebufferPatch(0xff);
 }
 
 void Scene3070::runItemPatchPickup() {
@@ -725,13 +697,14 @@ void Scene3070::runItemPatchPickup() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(9, kScene3070PatchOverlayDescriptorCount,
-		kScene3070ItemPatchPickupFrameMap, ARRAYSIZE(kScene3070ItemPatchPickupFrameMap), kScene3070OverlayFrameMillis));
-	state.scene3070SurgicalNeedleThreadState = 2;
-	state.scene3070SurgicalNeedleThreadTaken = true;
-	applySceneStateToHotspotsAndPatches(0xff);
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(9, kScene3070PatchOverlayDescriptorCount,
+			kScene3070OverlayFrameMillis).bookendWithLastFrame())
+		.commit(state.scene3070SurgicalNeedleThreadState, (byte)2)
+		.commit(state.scene3070SurgicalNeedleThreadTaken, true)
+		.framebufferPatch(0xff);
 	addInventoryItem(0x32);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 }
 
 void Scene3070::runFrankensteinRevival() {
@@ -765,22 +738,27 @@ void Scene3070::runFrankensteinRevival() {
 		beginSecondarySpeechLine(13, 4);
 
 	_vm->gameplayMusic()->playMusicCue(0x12, 100, false);
-	runActorReplacement(ActionOverlaySpec(13, 6, kScene3070RevivalStartFrameMap,
-		ARRAYSIZE(kScene3070RevivalStartFrameMap), kScene3070OverlayFrameMillis).hookAt(5, 2));
-
-	if (!walkActiveActorTo(0x0e6, 0x1b5, 1, 0)) {
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(13, 6, kScene3070RevivalStartFrameMap,
+			ARRAYSIZE(kScene3070RevivalStartFrameMap), kScene3070OverlayFrameMillis)
+			.soundAt(5, 0x14)
+			.loopingAmbientSoundAt(5, 0x11, 50)
+			.resourcePatchAt(5, 12))
+		.actorPath(SceneActorPose(0x0e6, 0x1b5, 1));
+	if (!sequence.completed()) {
 		_soundBank0.stop();
 		_ambientSoundBank0.stop();
 		return;
 	}
-	runActorReplacement(ActionOverlaySpec(11, 24, kScene3070RevivalLoopFrameMap,
-		ARRAYSIZE(kScene3070RevivalLoopFrameMap), kScene3070OverlayFrameMillis).hookEveryFrame(3));
-	runActorReplacement(ActionOverlaySpec(14, 19, kScene3070RevivalFinishFrameMap,
-		ARRAYSIZE(kScene3070RevivalFinishFrameMap), kScene3070OverlayFrameMillis).startAt(4));
+	sequence.actorReplacement(ActionOverlaySpec(11, 24, kScene3070RevivalLoopFrameMap,
+			ARRAYSIZE(kScene3070RevivalLoopFrameMap), kScene3070OverlayFrameMillis)
+			.loopingSoundAt(20, 0x0c, 25)
+			.stopSoundAt(60))
+		.actorReplacement(ActionOverlaySpec(14, 19, kScene3070OverlayFrameMillis).startAt(4));
 
 	runCurtainClearToBlack();
-	state.mainFlowStateId = kScene3110LongTransitionState;
-	_soundBank0.stop();
+	sequence.commit(state.mainFlowStateId, kScene3110LongTransitionState)
+		.stopSound();
 	_ambientSoundBank0.stop();
 }
 
@@ -789,17 +767,19 @@ void Scene3070::runBrainInstallation() {
 		dispatchGenericSceneAction(231);
 		return;
 	}
-	if (!walkActiveActorTo(0x225, 0x13e, 5, 0))
+	BlockingSequence sequence(*this);
+	sequence.actorPath(SceneActorPose(0x225, 0x13e, 5));
+	if (!sequence.completed())
 		return;
 
-	runActorReplacement(ActionOverlaySpec(20, 29, kScene3070BrainInstallationFrameMap,
-		ARRAYSIZE(kScene3070BrainInstallationFrameMap), kScene3070OverlayFrameMillis));
 	GameplayState &state = _vm->gameState();
-	state.scene3070FrankensteinBodyState = 2;
-	applySceneStateToHotspotsAndPatches(2);
+	sequence.actorReplacement(ActionOverlaySpec(20, 29, kScene3070BrainInstallationFrameMap,
+			ARRAYSIZE(kScene3070BrainInstallationFrameMap), kScene3070OverlayFrameMillis))
+		.commit(state.scene3070FrankensteinBodyState, (byte)2)
+		.framebufferPatch(2);
 	removeInventoryItem(0x25);
-	_soundBank0.playSample(1, 100);
-	beginSecondarySpeechLine(15, 0);
+	sequence.sound(1)
+		.secondarySpeech(15, 0);
 }
 
 void Scene3070::runBodyAssembly() {
@@ -811,21 +791,22 @@ void Scene3070::runBodyAssembly() {
 		beginSecondarySpeechLine(16, 1);
 		return;
 	}
-	if (!walkActiveActorTo(0x24a, 0x13d, 5, 0))
+	BlockingSequence sequence(*this);
+	sequence.actorPath(SceneActorPose(0x24a, 0x13d, 5));
+	if (!sequence.completed())
 		return;
 
-	beginSecondarySpeechLine(16, 2);
-	runActorReplacement(ActionOverlaySpec(15, 29, kScene3070BodyAssemblyFrameMap,
-		ARRAYSIZE(kScene3070BodyAssemblyFrameMap), kScene3070OverlayFrameMillis).hookAt(10, 1));
-	runActorReplacement(ActionOverlaySpec(16, 20, kScene3070BodyAssemblyFinishFrameMap,
-		ARRAYSIZE(kScene3070BodyAssemblyFinishFrameMap), kScene3070OverlayFrameMillis));
-
-	_vm->gameState().scene3070FrankensteinBodyState = 1;
-	applySceneStateToHotspotsAndPatches(2);
+	sequence.secondarySpeech(16, 2)
+		.actorReplacement(ActionOverlaySpec(15, 29, kScene3070BodyAssemblyFrameMap,
+			ARRAYSIZE(kScene3070BodyAssemblyFrameMap), kScene3070OverlayFrameMillis)
+			.resourcePatchAt(10, 21))
+		.actorReplacement(ActionOverlaySpec(16, 20, kScene3070OverlayFrameMillis).holdFirstFrame())
+		.commit(_vm->gameState().scene3070FrankensteinBodyState, (byte)1)
+		.framebufferPatch(2);
 	removeInventoryItem(0x30);
 	removeInventoryItem(0x42);
 	removeInventoryItem(0x4c);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 }
 
 void Scene3070::addSerumIngredient(byte itemId, uint16 speechRow, bool speakBefore, bool useSyringeAnimation) {
@@ -839,27 +820,22 @@ void Scene3070::addSerumIngredient(byte itemId, uint16 speechRow, bool speakBefo
 		return;
 	}
 
+	BlockingSequence sequence(*this);
 	if (speakBefore)
-		beginSecondarySpeechLine(speechRow, 0);
+		sequence.secondarySpeech(speechRow, 0);
 	const byte *frameMap = useSyringeAnimation ? kScene3070SyringeIngredientFrameMap : kScene3070IngredientFrameMap;
 	const uint frameCount = useSyringeAnimation ? ARRAYSIZE(kScene3070SyringeIngredientFrameMap) :
 		ARRAYSIZE(kScene3070IngredientFrameMap);
-	runActorReplacement(ActionOverlaySpec(10, 11, frameMap, frameCount, kScene3070OverlayFrameMillis));
-	state.scene3070SerumIngredientCount = MIN<byte>(5, state.scene3070SerumIngredientCount + 1);
+	sequence.actorReplacement(ActionOverlaySpec(10, 11, frameMap, frameCount,
+			kScene3070OverlayFrameMillis))
+		.commit(state.scene3070SerumIngredientCount,
+			MIN<byte>(5, state.scene3070SerumIngredientCount + 1));
 	if (useSyringeAnimation)
 		addInventoryItem(0x08);
 	removeInventoryItem(itemId);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 	if (!speakBefore)
-		beginSecondarySpeechLine(speechRow, 0);
-}
-
-void Scene3070::applyActionPatchChunk(uint chunkIndex) {
-	if (!_sceneChunkTable.isValidChunk(chunkIndex))
-		return;
-
-	drawResourceBlockList(_resourceArena, _resourceChunkOffsets[chunkIndex], _baseFramebuffer);
-	drawResourceBlockList(_resourceArena, _resourceChunkOffsets[chunkIndex], _sceneFramebuffer);
+		sequence.secondarySpeech(speechRow, 0);
 }
 
 bool Scene3070::runCurtainRevealFromBlack() {

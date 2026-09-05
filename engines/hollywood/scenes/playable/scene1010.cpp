@@ -19,13 +19,13 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene1010.h"
-
 #include "common/debug.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene1010.h"
+#include "hollywood/scenes/shared_frame_sequences.h"
 
 namespace Hollywood {
 
@@ -73,14 +73,7 @@ const int kScene1010ForegroundRightYThreshold = 0x1cb;
 const uint32 kScene1010SceneActorBlinkFrameMillis = 75;
 const uint kScene1010SceneActorBlinkDescriptorCount = 0x0c;
 
-const byte kScene1010SceneActorBlinkFrameMap[] = {
-	0, 11, 0, 1, 2, 1, 0, 0,
-	1, 2, 3, 4, 5, 6, 7, 8,
-	9, 10, 10, 10, 10, 10, 9, 8,
-	7, 6, 5, 4, 3, 2, 1, 0
-};
-
-static PlayableSceneConfig scene1010Config() {
+PlayableSceneConfig scene1010Config() {
 	PlayableSceneConfig config(1010,
 		SceneResourceLayout(9, 5, 8),
 		SceneViewport(kScene1010ViewportXOffset, kScene1010ViewportMinXOffset, kScene1010ViewportMaxXOffset),
@@ -214,7 +207,7 @@ bool Scene1010::dispatchCustomSceneAction(uint16 handlerId) {
 			beginSecondarySpeechLine(4, 0);
 			return true;
 		}
-		_vm->gameState().requestTravelScreenSelection(1);
+		requestTravelScreenSelection(1);
 		return true;
 	default:
 		return false;
@@ -326,12 +319,12 @@ void Scene1010::advanceSceneActorBlinkAnimation(uint32 delta) {
 }
 
 void Scene1010::drawSceneActorBlinkFrame() {
-	if (_sceneActorBlinkFrameIndex >= ARRAYSIZE(kScene1010SceneActorBlinkFrameMap))
+	if (_sceneActorBlinkFrameIndex >= kTitleBlinkFrameCount)
 		return;
 
 	drawStripSpriteFrame(_resourceArena, _resourceChunkOffsets[5], 0,
 		kScene1010SceneActorBlinkDescriptorCount,
-		kScene1010SceneActorBlinkFrameMap[_sceneActorBlinkFrameIndex], _sceneFramebuffer);
+		kTitleBlinkFrames[_sceneActorBlinkFrameIndex], _sceneFramebuffer);
 }
 
 } // End of namespace Hollywood

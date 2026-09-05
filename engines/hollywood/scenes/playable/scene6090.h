@@ -2,7 +2,7 @@
  *
  * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
- * file for details.
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef HOLLYWOOD_SCENES_PLAYABLE_SCENE6090_H
@@ -47,17 +48,14 @@ private:
 		byte actorDrawOrderMode) override;
 	bool shouldApplyGameplayPanelObjectPalette() const override;
 	void runCustomEntrySequence() override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
-	void advancePrimarySpeechAnimation(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool shouldPlayGameplayClickPath() const override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
 	uint32 primarySpeechAnimationFrameMillis(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
 	void primarySpeechAnimationRestored(byte animationGroup, byte baseFrame) override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
@@ -67,7 +65,7 @@ private:
 	void drawActorFrames(bool drawActiveActor, byte activeFacing, byte activeCel,
 		int activeWorldX, int activeWorldY, bool drawSecondaryActor, byte secondaryFacing,
 		byte secondaryFrame, int secondaryWorldX, int secondaryWorldY);
-	bool playLayerTransition(ResourceSpriteLayer &layer, byte firstFrame, byte lastFrame,
+	bool playLayerTransition(uint layerId, byte firstFrame, byte lastFrame,
 		uint32 frameMillis);
 	bool runCurtainRevealFromBlack();
 	void runOpeningConversation();
@@ -79,35 +77,13 @@ private:
 	void runDelayedInterruption();
 	void runInterruptionClips();
 
-	void startAsyncPrimarySpeechLine(uint16 rowIndex, byte frameIndex,
-		uint16 centerX, uint16 topY, byte red, byte green, byte blue,
-		byte animationGroup, byte volumePercent = 100);
-	void startAsyncPrimarySpeechPart();
-	void advanceAsyncPrimarySpeech(uint32 delta);
-	void stopAsyncPrimarySpeech();
-	void waitForAsyncPrimarySpeech();
-
 	void applyPatchChunk(uint chunkIndex);
+	void setRescueFrame(byte frame);
 	void runRopeRescueSequence();
 	void advanceEscapeAnimation(uint32 delta);
 	void advanceEscapePalette(uint32 delta);
 	void dimEscapePaletteStep();
 
-	ResourceSpriteLayer _leftAmbientLayer;
-	ResourceSpriteLayer _rightAmbientLayer;
-	ResourceSpriteLayer _tiedRonLayer;
-	ResourceSpriteLayer _hannoverLayer;
-	ResourceSpriteLayer _karloffLayer;
-	ResourceSpriteLayer _sueFaceLayer;
-	ResourceSpriteLayer _apparatusLayer;
-	ResourceSpriteLayer _rescueRonLayer;
-	ResourceSpriteLayer _rescueHannoverLayer;
-	ResourceSpriteLayer _rescueKarloffLayer;
-	ResourceSpriteLayer _rescueApparatusLayer;
-	ResourceSpriteLayer _rescueEffectLayer;
-	ResourceSpriteLayer _escapeBackdropLayer;
-	ResourceSpriteLayer _freedSueLayer;
-	ResourceSpriteLayer _specialEffectLayer;
 	uint _leftAmbientTrack;
 	uint _rightAmbientTrack;
 	TimedAnimationChannel _tiedRonChannel;
@@ -136,19 +112,6 @@ private:
 	bool _escapePaletteActive;
 	bool _paletteLockedDark;
 	bool _muffledSpeechStarted;
-
-	bool _asyncPrimaryActive;
-	bool _asyncPrimaryAnimated;
-	uint16 _asyncTextRecordId;
-	uint16 _asyncVoiceSampleId;
-	uint16 _asyncCenterX;
-	uint16 _asyncTopY;
-	byte _asyncPartCount;
-	byte _asyncPartIndex;
-	byte _asyncAnimationGroup;
-	byte _asyncColorIndex;
-	byte _asyncVolumePercent;
-	uint32 _asyncPartRemainingMillis;
 };
 
 } // End of namespace Hollywood

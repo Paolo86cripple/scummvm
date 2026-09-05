@@ -24,37 +24,24 @@
 
 #include "common/types.h"
 
+#include "hollywood/scenes/animation_events.h"
+#include "hollywood/scenes/animation_layers.h"
+
 namespace Hollywood {
 
-// Optional behavior for action overlays: clipping, state patches, sounds, hooks.
+// Playback bounds and interruption behavior for action overlays.
 struct ActionOverlayOptions {
 	ActionOverlayOptions() :
 		firstFrame(0),
 		endFrame(0),
-		redrawAtEnd(true),
 		allowSkip(true),
-		waitAfterFinalFrame(true),
-		statePatchFrame(-1),
-		statePatchSelector(0),
-		soundFrame(-1),
-		soundId(0),
-		soundVolumePercent(100),
-		hookFrame(-1),
-		hookId(0) {
+		waitAfterFinalFrame(true) {
 	}
 
 	uint firstFrame;
 	uint endFrame;
-	bool redrawAtEnd;
 	bool allowSkip;
 	bool waitAfterFinalFrame;
-	int statePatchFrame;
-	byte statePatchSelector;
-	int soundFrame;
-	byte soundId;
-	byte soundVolumePercent;
-	int hookFrame;
-	byte hookId;
 };
 
 /**
@@ -62,15 +49,34 @@ struct ActionOverlayOptions {
  *
  * Playback blocks its caller while scene events, animation, and drawing continue
  * between frames. The clamped frame range is [firstFrame, endFrame), with zero
- * endFrame meaning the end of frameMap. Negative patch and sound frames disable
- * those events; a nonzero hookId runs at hookFrame, or every frame when
- * hookFrame is negative. Frames normally hold for frameMillis, including the
- * last; noFinalFrameDelay() makes the terminal frame an immediate handoff.
+ * endFrame meaning the end of the playback sequence. Frame events run in declaration order
+ * after their frame is installed. Frames normally hold for frameMillis,
+ * including the last; noFinalFrameDelay() makes the terminal frame an
+ * immediate handoff. The terminal frame remains presented until the caller's
+ * next draw, so state and scene transitions cannot expose an intermediate
+ * composite.
  * unskippable() reserves input for the scene while a state-changing sequence
- * runs. The playback entry point determines whether the resource replaces the
- * actor or overlays the scene.
+ * runs. The playback entry point controls actor visibility; drawAt() only
+ * changes composition order. restoreBaseBackground() clears the sprite bounds
+ * from the base framebuffer before each draw.
  */
-struct ActionOverlaySpec {
+struct ActionOverlaySpec : AnimationEventSpec<ActionOverlaySpec> {
+	ActionOverlaySpec(uint newChunkIndex, uint newDescriptorCount, uint32 newFrameMillis) :
+			chunkIndex(newChunkIndex),
+			descriptorCount(newDescriptorCount),
+			frameMap(nullptr),
+			frameMapSize(0),
+			frameMillis(newFrameMillis),
+			heldFrame(-1),
+			bookendLastFrame(false),
+			appendFirstFrame(false),
+			reversePlayback(false),
+			hasDrawStratum(false),
+			drawStratum(kSceneAnimationInFrontOfActors),
+			restoreBackgroundBeforeDraw(false),
+			options() {
+	}
+
 	ActionOverlaySpec(uint newChunkIndex, uint newDescriptorCount,
 			const byte *newFrameMap, uint newFrameMapSize, uint32 newFrameMillis) :
 			chunkIndex(newChunkIndex),
@@ -78,41 +84,55 @@ struct ActionOverlaySpec {
 			frameMap(newFrameMap),
 			frameMapSize(newFrameMapSize),
 			frameMillis(newFrameMillis),
+			heldFrame(-1),
+			bookendLastFrame(false),
+			appendFirstFrame(false),
+			reversePlayback(false),
+			hasDrawStratum(false),
+			drawStratum(kSceneAnimationInFrontOfActors),
+			restoreBackgroundBeforeDraw(false),
 			options() {
 	}
 
-	ActionOverlaySpec &patchAt(int frame, byte selector) {
-		options.statePatchFrame = frame;
-		options.statePatchSelector = selector;
+	ActionOverlaySpec &holdFirstFrame() {
+		return holdFrame(0);
+	}
+
+	ActionOverlaySpec &holdFrame(int frame) {
+		const uint frameCount = frameMap != nullptr ? frameMapSize : descriptorCount;
+		heldFrame = frame >= 0 && (uint)frame < frameCount ? frame : -1;
+		bookendLastFrame = false;
+		appendFirstFrame = false;
 		return *this;
 	}
 
-	ActionOverlaySpec &soundAt(int frame, byte soundId, byte volumePercent = 100) {
-		options.soundFrame = frame;
-		options.soundId = soundId;
-		options.soundVolumePercent = volumePercent;
+	ActionOverlaySpec &bookendWithLastFrame() {
+		heldFrame = -1;
+		bookendLastFrame = true;
+		appendFirstFrame = false;
 		return *this;
 	}
 
-	ActionOverlaySpec &hookAt(int frame, byte hookId) {
-		options.hookFrame = frame;
-		options.hookId = hookId;
+	ActionOverlaySpec &returnToFirstFrame() {
+		heldFrame = -1;
+		bookendLastFrame = false;
+		appendFirstFrame = true;
 		return *this;
 	}
 
-	ActionOverlaySpec &hookEveryFrame(byte hookId) {
-		options.hookFrame = -1;
-		options.hookId = hookId;
+	ActionOverlaySpec &reverse() {
+		reversePlayback = true;
 		return *this;
 	}
 
-	ActionOverlaySpec &noRedrawAtEnd() {
-		options.redrawAtEnd = false;
+	ActionOverlaySpec &drawAt(SceneAnimationStratum stratum) {
+		hasDrawStratum = true;
+		drawStratum = stratum;
 		return *this;
 	}
 
-	ActionOverlaySpec &redrawAtEnd(bool redraw) {
-		options.redrawAtEnd = redraw;
+	ActionOverlaySpec &restoreBaseBackground() {
+		restoreBackgroundBeforeDraw = true;
 		return *this;
 	}
 
@@ -142,11 +162,43 @@ struct ActionOverlaySpec {
 		return *this;
 	}
 
+	uint playbackFrameCount() const {
+		const uint frameCount = frameMap != nullptr ? frameMapSize : descriptorCount;
+		if (frameCount == 0)
+			return 0;
+		return frameCount + (heldFrame >= 0 || bookendLastFrame || appendFirstFrame ? 1 : 0);
+	}
+
+	uint targetFrame(uint playbackFrame) const {
+		const uint frameCount = frameMap != nullptr ? frameMapSize : descriptorCount;
+		if (frameCount == 0)
+			return 0;
+		if (bookendLastFrame) {
+			if (playbackFrame == 0 || (reversePlayback && playbackFrame == frameCount))
+				return frameCount - 1;
+			return reversePlayback ? frameCount - playbackFrame - 1 : playbackFrame - 1;
+		}
+		if (appendFirstFrame && playbackFrame == frameCount)
+			return 0;
+		uint frame = heldFrame < 0 || playbackFrame <= (uint)heldFrame ?
+			playbackFrame : playbackFrame - 1;
+		if (!reversePlayback)
+			return frame;
+		return frameCount - 1 - frame;
+	}
+
 	uint chunkIndex;
 	uint descriptorCount;
 	const byte *frameMap;
 	uint frameMapSize;
 	uint32 frameMillis;
+	int heldFrame;
+	bool bookendLastFrame;
+	bool appendFirstFrame;
+	bool reversePlayback;
+	bool hasDrawStratum;
+	SceneAnimationStratum drawStratum;
+	bool restoreBackgroundBeforeDraw;
 	ActionOverlayOptions options;
 };
 

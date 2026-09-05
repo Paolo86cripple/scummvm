@@ -19,14 +19,14 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene5110.h"
-
 #include "engines/engine.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
 #include "hollywood/resource.h"
+#include "hollywood/scenes/playable/scene5110.h"
+#include "hollywood/scenes/shared_frame_sequences.h"
 
 namespace Hollywood {
 
@@ -56,22 +56,26 @@ const byte kScene5110DialogueStageId = 0x62;
 const byte kScene5110SalonResponseRow = 99;
 const byte kScene5110DialogueNoResponseFrame = 0xff;
 
+enum Scene5110LayerId {
+	kScene5110RandomDetailLayer,
+	kScene5110CenterSalonLayer,
+	kScene5110WerewolfLayer,
+	kScene5110CenterSalonDetailLayer,
+	kScene5110LeftSalonLayer,
+	kScene5110UpperRightSalonLayer,
+	kScene5110RightSalonDetailLayer,
+	kScene5110LowerSalonDetailLayer,
+	kScene5110RightStaticSalonLayer,
+	kScene5110ElevatorLayer,
+	kScene5110LayerCount
+};
+
 enum {
 	kScene5110DialogueTransitionEnd = 0,
 	kScene5110DialogueTransitionDown = 1,
 	kScene5110DialogueTransitionUp = 2,
 	kScene5110DialogueTransitionStay = 3,
 	kScene5110DialogueTransitionUpTwo = 4
-};
-
-enum {
-	kScene5110PatchUnderwear = 1,
-	kScene5110PatchBottle = 2,
-	kScene5110PatchMirror = 3
-};
-
-const byte kScene5110PickupFrameMap[] = {
-	11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
 };
 
 const byte kScene5110FirstElevatorFrameMap[] = { 0, 1, 2, 3, 4, 5 };
@@ -84,14 +88,31 @@ const byte kScene5110ElevatorLowerFrameMap[] = { 5, 4, 3, 2, 1, 0 };
 const byte kScene5110WerewolfFrameMap[] = {
 	0, 1, 2, 3, 4, 5, 5, 6, 7, 8, 9, 5, 4, 3, 2, 0
 };
-const byte kScene5110CenterDetailFrameMap[] = { 0, 1, 2, 3, 4, 3, 2, 1, 0 };
 const byte kScene5110LeftSalonFrameMap[] = {
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1, 0
 };
-const byte kScene5110UpperRightFrameMap[] = { 0, 1, 2, 3, 4, 3, 2, 1, 0 };
 const byte kScene5110LowerDetailFrameMap[] = { 0, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 0 };
 
-static PlayableSceneConfig scene5110Config() {
+const SceneLayerSpec kScene5110LayerSpecs[] = {
+	{kSceneAnimationScenePlaced, 7, 4, nullptr, 0, true, 0},
+	{kSceneAnimationScenePlaced, 8, 5, nullptr, 0, true, 1},
+	{kSceneAnimationScenePlaced, 9, 10, kScene5110WerewolfFrameMap,
+		ARRAYSIZE(kScene5110WerewolfFrameMap), true, 0},
+	{kSceneAnimationScenePlaced, 10, 5, kFiveFramePingPongFrames,
+		kFiveFramePingPongFrameCount, true, 0},
+	{kSceneAnimationScenePlaced, 15, 9, kScene5110LeftSalonFrameMap,
+		ARRAYSIZE(kScene5110LeftSalonFrameMap), true, 0},
+	{kSceneAnimationScenePlaced, 16, 8, kFiveFramePingPongFrames,
+		kFiveFramePingPongFrameCount, true, 0},
+	{kSceneAnimationScenePlaced, 17, 7, nullptr, 0, true, 0},
+	{kSceneAnimationScenePlaced, 18, 7, kScene5110LowerDetailFrameMap,
+		ARRAYSIZE(kScene5110LowerDetailFrameMap), true, 0},
+	{kSceneAnimationScenePlaced, 19, 1, nullptr, 0, true, 0},
+	{kSceneAnimationScenePlaced, 22, kScene5110ElevatorDescriptorCount,
+		nullptr, 0, false, 0}
+};
+
+PlayableSceneConfig scene5110Config() {
 	PlayableSceneConfig config(5110,
 		SceneResourceLayout(5, 5, 0x19),
 		SceneViewport(kScene5110ViewportXOffset, kScene5110ViewportXOffset, kScene5110ViewportXOffset),
@@ -99,22 +120,13 @@ static PlayableSceneConfig scene5110Config() {
 	config.setActorResources(kScene5110ActorBankTableEntry, kScene5110ActorPaletteTableEntry);
 	config.setTextResources(0, kScene5110SpeechCueDescriptorTableOffset);
 	config.walkablePaletteMaxRegion = 20;
-	config.useActorDepthTest = false;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
 Scene5110::Scene5110(HollywoodEngine *vm) :
 		PlayableScene(vm, scene5110Config()),
-		_randomDetailLayer(),
-		_centerSalonLayer(),
-		_werewolfLayer(),
-		_centerSalonDetailLayer(),
-		_leftSalonLayer(),
-		_upperRightSalonLayer(),
-		_rightSalonDetailLayer(),
-		_lowerSalonDetailLayer(),
-		_rightStaticSalonLayer(),
-		_elevatorLayer(),
+		_randomDetailTrack(RealtimeAnimationTracks::kInvalidTrack),
 		_salonAnimationChannel(),
 		_upperRightSalonState(1),
 		_rightSalonDetailDirection(0),
@@ -127,6 +139,9 @@ Scene5110::Scene5110(HollywoodEngine *vm) :
 		_centerSalonToggleB(false),
 		_centerSalonDetailSequenceActive(false),
 		_werewolfDialogueActive(false) {
+	_sceneLayers.configure(kScene5110LayerSpecs);
+	_randomDetailTrack = _realtimeAnimationTracks.addRandom(kScene5110RandomDetailLayer,
+		kScene5110FrameMillis, 0, 3, true);
 }
 
 int Scene5110::replacementFillRunsResourceChunkIndex() const {
@@ -161,7 +176,7 @@ void Scene5110::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 		drawSalonSpriteLayers();
 		return;
 	}
-	if (_elevatorLayer.visible) {
+	if (_sceneLayers.layerVisible(kScene5110ElevatorLayer)) {
 		drawElevatorComposite(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
 			drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY);
 		return;
@@ -171,10 +186,6 @@ void Scene5110::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
 	drawNormalRoomLayers(activeWorldY);
 	drawActionOverlayLayer();
-}
-
-bool Scene5110::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
 }
 
 void Scene5110::runCustomEntrySequence() {
@@ -399,10 +410,6 @@ bool Scene5110::shouldConvertSavedFramebufferFF() const {
 	return true;
 }
 
-bool Scene5110::shouldRunExitSideEffectsAfterLoop() const {
-	return true;
-}
-
 void Scene5110::runExitSideEffectsAfterLoop() {
 	fadePaletteToBlack();
 }
@@ -438,39 +445,19 @@ uint32 Scene5110::primarySpeechAnimationFrameMillis(byte animationGroup) const {
 
 void Scene5110::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) {
 	(void)animationGroup;
-	_werewolfLayer.setFrame(frameIndex);
+	_sceneLayers.setLayerFrame(kScene5110WerewolfLayer, frameIndex);
 }
 
 void Scene5110::primarySpeechAnimationStarted(byte animationGroup, byte baseFrame) {
 	(void)animationGroup;
-	_werewolfLayer.setFrame(baseFrame);
+	_sceneLayers.setLayerFrame(kScene5110WerewolfLayer, baseFrame);
 	_werewolfState = 0;
 }
 
 void Scene5110::primarySpeechAnimationRestored(byte animationGroup, byte baseFrame) {
 	(void)animationGroup;
-	_werewolfLayer.setFrame(baseFrame);
+	_sceneLayers.setLayerFrame(kScene5110WerewolfLayer, baseFrame);
 	_werewolfState = 0;
-}
-
-void Scene5110::handleAnimationFrameHook(byte hookId, uint frame) {
-	(void)frame;
-	switch (hookId) {
-	case kScene5110PatchUnderwear:
-		if (_sceneChunkTable.isValidChunk(11))
-			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[11], _baseFramebuffer);
-		break;
-	case kScene5110PatchBottle:
-		if (_sceneChunkTable.isValidChunk(5))
-			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[5], _baseFramebuffer);
-		break;
-	case kScene5110PatchMirror:
-		if (_sceneChunkTable.isValidChunk(13))
-			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[13], _baseFramebuffer);
-		break;
-	default:
-		break;
-	}
 }
 
 void Scene5110::handleLeftClick(const GameplayLoopCursorState &state) {
@@ -486,17 +473,18 @@ bool Scene5110::runEntryElevatorSequence(bool alternateEntry) {
 
 	const bool previousHideActiveActor = _hideActiveActor;
 	_hideActiveActor = true;
-	_elevatorLayer.visible = _sceneChunkTable.isValidChunk(22);
-	_elevatorLayer.reset(entryFrames[0]);
+	_sceneLayers.setLayerVisible(kScene5110ElevatorLayer,
+		_sceneChunkTable.isValidChunk(22));
+	_sceneLayers.resetLayer(kScene5110ElevatorLayer, entryFrames[0]);
 	drawPlayableComposite();
 	if (fadePaletteFromBlack()) {
-		_elevatorLayer.visible = false;
+		_sceneLayers.setLayerVisible(kScene5110ElevatorLayer, false);
 		_hideActiveActor = previousHideActiveActor;
 		return false;
 	}
 
 	if (!playElevatorSequence(entryFrames, entryFrameCount, false)) {
-		_elevatorLayer.visible = false;
+		_sceneLayers.setLayerVisible(kScene5110ElevatorLayer, false);
 		_hideActiveActor = previousHideActiveActor;
 		return false;
 	}
@@ -504,7 +492,7 @@ bool Scene5110::runEntryElevatorSequence(bool alternateEntry) {
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[23], _baseFramebuffer);
 	setActiveActorPose(0x084, 0x169, 2);
 	if (!holdElevatorFrame(true)) {
-		_elevatorLayer.visible = false;
+		_sceneLayers.setLayerVisible(kScene5110ElevatorLayer, false);
 		_hideActiveActor = previousHideActiveActor;
 		return false;
 	}
@@ -513,7 +501,7 @@ bool Scene5110::runEntryElevatorSequence(bool alternateEntry) {
 	const bool completed = playElevatorSequence(kScene5110ElevatorInnerFrameMap,
 		ARRAYSIZE(kScene5110ElevatorInnerFrameMap), false);
 	_soundBank0.stop();
-	_elevatorLayer.visible = false;
+	_sceneLayers.setLayerVisible(kScene5110ElevatorLayer, false);
 	_hideActiveActor = previousHideActiveActor;
 	drawPlayableComposite();
 	presentFrame();
@@ -526,10 +514,10 @@ bool Scene5110::playElevatorSequence(const byte *frameMap, uint frameMapSize, bo
 
 	const bool previousHideActiveActor = _hideActiveActor;
 	_hideActiveActor = !drawActor;
-	_elevatorLayer.visible = true;
+	_sceneLayers.setLayerVisible(kScene5110ElevatorLayer, true);
 	AnimationFrameRange range(0, frameMapSize - 1, kScene5110ElevatorFrameMillis);
 	range.frameOrder = frameMap;
-	const bool completed = playAndPresentAnimationFrames(_elevatorLayer,
+	const bool completed = playAndPresentAnimationFrames(kScene5110ElevatorLayer,
 		range.unskippable().noFinalFrameDelay());
 	_hideActiveActor = previousHideActiveActor;
 	return completed;
@@ -550,7 +538,7 @@ void Scene5110::runButtonExitToState(uint16 nextState) {
 	if (!playElevatorSequence(kScene5110ElevatorCloseFrameMap,
 			ARRAYSIZE(kScene5110ElevatorCloseFrameMap), true) || !holdElevatorFrame(false)) {
 		_soundBank0.stop();
-		_elevatorLayer.visible = false;
+		_sceneLayers.setLayerVisible(kScene5110ElevatorLayer, false);
 		return;
 	}
 	if (_sceneChunkTable.isValidChunk(24))
@@ -562,7 +550,7 @@ void Scene5110::runButtonExitToState(uint16 nextState) {
 		ARRAYSIZE(kScene5110ElevatorUpperFrameMap) : ARRAYSIZE(kScene5110ElevatorLowerFrameMap);
 	if (!playElevatorSequence(exitFrames, exitFrameCount, false)) {
 		_soundBank0.stop();
-		_elevatorLayer.visible = false;
+		_sceneLayers.setLayerVisible(kScene5110ElevatorLayer, false);
 		return;
 	}
 	_vm->gameState().scene5110ElevatorTransitionSeen = true;
@@ -577,11 +565,11 @@ void Scene5110::runButtonReturnSequence() {
 			!playElevatorSequence(kScene5110ElevatorInnerFrameMap,
 				ARRAYSIZE(kScene5110ElevatorInnerFrameMap), true)) {
 		_soundBank0.stop();
-		_elevatorLayer.visible = false;
+		_sceneLayers.setLayerVisible(kScene5110ElevatorLayer, false);
 		return;
 	}
 	_soundBank0.stop();
-	_elevatorLayer.visible = false;
+	_sceneLayers.setLayerVisible(kScene5110ElevatorLayer, false);
 	_vm->gameState().scene5110ElevatorTransitionSeen = true;
 	applySceneStateToHotspotsAndPatches(4);
 	setActiveActorPose(0x084, 0x169, 2);
@@ -595,14 +583,15 @@ void Scene5110::runUnderwearPickup() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(12, kScene5110PickupDescriptorCount,
-		kScene5110PickupFrameMap, ARRAYSIZE(kScene5110PickupFrameMap), kScene5110FrameMillis)
-		.hookAt(6, kScene5110PatchUnderwear)
-		.noFinalFrameDelay());
-	state.scene5110UnderwearTaken = true;
-	applySceneStateToHotspotsAndPatches(1);
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(12, kScene5110PickupDescriptorCount, kScene5110FrameMillis)
+			.bookendWithLastFrame()
+			.resourcePatchAt(6, 11)
+			.noFinalFrameDelay())
+		.commit(state.scene5110UnderwearTaken, true)
+		.framebufferPatch(1);
 	addInventoryItem(kScene5110UnderwearInventoryItem);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 }
 
 void Scene5110::runBottlePickup() {
@@ -619,15 +608,16 @@ void Scene5110::runBottlePickup() {
 		beginSecondarySpeechLine(4, 0);
 	}
 
-	beginSecondarySpeechLine(3, 1);
-	runActorReplacement(ActionOverlaySpec(6, kScene5110PickupDescriptorCount,
-		kScene5110PickupFrameMap, ARRAYSIZE(kScene5110PickupFrameMap), kScene5110FrameMillis)
-		.hookAt(6, kScene5110PatchBottle)
-		.noFinalFrameDelay());
-	state.scene5110BottleState = 2;
-	applySceneStateToHotspotsAndPatches(2);
+	BlockingSequence sequence(*this);
+	sequence.secondarySpeech(3, 1)
+		.actorReplacement(ActionOverlaySpec(6, kScene5110PickupDescriptorCount, kScene5110FrameMillis)
+			.bookendWithLastFrame()
+			.resourcePatchAt(6, 5)
+			.noFinalFrameDelay())
+		.commit(state.scene5110BottleState, (byte)2)
+		.framebufferPatch(2);
 	addInventoryItem(kScene5110BottleInventoryItem);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 }
 
 void Scene5110::runWerewolfDialogue() {
@@ -716,14 +706,15 @@ void Scene5110::runMirrorPickup() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(14, kScene5110PickupDescriptorCount,
-		kScene5110PickupFrameMap, ARRAYSIZE(kScene5110PickupFrameMap), kScene5110FrameMillis)
-		.hookAt(6, kScene5110PatchMirror)
-		.noFinalFrameDelay());
-	state.scene5110MirrorTaken = true;
-	applySceneStateToHotspotsAndPatches(5);
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(14, kScene5110PickupDescriptorCount, kScene5110FrameMillis)
+			.bookendWithLastFrame()
+			.resourcePatchAt(6, 13)
+			.noFinalFrameDelay())
+		.commit(state.scene5110MirrorTaken, true)
+		.framebufferPatch(5);
 	addInventoryItem(kScene5110MirrorInventoryItem);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 }
 
 void Scene5110::runJacuzziInspection() {
@@ -754,23 +745,24 @@ void Scene5110::beginSalonPrimarySpeechLine(uint16 rowIndex, byte frameIndex) {
 void Scene5110::settleWerewolfForSpeech() {
 	if (_werewolfState == 0)
 		return;
+	ResourceSpriteLayer &layer = _sceneLayers.layer(kScene5110WerewolfLayer);
 
 	if (_werewolfState == 1) {
-		_werewolfLayer.setFrame(2);
+		layer.setFrame(2);
 		_werewolfState = 2;
 	} else if (_werewolfState == 3) {
-		switch (_werewolfLayer.frameIndex) {
+		switch (layer.frameIndex) {
 		case 11:
-			_werewolfLayer.setFrame(5);
+			layer.setFrame(5);
 			break;
 		case 12:
-			_werewolfLayer.setFrame(4);
+			layer.setFrame(4);
 			break;
 		case 13:
-			_werewolfLayer.setFrame(3);
+			layer.setFrame(3);
 			break;
 		default:
-			_werewolfLayer.setFrame(2);
+			layer.setFrame(2);
 			break;
 		}
 		_werewolfState = 2;
@@ -816,7 +808,6 @@ void Scene5110::setWerewolfDialogueRecord(Common::Array<DialogueChoiceRecord> &r
 	record.playerTextRowId = playerTextRowId;
 	record.responseFrameIndex = responseFrameIndex;
 	record.disableAfterUse = disableAfterUse;
-	record.reserved = 0xff;
 	record.selectable = 1;
 }
 
@@ -837,7 +828,6 @@ bool Scene5110::applyWerewolfDialogueTransition(const DialogueChoiceRecord &reco
 		nodeIndex = record.nextNodeIndex;
 		depthIndex = previousDepth > 1 ? (byte)(previousDepth - 2) : 0;
 		break;
-	case kScene5110DialogueTransitionStay:
 	default:
 		break;
 	}
@@ -846,43 +836,13 @@ bool Scene5110::applyWerewolfDialogueTransition(const DialogueChoiceRecord &reco
 }
 
 void Scene5110::initializeSalonLayers() {
-	_randomDetailLayer.configure(7, 4, nullptr, 0);
-	_centerSalonLayer.configure(8, 5, nullptr, 0);
-	_werewolfLayer.configure(9, 10, kScene5110WerewolfFrameMap,
-		ARRAYSIZE(kScene5110WerewolfFrameMap));
-	_centerSalonDetailLayer.configure(10, 5, kScene5110CenterDetailFrameMap,
-		ARRAYSIZE(kScene5110CenterDetailFrameMap));
-	_leftSalonLayer.configure(15, 9, kScene5110LeftSalonFrameMap,
-		ARRAYSIZE(kScene5110LeftSalonFrameMap));
-	_upperRightSalonLayer.configure(16, 8, kScene5110UpperRightFrameMap,
-		ARRAYSIZE(kScene5110UpperRightFrameMap));
-	_rightSalonDetailLayer.configure(17, 7, nullptr, 0);
-	_lowerSalonDetailLayer.configure(18, 7, kScene5110LowerDetailFrameMap,
-		ARRAYSIZE(kScene5110LowerDetailFrameMap));
-	_rightStaticSalonLayer.configure(19, 1, nullptr, 0);
-	_elevatorLayer.configure(22, kScene5110ElevatorDescriptorCount, nullptr, 0);
-
-	_randomDetailLayer.visible = _sceneChunkTable.isValidChunk(7);
-	_centerSalonLayer.visible = _sceneChunkTable.isValidChunk(8);
-	_werewolfLayer.visible = _sceneChunkTable.isValidChunk(9);
-	_centerSalonDetailLayer.visible = _sceneChunkTable.isValidChunk(10);
-	_leftSalonLayer.visible = _sceneChunkTable.isValidChunk(15);
-	_upperRightSalonLayer.visible = _sceneChunkTable.isValidChunk(16);
-	_rightSalonDetailLayer.visible = _sceneChunkTable.isValidChunk(17);
-	_lowerSalonDetailLayer.visible = _sceneChunkTable.isValidChunk(18);
-	_rightStaticSalonLayer.visible = _sceneChunkTable.isValidChunk(19);
-	_elevatorLayer.visible = false;
-
-	_randomDetailLayer.reset(0);
-	_centerSalonLayer.reset(1);
-	_werewolfLayer.reset(0);
-	_centerSalonDetailLayer.reset(0);
-	_leftSalonLayer.reset(0);
-	_upperRightSalonLayer.reset(0);
-	_rightSalonDetailLayer.reset(0);
-	_lowerSalonDetailLayer.reset(0);
-	_rightStaticSalonLayer.reset(0);
-	_elevatorLayer.reset(0);
+	_sceneLayers.configure(kScene5110LayerSpecs);
+	_realtimeAnimationTracks.reset(_randomDetailTrack);
+	for (uint layerId = kScene5110RandomDetailLayer;
+			layerId < kScene5110ElevatorLayer; ++layerId) {
+		_sceneLayers.setLayerVisible(layerId,
+			_sceneChunkTable.isValidChunk(_sceneLayers.layer(layerId).chunkIndex));
+	}
 	_salonAnimationChannel.reset(0, kScene5110FrameMillis);
 	_upperRightSalonState = 1;
 	_rightSalonDetailDirection = 0;
@@ -904,13 +864,6 @@ void Scene5110::advanceSalonAnimations(uint32 delta) {
 }
 
 void Scene5110::advanceSalonAnimationTick() {
-	byte nextFrame = _randomDetailLayer.frameIndex;
-	for (uint attempt = 0; attempt < 8 && nextFrame == _randomDetailLayer.frameIndex; ++attempt)
-		nextFrame = (byte)_random.getRandomNumber(3);
-	if (nextFrame == _randomDetailLayer.frameIndex)
-		nextFrame = (_randomDetailLayer.frameIndex + 1) & 3;
-	_randomDetailLayer.setFrame(nextFrame);
-
 	if (_vm->gameState().scene5110SalonTransformState >= 2)
 		return;
 
@@ -924,104 +877,108 @@ void Scene5110::advanceSalonAnimationTick() {
 	} else if (_werewolfDialogueActive) {
 		advanceWerewolfDialogueTick();
 	} else {
-		advanceWerewolfTick(!_speechOverlay.visible && !_elevatorLayer.visible);
+		advanceWerewolfTick(!_speechOverlay.visible &&
+			!_sceneLayers.layerVisible(kScene5110ElevatorLayer));
 	}
 	advanceCenterSalonDetailTick();
 }
 
 void Scene5110::advanceUpperRightSalonTick() {
+	ResourceSpriteLayer &layer = _sceneLayers.layer(kScene5110UpperRightSalonLayer);
 	switch (_upperRightSalonState) {
 	case 0:
 		if (_random.getRandomNumber(19) == 0) {
-			_upperRightSalonLayer.setFrame(5);
+			layer.setFrame(5);
 			_upperRightSalonState = 3;
 		}
 		break;
 	case 1:
-		if (_upperRightSalonLayer.frameIndex != 0) {
-			_upperRightSalonLayer.setFrame(0);
+		if (layer.frameIndex != 0) {
+			layer.setFrame(0);
 		} else if (_random.getRandomNumber(14) == 0) {
-			_upperRightSalonLayer.setFrame(1);
+			layer.setFrame(1);
 		} else if (_random.getRandomNumber(24) == 0) {
-			_upperRightSalonLayer.setFrame(2);
+			layer.setFrame(2);
 			_upperRightSalonState = 2;
 		}
 		break;
 	case 2:
-		if (_upperRightSalonLayer.frameIndex > 3)
+		if (layer.frameIndex > 3)
 			_upperRightSalonState = 0;
 		else
-			_upperRightSalonLayer.setFrame(_upperRightSalonLayer.frameIndex + 1);
+			layer.setFrame(layer.frameIndex + 1);
 		break;
 	case 3:
-		if (_upperRightSalonLayer.frameIndex > 7) {
-			_upperRightSalonLayer.setFrame(0);
+		if (layer.frameIndex > 7) {
+			layer.setFrame(0);
 			_upperRightSalonState = 1;
 		} else {
-			_upperRightSalonLayer.setFrame(_upperRightSalonLayer.frameIndex + 1);
+			layer.setFrame(layer.frameIndex + 1);
 		}
 		break;
 	default:
 		_upperRightSalonState = 1;
-		_upperRightSalonLayer.setFrame(0);
+		layer.setFrame(0);
 		break;
 	}
 }
 
 void Scene5110::advanceRightSalonDetailTick() {
+	ResourceSpriteLayer &layer = _sceneLayers.layer(kScene5110RightSalonDetailLayer);
 	if (_rightSalonDetailDirection == 2) {
-		if (_rightSalonDetailDwell != 0 && _rightSalonDetailLayer.frameIndex < 6) {
-			_rightSalonDetailLayer.setFrame(_rightSalonDetailLayer.frameIndex + 1);
+		if (_rightSalonDetailDwell != 0 && layer.frameIndex < 6) {
+			layer.setFrame(layer.frameIndex + 1);
 			--_rightSalonDetailDwell;
 		} else {
-			_rightSalonDetailLayer.setFrame(_rightSalonDetailLayer.frameIndex - 1);
+			layer.setFrame(layer.frameIndex - 1);
 			_rightSalonDetailDirection = 3;
 			_rightSalonDetailDwell = (byte)(_random.getRandomNumber(5) + 1);
 		}
 		return;
 	}
 
-	if (_rightSalonDetailDwell != 0 && _rightSalonDetailLayer.frameIndex != 0) {
-		_rightSalonDetailLayer.setFrame(_rightSalonDetailLayer.frameIndex - 1);
+	if (_rightSalonDetailDwell != 0 && layer.frameIndex != 0) {
+		layer.setFrame(layer.frameIndex - 1);
 		--_rightSalonDetailDwell;
 	} else {
-		_rightSalonDetailLayer.setFrame(_rightSalonDetailLayer.frameIndex + 1);
+		layer.setFrame(layer.frameIndex + 1);
 		_rightSalonDetailDirection = 2;
 		_rightSalonDetailDwell = (byte)(_random.getRandomNumber(5) + 1);
 	}
 }
 
 void Scene5110::advanceLowerSalonDetailTick() {
+	ResourceSpriteLayer &layer = _sceneLayers.layer(kScene5110LowerSalonDetailLayer);
 	switch (_lowerSalonDetailState) {
 	case 0:
 		if (_random.getRandomNumber(24) == 0) {
-			_lowerSalonDetailLayer.setFrame(_lowerSalonDetailLayer.frameIndex + 1);
+			layer.setFrame(layer.frameIndex + 1);
 			_lowerSalonDetailState = 3;
 		}
 		break;
 	case 1:
 		if (_random.getRandomNumber(24) == 0) {
-			_lowerSalonDetailLayer.setFrame(1);
+			layer.setFrame(1);
 			_lowerSalonDetailState = 2;
 		}
 		break;
 	case 2:
-		if (_lowerSalonDetailLayer.frameIndex > 6)
+		if (layer.frameIndex > 6)
 			_lowerSalonDetailState = 0;
 		else
-			_lowerSalonDetailLayer.setFrame(_lowerSalonDetailLayer.frameIndex + 1);
+			layer.setFrame(layer.frameIndex + 1);
 		break;
 	case 3:
-		if (_lowerSalonDetailLayer.frameIndex > 11) {
-			_lowerSalonDetailLayer.setFrame(0);
+		if (layer.frameIndex > 11) {
+			layer.setFrame(0);
 			_lowerSalonDetailState = 1;
 		} else {
-			_lowerSalonDetailLayer.setFrame(_lowerSalonDetailLayer.frameIndex + 1);
+			layer.setFrame(layer.frameIndex + 1);
 		}
 		break;
 	default:
 		_lowerSalonDetailState = 1;
-		_lowerSalonDetailLayer.setFrame(0);
+		layer.setFrame(0);
 		break;
 	}
 }
@@ -1037,123 +994,127 @@ void Scene5110::advanceCenterSalonTick() {
 	else if (_random.getRandomNumber(14) == 0)
 		_centerSalonToggleB = true;
 
+	byte frameIndex = _centerSalonToggleB ? 0 : 1;
 	if (_centerSalonToggleA)
-		_centerSalonLayer.setFrame(_centerSalonToggleB ? 3 : 4);
-	else
-		_centerSalonLayer.setFrame(_centerSalonToggleB ? 0 : 1);
+		frameIndex = _centerSalonToggleB ? 3 : 4;
+	_sceneLayers.setLayerFrame(kScene5110CenterSalonLayer, frameIndex);
 }
 
 void Scene5110::advanceLeftSalonTick() {
+	ResourceSpriteLayer &layer = _sceneLayers.layer(kScene5110LeftSalonLayer);
 	if (_leftSalonRepeatCount != 0) {
-		if (_leftSalonLayer.frameIndex < 16) {
-			_leftSalonLayer.setFrame(_leftSalonLayer.frameIndex + 1);
+		if (layer.frameIndex < 16) {
+			layer.setFrame(layer.frameIndex + 1);
 		} else {
 			--_leftSalonRepeatCount;
-			_leftSalonLayer.setFrame(_leftSalonRepeatCount != 0 ? 1 : 0);
+			layer.setFrame(_leftSalonRepeatCount != 0 ? 1 : 0);
 		}
 		return;
 	}
 
 	if (_random.getRandomNumber(49) == 0) {
-		_leftSalonLayer.setFrame(1);
+		layer.setFrame(1);
 		_leftSalonRepeatCount = (byte)(_random.getRandomNumber(4) + 1);
 	}
 }
 
 void Scene5110::advanceWerewolfTick(bool allowLongGesture) {
+	ResourceSpriteLayer &layer = _sceneLayers.layer(kScene5110WerewolfLayer);
 	switch (_werewolfState) {
 	case 0:
-		if (_werewolfLayer.frameIndex == 10) {
-			_werewolfLayer.setFrame(6);
+		if (layer.frameIndex == 10) {
+			layer.setFrame(6);
 		} else if (_random.getRandomNumber(14) == 0) {
-			_werewolfLayer.setFrame(10);
+			layer.setFrame(10);
 		} else if (allowLongGesture && _random.getRandomNumber(39) == 0) {
-			_werewolfLayer.setFrame(11);
+			layer.setFrame(11);
 			_werewolfState = 3;
 		}
 		break;
 	case 1:
-		if (_werewolfLayer.frameIndex == 1) {
-			_werewolfLayer.setFrame(0);
+		if (layer.frameIndex == 1) {
+			layer.setFrame(0);
 		} else if (_random.getRandomNumber(14) == 0) {
-			_werewolfLayer.setFrame(1);
+			layer.setFrame(1);
 		} else if (_random.getRandomNumber(39) == 0) {
-			_werewolfLayer.setFrame(2);
+			layer.setFrame(2);
 			_werewolfState = 2;
 		}
 		break;
 	case 2:
-		if (_werewolfLayer.frameIndex > 4) {
-			_werewolfLayer.setFrame(6);
+		if (layer.frameIndex > 4) {
+			layer.setFrame(6);
 			_werewolfState = 0;
 		} else {
-			_werewolfLayer.setFrame(_werewolfLayer.frameIndex + 1);
+			layer.setFrame(layer.frameIndex + 1);
 		}
 		break;
 	case 3:
-		if (_werewolfLayer.frameIndex < 15) {
-			_werewolfLayer.setFrame(_werewolfLayer.frameIndex + 1);
+		if (layer.frameIndex < 15) {
+			layer.setFrame(layer.frameIndex + 1);
 		} else {
-			_werewolfLayer.setFrame(0);
+			layer.setFrame(0);
 			_werewolfState = 1;
 		}
 		break;
 	default:
 		_werewolfState = 1;
-		_werewolfLayer.setFrame(0);
+		layer.setFrame(0);
 		break;
 	}
 }
 
 void Scene5110::advanceWerewolfDialogueTick() {
 	_werewolfState = 0;
-	if (_werewolfLayer.frameIndex != 6)
-		_werewolfLayer.setFrame(6);
+	if (_sceneLayers.layerFrame(kScene5110WerewolfLayer) != 6)
+		_sceneLayers.setLayerFrame(kScene5110WerewolfLayer, 6);
 	else if (_random.getRandomNumber(14) == 0)
-		_werewolfLayer.setFrame(10);
+		_sceneLayers.setLayerFrame(kScene5110WerewolfLayer, 10);
 }
 
 void Scene5110::advanceCenterSalonDetailTick() {
+	ResourceSpriteLayer &layer = _sceneLayers.layer(kScene5110CenterSalonDetailLayer);
 	if (!_centerSalonDetailSequenceActive) {
 		if (_random.getRandomNumber(49) == 0) {
 			_centerSalonDetailSequenceActive = true;
-			_centerSalonDetailLayer.setFrame(1);
+			layer.setFrame(1);
 			_centerSalonDetailRepeatCount = (byte)(_random.getRandomNumber(4) + 1);
 		}
 		return;
 	}
 
-	if (_centerSalonDetailLayer.frameIndex < 7) {
-		_centerSalonDetailLayer.setFrame(_centerSalonDetailLayer.frameIndex + 1);
+	if (layer.frameIndex < 7) {
+		layer.setFrame(layer.frameIndex + 1);
 		return;
 	}
 
-	_centerSalonDetailLayer.setFrame(0);
+	layer.setFrame(0);
 	--_centerSalonDetailRepeatCount;
 	if (_centerSalonDetailRepeatCount == 0)
 		_centerSalonDetailSequenceActive = false;
 }
 
 void Scene5110::drawNormalRoomLayers(int activeWorldY) {
-	drawResourceSpriteLayer(_randomDetailLayer);
+	drawSceneLayer(kScene5110RandomDetailLayer);
 	if (_vm->gameState().scene5110SalonTransformState < 2) {
-		drawResourceSpriteLayer(_upperRightSalonLayer);
-		drawResourceSpriteLayer(_rightStaticSalonLayer);
-		drawResourceSpriteLayer(_centerSalonLayer);
-		if (_werewolfLayer.frameIndex >= 3 && _werewolfLayer.frameIndex <= 13) {
-			drawResourceSpriteLayer(_werewolfLayer);
-			drawResourceSpriteLayer(_rightSalonDetailLayer);
+		drawSceneLayer(kScene5110UpperRightSalonLayer);
+		drawSceneLayer(kScene5110RightStaticSalonLayer);
+		drawSceneLayer(kScene5110CenterSalonLayer);
+		const byte werewolfFrame = _sceneLayers.layerFrame(kScene5110WerewolfLayer);
+		if (werewolfFrame >= 3 && werewolfFrame <= 13) {
+			drawSceneLayer(kScene5110WerewolfLayer);
+			drawSceneLayer(kScene5110RightSalonDetailLayer);
 		} else {
-			drawResourceSpriteLayer(_rightSalonDetailLayer);
-			drawResourceSpriteLayer(_werewolfLayer);
+			drawSceneLayer(kScene5110RightSalonDetailLayer);
+			drawSceneLayer(kScene5110WerewolfLayer);
 		}
-		drawResourceSpriteLayer(_centerSalonDetailLayer);
+		drawSceneLayer(kScene5110CenterSalonDetailLayer);
 		if (_sceneChunkTable.isValidChunk(20))
 			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[20], _sceneFramebuffer);
 		if (activeWorldY > 0x109 && _sceneChunkTable.isValidChunk(21))
 			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[21], _sceneFramebuffer);
-		drawResourceSpriteLayer(_leftSalonLayer);
-		drawResourceSpriteLayer(_lowerSalonDetailLayer);
+		drawSceneLayer(kScene5110LeftSalonLayer);
+		drawSceneLayer(kScene5110LowerSalonDetailLayer);
 		return;
 	}
 
@@ -1166,18 +1127,18 @@ void Scene5110::drawNormalRoomLayers(int activeWorldY) {
 }
 
 void Scene5110::drawSalonSpriteLayers() {
-	drawResourceSpriteLayer(_randomDetailLayer);
+	drawSceneLayer(kScene5110RandomDetailLayer);
 	if (_vm->gameState().scene5110SalonTransformState >= 2)
 		return;
 
-	drawResourceSpriteLayer(_upperRightSalonLayer);
-	drawResourceSpriteLayer(_rightStaticSalonLayer);
-	drawResourceSpriteLayer(_centerSalonLayer);
-	drawResourceSpriteLayer(_rightSalonDetailLayer);
-	drawResourceSpriteLayer(_werewolfLayer);
-	drawResourceSpriteLayer(_centerSalonDetailLayer);
-	drawResourceSpriteLayer(_leftSalonLayer);
-	drawResourceSpriteLayer(_lowerSalonDetailLayer);
+	drawSceneLayer(kScene5110UpperRightSalonLayer);
+	drawSceneLayer(kScene5110RightStaticSalonLayer);
+	drawSceneLayer(kScene5110CenterSalonLayer);
+	drawSceneLayer(kScene5110RightSalonDetailLayer);
+	drawSceneLayer(kScene5110WerewolfLayer);
+	drawSceneLayer(kScene5110CenterSalonDetailLayer);
+	drawSceneLayer(kScene5110LeftSalonLayer);
+	drawSceneLayer(kScene5110LowerSalonDetailLayer);
 }
 
 void Scene5110::drawElevatorComposite(bool drawActiveActor, byte activeFacing, byte activeCel,
@@ -1187,7 +1148,7 @@ void Scene5110::drawElevatorComposite(bool drawActiveActor, byte activeFacing, b
 		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
 	if (_sceneChunkTable.isValidChunk(20))
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[20], _sceneFramebuffer);
-	drawResourceSpriteLayer(_elevatorLayer);
+	drawSceneLayer(kScene5110ElevatorLayer);
 	drawSalonSpriteLayers();
 }
 

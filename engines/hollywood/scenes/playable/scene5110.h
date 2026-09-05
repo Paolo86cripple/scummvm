@@ -40,7 +40,6 @@ private:
 	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	void runCustomEntrySequence() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
@@ -49,7 +48,6 @@ private:
 		const ScenePoint &boundary, int &requestedFacing, bool &restoredStepDeltas) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	bool shouldConvertSavedFramebufferFF() const override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
@@ -58,7 +56,6 @@ private:
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
 	void primarySpeechAnimationStarted(byte animationGroup, byte baseFrame) override;
 	void primarySpeechAnimationRestored(byte animationGroup, byte baseFrame) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	void handleLeftClick(const GameplayLoopCursorState &state) override;
 
 	bool runEntryElevatorSequence(bool alternateEntry);
@@ -105,16 +102,7 @@ private:
 	void replaceColorMapItemFromOriginal(byte sourceItem, byte destinationItem);
 	void rebuildWalkableMask();
 
-	ResourceSpriteLayer _randomDetailLayer;
-	ResourceSpriteLayer _centerSalonLayer;
-	ResourceSpriteLayer _werewolfLayer;
-	ResourceSpriteLayer _centerSalonDetailLayer;
-	ResourceSpriteLayer _leftSalonLayer;
-	ResourceSpriteLayer _upperRightSalonLayer;
-	ResourceSpriteLayer _rightSalonDetailLayer;
-	ResourceSpriteLayer _lowerSalonDetailLayer;
-	ResourceSpriteLayer _rightStaticSalonLayer;
-	ResourceSpriteLayer _elevatorLayer;
+	uint _randomDetailTrack;
 	TimedAnimationChannel _salonAnimationChannel;
 	byte _upperRightSalonState;
 	byte _rightSalonDetailDirection;

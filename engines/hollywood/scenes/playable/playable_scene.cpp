@@ -19,8 +19,6 @@
  *
  */
 
-#include "hollywood/scenes/playable/playable_scene.h"
-
 #include "common/debug.h"
 #include "common/events.h"
 #include "common/file.h"
@@ -28,17 +26,23 @@
 #include "common/system.h"
 #include "graphics/surface.h"
 
+#include "hollywood/hollywood.h"
+#include "hollywood/debug.h"
 #include "hollywood/font.h"
 #include "hollywood/gameplay/actor_renderer.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/gameplay/inventory_media.h"
 #include "hollywood/gameplay/travel_screen.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/playable_scene.h"
 #include "hollywood/scenes/resource_delta_clip_player.h"
 #include "hollywood/scenes/scene_registry.h"
 
 namespace Hollywood {
+
+const byte kMineAmbientSoundCueVolumes[] = {
+	10, 10, 10, 2, 10, 10, 10, 100
+};
 
 const char *const kResource000Name = "RESOURCE.000";
 const char *const kStage003ArchiveName = "RESOURCE.003";
@@ -110,63 +114,58 @@ PlayableScene::PlayableScene(HollywoodEngine *vm, const PlayableSceneConfig &con
 		_config(config),
 		_sceneStateId(vm->gameState().mainFlowStateId),
 		_resources(),
-		_sceneChunkTable(_resources.chunkTable),
-		_resourceChunkOffsets(_resources.chunkOffsets),
-		_resourceArenaCursor(_resources.arenaCursor),
-		_resourceArena(_resources.arena),
-		_metadata(_resources.metadata),
+		_sceneChunkTable(_resources._chunkTable),
+		_resourceChunkOffsets(_resources._chunkOffsets),
+		_resourceArena(_resources._arena),
+		_metadata(_resources._metadata),
 		_surfaceState(),
-		_paletteResource(_surfaceState.paletteResource),
-		_paletteCurrent(_surfaceState.paletteCurrent),
-		_actorPaletteBase(_surfaceState.actorPaletteBase),
-		_baseFramebufferOriginal(_surfaceState.baseFramebufferOriginal),
-		_baseFramebuffer(_surfaceState.baseFramebuffer),
-		_sceneFramebuffer(_surfaceState.sceneFramebuffer),
-		_savedFramebuffer(_surfaceState.savedFramebuffer),
-		_fillRuns(_surfaceState.fillRuns),
-		_paletteMaskOriginal(_surfaceState.paletteMaskOriginal),
-		_paletteMask(_surfaceState.paletteMask),
-		_fullPaletteRegionMask(_surfaceState.fullPaletteRegionMask),
-		_walkablePaletteMask(_surfaceState.walkablePaletteMask),
-		_colorToActorDepthClassMap(_surfaceState.colorToActorDepthClassMap),
-		_presentationPaletteRemapTable(_surfaceState.presentationPaletteRemapTable),
-		_actorDepthYThresholds(_surfaceState.actorDepthYThresholds),
-		_drawActorDepthYThresholds(_surfaceState.drawActorDepthYThresholds),
-		_screen(_surfaceState.screen),
-		_displayPalette(_surfaceState.displayPalette),
+		_paletteResource(_surfaceState._paletteResource),
+		_paletteCurrent(_surfaceState._paletteCurrent),
+		_actorPaletteBase(_surfaceState._actorPaletteBase),
+		_baseFramebufferOriginal(_surfaceState._baseFramebufferOriginal),
+		_baseFramebuffer(_surfaceState._baseFramebuffer),
+		_sceneFramebuffer(_surfaceState._sceneFramebuffer),
+		_savedFramebuffer(_surfaceState._savedFramebuffer),
+		_fillRuns(_surfaceState._fillRuns),
+		_paletteMaskOriginal(_surfaceState._paletteMaskOriginal),
+		_paletteMask(_surfaceState._paletteMask),
+		_fullPaletteRegionMask(_surfaceState._fullPaletteRegionMask),
+		_walkablePaletteMask(_surfaceState._walkablePaletteMask),
+		_colorToActorDepthClassMap(_surfaceState._colorToActorDepthClassMap),
+		_presentationPaletteRemapTable(_surfaceState._presentationPaletteRemapTable),
+		_actorDepthYThresholds(_surfaceState._actorDepthYThresholds),
+		_drawActorDepthYThresholds(_surfaceState._drawActorDepthYThresholds),
+		_screen(_surfaceState._screen),
+		_displayPalette(_surfaceState._displayPalette),
 		_textStore(),
-		_stage003DecodeKey(_textStore.decodeKey),
-		_stage003StageBlock(_textStore.stageBlock),
-		_stage003SmallRows(_textStore.stageSmallRows),
-		_stage003LargeRows(_textStore.stageLargeRows),
-		_staticSpeechCueDescriptors(_textStore.staticSpeechCueDescriptors),
-		_inventoryOwnerSmallRows(_textStore.inventoryOwnerSmallRows),
-		_inventoryOwnerLargeRows(_textStore.inventoryOwnerLargeRows),
+		_stage003DecodeKey(_textStore._decodeKey),
+		_stage003SmallRows(_textStore._stageSmallRows),
 		_pathController(),
-		_routeBoundaryPoints(_pathController.routeBoundaryPoints),
-		_routeSteps(_pathController.routeSteps),
-		_actorPathFrames(_pathController.frames),
-		_actorPathStepDeltas(_pathController.stepDeltas),
+		_routeBoundaryPoints(_pathController._routeBoundaryPoints),
+		_routeSteps(_pathController._routeSteps),
+		_actorPathFrames(_pathController._frames),
+		_actorPathStepDeltas(_pathController._stepDeltas),
 		_panelArt(vm->getLanguage()),
 		_residentSoundEffects(vm->isDemo() && vm->getPlatform() == Common::kPlatformDOS),
 		_random(Common::String::format("scene%u", config.sceneId)),
 		_sceneLayers(),
-		_realtimeAnimationTracks(),
+		_realtimeAnimationTracks(_sceneLayers),
 		_animationPlayer(*this),
+		_concurrentActorPathChannel(),
 		_speechController(vm->getLanguage(), vm->hasSpeechData()),
 		_realtimeSpeechPlayer(vm->getLanguage(), vm->hasSpeechData()),
-		_speech(_speechController.player),
-		_speechOverlay(_speechController.secondaryOverlay),
-		_primarySpeechOverlay(_speechController.primaryOverlay),
-		_primaryLeftSpeechLastFrame(_speechController.primaryLeftSpeechLastFrame),
-		_primaryDialogueSpeechLastFrame(_speechController.primaryDialogueSpeechLastFrame),
-		_primaryDialogueSpeechGroup(_speechController.primaryDialogueSpeechGroup),
-		_primaryLeftSpeechActive(_speechController.primaryLeftSpeechActive),
-		_primaryDialogueSpeechActive(_speechController.primaryDialogueSpeechActive),
-		_secondaryActorTimerAccumulator(_speechController.secondaryActorTimerAccumulator),
-		_primaryLeftSpeechTimerAccumulator(_speechController.primaryLeftSpeechTimerAccumulator),
-		_primaryDialogueSpeechTimerAccumulator(_speechController.primaryDialogueSpeechTimerAccumulator),
-		_secondaryActorFrame(_speechController.secondaryActorFrame),
+		_speech(_speechController._player),
+		_speechOverlay(_speechController._secondaryOverlay),
+		_primarySpeechOverlay(_speechController._primaryOverlay),
+		_primaryLeftSpeechLastFrame(_speechController._primaryLeftSpeechLastFrame),
+		_primaryDialogueSpeechLastFrame(_speechController._primaryDialogueSpeechLastFrame),
+		_primaryDialogueSpeechGroup(_speechController._primaryDialogueSpeechGroup),
+		_primaryLeftSpeechActive(_speechController._primaryLeftSpeechActive),
+		_primaryDialogueSpeechActive(_speechController._primaryDialogueSpeechActive),
+		_secondaryActorTimerAccumulator(_speechController._secondaryActorTimerAccumulator),
+		_primaryLeftSpeechTimerAccumulator(_speechController._primaryLeftSpeechTimerAccumulator),
+		_primaryDialogueSpeechTimerAccumulator(_speechController._primaryDialogueSpeechTimerAccumulator),
+		_secondaryActorFrame(_speechController._secondaryActorFrame),
 		_realtimeSpeechElapsed(0),
 		_realtimeSpeechDuration(0),
 		_realtimeSpeechTextRecordId(0),
@@ -181,7 +180,7 @@ PlayableScene::PlayableScene(HollywoodEngine *vm, const PlayableSceneConfig &con
 		_realtimeSpeechActive(false),
 		_realtimeSpeechPrimary(false),
 		_actionOverlayPlayer(),
-		_hideActiveActor(_actionOverlayPlayer.hideActiveActor),
+		_hideActiveActor(_actionOverlayPlayer._hideActiveActor),
 		_ambientMusicTimerAccumulator(0),
 		_previousAmbientMusicTrackId(0),
 		_currentAmbientSoundCueId(0),
@@ -190,7 +189,12 @@ PlayableScene::PlayableScene(HollywoodEngine *vm, const PlayableSceneConfig &con
 		_viewportMinXOffset(0),
 		_viewportMaxXOffset(0),
 		_lastViewportScrollActorWorldX(config.defaultActorPose.x),
+		_concurrentActorPathFrameIndex(0),
+		_concurrentActorPathActive(false),
 		_actorPathPlaybackActive(false),
+		_playerDirectedActorPathActive(false),
+		_playerDirectedActorPathFootstepPlayed(false),
+		_pendingGameplayActionHandlerId(0),
 		_activeActorWorldX(config.defaultActorPose.x),
 		_activeActorWorldY(config.defaultActorPose.y),
 		_activeActorFacing(config.defaultActorPose.facing),
@@ -199,7 +203,8 @@ PlayableScene::PlayableScene(HollywoodEngine *vm, const PlayableSceneConfig &con
 		_lastSceneActionItemId(0),
 		_lastInventoryActionItemId(0),
 		_lastInventoryPrimaryItemId(0),
-		_skipRequested(false) {
+		_skipRequested(false),
+		_stepAdvanceRequested(false) {
 	_surfaceState.initialize(kPaletteSize, kScenePaletteMapByteCount, kPaletteMaskUsedBytes, kScenePaletteMapPageSize,
 		kScenePaletteRegionCount, kActorPaletteBaseBytes);
 	_speechController.initialize(kDefaultSecondarySpeechTextColor, kDefaultPrimarySpeechTextColor);
@@ -218,17 +223,38 @@ PlayableScene::PlayableScene(HollywoodEngine *vm, const PlayableSceneConfig &con
 
 PlayableScene::BlockingSequence::BlockingSequence(PlayableScene &scene) :
 		_scene(scene),
-		_running(true) {
+		_running(true),
+		_aborted(false) {
 	refresh();
 }
 
 PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::layerFrames(
-		SceneLayerStack &layers, uint layerId, const AnimationFrameRange &range) {
+		uint layerId, const AnimationFrameRange &range) {
+	if (canRun())
+		finishMediaStep(_scene.playAnimationFrames(layerId, range));
+	return *this;
+}
+
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::presentedLayerFrames(
+		uint layerId, const AnimationFrameRange &range) {
+	if (canRun())
+		finishMediaStep(_scene.playAndPresentAnimationFrames(layerId, range));
+	return *this;
+}
+
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::presentedLayerTransition(
+		uint layerId, const AnimationTransition &transition) {
+	if (canRun())
+		finishMediaStep(_scene.playAndPresentAnimationTransition(layerId, transition));
+	return *this;
+}
+
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::resourceLayerFrames(
+		uint layerId, uint chunkIndex, uint16 descriptorCount, const byte *frameMap,
+		uint frameMapSize, const AnimationFrameRange &range, bool clearAtEnd) {
 	if (canRun()) {
-		const bool completed = _scene.playAnimationFrames(layers, layerId, range);
-		if (!completed && !_scene._skipRequested)
-			_running = false;
-		refresh();
+		finishMediaStep(_scene.playResourceLayerSequence(layerId, chunkIndex,
+			descriptorCount, frameMap, frameMapSize, range, clearAtEnd));
 	}
 	return *this;
 }
@@ -251,7 +277,8 @@ PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::actorReplaceme
 
 PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::actorPose(
 		const SceneActorPose &pose, byte cel) {
-	_scene.setActiveActorPose(pose.x, pose.y, pose.facing, cel);
+	if (canFinalize())
+		_scene.setActiveActorPose(pose.x, pose.y, pose.facing, cel);
 	return *this;
 }
 
@@ -303,17 +330,15 @@ PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::primarySpeech(
 }
 
 PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::framebufferPatch(byte selector) {
-	_scene.applySceneStateToHotspotsAndPatches(selector);
+	if (canFinalize())
+		_scene.applySceneStateToHotspotsAndPatches(selector);
 	return *this;
 }
 
-PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::paletteTransition(
-		PaletteTransition transition) {
+PlayableScene::BlockingSequence &PlayableScene::BlockingSequence::fadeFromBlack() {
 	if (canRun()) {
-		if (transition == kFadeFromBlack)
-			_scene.fadePaletteFromBlack();
-		else
-			_scene.fadePaletteToBlack();
+		if (_scene.fadePaletteFromBlack())
+			_running = false;
 		refresh();
 	}
 	return *this;
@@ -324,9 +349,25 @@ bool PlayableScene::BlockingSequence::canRun() {
 	return _running;
 }
 
+bool PlayableScene::BlockingSequence::canFinalize() {
+	refresh();
+	return !_aborted;
+}
+
+void PlayableScene::BlockingSequence::finishMediaStep(bool completed) {
+	if (!completed) {
+		const bool stepAdvanced = _scene.consumeStepAdvanceRequest();
+		if (!stepAdvanced && !_scene._skipRequested)
+			_running = false;
+	}
+	refresh();
+}
+
 void PlayableScene::BlockingSequence::refresh() {
-	if (_scene.animationPlaybackShouldStop())
+	if (_scene.animationPlaybackShouldStop()) {
 		_running = false;
+		_aborted = true;
+	}
 }
 
 PlayableSceneConfig::PlayableSceneConfig(uint16 sceneNumber, const SceneResourceLayout &resourceLayout,
@@ -343,10 +384,11 @@ PlayableSceneConfig::PlayableSceneConfig(uint16 sceneNumber, const SceneResource
 		viewportMinXOffset(sceneViewport.minXOffset),
 		viewportMaxXOffset(sceneViewport.maxXOffset),
 		defaultActorPose(actorPose),
+		drawDefaultActor(true),
+		entrySequenceOwnsFirstPresentation(false),
 		inventoryOwnerIndex(sceneNumber / 1000 == 7 ? 1 : 0),
 		activeAudioChapterIndex(sceneNumber / 1000 == 7 ? kSceneConfigNoAudioChapter : sceneNumber / 1000),
 		actorBankTableEntry(0xd0),
-		actorBankSegmentCount(14),
 		actorPaletteTableEntry(0x108),
 		inventoryActionTableExtraOffset(sceneNumber / 1000 == 7 ? kResource000FixedInventoryVerbTableOffset : 0),
 		inventoryRowsOffsetIndex(0x32),
@@ -427,8 +469,7 @@ bool PlayableScene::play() {
 	if (!_vm->isSceneRestartRequested()) {
 		if (_vm->gameState().activeActorPoseStateId != _vm->gameState().mainFlowStateId)
 			_vm->gameState().activeActorPoseValid = false;
-		if (shouldRunExitSideEffectsAfterLoop())
-			runExitSideEffectsAfterLoop();
+		runExitSideEffectsAfterLoop();
 	}
 	return result;
 }
@@ -548,10 +589,6 @@ uint PlayableScene::resource000ActorBankTableEntry() const {
 	return _config.actorBankTableEntry;
 }
 
-uint PlayableScene::resource000ActorBankSegmentCount() const {
-	return _config.actorBankSegmentCount;
-}
-
 uint PlayableScene::resource000ActorPaletteTableEntry() const {
 	return _config.actorPaletteTableEntry;
 }
@@ -625,15 +662,11 @@ bool PlayableScene::shouldLoadArenaChunk(uint index) const {
 	return !_vm->isDemo() || _sceneChunkTable.isValidChunk(index);
 }
 
-bool PlayableScene::shouldRunExitSideEffectsAfterLoop() const {
-	return false;
-}
-
 void PlayableScene::runExitSideEffectsAfterLoop() {
 }
 
 bool PlayableScene::shouldPresentPreviewBeforeEntrySequence() const {
-	return true;
+	return !_config.entrySequenceOwnsFirstPresentation;
 }
 
 bool PlayableScene::shouldUseActorDepthTest(int actorWorldX, int actorWorldY) const {
@@ -650,6 +683,11 @@ bool PlayableScene::isMainFlowStateInScene(uint16 stateId) const {
 	return isGameplayStateInScene(_sceneStateId, stateId);
 }
 
+bool PlayableScene::didLeaveSceneAfterLoop() const {
+	const uint16 stateId = _vm->gameState().mainFlowStateId;
+	return !Engine::shouldQuit() && stateId != 0xff && !isMainFlowStateInScene(stateId);
+}
+
 void PlayableScene::initializeCustomPreviewState() {
 	initializeDefaultPreviewState();
 }
@@ -657,23 +695,53 @@ void PlayableScene::initializeCustomPreviewState() {
 void PlayableScene::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
+	prepareCustomComposite(drawActiveActor || drawSecondaryActor, activeFacing,
+		activeWorldX, activeWorldY, actorDrawOrderMode);
 	copyBaseFramebufferToSceneFramebuffer();
-	drawLayerStack(_sceneLayers, kSceneAnimationBehindActors);
+	drawCustomBackgroundComposite(activeWorldX, activeWorldY);
+	drawLayerStack(kSceneAnimationBehindActors);
 	drawActionOverlayAtStratum(kSceneAnimationBehindActors);
 
 	if (_sceneLayers.hasVisibleLayers(kSceneAnimationActorReplacement)) {
 		if (drawActiveActor || drawSecondaryActor)
 			updateActorPaletteForWorldPoint(activeWorldX, activeWorldY);
-		drawLayerStack(_sceneLayers, kSceneAnimationActorReplacement);
+		drawLayerStack(kSceneAnimationActorReplacement);
 	} else {
 		drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
 			drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
 	}
+	drawCustomActorForegroundComposite(activeWorldX, activeWorldY, actorDrawOrderMode);
 	drawActionOverlayAtStratum(kSceneAnimationActorReplacement);
-	drawLayerStack(_sceneLayers, kSceneAnimationInFrontOfActors);
+	drawLayerStack(kSceneAnimationInFrontOfActors);
 	drawActionOverlayAtStratum(kSceneAnimationInFrontOfActors);
 	drawActionOverlayAtStratum(kSceneAnimationScenePlaced);
+	drawCustomForegroundComposite(activeWorldX, activeWorldY);
+}
+
+void PlayableScene::prepareCustomComposite(bool drawActors, byte activeFacing,
+		int activeWorldX, int activeWorldY, byte actorDrawOrderMode) {
+	(void)drawActors;
+	(void)activeFacing;
+	(void)activeWorldX;
+	(void)activeWorldY;
+	(void)actorDrawOrderMode;
+}
+
+void PlayableScene::drawCustomBackgroundComposite(int activeWorldX, int activeWorldY) {
+	(void)activeWorldX;
+	(void)activeWorldY;
+}
+
+void PlayableScene::drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
+		byte actorDrawOrderMode) {
+	(void)activeWorldX;
+	(void)activeWorldY;
+	(void)actorDrawOrderMode;
+}
+
+void PlayableScene::drawCustomForegroundComposite(int activeWorldX, int activeWorldY) {
+	(void)activeWorldX;
+	(void)activeWorldY;
 }
 
 bool PlayableScene::shouldDrawSecondaryActorInPlayableComposite() const {
@@ -719,6 +787,11 @@ bool PlayableScene::shouldPlayGameplayClickPath() const {
 	return true;
 }
 
+byte PlayableScene::customizeSceneActionFacing(uint16 handlerId, byte calculatedFacing) const {
+	(void)handlerId;
+	return calculatedFacing;
+}
+
 bool PlayableScene::adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const {
 	(void)targetX;
 	(void)targetY;
@@ -762,18 +835,99 @@ AmbientAudioProfile PlayableScene::ambientAudioProfile() const {
 	return createLoopingAmbientAudioProfile(100);
 }
 
-byte PlayableScene::ambientSoundCueVolume(byte cueId, byte defaultVolumePercent) const {
-	(void)cueId;
-	return defaultVolumePercent;
-}
-
 void PlayableScene::handleAnimationFrameHook(byte hookId, uint frame) {
 	(void)hookId;
 	(void)frame;
 }
 
+void PlayableScene::handleAnimationFrameEvent(const AnimationFrameEvent &event, uint frame) {
+	switch (event.type) {
+	case AnimationFrameEvent::kFramebufferPatch:
+		applySceneStateToHotspotsAndPatches(event.selector);
+		break;
+	case AnimationFrameEvent::kResourcePatch:
+		if (_sceneChunkTable.isValidChunk(event.resourceChunk))
+			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[event.resourceChunk], _baseFramebuffer);
+		break;
+	case AnimationFrameEvent::kSound:
+	case AnimationFrameEvent::kLoopingSound: {
+		SoundBank0Player *player = &_soundBank0;
+		if (event.soundSlot != AnimationFrameEvent::kMainSoundSlot) {
+			if (event.soundSlot >= kAmbientSoundSlotCount)
+				break;
+			player = event.soundSlot == 0 ?
+				&_ambientSoundBank0 : &_additionalAmbientSoundBank0Slots[event.soundSlot - 1];
+		}
+		if (event.type == AnimationFrameEvent::kLoopingSound)
+			player->playSampleLooping(event.soundId, event.soundVolumePercent);
+		else
+			player->playSample(event.soundId, event.soundVolumePercent);
+		break;
+	}
+	case AnimationFrameEvent::kResidentSound:
+		playResidentSoundEffect((byte)event.soundId, event.soundVolumePercent);
+		break;
+	case AnimationFrameEvent::kStopSound:
+		_soundBank0.stop();
+		break;
+	case AnimationFrameEvent::kSecondarySpeech:
+		startRealtimeSecondarySpeechLine(event.speechRow, event.speechFrame, event.speechId);
+		break;
+	case AnimationFrameEvent::kPrimarySpeech:
+		beginPrimarySpeechLine(event.speechRow, event.speechFrame,
+			event.speechCenterX, event.speechTopY,
+			event.speechRed, event.speechGreen, event.speechBlue);
+		break;
+	case AnimationFrameEvent::kActorPath:
+		startConcurrentActorPath(event.actorX, event.actorY, event.actorFacing,
+			event.actorCel, event.actorPathFrameMillis);
+		break;
+	case AnimationFrameEvent::kLayerFrame:
+		_sceneLayers.setLayerFrame(event.layerId, event.layerFrame);
+		break;
+	case AnimationFrameEvent::kLayerFrameMap: {
+		const int mapIndex = (int)frame - event.layerFrameMapFirstFrame;
+		if (event.layerFrameMap != nullptr && mapIndex >= 0 &&
+				(uint)mapIndex < event.layerFrameMapSize) {
+			const byte mappedFrame = event.layerFrameMap[mapIndex];
+			if (event.showMappedLayer)
+				_sceneLayers.setVisibleLayerFrame(event.layerId, mappedFrame);
+			else
+				_sceneLayers.setLayerFrame(event.layerId, mappedFrame);
+		}
+		break;
+	}
+	case AnimationFrameEvent::kLayerReset:
+		_sceneLayers.resetLayer(event.layerId, event.layerFrame);
+		break;
+	case AnimationFrameEvent::kLayerVisibility:
+		_sceneLayers.setLayerVisible(event.layerId, event.layerVisible);
+		break;
+	case AnimationFrameEvent::kStateCommit:
+		if (event.commitFunction != nullptr)
+			event.commitFunction(event.commitTarget, event.commitValue);
+		break;
+	case AnimationFrameEvent::kInvalidatePalette:
+		invalidatePresentationPalette();
+		break;
+	case AnimationFrameEvent::kFadeFromBlack:
+		drawPlayableComposite();
+		fadePaletteFromBlack();
+		break;
+	case AnimationFrameEvent::kCustomHook:
+		handleAnimationFrameHook(event.hookId, frame);
+		break;
+	}
+}
+
 void PlayableScene::advanceFullscreenAnimation(uint32 delta) {
 	updateAmbientAudioAndMusicCues(delta);
+}
+
+void PlayableScene::advanceTransitionAnimation(uint32 delta) {
+	advanceCustomGameplayLoop(delta);
+	_realtimeAnimationTracks.advance(delta, _random);
+	advanceAmbientAudio(delta);
 }
 
 AmbientAudioProfile PlayableScene::createLoopingAmbientAudioProfile(byte volumePercent) const {
@@ -805,6 +959,15 @@ AmbientAudioProfile PlayableScene::createRandomAmbientAudioProfile(byte soundFir
 	profile.musicCueCount = musicCueCount;
 	profile.musicProbabilityModulus = musicProbabilityModulus;
 	profile.musicVolumePercent = musicVolumePercent;
+	return profile;
+}
+
+AmbientAudioProfile PlayableScene::createMineAmbientAudioProfile(byte musicFirstCueId,
+		byte musicCueCount, byte musicProbabilityModulus) const {
+	AmbientAudioProfile profile = createRandomAmbientAudioProfile(0x0d, 8, 10, 25,
+		musicFirstCueId, musicCueCount, 100, musicProbabilityModulus);
+	profile.soundCueVolumes = kMineAmbientSoundCueVolumes;
+	profile.soundCueVolumeCount = ARRAYSIZE(kMineAmbientSoundCueVolumes);
 	return profile;
 }
 
@@ -850,7 +1013,6 @@ bool PlayableScene::load() {
 		return false;
 	}
 	if (!_resources.loadChunkTable(archiveName)) {
-		warning("Failed to read %s header", archiveName);
 		warning("%s load failed: %s chunk table", sceneDebugName(), archiveName);
 		return false;
 	}
@@ -864,7 +1026,7 @@ bool PlayableScene::load() {
 		return false;
 	}
 
-	if (!loadFixedChunk(framebufferChunkIndex, _baseFramebuffer, kFrameBufferSize)) {
+	if (!loadFixedChunk(framebufferChunkIndex, _baseFramebuffer, kSceneBufferByteCount)) {
 		warning("%s load failed: %s chunk %u framebuffer", sceneDebugName(), archiveName,
 			framebufferChunkIndex);
 		return false;
@@ -1016,7 +1178,7 @@ bool PlayableScene::loadResource000RuntimeTables(Common::Array<byte> &offsetTabl
 
 bool PlayableScene::loadResource000ActorBank(const Common::Array<byte> &offsetTable, const Common::Array<byte> &sizeTable) {
 	const uint tableEntry = resource000ActorBankTableEntry();
-	const uint segmentCount = resource000ActorBankSegmentCount();
+	const uint segmentCount = kActorBankSegmentCount;
 	if (tableEntry + 4 > offsetTable.size() ||
 			tableEntry + segmentCount * 4 > sizeTable.size()) {
 		warning("%s %s actor bank table entries are out of range: tableEntry=0x%04x segments=%u offsetTableSize=%u sizeTableSize=%u",
@@ -1302,6 +1464,7 @@ void PlayableScene::initializeDefaultPreviewState() {
 	_speechController.resetRuntimeState(kInvalidPrimarySpeechAnimationGroup, 7);
 	_actionOverlayPlayer.reset();
 	_sceneLayers.reset();
+	cancelConcurrentActorPath();
 	resetAmbientAudioState();
 	_activeActorCel = 0;
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
@@ -1326,7 +1489,7 @@ void PlayableScene::drawCutsceneComposite(bool drawActiveActor, byte activeFacin
 }
 
 void PlayableScene::drawPlayableComposite() {
-	const bool drawActiveActor = !_hideActiveActor;
+	const bool drawActiveActor = _config.drawDefaultActor && !_hideActiveActor;
 	const bool drawSecondaryActor = shouldDrawSecondaryActorInPlayableComposite();
 	drawCutsceneComposite(drawActiveActor, _activeActorFacing, _activeActorCel, _activeActorWorldX, _activeActorWorldY,
 		drawSecondaryActor, _activeActorFacing, _secondaryActorFrame, _activeActorWorldX, _activeActorWorldY,
@@ -1402,7 +1565,7 @@ void PlayableScene::updateActorPaletteForWorldPoint(int worldX, int worldY) {
 }
 
 void PlayableScene::drawMappedSpriteFrame(uint chunkIndex, uint descriptorCount, const byte *frameMap, uint frameMapSize, byte frameIndex) {
-	if (chunkIndex >= HollywoodEngine::kResourceChunkCount || frameIndex >= frameMapSize)
+	if (chunkIndex >= kResourceChunkCount || frameIndex >= frameMapSize)
 		return;
 
 	drawStripSpriteFrame(_resourceArena, _resourceChunkOffsets[chunkIndex], 0,
@@ -1410,7 +1573,7 @@ void PlayableScene::drawMappedSpriteFrame(uint chunkIndex, uint descriptorCount,
 }
 
 void PlayableScene::restoreResourceSpriteLayerBackground(const ResourceSpriteLayer &layer, const Graphics::Surface &background) {
-	if (!layer.visible || layer.chunkIndex >= HollywoodEngine::kResourceChunkCount)
+	if (!layer.visible || layer.chunkIndex >= kResourceChunkCount)
 		return;
 
 	if (layer.hasPreviousDescriptor) {
@@ -1422,63 +1585,72 @@ void PlayableScene::restoreResourceSpriteLayerBackground(const ResourceSpriteLay
 }
 
 void PlayableScene::drawResourceSpriteLayer(const ResourceSpriteLayer &layer) {
-	if (!layer.visible || layer.chunkIndex >= HollywoodEngine::kResourceChunkCount)
+	if (!layer.visible || layer.chunkIndex >= kResourceChunkCount)
 		return;
 
 	drawStripSpriteFrame(_resourceArena, _resourceChunkOffsets[layer.chunkIndex], 0,
 		layer.descriptorCount, layer.descriptorIndex(), _sceneFramebuffer);
 }
 
-void PlayableScene::drawLayerStack(const SceneLayerStack &layers,
-		SceneAnimationStratum stratum) {
-	for (uint i = 0; i < layers.layerCount(); ++i) {
-		if (layers.isInStratum(i, stratum))
-			drawResourceSpriteLayer(layers.layer(i));
+void PlayableScene::restoreSceneLayerBackground(uint layerId,
+		const Graphics::Surface &background) {
+	if (_sceneLayers.hasLayer(layerId))
+		restoreResourceSpriteLayerBackground(_sceneLayers.layer(layerId), background);
+}
+
+void PlayableScene::drawSceneLayer(uint layerId) {
+	if (_sceneLayers.hasLayer(layerId))
+		drawResourceSpriteLayer(_sceneLayers.layer(layerId));
+}
+
+void PlayableScene::drawLayerStack(SceneAnimationStratum stratum) {
+	for (uint i = 0; i < _sceneLayers.layerCount(); ++i) {
+		if (_sceneLayers.isInStratum(i, stratum))
+			drawResourceSpriteLayer(_sceneLayers.layer(i));
 	}
 }
 
 void PlayableScene::drawActionOverlayAtStratum(SceneAnimationStratum stratum) {
-	if (_actionOverlayPlayer.isVisible() && _actionOverlayPlayer.stratum == stratum)
+	if (_actionOverlayPlayer.isVisible() && _actionOverlayPlayer._stratum == stratum)
 		drawActionOverlayLayer();
 }
 
-bool PlayableScene::playAnimationFrames(SceneLayerStack &layers, uint layerId,
-		const AnimationFrameRange &range) {
-	if (!layers.hasLayer(layerId))
-		return false;
-	return playAnimationFrames(layers.layer(layerId), range);
-}
-
-bool PlayableScene::playAnimationTransition(SceneLayerStack &layers, uint layerId,
-		const AnimationTransition &transition) {
-	if (!layers.hasLayer(layerId))
-		return false;
-	return playAnimationTransition(layers.layer(layerId), transition);
-}
-
-bool PlayableScene::playResourceLayerSequence(ResourceSpriteLayer &layer, uint chunkIndex,
+bool PlayableScene::playResourceLayerSequence(uint layerId, uint chunkIndex,
 		uint16 descriptorCount, const byte *frameMap, uint frameMapSize,
 		const AnimationFrameRange &range, bool clearAtEnd) {
+	if (!_sceneLayers.hasLayer(layerId))
+		return false;
+
+	ResourceSpriteLayer &layer = _sceneLayers.layer(layerId);
 	layer.configure(chunkIndex, descriptorCount, frameMap, frameMapSize);
 	layer.visible = true;
 	const bool completed = _animationPlayer.playAndPresent(layer, range);
-	if (clearAtEnd)
-		clearResourceLayer(layer);
+	if (clearAtEnd) {
+		layer.visible = false;
+		layer.configure(0, 0, nullptr, 0);
+	}
 	return completed;
 }
 
-void PlayableScene::clearResourceLayer(ResourceSpriteLayer &layer) {
+void PlayableScene::clearSceneLayer(uint layerId) {
+	if (!_sceneLayers.hasLayer(layerId))
+		return;
+
+	ResourceSpriteLayer &layer = _sceneLayers.layer(layerId);
 	layer.visible = false;
 	layer.configure(0, 0, nullptr, 0);
 }
 
 void PlayableScene::drawActionOverlayLayer() {
-	drawResourceSpriteLayer(_actionOverlayPlayer.layer);
+	if (_actionOverlayPlayer.isVisible() &&
+			_actionOverlayPlayer._restoreBackgroundBeforeDraw)
+		restoreResourceSpriteLayerBackground(_actionOverlayPlayer._layer, _baseFramebuffer);
+	drawResourceSpriteLayer(_actionOverlayPlayer._layer);
 }
 
 void PlayableScene::drawClipFrameDeltaFromResource(const Common::Array<byte> &resource,
 		uint32 frameTableOffset, uint32 chunkSize, uint tableEntryCount, byte frameIndex) {
-	ResourceDeltaClipPlayer::drawFrame(resource, frameTableOffset, chunkSize, tableEntryCount,
+	drawResourceDeltaClipFrame(resource, frameTableOffset, chunkSize, tableEntryCount,
 		frameIndex, framebufferPixels(_sceneFramebuffer), framebufferByteCount());
 }
 
@@ -1490,28 +1662,78 @@ void PlayableScene::drawClipFrameDelta(uint chunkIndex, uint tableEntryCount, by
 		_sceneChunkTable.sizes[chunkIndex], tableEntryCount, frameIndex);
 }
 
-void PlayableScene::playDeltaClipFromResource(const Common::Array<byte> &resource,
-		uint32 frameTableOffset, uint32 chunkSize, uint tableEntryCount, uint frameCount,
-		uint32 frameMillis, uint firstFrame) {
-	for (uint frame = firstFrame; frame < frameCount && !Engine::shouldQuit() &&
-			!_vm->isSceneRestartRequested(); ++frame) {
-		drawClipFrameDeltaFromResource(resource, frameTableOffset, chunkSize, tableEntryCount,
-			(byte)frame);
-		presentFrame();
-		if (waitDeltaClipFrameMillis(frameMillis))
-			break;
-	}
-}
-
 void PlayableScene::playDeltaClip(uint chunkIndex, uint tableEntryCount, uint frameCount,
 		uint32 frameMillis, uint firstFrame) {
 	for (uint frame = firstFrame; frame < frameCount && !Engine::shouldQuit() &&
 			!_vm->isSceneRestartRequested(); ++frame) {
 		drawClipFrameDelta(chunkIndex, tableEntryCount, (byte)frame);
 		presentFrame();
-		if (waitDeltaClipFrameMillis(frameMillis))
+		if (waitDeltaClipFrameMillis(frameMillis)) {
+			if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
+				break;
+			consumeStepAdvanceRequest();
+			for (++frame; frame < frameCount; ++frame)
+				drawClipFrameDelta(chunkIndex, tableEntryCount, (byte)frame);
+			presentFrame();
 			break;
+		}
 	}
+}
+
+bool PlayableScene::playTransitionFrames(TransitionFrameRenderer &renderer, byte firstFrame,
+		byte lastFrame, uint32 frameMillis, TransitionFrameMode mode, bool allowSkip) {
+	if (firstFrame > lastFrame || frameMillis == 0)
+		return false;
+
+	uint frameIndex = firstFrame;
+	uint32 frameAccumulator = 0;
+	uint32 lastMillis = g_system->getMillis();
+	renderer.drawFrame((byte)frameIndex);
+	presentFrame();
+
+	while (frameIndex < lastFrame && !animationPlaybackShouldStop()) {
+		if (pollEvents(allowSkip)) {
+			if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
+				return false;
+
+			const bool stepAdvanced = consumeStepAdvanceRequest();
+			if (mode == kCumulativeTransitionFrames) {
+				while (frameIndex < lastFrame)
+					renderer.drawFrame((byte)++frameIndex);
+			} else {
+				frameIndex = lastFrame;
+				renderer.drawFrame((byte)frameIndex);
+			}
+			presentFrame();
+			return stepAdvanced;
+		}
+
+		const uint32 now = g_system->getMillis();
+		const uint32 delta = now - lastMillis;
+		lastMillis = now;
+		frameAccumulator += delta;
+		if (delta != 0)
+			advanceTransitionAnimation(MIN<uint32>(delta, kBlockingSceneMaxFrameDeltaMillis));
+
+		const uint previousFrame = frameIndex;
+		while (frameAccumulator >= frameMillis && frameIndex < lastFrame) {
+			frameAccumulator -= frameMillis;
+			++frameIndex;
+			if (mode == kCumulativeTransitionFrames)
+				renderer.drawFrame((byte)frameIndex);
+		}
+
+		if (frameIndex != previousFrame) {
+			if (mode == kIndependentTransitionFrames)
+				renderer.drawFrame((byte)frameIndex);
+			presentFrame();
+		}
+
+		if (frameIndex < lastFrame && frameAccumulator < frameMillis)
+			g_system->delayMillis(MIN<uint32>(frameMillis - frameAccumulator, 10));
+	}
+
+	return frameIndex == lastFrame && !animationPlaybackShouldStop();
 }
 
 bool PlayableScene::waitDeltaClipFrameMillis(uint32 millis) {
@@ -1528,9 +1750,33 @@ bool PlayableScene::waitDeltaClipFrameMillis(uint32 millis) {
 	return Engine::shouldQuit() || _vm->isSceneRestartRequested();
 }
 
-bool PlayableScene::playFullscreenDeltaAnimation(const FullscreenDeltaAnimationSpec &spec) {
-	if (spec.palette.size() != kPaletteSize || spec.frameCount == 0 ||
-			spec.frameCount > 0x100 || spec.frameCount > spec.frames.size() / 4) {
+bool PlayableScene::waitFullscreenAnimationFrame(uint32 millis, bool allowSkip) {
+	const uint32 startMillis = g_system->getMillis();
+	uint32 lastMillis = startMillis;
+	while (!animationPlaybackShouldStop()) {
+		if (pollEvents(allowSkip))
+			return true;
+
+		const uint32 now = g_system->getMillis();
+		const uint32 delta = now - lastMillis;
+		lastMillis = now;
+		if (delta != 0)
+			advanceFullscreenAnimation(MIN<uint32>(delta, kBlockingSceneMaxFrameDeltaMillis));
+
+		const uint32 elapsed = g_system->getMillis() - startMillis;
+		if (elapsed >= millis)
+			break;
+		g_system->delayMillis(MIN<uint32>(millis - elapsed, 10));
+	}
+
+	return animationPlaybackShouldStop();
+}
+
+bool PlayableScene::playFullscreenDeltaAnimation(const Common::Array<byte> &base,
+		const Common::Array<byte> &palette, const Common::Array<byte> &frames,
+		uint frameCount, uint32 frameMillis) {
+	if (palette.size() != kPaletteSize || frameCount == 0 ||
+			frameCount > 0x100 || frameCount > frames.size() / 4) {
 		warning("%s fullscreen delta animation has invalid resources", sceneDebugName());
 		return false;
 	}
@@ -1549,17 +1795,17 @@ bool PlayableScene::playFullscreenDeltaAnimation(const FullscreenDeltaAnimationS
 
 	_viewportXOffset = 0;
 	memset(framebufferPixels(_sceneFramebuffer), 0, framebufferByteCount());
-	drawResourceBlockList(spec.base, 0, _sceneFramebuffer);
+	drawResourceBlockList(base, 0, _sceneFramebuffer);
 	presentFrame();
 
-	_paletteCurrent = spec.palette;
+	_paletteCurrent = palette;
 	_displayPalette.markAllDirty();
 	presentFrame();
 
 	bool completed = true;
-	for (uint frame = 0; frame < spec.frameCount && !animationPlaybackShouldStop(); ++frame) {
-		if (!ResourceDeltaClipPlayer::drawFrame(spec.frames, 0, spec.frames.size(),
-				spec.frameCount, (byte)frame, framebufferPixels(_sceneFramebuffer),
+	for (uint frame = 0; frame < frameCount && !animationPlaybackShouldStop(); ++frame) {
+		if (!drawResourceDeltaClipFrame(frames, 0, frames.size(),
+				frameCount, (byte)frame, framebufferPixels(_sceneFramebuffer),
 				framebufferByteCount())) {
 			warning("%s failed to decode fullscreen delta frame %u", sceneDebugName(), frame);
 			completed = false;
@@ -1567,19 +1813,10 @@ bool PlayableScene::playFullscreenDeltaAnimation(const FullscreenDeltaAnimationS
 		}
 		presentFrame();
 
-		uint32 remaining = spec.frameMillis;
-		while (remaining != 0 && !animationPlaybackShouldStop()) {
-			if (pollEvents(spec.allowSkip)) {
-				completed = false;
-				break;
-			}
-			const uint32 slice = MIN<uint32>(remaining, 10);
-			g_system->delayMillis(slice);
-			advanceFullscreenAnimation(slice);
-			remaining -= slice;
-		}
-		if (remaining != 0)
+		if (waitFullscreenAnimationFrame(frameMillis, false)) {
+			completed = false;
 			break;
+		}
 	}
 
 	_paletteCurrent = blackPalette;
@@ -1724,6 +1961,7 @@ void PlayableScene::runEntryPath(int startX, int startY, byte startFacing, int t
 	_activeActorFacing = startFacing;
 	_activeActorCel = 0;
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
+	centerViewportOnActor(_activeActorWorldX);
 
 	drawPlayableComposite();
 	presentFrame();
@@ -1742,15 +1980,21 @@ void PlayableScene::runEntryPath(int startX, int startY, byte startFacing, int t
 		handleActorPathFootstep(frameIndex + 1 == _actorPathFrames.size(), footstepPlayed);
 		if (waitSceneMillis(kActorPathFrameMillis)) {
 			_actorPathPlaybackActive = false;
-			return;
+			if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
+				return;
+			consumeStepAdvanceRequest();
+			break;
 		}
 	}
 	_actorPathPlaybackActive = false;
 
 	_activeActorWorldX = targetX;
 	_activeActorWorldY = targetY;
+	if (!_actorPathFrames.empty())
+		_activeActorFacing = _actorPathFrames.back().facing;
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 	_activeActorCel = 0;
+	_lastViewportScrollActorWorldX = _activeActorWorldX;
 	drawPlayableComposite();
 	presentFrame();
 }
@@ -1778,7 +2022,8 @@ uint16 PlayableScene::viewportYOffset() const {
 
 void PlayableScene::prepareGameplayLoop() {
 	_skipRequested = false;
-	_actorPathPlaybackActive = false;
+	_stepAdvanceRequested = false;
+	cancelConcurrentActorPath();
 	stopRealtimeSpeech();
 	_speechController.resetRuntimeState(kInvalidPrimarySpeechAnimationGroup, 7);
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
@@ -1792,6 +2037,7 @@ void PlayableScene::prepareGameplayLoop() {
 
 void PlayableScene::advanceGameplayLoop(uint32 delta) {
 	advanceSecondaryActorSpeechAnimation(delta);
+	advanceConcurrentActorPath(delta);
 	advanceCustomGameplayLoop(delta);
 	advanceRealtimeSpeech(delta);
 	_realtimeAnimationTracks.advance(delta, _random);
@@ -1849,6 +2095,24 @@ Common::String PlayableScene::inventoryItemName(byte owner, byte itemId) const {
 	if (owner != inventoryOwnerIndex())
 		return Common::String();
 
+	if (owner == 0 && itemId == 0x5f &&
+			_vm->gameState().inventoryItemResourcePageByOwnerAndItemId[owner][itemId] == 0x40) {
+		const Common::String name = _textStore.inventoryItemName(114);
+		if (!name.empty())
+			return name;
+	}
+
+	if ((owner == 0 && itemId == 0x2d) || (owner == 1 && itemId == 0x1a)) {
+		const byte knifeState = _vm->gameState().multiToolKnifeState;
+		// Each open attachment has a localized name after the regular item rows.
+		if (knifeState < 10 && (knifeState & 1) != 0) {
+			const byte nameRow = (owner == 0 ? 109 : 35) + knifeState / 2;
+			const Common::String name = _textStore.inventoryItemName(nameRow);
+			if (!name.empty())
+				return name;
+		}
+	}
+
 	return _textStore.inventoryItemName(itemId);
 }
 
@@ -1875,7 +2139,7 @@ void PlayableScene::showTravelScreenViewer() {
 }
 
 bool PlayableScene::showInventoryMedia(InventoryMediaId mediaId) {
-	InventoryMediaPlayer media(_vm);
+	InventoryMediaPlayer media;
 	if (!media.loadStill(mediaId))
 		return false;
 
@@ -1890,7 +2154,7 @@ bool PlayableScene::showInventoryMedia(InventoryMediaId mediaId) {
 }
 
 bool PlayableScene::playSueTapeRecording() {
-	InventoryMediaPlayer media(_vm);
+	InventoryMediaPlayer media;
 	if (!media.loadSueTape())
 		return false;
 
@@ -1930,6 +2194,7 @@ void PlayableScene::installFullscreenInventoryMedia(const InventoryMediaPlayer &
 	_residentSoundEffects.stop();
 	clearAllSpeechOverlays();
 	_skipRequested = false;
+	_stepAdvanceRequested = false;
 
 	_sceneFramebuffer.copyRectToSurface(media.framebuffer(), 0, 0,
 		Common::Rect(0, 0, HollywoodEngine::kSceneBufferWidth, HollywoodEngine::kSceneBufferHeight));
@@ -1945,6 +2210,7 @@ void PlayableScene::restoreFullscreenInventoryMedia(const Graphics::ManagedSurfa
 	_paletteCurrent = savedPalette;
 	_viewportXOffset = savedViewportX;
 	_skipRequested = false;
+	_stepAdvanceRequested = false;
 	_displayPalette.markAllDirty();
 	presentFrame();
 }
@@ -1976,11 +2242,15 @@ bool PlayableScene::pollFullscreenMediaEvents(bool &dismissed) {
 			presentFrame();
 			break;
 		case Common::EVENT_KEYDOWN:
-			if (event.kbd.keycode == Common::KEYCODE_ESCAPE ||
-					event.kbd.keycode == Common::KEYCODE_RETURN ||
-					event.kbd.keycode == Common::KEYCODE_KP_ENTER ||
-					event.kbd.keycode == Common::KEYCODE_SPACE)
+			if (event.kbd.keycode == Common::KEYCODE_ESCAPE) {
 				dismissed = true;
+			} else if (!event.kbdRepeat &&
+					(event.kbd.keycode == Common::KEYCODE_RETURN ||
+					 event.kbd.keycode == Common::KEYCODE_KP_ENTER ||
+					 event.kbd.keycode == Common::KEYCODE_SPACE)) {
+				_stepAdvanceRequested = true;
+				dismissed = true;
+			}
 			break;
 		case Common::EVENT_MOUSEMOVE:
 			_vm->cursor()->updatePosition(event.mouse);
@@ -2054,11 +2324,110 @@ bool PlayableScene::runSueTapeSpeechLine(InventoryMediaPlayer &media, uint16 row
 		_speech.stop();
 		_primarySpeechOverlay.visible = false;
 		_primarySpeechOverlay.lines.clear();
+		if (dismissed && consumeStepAdvanceRequest()) {
+			dismissed = false;
+			continue;
+		}
 		if (dismissed || Engine::shouldQuit() || _vm->isSceneRestartRequested())
 			return true;
 	}
 
 	return false;
+}
+
+void PlayableScene::startConcurrentActorPath(int targetX, int targetY, byte finalFacing,
+		byte finalCel, uint32 frameMillis, bool snapToTargetIfNoPath) {
+	_playerDirectedActorPathActive = false;
+	_playerDirectedActorPathFootstepPlayed = false;
+	_pendingGameplayActionHandlerId = 0;
+	queueActorPathWithPaletteRegionRouting(_activeActorWorldX, _activeActorWorldY,
+		targetX, targetY, finalFacing, finalCel);
+	_concurrentActorPathFrameIndex = 1;
+	_concurrentActorPathChannel.reset(0, frameMillis);
+	_lastViewportScrollActorWorldX = _activeActorWorldX;
+	_concurrentActorPathActive = _actorPathFrames.size() > 1;
+	_actorPathPlaybackActive = _concurrentActorPathActive;
+	if (!_concurrentActorPathActive && !_actorPathFrames.empty()) {
+		const ActorPathFrame &frame = _actorPathFrames.back();
+		_activeActorWorldX = frame.worldX;
+		_activeActorWorldY = frame.worldY;
+		_activeActorFacing = frame.facing;
+		_activeActorCel = frame.cel;
+		_activeActorDrawOrderMode = frame.drawOrderMode;
+	} else if (!_concurrentActorPathActive && snapToTargetIfNoPath) {
+		setActiveActorPose(targetX, targetY, finalFacing, finalCel);
+	}
+}
+
+bool PlayableScene::startPlayerDirectedActorPath(int targetX, int targetY,
+		byte finalFacing, byte finalCel, uint16 actionHandlerId) {
+	startConcurrentActorPath(targetX, targetY, finalFacing, finalCel,
+		kActorPathFrameMillis);
+	if (!_concurrentActorPathActive)
+		return false;
+
+	_playerDirectedActorPathActive = true;
+	_pendingGameplayActionHandlerId = actionHandlerId;
+	return true;
+}
+
+void PlayableScene::advanceConcurrentActorPath(uint32 delta) {
+	if (!_concurrentActorPathActive)
+		return;
+
+	const uint frameCount = _concurrentActorPathChannel.consumeFrames(delta);
+	for (uint i = 0; i < frameCount &&
+			_concurrentActorPathFrameIndex < _actorPathFrames.size(); ++i) {
+		const ActorPathFrame &frame = _actorPathFrames[_concurrentActorPathFrameIndex++];
+		_activeActorWorldX = frame.worldX;
+		_activeActorWorldY = frame.worldY;
+		_activeActorFacing = frame.facing;
+		_activeActorCel = frame.cel;
+		_activeActorDrawOrderMode = frame.drawOrderMode;
+		if (_playerDirectedActorPathActive) {
+			const bool terminalFrame = _concurrentActorPathFrameIndex >= _actorPathFrames.size();
+			handleActorPathFootstep(terminalFrame, _playerDirectedActorPathFootstepPlayed);
+		}
+	}
+	if (_concurrentActorPathFrameIndex >= _actorPathFrames.size()) {
+		const uint16 actionHandlerId = _playerDirectedActorPathActive ?
+			_pendingGameplayActionHandlerId : 0;
+		cancelConcurrentActorPath();
+		if (actionHandlerId != 0)
+			runGameplayAction(actionHandlerId);
+	}
+}
+
+void PlayableScene::finishConcurrentActorPath(bool allowSkip) {
+	bool interrupted = false;
+	while (_concurrentActorPathActive && !animationPlaybackShouldStop()) {
+		if (waitSceneMillis(10, allowSkip)) {
+			interrupted = true;
+			break;
+		}
+	}
+
+	if (_concurrentActorPathActive && !_actorPathFrames.empty()) {
+		const ActorPathFrame &frame = _actorPathFrames.back();
+		_activeActorWorldX = frame.worldX;
+		_activeActorWorldY = frame.worldY;
+		_activeActorFacing = frame.facing;
+		_activeActorCel = frame.cel;
+		_activeActorDrawOrderMode = frame.drawOrderMode;
+	}
+	cancelConcurrentActorPath();
+	if (interrupted && !animationPlaybackShouldStop())
+		consumeStepAdvanceRequest();
+}
+
+void PlayableScene::cancelConcurrentActorPath() {
+	_concurrentActorPathChannel.reset(0, 0);
+	_concurrentActorPathFrameIndex = 0;
+	_concurrentActorPathActive = false;
+	_actorPathPlaybackActive = false;
+	_playerDirectedActorPathActive = false;
+	_playerDirectedActorPathFootstepPlayed = false;
+	_pendingGameplayActionHandlerId = 0;
 }
 
 bool PlayableScene::walkActiveActorTo(int targetX, int targetY, byte finalFacing, byte finalCel, bool cancelOnSkip) {
@@ -2088,6 +2457,7 @@ bool PlayableScene::walkActiveActorTo(int targetX, int targetY, byte finalFacing
 				return false;
 
 			if (cancelOnSkip) {
+				consumeStepAdvanceRequest();
 				_skipRequested = false;
 				drawPlayableComposite();
 				presentFrame();
@@ -2101,6 +2471,8 @@ bool PlayableScene::walkActiveActorTo(int targetX, int targetY, byte finalFacing
 			_activeActorCel = lastFrame.cel;
 			_activeActorDrawOrderMode = lastFrame.drawOrderMode;
 			_actorPathPlaybackActive = false;
+			_lastViewportScrollActorWorldX = _activeActorWorldX;
+			consumeStepAdvanceRequest();
 			drawPlayableComposite();
 			presentFrame();
 			return true;
@@ -2191,26 +2563,6 @@ void PlayableScene::queueActorPathWithPaletteRegionRouting(int startX, int start
 		lastFrame.worldY, lastFrame.facing, lastFrame.cel, lastFrame.drawOrderMode);
 }
 
-void PlayableScene::buildActorPathFramesBetweenPoints(ActorPathBuildState &state, int targetX, int targetY,
-		byte finalFacing, byte finalCel, int requestedFacing) {
-	_pathController.buildFramesBetweenPoints(state, targetX, targetY, finalFacing, finalCel,
-		requestedFacing, kInvalidFacing, kInvalidCel);
-}
-
-void PlayableScene::appendActorPathFrame(const ActorPathBuildState &state) {
-	_pathController.appendFrame(state);
-}
-
-ScenePoint PlayableScene::nearestPaletteRouteBoundaryPoint(int startX, int startY, byte currentRegion, byte nextRegion) const {
-	return _pathController.nearestPaletteRouteBoundaryPoint(startX, startY, currentRegion, nextRegion);
-}
-
-ScenePoint PlayableScene::bestPaletteRouteBoundaryPoint(int startX, int startY, int targetX, int targetY,
-		byte currentRegion, byte targetRegion) const {
-	return _pathController.bestPaletteRouteBoundaryPoint(startX, startY, targetX, targetY,
-		currentRegion, targetRegion);
-}
-
 byte PlayableScene::paletteRegionAt(int x, int y) const {
 	if (x < 0 || y < 0 || x >= HollywoodEngine::kSceneBufferWidth || y >= HollywoodEngine::kSceneBufferHeight ||
 			_fullPaletteRegionMask.empty())
@@ -2234,22 +2586,6 @@ byte PlayableScene::walkableMaskAt(int x, int y) const {
 
 	const byte pixel = savedFramebufferPixelAt(offset);
 	return pixel < _walkablePaletteMask.size() ? _walkablePaletteMask[pixel] : 0;
-}
-
-byte PlayableScene::calculateMovementFacingForPath(int fromX, int fromY, int toX, int toY, int requestedFacing) const {
-	return _pathController.calculateMovementFacingForPath(fromX, fromY, toX, toY, requestedFacing);
-}
-
-uint PlayableScene::calculateWalkStepCountForAxisDelta(int startAxis, int targetAxis, byte facing, byte cel) const {
-	return _pathController.calculateWalkStepCountForAxisDelta(startAxis, targetAxis, facing, cel);
-}
-
-byte PlayableScene::nextActorPathCel(byte cel) const {
-	return _pathController.nextCel(cel);
-}
-
-uint PlayableScene::actorPathStepDelta(byte facing, byte cel) const {
-	return _pathController.stepDelta(facing, cel);
 }
 
 void PlayableScene::resetActorPathStepDeltas() {
@@ -2312,6 +2648,11 @@ bool PlayableScene::unlockTravelDestination(byte destinationId) {
 	return true;
 }
 
+void PlayableScene::requestTravelScreenSelection(byte currentChapterId) {
+	syncActiveActorPoseToGameState();
+	_vm->gameState().requestTravelScreenSelection(currentChapterId);
+}
+
 bool PlayableScene::hasInventoryItem(byte itemId) const {
 	const byte owner = _vm->gameState().currentInventoryOwnerIndex;
 	return _vm->gameState().hasInventoryItem(owner, itemId);
@@ -2349,7 +2690,9 @@ void PlayableScene::runActorReplacement(uint chunkIndex, uint descriptorCount, c
 }
 
 void PlayableScene::runActorReplacement(const ActionOverlaySpec &spec) {
-	runActionOverlay(spec, kSceneAnimationActorReplacement);
+	const SceneAnimationStratum stratum = spec.hasDrawStratum ?
+		spec.drawStratum : kSceneAnimationActorReplacement;
+	runActionOverlay(spec, stratum, true);
 }
 
 void PlayableScene::runSceneOverlay(uint chunkIndex, uint descriptorCount, const byte *frameMap,
@@ -2358,44 +2701,58 @@ void PlayableScene::runSceneOverlay(uint chunkIndex, uint descriptorCount, const
 }
 
 void PlayableScene::runSceneOverlay(const ActionOverlaySpec &spec) {
-	runActionOverlay(spec, kSceneAnimationInFrontOfActors);
+	const SceneAnimationStratum stratum = spec.hasDrawStratum ?
+		spec.drawStratum : kSceneAnimationInFrontOfActors;
+	runActionOverlay(spec, stratum, false);
 }
 
-void PlayableScene::runActionOverlay(const ActionOverlaySpec &spec, SceneAnimationStratum stratum) {
+void PlayableScene::runActionOverlay(const ActionOverlaySpec &spec,
+		SceneAnimationStratum stratum, bool hideActiveActor) {
 	const ActionOverlayOptions &options = spec.options;
 	const bool previousHideActiveActor = _actionOverlayPlayer.begin(spec.chunkIndex,
-		spec.descriptorCount, spec.frameMap, spec.frameMapSize, stratum);
+		spec.descriptorCount, spec.frameMap, spec.frameMapSize, stratum,
+		hideActiveActor, spec.restoreBackgroundBeforeDraw);
 
-	const uint firstFrame = MIN<uint>(options.firstFrame, spec.frameMapSize);
-	const uint requestedEndFrame = options.endFrame == 0 ? spec.frameMapSize : options.endFrame;
-	const uint cappedEndFrame = MIN<uint>(requestedEndFrame, spec.frameMapSize);
+	const uint playbackFrameCount = spec.playbackFrameCount();
+	const uint firstFrame = MIN<uint>(options.firstFrame, playbackFrameCount);
+	const uint requestedEndFrame = options.endFrame == 0 ? playbackFrameCount : options.endFrame;
+	const uint cappedEndFrame = MIN<uint>(requestedEndFrame, playbackFrameCount);
 	for (uint frame = firstFrame; frame < cappedEndFrame && !Engine::shouldQuit(); ++frame) {
-		_actionOverlayPlayer.setFrame(frame);
-		if (options.statePatchFrame >= 0 && (int)frame == options.statePatchFrame)
-			applySceneStateToHotspotsAndPatches(options.statePatchSelector);
-		if (options.soundFrame >= 0 && (int)frame == options.soundFrame)
-			_soundBank0.playSample(options.soundId, options.soundVolumePercent);
-		if (options.hookId != 0 && (options.hookFrame < 0 || (int)frame == options.hookFrame))
-			handleAnimationFrameHook(options.hookId, frame);
+		_actionOverlayPlayer.setFrame(spec.targetFrame(frame));
+		const Common::Array<AnimationFrameEvent> &events = spec._events;
+		for (uint eventIndex = 0; eventIndex < events.size(); ++eventIndex) {
+			if (events[eventIndex].matches(frame))
+				handleAnimationFrameEvent(events[eventIndex], frame);
+		}
 		const bool terminalFrame = frame + 1 >= cappedEndFrame;
 		if (terminalFrame && !options.waitAfterFinalFrame) {
 			drawPlayableComposite();
 			presentFrame();
 		} else if (waitSceneMillis(spec.frameMillis, options.allowSkip)) {
+			if (!Engine::shouldQuit() && !_vm->isSceneRestartRequested() &&
+				consumeStepAdvanceRequest()) {
+				for (++frame; frame < cappedEndFrame; ++frame) {
+					_actionOverlayPlayer.setFrame(spec.targetFrame(frame));
+					for (uint eventIndex = 0; eventIndex < events.size(); ++eventIndex) {
+						if (events[eventIndex].matches(frame))
+							handleAnimationFrameEvent(events[eventIndex], frame);
+					}
+				}
+			}
 			break;
 		}
 	}
 	_actionOverlayPlayer.finish(previousHideActiveActor);
-
-	if (options.redrawAtEnd) {
-		drawPlayableComposite();
-		presentFrame();
-	}
 }
 
 byte PlayableScene::primarySpeechAnimationBaseFrame(byte animationGroup) const {
 	(void)animationGroup;
 	return 0;
+}
+
+byte PlayableScene::primarySpeechAnimationInitialFrame(byte animationGroup, byte baseFrame) const {
+	(void)animationGroup;
+	return baseFrame;
 }
 
 byte PlayableScene::primarySpeechAnimationFrameCount(byte animationGroup) const {
@@ -2473,6 +2830,10 @@ bool PlayableScene::waitForAnimationFrame(uint32 millis, bool allowSkip) {
 	return waitSceneMillis(millis, allowSkip);
 }
 
+bool PlayableScene::consumeAnimationFastForwardRequest() {
+	return consumeStepAdvanceRequest();
+}
+
 void PlayableScene::resetViewportFromScene() {
 	const uint16 maximumFramebufferOffset =
 		HollywoodEngine::kSceneBufferWidth - HollywoodEngine::kScreenWidth;
@@ -2486,18 +2847,30 @@ void PlayableScene::resetViewportFromScene() {
 	_lastViewportScrollActorWorldX = _activeActorWorldX;
 }
 
+void PlayableScene::centerViewportOnActor(int actorWorldX) {
+	const int centeredOffset = actorWorldX - HollywoodEngine::kScreenWidth / 2;
+	if (centeredOffset <= _viewportMinXOffset) {
+		_viewportXOffset = _viewportMinXOffset;
+	} else if (centeredOffset >= _viewportMaxXOffset) {
+		_viewportXOffset = _viewportMaxXOffset;
+	} else {
+		_viewportXOffset = (uint16)CLIP<int>((centeredOffset + 2) & ~3,
+			_viewportMinXOffset, _viewportMaxXOffset);
+	}
+}
+
 void PlayableScene::advanceViewportScroll(uint32 delta) {
 	(void)delta;
-	if (!_actorPathPlaybackActive || _viewportMinXOffset >= _viewportMaxXOffset) {
+	if (_viewportMinXOffset >= _viewportMaxXOffset) {
 		_lastViewportScrollActorWorldX = _activeActorWorldX;
 		return;
 	}
 
 	const int actorScreenX = _activeActorWorldX - _viewportXOffset;
-	if (_lastViewportScrollActorWorldX < _activeActorWorldX &&
+	if ((!_actorPathPlaybackActive || _lastViewportScrollActorWorldX < _activeActorWorldX) &&
 			actorScreenX > kViewportScrollRightThreshold && _viewportXOffset < _viewportMaxXOffset) {
 		_viewportXOffset = MIN<uint16>(_viewportXOffset + kViewportScrollStep, _viewportMaxXOffset);
-	} else if (_activeActorWorldX < _lastViewportScrollActorWorldX &&
+	} else if ((!_actorPathPlaybackActive || _activeActorWorldX < _lastViewportScrollActorWorldX) &&
 			actorScreenX < kViewportScrollLeftThreshold && _viewportMinXOffset < _viewportXOffset) {
 		if (_viewportXOffset > _viewportMinXOffset + kViewportScrollStep)
 			_viewportXOffset -= kViewportScrollStep;
@@ -2567,8 +2940,14 @@ void PlayableScene::updateAmbientSoundCue(const AmbientAudioProfile &profile) {
 		_currentAmbientSoundCueId = (byte)(profile.soundFirstCueId +
 			_random.getRandomNumber(profile.soundCueCount - 1));
 	} while (profile.soundCueCount > 1 && _currentAmbientSoundCueId == _previousAmbientSoundCueId);
-	_ambientSoundBank0.playSample(_currentAmbientSoundCueId,
-		ambientSoundCueVolume(_currentAmbientSoundCueId, profile.soundVolumePercent));
+	byte volumePercent = profile.soundVolumePercent;
+	if (profile.soundCueVolumes != nullptr &&
+			_currentAmbientSoundCueId >= profile.soundFirstCueId) {
+		const uint volumeIndex = _currentAmbientSoundCueId - profile.soundFirstCueId;
+		if (volumeIndex < profile.soundCueVolumeCount)
+			volumePercent = profile.soundCueVolumes[volumeIndex];
+	}
+	_ambientSoundBank0.playSample(_currentAmbientSoundCueId, volumePercent);
 }
 
 void PlayableScene::updateAmbientMusicCue(const AmbientAudioProfile &profile) {
@@ -2646,7 +3025,7 @@ void PlayableScene::advancePrimaryDialogueSpeechFrame(uint32 delta) {
 
 bool PlayableScene::startRealtimePrimarySpeechLine(uint16 rowIndex, byte frameIndex,
 		uint16 centerX, uint16 topY, byte red, byte green, byte blue,
-		byte animationGroup, byte speechId) {
+		byte animationGroup, byte speechId, byte volumePercent) {
 	stopRealtimeSpeech();
 	if (!getStage003Cue(rowIndex, frameIndex, _realtimeSpeechTextRecordId,
 			_realtimeSpeechContinuationCount, _realtimeSpeechVoiceSampleId)) {
@@ -2659,15 +3038,19 @@ bool PlayableScene::startRealtimePrimarySpeechLine(uint16 rowIndex, byte frameIn
 	_realtimeSpeechTopY = topY;
 	_realtimeSpeechAnimationGroup = animationGroup;
 	_realtimeSpeechId = speechId;
-	_realtimeSpeechVolumePercent = primarySpeechVolumePercent(animationGroup);
+	_realtimeSpeechVolumePercent = volumePercent == 0xff ?
+		primarySpeechVolumePercent(animationGroup) : volumePercent;
 	_realtimeSpeechPrimary = true;
 	_realtimeSpeechActive = true;
 	setPaletteEntry6Bit(kDefaultPrimarySpeechTextColor, red, green, blue);
 	_primarySpeechOverlay.colorIndex = kDefaultPrimarySpeechTextColor;
-	const byte baseFrame = primarySpeechAnimationBaseFrame(animationGroup);
-	_speechController.startPrimaryDialogueSpeech(animationGroup, baseFrame);
-	primarySpeechAnimationStarted(animationGroup, baseFrame);
-	setPrimarySpeechAnimationFrame(animationGroup, baseFrame);
+	if (animationGroup != kInvalidPrimarySpeechAnimationGroup) {
+		const byte baseFrame = primarySpeechAnimationBaseFrame(animationGroup);
+		const byte initialFrame = primarySpeechAnimationInitialFrame(animationGroup, baseFrame);
+		_speechController.startPrimaryDialogueSpeech(animationGroup, initialFrame);
+		primarySpeechAnimationStarted(animationGroup, baseFrame);
+		setPrimarySpeechAnimationFrame(animationGroup, initialFrame);
+	}
 	startRealtimeSpeechPart();
 	return _realtimeSpeechActive;
 }
@@ -2737,6 +3120,25 @@ void PlayableScene::advanceRealtimeSpeech(uint32 delta) {
 	startRealtimeSpeechPart();
 }
 
+bool PlayableScene::waitForRealtimeSpeech(bool allowSkip) {
+	while (isRealtimeSpeechActive() && !animationPlaybackShouldStop()) {
+		if (waitSceneMillis(50, allowSkip)) {
+			if (consumeStepAdvanceRequest()) {
+				_realtimeSpeechPlayer.stop();
+				++_realtimeSpeechContinuationPart;
+				startRealtimeSpeechPart();
+				continue;
+			}
+			stopRealtimeSpeech();
+			return true;
+		}
+	}
+
+	if (isRealtimeSpeechActive())
+		stopRealtimeSpeech();
+	return animationPlaybackShouldStop();
+}
+
 void PlayableScene::stopRealtimeSpeech() {
 	finishRealtimeSpeech(false);
 }
@@ -2757,11 +3159,13 @@ void PlayableScene::finishRealtimeSpeech(bool completed) {
 	_realtimeSpeechId = 0;
 	if (primary) {
 		_speechController.clearPrimaryOverlay();
-		const byte baseFrame = primarySpeechAnimationBaseFrame(animationGroup);
-		setPrimarySpeechAnimationFrame(animationGroup, baseFrame);
-		_speechController.stopPrimaryDialogueSpeech(kInvalidPrimarySpeechAnimationGroup, 7);
-		if (completed)
-			primarySpeechAnimationRestored(animationGroup, baseFrame);
+		if (animationGroup != kInvalidPrimarySpeechAnimationGroup) {
+			const byte baseFrame = primarySpeechAnimationBaseFrame(animationGroup);
+			setPrimarySpeechAnimationFrame(animationGroup, baseFrame);
+			_speechController.stopPrimaryDialogueSpeech(kInvalidPrimarySpeechAnimationGroup, 7);
+			if (completed)
+				primarySpeechAnimationRestored(animationGroup, baseFrame);
+		}
 	} else {
 		_speechController.clearSecondaryOverlay();
 		_speechController.prepareSecondaryActorSpeech();
@@ -2779,30 +3183,8 @@ void PlayableScene::clearAllSpeechOverlays() {
 }
 
 void PlayableScene::drawSpeechOverlay() {
-	if (!_vm->font() || !_vm->font()->isLoaded())
-		return;
-
-	drawSpeechOverlay(_speechOverlay);
-	drawSpeechOverlay(_primarySpeechOverlay);
-}
-
-void PlayableScene::drawSpeechOverlay(const SpeechOverlay &overlay) {
-	if (!overlay.visible)
-		return;
-
-	HollywoodFont *font = _vm->font();
-	font->setShadowColor(0);
-
-	Graphics::Surface *screenSurface = _screen.surfacePtr();
-
-	for (uint lineIndex = 0; lineIndex < overlay.lines.size(); ++lineIndex) {
-		const Common::String &line = overlay.lines[lineIndex];
-		const int lineWidth = actorSpeechTextWidth(line);
-		const int x = (int)overlay.centerX - (lineWidth >> 1) - viewportXOffset();
-		const int y = (int)overlay.topY + lineIndex * kOriginalSpeechLineHeight;
-		font->drawString(screenSurface, line, x, y, lineWidth, overlay.colorIndex,
-			Graphics::kTextAlignLeft, 0, false, true);
-	}
+	drawSpeechOverlayText(_speechOverlay, _vm->font(), *_screen.surfacePtr(), viewportXOffset());
+	drawSpeechOverlayText(_primarySpeechOverlay, _vm->font(), *_screen.surfacePtr(), viewportXOffset());
 }
 
 void PlayableScene::beginSecondarySpeechLine(uint16 rowIndex, byte frameIndex) {
@@ -2886,6 +3268,9 @@ void PlayableScene::runSpeechLine(SpeechOverlay &overlay, uint16 rowIndex, byte 
 void PlayableScene::runSpeechCue(SpeechOverlay &overlay, uint16 textRecordId, byte continuationCount,
 		uint16 voiceSampleId, uint16 centerX, uint16 topY, byte colorIndex, bool useRequestedTop,
 		bool animatePrimaryLeft, bool animatePrimaryDialogue, byte primaryAnimationGroup) {
+	if (&overlay == &_primarySpeechOverlay || isRealtimeSecondarySpeechActive())
+		stopRealtimeSpeech();
+
 	const byte lineCount = MAX<byte>(1, continuationCount);
 	for (byte part = 0; part < lineCount && !Engine::shouldQuit(); ++part) {
 		const Common::String text = getResource003LargeTextRecord(textRecordId + part);
@@ -2912,9 +3297,10 @@ void PlayableScene::runSpeechCue(SpeechOverlay &overlay, uint16 textRecordId, by
 		}
 		if (animationGroup != kInvalidPrimarySpeechAnimationGroup) {
 			const byte baseFrame = primarySpeechAnimationBaseFrame(animationGroup);
-			_speechController.startPrimaryDialogueSpeech(animationGroup, baseFrame);
+			const byte initialFrame = primarySpeechAnimationInitialFrame(animationGroup, baseFrame);
+			_speechController.startPrimaryDialogueSpeech(animationGroup, initialFrame);
 			primarySpeechAnimationStarted(animationGroup, baseFrame);
-			setPrimarySpeechAnimationFrame(animationGroup, baseFrame);
+			setPrimarySpeechAnimationFrame(animationGroup, initialFrame);
 		}
 		const bool interrupted = waitForSpeechOrDelay(duration, animatePrimaryLeft);
 		if (animatePrimaryLeft) {
@@ -2924,7 +3310,7 @@ void PlayableScene::runSpeechCue(SpeechOverlay &overlay, uint16 textRecordId, by
 		bool restoredPrimarySpeechAnimation = false;
 		byte restoredPrimarySpeechAnimationGroup = 0;
 		byte restoredPrimarySpeechBaseFrame = 0;
-		if (_primaryDialogueSpeechActive) {
+		if (_primaryDialogueSpeechActive && !(_realtimeSpeechActive && _realtimeSpeechPrimary)) {
 			restoredPrimarySpeechAnimation = true;
 			restoredPrimarySpeechAnimationGroup = _primaryDialogueSpeechGroup;
 			restoredPrimarySpeechBaseFrame = primarySpeechAnimationBaseFrame(_primaryDialogueSpeechGroup);
@@ -2952,11 +3338,6 @@ bool PlayableScene::getStaticSpeechCue(uint16 rowIndex, byte frameIndex, uint16 
 }
 
 void PlayableScene::wrapActorSpeechText(const Common::String &text, uint16 anchorSceneX, Common::Array<Common::String> &lines) const {
-	lines.clear();
-	if (text.empty())
-		return;
-
-	uint maxChars = 0x32;
 	const int viewportX = viewportXOffset();
 	int clampedAnchorSceneX = anchorSceneX;
 	if (viewportX < clampedAnchorSceneX) {
@@ -2966,78 +3347,17 @@ void PlayableScene::wrapActorSpeechText(const Common::String &text, uint16 ancho
 		clampedAnchorSceneX = viewportX + 10;
 	}
 
-	const int anchorX = clampedAnchorSceneX - viewportX;
-	if (anchorX < 0xa0)
-		maxChars = (anchorX * 0x32) / 0xa0;
-	else if (HollywoodEngine::kScreenWidth - anchorX < 0xa0)
-		maxChars = ((HollywoodEngine::kScreenWidth - anchorX) * 0x32) / 0xa0;
-	maxChars = MAX<uint>(maxChars, 0x18);
-
-	const uint lineShrink = maxChars < 0x2a ? (maxChars > 0x20 ? 2 : 1) : 3;
-	const char *source = text.c_str();
-	const uint textLength = text.size();
-	uint cursor = 0;
-	while (cursor < textLength && lines.size() < 10) {
-		uint end = textLength;
-		if (cursor + maxChars < textLength) {
-			end = cursor + maxChars;
-			while (end > cursor && (byte)source[end] != 0x20 && source[end] != 0)
-				--end;
-			while (end > cursor && (byte)source[end - 1] == 0x20)
-				--end;
-			if (end == cursor)
-				end = MIN<uint>(textLength, cursor + maxChars);
-		}
-
-		lines.push_back(Common::String(source + cursor, end - cursor));
-
-		cursor = end;
-		while (cursor < textLength && (byte)source[cursor] == 0x20)
-			++cursor;
-
-		maxChars = maxChars > lineShrink ? maxChars - lineShrink : 1;
-	}
+	wrapSpeechOverlayText(text, clampedAnchorSceneX - viewportX, lines);
 }
 
 Common::String PlayableScene::getResource003LargeTextRecord(uint16 recordId) const {
 	return _textStore.largeTextRecord(recordId);
 }
 
-uint PlayableScene::actorSpeechTextWidth(const Common::String &text) const {
-	if (!_vm->font() || !_vm->font()->isLoaded())
-		return 0;
-
-	return _vm->font()->getStringWidth(text) + 2;
-}
-
-uint PlayableScene::speechOverlayTextWidth(const SpeechOverlay &overlay) const {
-	uint textWidth = 0;
-	for (uint i = 0; i < overlay.lines.size(); ++i)
-		textWidth = MAX<uint>(textWidth, actorSpeechTextWidth(overlay.lines[i]));
-
-	return textWidth;
-}
-
 void PlayableScene::calculateSpeechOverlayBounds(SpeechOverlay &overlay, int centerX, int topY, bool useRequestedTop,
 		int actorWorldY) {
-	const uint textWidth = speechOverlayTextWidth(overlay);
-	int adjustedCenterX = centerX - viewportXOffset();
-	if (((adjustedCenterX - (int)(textWidth >> 1)) - 1 + (int)textWidth) > 0x27e)
-		adjustedCenterX = (textWidth & 1) == 0 ? 0x27e - (textWidth >> 1) : 0x27d - (textWidth >> 1);
-	if (adjustedCenterX - (int)(textWidth >> 1) < 1)
-		adjustedCenterX = (textWidth >> 1) + 1;
-	adjustedCenterX += viewportXOffset();
-
-	int adjustedTopY = 0;
-	if (useRequestedTop)
-		adjustedTopY = topY - (int)overlay.lines.size() * kOriginalSpeechLineHeight;
-	else
-		adjustedTopY = actorWorldY - (int)overlay.lines.size() * kOriginalSpeechLineHeight - 0xbe;
-	if (adjustedTopY < 1)
-		adjustedTopY = 1;
-
-	overlay.centerX = (uint16)adjustedCenterX;
-	overlay.topY = (uint16)adjustedTopY;
+	const int anchorBottomY = useRequestedTop ? topY : actorWorldY - 0xbe;
+	layoutSpeechOverlay(overlay, _vm->font(), centerX, anchorBottomY, viewportXOffset());
 }
 
 void PlayableScene::calculateSecondarySpeechBounds(int actorWorldX, int actorWorldY) {
@@ -3053,13 +3373,27 @@ bool PlayableScene::waitForSpeechOrDelay(uint32 fallbackMillis, bool animatePrim
 			break;
 
 		const uint32 slice = speechActive ? 50 : MIN<uint32>(50, fallbackMillis - elapsed);
-		if (waitSceneMillis(slice))
+		if (waitSceneMillis(slice)) {
+			if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
+				return true;
+			if (consumeStepAdvanceRequest())
+				return false;
 			return true;
+		}
 		if (animatePrimaryLeft && !_primarySpeechOverlay.visible)
 			break;
 	}
 
 	return Engine::shouldQuit();
+}
+
+bool PlayableScene::consumeStepAdvanceRequest() {
+	if (!_stepAdvanceRequested)
+		return false;
+
+	_stepAdvanceRequested = false;
+	_skipRequested = false;
+	return true;
 }
 
 void PlayableScene::setPaletteEntry6Bit(byte colorIndex, byte red, byte green, byte blue) {
@@ -3102,12 +3436,12 @@ void PlayableScene::drawGameplayPanel(Graphics::Surface &surface, const Gameplay
 }
 
 void PlayableScene::drawVerbPanel(Graphics::Surface &surface, const GameplayPanelState &panelState) {
-	_panelArt.drawVerbPanel(surface, _baseFramebuffer, viewportXOffset(), 0, panelState,
+	_panelArt.drawVerbPanel(surface, _sceneFramebuffer.rawSurface(), viewportXOffset(), 0, panelState,
 		_vm->font());
 }
 
 void PlayableScene::drawInventoryPanel(Graphics::Surface &surface, const GameplayPanelState &panelState) {
-	_panelArt.drawDialogueInventoryPanel(surface, _baseFramebuffer, viewportXOffset(), 0,
+	_panelArt.drawDialogueInventoryPanel(surface, _sceneFramebuffer.rawSurface(), viewportXOffset(), 0,
 		panelState, _vm->gameState(), _vm->font());
 }
 
@@ -3118,7 +3452,7 @@ void PlayableScene::presentFrame(const SceneHoverCaption *hoverCaption, const Ga
 	if ((panelState && panelState->visible()) || (dialogueMenuState && dialogueMenuState->visible()))
 		applyGameplayPanelPalette();
 	const uint16 xOffset = viewportXOffset();
-	_displayPalette.uploadFrom6Bit(_paletteCurrent);
+	const bool paletteChanged = _displayPalette.uploadFrom6Bit(_paletteCurrent);
 	_screen.copyRectToSurface(_sceneFramebuffer.rawSurface(), 0, 0,
 		Common::Rect(xOffset, 0, xOffset + HollywoodEngine::kScreenWidth, HollywoodEngine::kScreenHeight));
 
@@ -3133,11 +3467,14 @@ void PlayableScene::presentFrame(const SceneHoverCaption *hoverCaption, const Ga
 			hoverCaption->draw(*screenSurface, *_vm->font());
 	}
 
-	g_system->copyRectToScreen(_screen.getPixels(), _screen.pitch, 0, 0, _screen.w, _screen.h);
+	const bool screenChanged = _surfaceState.updatePresentedScreenCache();
+	if (screenChanged || paletteChanged)
+		g_system->copyRectToScreen(_screen.getPixels(), _screen.pitch, 0, 0, _screen.w, _screen.h);
 	g_system->updateScreen();
 }
 
 bool PlayableScene::pollEvents(bool allowSkip) {
+	_stepAdvanceRequested = false;
 	Common::Event event;
 	while (g_system->getEventManager()->pollEvent(event)) {
 		switch (event.type) {
@@ -3152,10 +3489,16 @@ bool PlayableScene::pollEvents(bool allowSkip) {
 			_displayPalette.markAllDirty();
 			break;
 		case Common::EVENT_KEYDOWN:
-			if (allowSkip && (event.kbd.keycode == Common::KEYCODE_ESCAPE ||
-					event.kbd.keycode == Common::KEYCODE_RETURN ||
-					event.kbd.keycode == Common::KEYCODE_SPACE)) {
+			if (allowSkip && event.kbd.keycode == Common::KEYCODE_ESCAPE) {
 				_skipRequested = true;
+				return true;
+			}
+			if (allowSkip && !event.kbdRepeat &&
+					(event.kbd.keycode == Common::KEYCODE_RETURN ||
+					 event.kbd.keycode == Common::KEYCODE_KP_ENTER ||
+					 event.kbd.keycode == Common::KEYCODE_SPACE)) {
+				_skipRequested = true;
+				_stepAdvanceRequested = true;
 				return true;
 			}
 			break;

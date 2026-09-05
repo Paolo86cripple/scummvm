@@ -19,8 +19,8 @@
  *
  */
 
-#ifndef HOLLYWOOD_SCENES_PLAYABLE_ANIMATION_LAYERS_H
-#define HOLLYWOOD_SCENES_PLAYABLE_ANIMATION_LAYERS_H
+#ifndef HOLLYWOOD_SCENES_ANIMATION_LAYERS_H
+#define HOLLYWOOD_SCENES_ANIMATION_LAYERS_H
 
 #include "common/array.h"
 #include "common/types.h"
@@ -138,6 +138,7 @@ public:
 
 		LayerState &state = _layers[id];
 		state.configured = true;
+		state.defaultStratum = stratum;
 		state.stratum = stratum;
 		state.defaultVisible = visible;
 		state.initialFrame = initialFrame;
@@ -155,15 +156,15 @@ public:
 		return id;
 	}
 
-	void configureLayerResource(uint id, uint chunkIndex, uint16 descriptorCount,
-			const byte *frameMap, uint frameMapSize, bool visible = true) {
+	// Rebinds the active resource without changing default visibility or initial frame.
+	void setLayerResource(uint id, uint chunkIndex, uint16 descriptorCount,
+			const byte *frameMap, uint frameMapSize) {
 		if (!hasLayer(id))
 			return;
 
 		LayerState &state = _layers[id];
+		const bool visible = state.layer.visible;
 		state.layer.configure(chunkIndex, descriptorCount, frameMap, frameMapSize);
-		state.defaultVisible = visible;
-		state.initialFrame = 0;
 		state.layer.visible = visible && availableFrameCount(state.layer) != 0;
 	}
 
@@ -172,6 +173,7 @@ public:
 			LayerState &state = _layers[i];
 			if (!state.configured)
 				continue;
+			state.stratum = state.defaultStratum;
 			state.layer.reset(state.initialFrame);
 			state.layer.visible = state.defaultVisible && availableFrameCount(state.layer) != 0;
 		}
@@ -189,12 +191,9 @@ public:
 		return hasLayer(id) && _layers[id].stratum == stratum;
 	}
 
-	bool hasVisibleLayers() const {
-		for (uint i = 0; i < _layers.size(); ++i) {
-			if (_layers[i].configured && _layers[i].layer.visible)
-				return true;
-		}
-		return false;
+	void setLayerStratum(uint id, SceneAnimationStratum stratum) {
+		if (hasLayer(id))
+			_layers[id].stratum = stratum;
 	}
 
 	bool hasVisibleLayers(SceneAnimationStratum stratum) const {
@@ -220,9 +219,42 @@ public:
 			_layers[id].layer.visible = visible && availableFrameCount(_layers[id].layer) != 0;
 	}
 
+	void setLayerChunk(uint id, uint chunkIndex) {
+		if (hasLayer(id))
+			_layers[id].layer.chunkIndex = chunkIndex;
+	}
+
+	// Changes the logical frame mapping without resetting the current frame.
+	void setLayerFrameMap(uint id, const byte *frameMap, uint frameMapSize) {
+		if (!hasLayer(id))
+			return;
+		_layers[id].layer.frameMap = frameMap;
+		_layers[id].layer.frameMapSize = frameMapSize;
+	}
+
 	void setLayerFrame(uint id, byte frameIndex) {
 		if (hasLayer(id))
 			_layers[id].layer.setFrame(frameIndex);
+	}
+
+	void resetLayer(uint id, byte frameIndex) {
+		if (hasLayer(id))
+			_layers[id].layer.reset(frameIndex);
+	}
+
+	// Resets cleanup history before making a layer visible.
+	void showLayerAtFrame(uint id, byte frameIndex) {
+		if (!hasLayer(id))
+			return;
+		_layers[id].layer.reset(frameIndex);
+		_layers[id].layer.visible = availableFrameCount(_layers[id].layer) != 0;
+	}
+
+	bool advanceLayerFrame(uint id, byte lastFrame) {
+		if (!hasLayer(id) || _layers[id].layer.frameIndex >= lastFrame)
+			return false;
+		_layers[id].layer.setFrame(_layers[id].layer.frameIndex + 1);
+		return true;
 	}
 
 	void setVisibleLayerFrame(uint id, byte frameIndex) {
@@ -269,6 +301,7 @@ private:
 	struct LayerState {
 		LayerState() :
 				configured(false),
+				defaultStratum(kSceneAnimationBehindActors),
 				stratum(kSceneAnimationBehindActors),
 				defaultVisible(false),
 				initialFrame(0),
@@ -276,13 +309,14 @@ private:
 		}
 
 		bool configured;
+		SceneAnimationStratum defaultStratum;
 		SceneAnimationStratum stratum;
 		bool defaultVisible;
 		byte initialFrame;
 		ResourceSpriteLayer layer;
 	};
 
-	static uint availableFrameCount(const ResourceSpriteLayer &layer) {
+	uint availableFrameCount(const ResourceSpriteLayer &layer) const {
 		return layer.frameMap != nullptr ? layer.frameMapSize : layer.descriptorCount;
 	}
 
@@ -291,4 +325,4 @@ private:
 
 } // End of namespace Hollywood
 
-#endif // HOLLYWOOD_SCENES_PLAYABLE_ANIMATION_LAYERS_H
+#endif // HOLLYWOOD_SCENES_ANIMATION_LAYERS_H

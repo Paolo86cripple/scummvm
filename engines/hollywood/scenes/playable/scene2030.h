@@ -40,11 +40,10 @@ private:
 
 	void initializeCustomPreviewState() override;
 	void runCustomEntrySequence() override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
+	void advanceTransitionAnimation(uint32 delta) override;
 	void realtimeSpeechEnded(byte speechId, bool completed) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
@@ -65,7 +64,6 @@ private:
 	void closeMerchantAfterInteraction(bool rightMerchant);
 	void waitForMerchantState(bool rightMerchant, byte targetState);
 	void beginSecondarySpeechLineAndOpenMerchant(uint16 rowIndex, byte frameIndex, bool rightMerchant);
-	void waitForStartedSecondarySpeech(uint32 startMillis, uint32 durationMillis);
 	void runMerchantPrimarySpeechLine(uint16 rowIndex, byte frameIndex, bool rightMerchant);
 	bool merchantSpeechGroupIsRight(byte animationGroup) const;
 	bool merchantSpeechGroupIsLeft(byte animationGroup) const;
@@ -81,7 +79,7 @@ private:
 	void initializeMerchantShopDialogueRecords(Common::Array<DialogueChoiceRecord> &records) const;
 	void setMerchantShopDialogueRecord(Common::Array<DialogueChoiceRecord> &records, uint index,
 		byte enabled, byte nextNodeIndex, byte transitionMode, byte playerTextRowId,
-		byte responseFrameIndex, byte disableAfterUse, byte reserved) const;
+		byte responseFrameIndex, byte disableAfterUse) const;
 	uint16 merchantShopProductPrice(byte productRowId) const;
 	void runLeftMerchantPurchase(byte productRowId);
 	void subtractEgyptianMoney(uint16 amount);

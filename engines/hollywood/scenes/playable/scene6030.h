@@ -34,8 +34,7 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+	void drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
 	void prepareCustomGameplayLoop() override;
@@ -52,9 +51,6 @@ private:
 	void rebuildWorkingWalkableMask();
 	void resetAnimationLayers();
 	void advanceHannoverLayer(uint32 delta);
-	void startScriptedActorPath(int targetX, int targetY, byte finalFacing);
-	void advanceScriptedActorPath(uint32 delta);
-	void finishScriptedActorPath();
 	void drawForegroundBlocks(int activeWorldX, int activeWorldY);
 	void runEntryConversation();
 	void runHannoverDialogueMenu();
@@ -74,10 +70,7 @@ private:
 	void returnToScene6020();
 
 	TimedAnimationChannel _hannoverIdleChannel;
-	TimedAnimationChannel _scriptedActorPathChannel;
-	uint _scriptedActorPathFrameIndex;
 	bool _hannoverManualSequenceActive;
-	bool _scriptedActorPathActive;
 };
 
 } // End of namespace Hollywood

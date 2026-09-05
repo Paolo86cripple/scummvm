@@ -23,14 +23,13 @@
 #define HOLLYWOOD_SCENES_INTRO_SCENE9160_H
 
 #include "hollywood/music.h"
-#include "hollywood/scenes/intro/intro_resource_set.h"
-#include "hollywood/scenes/intro/intro_scene.h"
+#include "hollywood/scenes/presentation_scene.h"
 
 namespace Hollywood {
 
 class HollywoodEngine;
 
-class Scene9160 : public IntroSceneBase {
+class Scene9160 : public PresentationScene {
 public:
 	Scene9160(HollywoodEngine *vm);
 
@@ -39,8 +38,6 @@ public:
 private:
 	bool load();
 	bool loadVariableChunk(uint index, Common::Array<byte> &destination);
-	bool loadChunk(uint index, Common::Array<byte> &destination, uint fixedSize);
-	bool loadArenaChunk(uint index);
 	void sanitizePanel(Common::Array<byte> &panel);
 	void copyPanelToFramebuffer(const Common::Array<byte> &panel, int yOffset);
 	void drawOverlayChunk(uint chunkIndex, int yOffset);
@@ -54,7 +51,6 @@ private:
 	uint presentRowOffset() const override;
 	void stopAudio() override;
 
-	IntroResourceSet _resources;
 	MusicPlayer *_music;
 	Common::Array<byte> _paletteResource;
 	Common::Array<byte> _panelA;

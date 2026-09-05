@@ -19,14 +19,15 @@
  *
  */
 
-#include "hollywood/gameplay/inventory_actions.h"
-
 #include "common/events.h"
 #include "common/system.h"
 
-#include "hollywood/gameplay/cursor.h"
-#include "hollywood/gameplay/game_state.h"
 #include "hollywood/hollywood.h"
+#include "hollywood/gameplay/cursor.h"
+#include "hollywood/gameplay/game_loop.h"
+#include "hollywood/gameplay/game_state.h"
+#include "hollywood/gameplay/inventory_actions.h"
+#include "hollywood/gameplay/inventory_media.h"
 
 namespace Hollywood {
 
@@ -158,6 +159,9 @@ bool beginRonSimpleInventorySpeech(HollywoodEngine *vm, GameplayLoopDelegate *de
 	case 30:  // Usar algodon as cleaning rag: Ron refuses to clean.
 		beginRonRandomSpeechLine(delegate, 0x1d, 1);
 		return true;
+	case 31:  // Usar serrucho where it cannot be used.
+		beginRonRandomSpeechLine(delegate, 0x1e, 1);
+		return true;
 	case 32:  // Usar bisturi as tool: "I am a journalist, not a surgeon."
 		beginRonRandomSpeechLine(delegate, 0x1f, 1);
 		return true;
@@ -170,10 +174,10 @@ bool beginRonSimpleInventorySpeech(HollywoodEngine *vm, GameplayLoopDelegate *de
 	case 44:  // Usar lupa where not needed.
 		beginRonRandomSpeechLine(delegate, 0x2b, 2);
 		return true;
-	case 52:  // Usar estaca with serrucho: too small to sharpen.
+	case 52:  // Usar bisturi with madero: too small to sharpen.
 		beginRonSpeechLine(delegate, 0x33, 0);
 		return true;
-	case 53:  // Usar serrucho with estaca: Ron would cut it badly.
+	case 53:  // Usar bisturi with poster: Ron would cut it badly.
 		beginRonSpeechLine(delegate, 0x34, 0);
 		return true;
 	case 58:  // Usar flor del Nilo with ponchera/glass: keeps well without water.
@@ -642,6 +646,7 @@ bool isRonInventoryAction(uint16 handlerId) {
 	case 2:
 	case 20:
 	case 30:
+	case 31:
 	case 32:
 	case 34:
 	case 40:
@@ -1002,8 +1007,8 @@ bool dispatchInventoryRelationAction(HollywoodEngine *vm, GameplayLoopDelegate *
 
 bool dispatchSharedInventoryAction(HollywoodEngine *vm, GameplayLoopDelegate *delegate,
 		uint16 handlerId, byte owner) {
-	// Mirrors the low shared table installed by InstallSceneActionCallbackTable
-	// at 004d6000. This is not the larger main-scene callback table.
+	// Shared handlers from InstallSceneActionCallbackTable (0x004d6000);
+	// main-scene handlers are dispatched separately.
 	const bool sharedHandler =
 		handlerId == 0 || handlerId == 1 || handlerId == 35 ||
 		handlerId == 41 || handlerId == 45 || handlerId == 49 ||

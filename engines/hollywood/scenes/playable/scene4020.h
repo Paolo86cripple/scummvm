@@ -22,7 +22,7 @@
 #ifndef HOLLYWOOD_SCENES_PLAYABLE_SCENE4020_H
 #define HOLLYWOOD_SCENES_PLAYABLE_SCENE4020_H
 
-#include "hollywood/scenes/playable/animation_channels.h"
+#include "hollywood/scenes/animation_channels.h"
 #include "hollywood/scenes/playable/playable_scene.h"
 
 namespace Hollywood {
@@ -35,8 +35,6 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	void runCustomEntrySequence() override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
@@ -44,7 +42,6 @@ private:
 		const ScenePoint &boundary, int &requestedFacing, bool &restoredStepDeltas) override;
 	bool customizeRouteFinal(byte currentRegion, byte targetRegion, const ActorPathBuildState &state,
 		int targetX, int targetY, int &requestedFacing, bool &restoredStepDeltas) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetIdleLayer();

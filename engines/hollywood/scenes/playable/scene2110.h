@@ -34,12 +34,7 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
@@ -48,14 +43,10 @@ private:
 	byte primarySpeechAnimationFrameCount(byte animationGroup) const override;
 	uint32 primarySpeechAnimationFrameMillis(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetAnimationLayers();
 	void advanceEntryIdle(uint32 delta);
-	void startScriptedActorPath();
-	void advanceScriptedActorPath(uint32 delta);
-	void finishScriptedActorPath();
 	void runEntryFromScene2100();
 	void runScriptedReturnToScene2100();
 	bool runScriptedEntryOpening();
@@ -68,14 +59,8 @@ private:
 	void runTreasurePrimarySpeechLine(uint16 rowIndex, byte frameIndex);
 
 	TimedAnimationChannel _entryIdleChannel;
-	TimedAnimationChannel _scriptedActorPathChannel;
-	ResourceSpriteLayer _entryLayer;
-	ResourceSpriteLayer _ambientLayer;
-	ResourceSpriteLayer _treasureLayer;
 	uint _ambientTrack;
 	bool _entryIdleActive;
-	bool _scriptedActorPathActive;
-	uint _scriptedActorPathFrameIndex;
 };
 
 } // End of namespace Hollywood

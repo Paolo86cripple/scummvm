@@ -35,14 +35,13 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel,
-		int activeWorldX, int activeWorldY, bool drawSecondaryActor, byte secondaryFacing,
-		byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
 	void advancePrimarySpeechAnimation(uint32 delta) override;
+	void prepareCustomComposite(bool drawActors, byte activeFacing,
+		int activeWorldX, int activeWorldY, byte actorDrawOrderMode) override;
+	bool shouldUseActorDepthTest(int actorWorldX, int actorWorldY) const override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool customizeRouteSegment(byte currentRegion, byte nextRegion,
 		const ActorPathBuildState &state, const ScenePoint &boundary,
@@ -55,8 +54,6 @@ private:
 	uint32 primarySpeechAnimationFrameMillis(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
 	void primarySpeechAnimationRestored(byte animationGroup, byte baseFrame) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
@@ -77,9 +74,6 @@ private:
 	void takeCharlieBriefcase();
 	void giveBillyFordEnvelopeToCharlie();
 
-	ResourceSpriteLayer _charlieLayer;
-	ResourceSpriteLayer _letterLayer;
-	ResourceSpriteLayer _departureLayer;
 	TimedAnimationChannel _charlieIdleChannel;
 	TimedAnimationChannel _charlieConversationChannel;
 	byte _charlieIdleState;

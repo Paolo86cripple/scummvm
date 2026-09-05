@@ -19,11 +19,10 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene3080.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene3080.h"
 
 namespace Hollywood {
 
@@ -47,26 +46,12 @@ const uint kScene3080SmallIdleDescriptorCount = 0x16;
 const uint kScene3080DiaryOverlayDescriptorCount = 0x0e;
 const uint kScene3080StickOverlayDescriptorCount = 0x0d;
 const uint kScene3080FlyerOverlayDescriptorCount = 9;
-const byte kScene3080DiaryPatchHook = 1;
-const byte kScene3080StickPatchHook = 2;
-const byte kScene3080FlyerSoundHook = 3;
-
-const byte kScene3080LargeLayerFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7,
-	8, 9, 10, 11, 12, 13, 14, 15
-};
+const uint kScene3080LargeLayer = 0;
+const uint kScene3080SmallIdleLayer = 1;
 
 const byte kScene3080SmallIdleFrameMap[] = {
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7,
 	11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21
-};
-
-const byte kScene3080DiaryOverlayFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
-};
-
-const byte kScene3080StickOverlayFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
 };
 
 const byte kScene3080FlyerOverlayFrameMap[] = {
@@ -76,7 +61,14 @@ const byte kScene3080FlyerOverlayFrameMap[] = {
 	4, 5, 6, 7, 8
 };
 
-static PlayableSceneConfig scene3080Config() {
+const SceneLayerSpec kScene3080LayerSpecs[] = {
+	{kSceneAnimationBehindActors, 17, kScene3080LargeLayerDescriptorCount,
+		nullptr, 0, true, 0},
+	{kSceneAnimationInFrontOfActors, 7, kScene3080SmallIdleDescriptorCount,
+		kScene3080SmallIdleFrameMap, ARRAYSIZE(kScene3080SmallIdleFrameMap), true, 0}
+};
+
+PlayableSceneConfig scene3080Config() {
 	PlayableSceneConfig config(3080,
 		SceneResourceLayout(18, 5, 17),
 		SceneViewport(kScene3080ViewportXOffset),
@@ -91,16 +83,10 @@ static PlayableSceneConfig scene3080Config() {
 Scene3080::Scene3080(HollywoodEngine *vm) :
 		PlayableScene(vm, scene3080Config()),
 		_smallIdleChannel(),
-		_largeLayer(),
-		_smallIdleLayer(),
 		_largeTrack(RealtimeAnimationTracks::kInvalidTrack),
 		_smallIdleMode(0) {
-	_largeLayer.configure(17, kScene3080LargeLayerDescriptorCount,
-		kScene3080LargeLayerFrameMap, ARRAYSIZE(kScene3080LargeLayerFrameMap));
-	_largeTrack = _realtimeAnimationTracks.addRange(_largeLayer,
-		kScene3080LargeFrameMillis, 0, 7);
-	_smallIdleLayer.configure(7, kScene3080SmallIdleDescriptorCount,
-		kScene3080SmallIdleFrameMap, ARRAYSIZE(kScene3080SmallIdleFrameMap));
+	_sceneLayers.configure(kScene3080LayerSpecs);
+	_largeTrack = _realtimeAnimationTracks.addRange(kScene3080LargeLayer, kScene3080LargeFrameMillis, 0, 7);
 }
 
 void Scene3080::initializeCustomPreviewState() {
@@ -130,28 +116,18 @@ void Scene3080::initializeCustomPreviewState() {
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 }
 
-void Scene3080::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+void Scene3080::drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) {
+	(void)activeWorldX;
 	(void)actorDrawOrderMode;
 
-	copyBaseFramebufferToSceneFramebuffer();
-	drawResourceSpriteLayer(_largeLayer);
-	if (_actionOverlayPlayer.replacesActor()) {
-		drawActionOverlayLayer();
-		drawResourceSpriteLayer(_smallIdleLayer);
+	if (_actionOverlayPlayer.replacesActor() || activeWorldY > 0x165)
 		return;
-	}
 
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	if (activeWorldY <= 0x165) {
-		drawForegroundBlocks();
-		const uint chunkIndex = _vm->gameState().scene3080WindowOpened ? 16 : 6;
-		if (_sceneChunkTable.isValidChunk(chunkIndex))
-			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[chunkIndex], _sceneFramebuffer);
-	}
-	drawResourceSpriteLayer(_smallIdleLayer);
+	drawForegroundBlocks();
+	const uint chunkIndex = _vm->gameState().scene3080WindowOpened ? 16 : 6;
+	if (_sceneChunkTable.isValidChunk(chunkIndex))
+		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[chunkIndex], _sceneFramebuffer);
 }
 
 void Scene3080::runCustomEntrySequence() {
@@ -331,46 +307,22 @@ AmbientAudioProfile Scene3080::ambientAudioProfile() const {
 	return profile;
 }
 
-void Scene3080::handleAnimationFrameHook(byte hookId, uint frame) {
-	if (hookId == kScene3080DiaryPatchHook) {
-		if (_sceneChunkTable.isValidChunk(12))
-			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[12], _baseFramebuffer);
-		return;
-	}
-	if (hookId == kScene3080StickPatchHook) {
-		if (_sceneChunkTable.isValidChunk(8))
-			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[8], _baseFramebuffer);
-		return;
-	}
-	if (hookId != kScene3080FlyerSoundHook)
-		return;
-
-	if (frame == 8)
-		_soundBank0.playSampleLooping(0x1b, 75);
-	else if (frame == 28)
-		_soundBank0.stop();
-}
-
-bool Scene3080::shouldRunExitSideEffectsAfterLoop() const {
-	const uint16 stateId = _vm->gameState().mainFlowStateId;
-	return !Engine::shouldQuit() && stateId != 0xff && !isMainFlowStateInScene(stateId);
-}
-
 void Scene3080::runExitSideEffectsAfterLoop() {
+	if (!didLeaveSceneAfterLoop())
+		return;
+
 	fadePaletteToBlack();
 	if (_vm->gameState().mainFlowStateId != kScene3090State)
 		_vm->gameplayMusic()->stop();
 }
 
 void Scene3080::resetAnimationLayers() {
+	_sceneLayers.reset();
 	const bool alternateSmoke = _vm->gameState().scene3080ChimneySmokeAnimationChanged;
 	_realtimeAnimationTracks.setRange(_largeTrack,
 		alternateSmoke ? 8 : 0, alternateSmoke ? 15 : 7);
 	_realtimeAnimationTracks.reset(_largeTrack);
 	_smallIdleChannel.reset(0, kScene3080SmallIdleFrameMillis);
-	_largeLayer.visible = true;
-	_smallIdleLayer.visible = true;
-	_smallIdleLayer.reset(0);
 	_smallIdleMode = 0;
 }
 
@@ -429,7 +381,7 @@ void Scene3080::advanceSmallIdleLayer(uint32 delta) {
 			_smallIdleMode = 0;
 			_smallIdleChannel.frameIndex = 0;
 		}
-		_smallIdleLayer.setFrame(_smallIdleChannel.frameIndex);
+		_sceneLayers.setLayerFrame(kScene3080SmallIdleLayer, _smallIdleChannel.frameIndex);
 	}
 }
 
@@ -467,9 +419,8 @@ void Scene3080::runDiaryPickup() {
 	}
 
 	runActorReplacement(ActionOverlaySpec(10, kScene3080DiaryOverlayDescriptorCount,
-		kScene3080DiaryOverlayFrameMap, ARRAYSIZE(kScene3080DiaryOverlayFrameMap), kScene3080OverlayFrameMillis)
-		.hookAt(10, kScene3080DiaryPatchHook)
-		.noRedrawAtEnd());
+		kScene3080OverlayFrameMillis).holdFirstFrame()
+		.resourcePatchAt(10, 12));
 	state.scene3080FrankensteinDiaryTaken = true;
 	state.scene3080FrankensteinDiaryRevealed = false;
 	applySceneStateToHotspotsAndPatches(2);
@@ -486,9 +437,8 @@ void Scene3080::runStickPickup() {
 	}
 
 	runActorReplacement(ActionOverlaySpec(9, kScene3080StickOverlayDescriptorCount,
-		kScene3080StickOverlayFrameMap, ARRAYSIZE(kScene3080StickOverlayFrameMap), kScene3080OverlayFrameMillis)
-		.hookAt(10, kScene3080StickPatchHook)
-		.noRedrawAtEnd());
+		kScene3080OverlayFrameMillis).holdFirstFrame()
+		.resourcePatchAt(10, 8));
 	state.scene3080BranchTaken = true;
 	applySceneStateToHotspotsAndPatches(4);
 	addInventoryItem(0x35);
@@ -499,7 +449,8 @@ void Scene3080::runStickPickup() {
 void Scene3080::runFlyerCoatingOverlay() {
 	runActorReplacement(ActionOverlaySpec(14, kScene3080FlyerOverlayDescriptorCount,
 		kScene3080FlyerOverlayFrameMap, ARRAYSIZE(kScene3080FlyerOverlayFrameMap), kScene3080OverlayFrameMillis)
-		.hookEveryFrame(kScene3080FlyerSoundHook));
+		.loopingSoundAt(8, 0x1b, 75)
+		.stopSoundAt(28));
 	_soundBank0.stop();
 	addInventoryItem(0x34);
 	removeInventoryItem(0x58);

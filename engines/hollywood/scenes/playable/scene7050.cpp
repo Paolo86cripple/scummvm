@@ -19,13 +19,12 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene7050.h"
-
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene7050.h"
 
 namespace Hollywood {
 
@@ -53,24 +52,18 @@ const byte kScene7050PrimarySpeechAltGroup = 8;
 const uint kScene7050DialogueChoiceRecordCount = 10 * 10 * 7;
 const uint kScene7050ColorToItemMapOffset = 0x100;
 const uint kScene7050ColorMapSize = 0x100;
-const byte kScene7050CloakroomRagPickupHook = 1;
 const byte kScene7050Chunk7FrameMap[] = {
 	0, 0, 1, 2, 3, 25, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
 	14, 15, 16, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5,
 	4, 18, 19, 20, 21, 22, 23, 24, 26, 20, 19, 18, 0
 };
-const byte kScene7050Chunk8ReturnFrameMap[] = { 0, 0, 1, 2, 3 };
-const byte kScene7050Chunk11PickupItem10FrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
-};
-
 const uint kScene7050AttendantLayer = 0;
 const SceneLayerSpec kScene7050LayerSpecs[] = {
 	{kSceneAnimationBehindActors, 7, kScene7050Chunk7DescriptorCount,
 		kScene7050Chunk7FrameMap, ARRAYSIZE(kScene7050Chunk7FrameMap), true, 0}
 };
 
-static PlayableSceneConfig scene7050Config() {
+PlayableSceneConfig scene7050Config() {
 	PlayableSceneConfig config(7050,
 		SceneResourceLayout(12, 5, 11),
 		SceneViewport(0x68),
@@ -103,22 +96,19 @@ void Scene7050::initializeCustomPreviewState() {
 	applySceneStateToHotspotsAndPatches(0xff);
 }
 
-void Scene7050::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
+void Scene7050::prepareCustomComposite(bool drawActors, byte activeFacing,
+		int activeWorldX, int activeWorldY, byte actorDrawOrderMode) {
+	(void)drawActors;
+	(void)activeFacing;
+	(void)activeWorldX;
+	(void)activeWorldY;
 	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-
 	_sceneLayers.setLayerFrame(kScene7050AttendantLayer,
 		_cloakroomAttendantAnimation.channel.frameIndex);
-	drawLayerStack(_sceneLayers, kSceneAnimationBehindActors);
+}
 
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-
-	drawActionOverlayLayer();
-
+void Scene7050::drawCustomForegroundComposite(int activeWorldX, int activeWorldY) {
+	(void)activeWorldY;
 	const uint blockChunk = activeWorldX < 0x1a4 ? 5 : 6;
 	drawResourceBlockList(_resourceArena, _resourceChunkOffsets[blockChunk], _sceneFramebuffer);
 }
@@ -328,20 +318,17 @@ void Scene7050::initializeDialogueRecords(Common::Array<DialogueChoiceRecord> &r
 	records[0].playerTextRowId = 2;
 	records[0].responseFrameIndex = 2;
 	records[0].disableAfterUse = 1;
-	records[0].reserved = 0xff;
 
 	records[1].enabled = 1;
 	records[1].transitionMode = 3;
 	records[1].playerTextRowId = 3;
 	records[1].responseFrameIndex = 3;
 	records[1].disableAfterUse = 1;
-	records[1].reserved = 0xff;
 
 	records[2].enabled = 1;
 	records[2].transitionMode = 0;
 	records[2].playerTextRowId = 4;
 	records[2].responseFrameIndex = 4;
-	records[2].reserved = 0xff;
 }
 
 void Scene7050::runSecondaryActorPoseIn() {
@@ -367,28 +354,23 @@ void Scene7050::beginCloakroomAttendantSpeechLine(byte frameIndex, bool alternat
 }
 
 void Scene7050::handleActionSlot01ReturnToG04() {
-	runActorReplacement(8, kScene7050Chunk8DescriptorCount, kScene7050Chunk8ReturnFrameMap,
-		ARRAYSIZE(kScene7050Chunk8ReturnFrameMap), kScene7050FrameMillis);
-	_soundBank0.playSample(3, 100);
-	_vm->gameState().mainFlowStateId = kScene7050ReturnToG04State;
+	BlockingSequence(*this)
+		.actorReplacement(ActionOverlaySpec(8, kScene7050Chunk8DescriptorCount,
+			kScene7050FrameMillis).holdFirstFrame())
+		.sound(3)
+		.commit(_vm->gameState().mainFlowStateId, kScene7050ReturnToG04State);
 }
 
 void Scene7050::handleActionSlot10PickupItem10() {
 	dispatchGenericSceneAction(19);
-	runActorReplacement(ActionOverlaySpec(11, kScene7050Chunk11DescriptorCount,
-		kScene7050Chunk11PickupItem10FrameMap, ARRAYSIZE(kScene7050Chunk11PickupItem10FrameMap), kScene7050FrameMillis)
-		.hookAt(4, kScene7050CloakroomRagPickupHook));
+	GameplayState &state = _vm->gameState();
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(11, kScene7050Chunk11DescriptorCount,
+		kScene7050FrameMillis)
+		.commitAt(4, state.cloakroomRagVisible, 0)
+		.patchAt(4, 1));
 	addInventoryItem(0x10);
-	_soundBank0.playSample(1, 100);
-}
-
-void Scene7050::handleAnimationFrameHook(byte hookId, uint frame) {
-	(void)frame;
-
-	if (hookId == kScene7050CloakroomRagPickupHook) {
-		_vm->gameState().cloakroomRagVisible = 0;
-		applySceneStateToHotspotsAndPatches(1);
-	}
+	sequence.sound(1);
 }
 
 void Scene7050::advanceSecondaryActorAnimation(uint32 delta) {

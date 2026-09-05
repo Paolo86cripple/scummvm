@@ -36,8 +36,7 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+	void drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
 	void advancePrimarySpeechAnimation(uint32 delta) override;
@@ -57,6 +56,7 @@ private:
 		byte red, byte green, byte blue);
 	void runScriptedSequence();
 	void runOpeningSueEntryAndIdleWaits();
+	bool finishOpeningSueEntryAfterSkip();
 	void runChunk6FrameRange(byte firstFrame, byte lastFrame, byte finalPoseMode);
 	void runChunk7RevealFramesThenHold();
 	void blackOutScenePalette();
@@ -74,8 +74,6 @@ private:
 	bool _drawChunk7OverlayInsteadOfActor;
 	uint32 _chunk7TimerAccumulator;
 	uint32 _primaryTimerAccumulator;
-	SceneLayerStack _backTransientLayers;
-	SceneLayerStack _actorReplacementLayers;
 };
 
 } // End of namespace Hollywood

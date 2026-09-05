@@ -19,20 +19,18 @@
  *
  */
 
-#include "hollywood/gameplay/inventory_media.h"
-
 #include "common/path.h"
 #include "common/ptr.h"
 #include "common/stream.h"
 #include "common/textconsole.h"
 
 #include "hollywood/hollywood.h"
+#include "hollywood/gameplay/inventory_media.h"
 #include "hollywood/resource.h"
 
 namespace Hollywood {
 
 const char *const kInventoryMediaArchiveName = "RESOURCE.I04";
-const uint kInventoryMediaFramebufferBytes = HollywoodEngine::kSceneBufferWidth * HollywoodEngine::kSceneBufferHeight;
 const uint kSueTapePaletteChunk = 8;
 const uint kSueTapeBaseChunk = 9;
 const uint kSueTapeFramesChunk = 10;
@@ -42,8 +40,7 @@ const uint kFrankensteinDiaryPaletteChunk = 15;
 const uint kTaffyPassPaletteChunk = 17;
 const uint kForgedPassPaletteChunk = 19;
 
-InventoryMediaPlayer::InventoryMediaPlayer(HollywoodEngine *vm) :
-		_vm(vm),
+InventoryMediaPlayer::InventoryMediaPlayer() :
 		_palette(),
 		_tapeResource(),
 		_tapeDescriptorTableOffset(0),
@@ -74,10 +71,10 @@ bool InventoryMediaPlayer::loadStill(InventoryMediaId mediaId) {
 
 	Common::Array<byte> pixels;
 	if (!readChunk(paletteChunk, _palette, kPaletteSize) ||
-			!readChunk(paletteChunk + 1, pixels, kInventoryMediaFramebufferBytes))
+			!readChunk(paletteChunk + 1, pixels, kSceneBufferByteCount))
 		return false;
 
-	_framebuffer.resize(kInventoryMediaFramebufferBytes);
+	_framebuffer.resize(kSceneBufferByteCount);
 	memcpy(_framebuffer.data(), pixels.data(), pixels.size());
 	_tapeResource.clear();
 	_tapeDescriptorTableOffset = 0;
@@ -97,7 +94,7 @@ bool InventoryMediaPlayer::loadSueTape() {
 	memcpy(_tapeResource.data(), base.data(), base.size());
 	memcpy(_tapeResource.data() + base.size(), frames.data(), frames.size());
 
-	_framebuffer.resize(kInventoryMediaFramebufferBytes);
+	_framebuffer.resize(kSceneBufferByteCount);
 	_framebuffer.clear();
 	drawResourceBlockList(_tapeResource, 0, _framebuffer.surface());
 	return true;
@@ -113,7 +110,7 @@ void InventoryMediaPlayer::drawSueTapeFrame(byte frameIndex) {
 
 bool InventoryMediaPlayer::readChunk(uint index, Common::Array<byte> &destination, uint expectedSize) {
 	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		_vm->resources()->createChunkReadStream(Common::Path(kInventoryMediaArchiveName), index));
+		createResourceChunkReadStream(Common::Path(kInventoryMediaArchiveName), index));
 	if (!stream) {
 		warning("Failed to open %s chunk %u", kInventoryMediaArchiveName, index);
 		return false;

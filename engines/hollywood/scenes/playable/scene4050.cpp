@@ -19,11 +19,10 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene4050.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene4050.h"
 
 namespace Hollywood {
 
@@ -53,8 +52,8 @@ const uint kScene4050PatchState2Chunk = 9;
 const uint kScene4050ExitPatchChunk = 10;
 const uint kScene4050D09ReturnTransitionChunk = 11;
 const uint kScene4050D09ReturnTransitionDescriptorCount = 0x15;
-const uint kScene4050SceneObjectPaletteFirstColor = 0xb0;
-const uint kScene4050SceneObjectPaletteLastColor = 0xcf;
+const uint kScene4050ResourceLayerPaletteFirstColor = 0xb0;
+const uint kScene4050ResourceLayerPaletteLastColor = 0xff;
 const byte kScene4050LongRopeItem = 0x6b;
 const byte kScene4050PatchStateBase = 0;
 const byte kScene4050PatchStateRopeAttached = 1;
@@ -62,8 +61,6 @@ const byte kScene4050PatchStateWindowReached = 2;
 const byte kScene4050RonIdleBlinkFrame = 4;
 const byte kScene4050RonSpeechFrameCount = 4;
 const byte kScene4050TextColor = 0xfd;
-const byte kScene4050AttachRopeSoundHook = 1;
-const byte kScene4050SwingSoundHook = 2;
 const int kScene4050CurtainStartOffset = 0xdc;
 const byte kScene4050CurtainBandWidth = 0x14;
 const uint kScene4050CurtainEndOffset = 0xf0;
@@ -83,6 +80,23 @@ const byte kScene4050D09ReturnTransitionAlternateFrameMap[] = {
 	0, 1, 2, 3, 4, 15, 16, 17, 18, 19, 20
 };
 
+enum Scene4050LayerId {
+	kScene4050BackgroundLayer,
+	kScene4050RonLayer,
+	kScene4050D09ReturnTransitionLayer
+};
+
+const SceneLayerSpec kScene4050LayerSpecs[] = {
+	{kSceneAnimationInFrontOfActors, kScene4050BackgroundChunk,
+		kScene4050BackgroundDescriptorCount, nullptr, 0, true, 0},
+	{kSceneAnimationActorReplacement, kScene4050RonChunk,
+		kScene4050RonDescriptorCount, nullptr, 0, true, 0},
+	{kSceneAnimationInFrontOfActors, kScene4050D09ReturnTransitionChunk,
+		kScene4050D09ReturnTransitionDescriptorCount,
+		kScene4050D09ReturnTransitionBaseFrameMap,
+		ARRAYSIZE(kScene4050D09ReturnTransitionBaseFrameMap), false, 0}
+};
+
 PlayableSceneConfig scene4050Config() {
 	PlayableSceneConfig config(4050,
 		SceneResourceLayout(5, 5, 11),
@@ -91,6 +105,8 @@ PlayableSceneConfig scene4050Config() {
 	config.setActorResources(kScene4050ActorBankTableEntry, kScene4050ActorPaletteTableEntry);
 	config.setTextResources(kScene4050Resource003RowsOffsetIndex, kScene4050SpeechCueDescriptorTableOffset);
 	config.walkablePaletteMaxRegion = 20;
+	config.drawDefaultActor = false;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
@@ -99,50 +115,26 @@ Scene4050::Scene4050(HollywoodEngine *vm) :
 		_flagPaletteChannel(),
 		_ronSpeechChannel(),
 		_ronIdleChannel(),
-		_backgroundLayer(),
-		_ronLayer(),
-		_d09ReturnTransitionLayer(),
 		_backgroundTrack(RealtimeAnimationTracks::kInvalidTrack),
 		_ambientEffectTimerAccumulator(0),
 		_previousContinuousAmbientCue(0),
 		_previousRandomAmbientCue(0),
 		_ronManualSequenceActive(false),
 		_transitionClearedToBlack(false) {
-	_backgroundLayer.configure(kScene4050BackgroundChunk,
-		kScene4050BackgroundDescriptorCount, nullptr, 0);
-	_backgroundTrack = _realtimeAnimationTracks.addLoop(_backgroundLayer,
+	_sceneLayers.configure(kScene4050LayerSpecs);
+	_backgroundTrack = _realtimeAnimationTracks.addLoop(kScene4050BackgroundLayer,
 		kScene4050BackgroundFrameMillis, kScene4050BackgroundDescriptorCount);
 }
 
 void Scene4050::initializeCustomPreviewState() {
 	initializeDefaultPreviewState();
-	restoreSceneObjectPaletteRange();
+	restoreResourceLayerPalette();
 	resetAnimationLayers();
 	_ambientEffectTimerAccumulator = 0;
 	_previousContinuousAmbientCue = 0;
 	_previousRandomAmbientCue = 0;
 	_transitionClearedToBlack = false;
 	setActiveActorPose(kScene4050RonWorldX, kScene4050RonWorldY, kScene4050RonFacing);
-}
-
-void Scene4050::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)drawActiveActor;
-	(void)activeFacing;
-	(void)activeCel;
-	(void)activeWorldX;
-	(void)activeWorldY;
-	(void)drawSecondaryActor;
-	(void)secondaryFacing;
-	(void)secondaryFrame;
-	(void)secondaryWorldX;
-	(void)secondaryWorldY;
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawSceneLayers();
-	drawActionOverlayLayer();
 }
 
 void Scene4050::runCustomEntrySequence() {
@@ -152,7 +144,7 @@ void Scene4050::runCustomEntrySequence() {
 	}
 
 	setActiveActorPose(kScene4050RonWorldX, kScene4050RonWorldY, kScene4050RonFacing);
-	_backgroundLayer.setFrame(0);
+	_sceneLayers.setLayerFrame(kScene4050BackgroundLayer, 0);
 	setRonResourceFrame(0);
 	drawPlayableComposite();
 	presentFrame();
@@ -167,14 +159,6 @@ void Scene4050::runCustomEntrySequence() {
 	beginRonResourceSpeechLine(1, 0);
 }
 
-bool Scene4050::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
-}
-
-bool Scene4050::shouldRunExitSideEffectsAfterLoop() const {
-	return true;
-}
-
 void Scene4050::runExitSideEffectsAfterLoop() {
 	if (!_transitionClearedToBlack)
 		fadePaletteToBlack();
@@ -184,7 +168,7 @@ void Scene4050::runExitSideEffectsAfterLoop() {
 
 void Scene4050::prepareCustomGameplayLoop() {
 	if (!_transitionClearedToBlack)
-		restoreSceneObjectPaletteRange();
+		restoreResourceLayerPalette();
 }
 
 void Scene4050::advanceCustomGameplayLoop(uint32 delta) {
@@ -280,28 +264,19 @@ AmbientAudioProfile Scene4050::ambientAudioProfile() const {
 }
 
 void Scene4050::resetAnimationLayers() {
+	_sceneLayers.configure(kScene4050LayerSpecs);
 	_realtimeAnimationTracks.reset(_backgroundTrack);
-	_backgroundLayer.visible = true;
 	_flagPaletteChannel.reset(0, kScene4050FlagPaletteCycleMillis);
-
-	_ronLayer.configure(kScene4050RonChunk, kScene4050RonDescriptorCount, nullptr, 0);
-	_ronLayer.visible = true;
-	_ronLayer.setFrame(0);
-	_d09ReturnTransitionLayer.configure(kScene4050D09ReturnTransitionChunk,
-		kScene4050D09ReturnTransitionDescriptorCount,
-		kScene4050D09ReturnTransitionBaseFrameMap,
-		ARRAYSIZE(kScene4050D09ReturnTransitionBaseFrameMap));
-	_d09ReturnTransitionLayer.visible = false;
-	_d09ReturnTransitionLayer.setFrame(0);
 	_ronSpeechChannel.reset(0, kScene4050RonSpeechFrameMillis);
 	_ronIdleChannel.reset(0, kScene4050RonSpeechFrameMillis);
 	_ronManualSequenceActive = false;
 }
 
-void Scene4050::restoreSceneObjectPaletteRange() {
-	const uint firstOffset = kScene4050SceneObjectPaletteFirstColor * 3;
-	const uint byteCount = (kScene4050SceneObjectPaletteLastColor -
-		kScene4050SceneObjectPaletteFirstColor + 1) * 3;
+void Scene4050::restoreResourceLayerPalette() {
+	// D05 supplies the colors for both resource-rendered Ron and the flag.
+	const uint firstOffset = kScene4050ResourceLayerPaletteFirstColor * 3;
+	const uint byteCount = (kScene4050ResourceLayerPaletteLastColor -
+		kScene4050ResourceLayerPaletteFirstColor + 1) * 3;
 	if (_paletteResource.size() < firstOffset + byteCount ||
 			_paletteCurrent.size() < firstOffset + byteCount)
 		return;
@@ -309,16 +284,6 @@ void Scene4050::restoreSceneObjectPaletteRange() {
 	memcpy(_paletteCurrent.data() + firstOffset, _paletteResource.data() + firstOffset, byteCount);
 	_surfaceState.rebuildPresentationPaletteRemapTable();
 	invalidatePresentationPalette();
-}
-
-void Scene4050::drawSceneLayers() {
-	if (_d09ReturnTransitionLayer.visible) {
-		drawResourceSpriteLayer(_backgroundLayer);
-		drawResourceSpriteLayer(_d09ReturnTransitionLayer);
-	} else {
-		drawResourceSpriteLayer(_ronLayer);
-		drawResourceSpriteLayer(_backgroundLayer);
-	}
 }
 
 void Scene4050::advanceFlagPalette(uint32 delta) {
@@ -344,15 +309,16 @@ void Scene4050::rotateFlagPalette() {
 void Scene4050::advanceRonLayer(uint32 delta) {
 	if (_ronManualSequenceActive)
 		return;
+	ResourceSpriteLayer &layer = _sceneLayers.layer(kScene4050RonLayer);
 
 	if (_speechOverlay.visible) {
 		const uint frameCount = _ronSpeechChannel.consumeFrames(delta);
 		for (uint frame = 0; frame < frameCount; ++frame) {
-			byte nextFrame = _ronLayer.frameIndex;
-			for (uint attempt = 0; attempt < 8 && nextFrame == _ronLayer.frameIndex; ++attempt)
+			byte nextFrame = layer.frameIndex;
+			for (uint attempt = 0; attempt < 8 && nextFrame == layer.frameIndex; ++attempt)
 				nextFrame = (byte)_random.getRandomNumber(kScene4050RonSpeechFrameCount - 1);
-			if (nextFrame == _ronLayer.frameIndex)
-				nextFrame = (byte)((_ronLayer.frameIndex + 1) % kScene4050RonSpeechFrameCount);
+			if (nextFrame == layer.frameIndex)
+				nextFrame = (byte)((layer.frameIndex + 1) % kScene4050RonSpeechFrameCount);
 			setRonResourceFrame(nextFrame);
 		}
 		return;
@@ -360,7 +326,7 @@ void Scene4050::advanceRonLayer(uint32 delta) {
 
 	const uint frameCount = _ronIdleChannel.consumeFrames(delta);
 	for (uint frame = 0; frame < frameCount; ++frame) {
-		if (_ronLayer.frameIndex == kScene4050RonIdleBlinkFrame) {
+		if (layer.frameIndex == kScene4050RonIdleBlinkFrame) {
 			setRonResourceFrame(0);
 		} else if (_random.getRandomNumber(14) == 0) {
 			setRonResourceFrame(kScene4050RonIdleBlinkFrame);
@@ -400,7 +366,7 @@ void Scene4050::updateAmbientSounds(uint32 delta) {
 }
 
 void Scene4050::setRonResourceFrame(byte frameIndex) {
-	_ronLayer.setFrame(frameIndex);
+	_sceneLayers.setLayerFrame(kScene4050RonLayer, frameIndex);
 	_ronSpeechChannel.frameIndex = frameIndex;
 	_ronIdleChannel.frameIndex = frameIndex;
 }
@@ -412,8 +378,9 @@ void Scene4050::beginRonResourceSpeechLine(uint16 rowIndex, byte frameIndex) {
 	int bottom = 0;
 	uint16 centerX = _activeActorWorldX;
 	uint16 topY = _activeActorWorldY;
-	if (resourceDescriptorBounds(_ronLayer.chunkIndex, _ronLayer.descriptorCount,
-			_ronLayer.descriptorIndex(), left, top, width, bottom)) {
+	const ResourceSpriteLayer &ronLayer = _sceneLayers.layer(kScene4050RonLayer);
+	if (resourceDescriptorBounds(ronLayer.chunkIndex, ronLayer.descriptorCount,
+			ronLayer.descriptorIndex(), left, top, width, bottom)) {
 		centerX = (uint16)(left + width / 2);
 		topY = (uint16)top;
 	}
@@ -425,8 +392,8 @@ void Scene4050::beginRonResourceSpeechLine(uint16 rowIndex, byte frameIndex) {
 
 void Scene4050::runD09ReturnTransitionSequence() {
 	resetAnimationLayers();
-	_backgroundLayer.setFrame(0);
-	_ronLayer.visible = false;
+	_sceneLayers.setLayerFrame(kScene4050BackgroundLayer, 0);
+	_sceneLayers.setLayerVisible(kScene4050RonLayer, false);
 
 	GameplayState &state = _vm->gameState();
 	const byte *frameMap = state.scene4090WideCoffinVariant == 0 ?
@@ -435,21 +402,22 @@ void Scene4050::runD09ReturnTransitionSequence() {
 	const uint frameMapSize = state.scene4090WideCoffinVariant == 0 ?
 		ARRAYSIZE(kScene4050D09ReturnTransitionBaseFrameMap) :
 		ARRAYSIZE(kScene4050D09ReturnTransitionAlternateFrameMap);
-	_d09ReturnTransitionLayer.configure(kScene4050D09ReturnTransitionChunk,
+	_sceneLayers.setLayerResource(kScene4050D09ReturnTransitionLayer,
+		kScene4050D09ReturnTransitionChunk,
 		kScene4050D09ReturnTransitionDescriptorCount, frameMap, frameMapSize);
-	_d09ReturnTransitionLayer.visible = true;
-	_d09ReturnTransitionLayer.setFrame(0);
+	_sceneLayers.showLayerAtFrame(kScene4050D09ReturnTransitionLayer, 0);
 	drawPlayableComposite();
 	presentFrame();
 	if (runCurtainRevealFromBlack())
 		return;
 
-	_soundBank0.playSampleLooping(0x30, 100);
-	const bool completed = playAndPresentAnimationFrames(_d09ReturnTransitionLayer,
-		AnimationFrameRange(0, frameMapSize - 1, kScene4050D09FrameMillis)
-			.unskippable().noFinalFrameDelay());
-	_soundBank0.stop();
-	if (!completed)
+	BlockingSequence sequence(*this);
+	sequence.loopingSound(0x30)
+		.presentedLayerFrames(kScene4050D09ReturnTransitionLayer,
+			AnimationFrameRange(0, frameMapSize - 1, kScene4050D09FrameMillis)
+				.unskippable().noFinalFrameDelay())
+		.stopSound();
+	if (!sequence.completed())
 		return;
 
 	runCurtainClearToBlack();
@@ -457,9 +425,9 @@ void Scene4050::runD09ReturnTransitionSequence() {
 	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
 		return;
 
-	_transitionClearedToBlack = true;
-	state.mainFlowStateId = kScene4090ReturnState;
-	state.activeActorPoseValid = false;
+	sequence.commit(_transitionClearedToBlack, true)
+		.commit(state.mainFlowStateId, kScene4090ReturnState)
+		.commit(state.activeActorPoseValid, false);
 }
 
 bool Scene4050::runCurtainRevealFromBlack() {
@@ -551,18 +519,20 @@ void Scene4050::useLongRopeOnLedge() {
 
 	beginRonResourceSpeechLine(8, 1);
 	_ronManualSequenceActive = true;
-	const bool completed = playAndPresentAnimationFrames(_ronLayer,
+	BlockingSequence sequence(*this);
+	sequence.presentedLayerFrames(kScene4050RonLayer,
 		AnimationFrameRange(5, 0x11, kScene4050ActionFrameMillis)
-			.hookAt(6, kScene4050AttachRopeSoundHook).unskippable().noFinalFrameDelay());
-	setRonResourceFrame(_ronLayer.frameIndex);
+			.soundAt(6, 0x2d).unskippable().noFinalFrameDelay());
+	setRonResourceFrame(_sceneLayers.layerFrame(kScene4050RonLayer));
 	_ronManualSequenceActive = false;
-	if (!completed)
+	if (!sequence.completed())
 		return;
 	removeInventoryItem(kScene4050LongRopeItem);
-	_soundBank0.playSample(1, 100);
-	_vm->gameState().scene4050RopeSwingState = kScene4050PatchStateRopeAttached;
-	applySceneStateToHotspotsAndPatches(1);
-	beginRonResourceSpeechLine(8, 2);
+	sequence.sound(1)
+		.commit(_vm->gameState().scene4050RopeSwingState, kScene4050PatchStateRopeAttached)
+		.framebufferPatch(1);
+	if (sequence.completed())
+		beginRonResourceSpeechLine(8, 2);
 }
 
 void Scene4050::useSceneRope() {
@@ -576,22 +546,16 @@ void Scene4050::useSceneRope() {
 	if (_sceneChunkTable.isValidChunk(kScene4050ExitPatchChunk))
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[kScene4050ExitPatchChunk], _baseFramebuffer);
 	_ronManualSequenceActive = true;
-	const bool completed = playAndPresentAnimationFrames(_ronLayer,
+	BlockingSequence sequence(*this);
+	sequence.presentedLayerFrames(kScene4050RonLayer,
 		AnimationFrameRange(0x12, 0x1b, kScene4050ActionFrameMillis)
-			.hookAt(0x17, kScene4050SwingSoundHook).unskippable().noFinalFrameDelay());
-	setRonResourceFrame(_ronLayer.frameIndex);
+			.soundAt(0x17, 0x2e).unskippable().noFinalFrameDelay());
+	setRonResourceFrame(_sceneLayers.layerFrame(kScene4050RonLayer));
 	_ronManualSequenceActive = false;
-	if (!completed)
+	if (!sequence.completed())
 		return;
-	state.scene4050RopeSwingState = kScene4050PatchStateWindowReached;
-	state.mainFlowStateId = kScene4060FirstState;
-}
-
-void Scene4050::handleAnimationFrameHook(byte hookId, uint frame) {
-	if (hookId == kScene4050AttachRopeSoundHook && frame == 6)
-		_soundBank0.playSample(0x2d, 100);
-	else if (hookId == kScene4050SwingSoundHook && frame == 0x17)
-		_soundBank0.playSample(0x2e, 100);
+	sequence.commit(state.scene4050RopeSwingState, kScene4050PatchStateWindowReached)
+		.commit(state.mainFlowStateId, kScene4060FirstState);
 }
 
 void Scene4050::applyPatchStateColorMap(byte patchState) {
@@ -626,7 +590,7 @@ void Scene4050::applyPatchStateColorMap(byte patchState) {
 
 bool Scene4050::resourceDescriptorBounds(uint chunkIndex, uint16 descriptorCount, uint16 descriptorIndex,
 		int &left, int &top, int &width, int &bottom) const {
-	if (chunkIndex >= HollywoodEngine::kResourceChunkCount || descriptorIndex >= descriptorCount)
+	if (chunkIndex >= kResourceChunkCount || descriptorIndex >= descriptorCount)
 		return false;
 
 	const uint entryOffset = _resourceChunkOffsets[chunkIndex] + kFrameDescriptorSize * descriptorIndex;

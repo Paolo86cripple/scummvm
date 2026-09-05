@@ -19,12 +19,8 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene6000.h"
-
-#include "common/events.h"
-#include "common/system.h"
-
 #include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene6000.h"
 
 namespace Hollywood {
 
@@ -85,7 +81,7 @@ uint Scene6000::sceneArenaLastChunk() const {
 }
 
 void Scene6000::adjustPaletteAfterLoad() {
-	if (_paletteResource.size() >= 0x300) {
+	if (_paletteResource.size() >= kPaletteSize) {
 		_paletteResource[0x2fd] = 0x3f;
 		_paletteResource[0x2fe] = 0x3f;
 		_paletteResource[0x2ff] = 0x3f;
@@ -96,17 +92,12 @@ void Scene6000::runPresentation() {
 	uint tick = 0;
 	uint32 frameAccumulator = 0;
 	uint32 spriteAccumulator = 0;
-	uint32 lastMillis = g_system->getMillis();
+	uint32 delta = 0;
 	bool spriteVisible = false;
 	bool spriteDirty = false;
+	TimedPresentationLoop loop(*this, TimedPresentationLoop::kUntilStopped);
 
-	while (tick < kScene6000EndTick && !_skipRequested && !Engine::shouldQuit()) {
-		if (pollEvents())
-			return;
-
-		const uint32 now = g_system->getMillis();
-		const uint32 delta = now - lastMillis;
-		lastMillis = now;
+	while (tick < kScene6000EndTick && loop.beginFrame()) {
 		frameAccumulator += delta;
 		if (spriteVisible)
 			spriteAccumulator += delta;
@@ -115,7 +106,7 @@ void Scene6000::runPresentation() {
 			frameAccumulator -= kScene6000SceneTickMillis;
 			++tick;
 			if (tick == kScene6000PatchTick)
-				drawResourceBlockList(_resourceArena, _resourceChunkOffsets[2], _sceneFramebuffer.managedSurface());
+				drawResourceBlockList(_resources._arena, _resources._chunkOffsets[2], _sceneFramebuffer.managedSurface());
 			if (tick == kScene6000SpriteStartTick) {
 				spriteVisible = true;
 				spriteAccumulator = kScene6000SpriteFrameMillis;
@@ -138,19 +129,19 @@ void Scene6000::runPresentation() {
 			drawAnimatedSpriteFrame(spriteVisible);
 			spriteDirty = false;
 		}
-		g_system->delayMillis(10);
+		delta = loop.finishFrame();
 	}
 }
 
 void Scene6000::drawAnimatedSpriteFrame(bool drawSprite) {
 	const uint mapIndex = MIN<uint>(_spriteFrameIndex, ARRAYSIZE(kScene6000SpriteFrameMap) - 1);
 	const uint16 descriptor = kScene6000SpriteFrameMap[mapIndex];
-	restoreSpriteBackground(_resourceArena, _resourceChunkOffsets[3], 0,
+	restoreSpriteBackground(_resources._arena, _resources._chunkOffsets[3], 0,
 		kScene6000SpriteDescriptorCount, descriptor,
 		_baseFramebuffer.surface(), _sceneFramebuffer.surface());
 
 	if (drawSprite)
-		drawStripSpriteFrame(_resourceArena, _resourceChunkOffsets[3], 0,
+		drawStripSpriteFrame(_resources._arena, _resources._chunkOffsets[3], 0,
 			kScene6000SpriteDescriptorCount, descriptor, _sceneFramebuffer.surface());
 
 	presentFrame();

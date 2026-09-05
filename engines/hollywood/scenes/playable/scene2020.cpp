@@ -19,13 +19,12 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene2020.h"
-
 #include "common/rect.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene2020.h"
 
 namespace Hollywood {
 
@@ -61,12 +60,6 @@ const byte kScene2020TigerToothInventoryItem = 0x26;
 const byte kScene2020SteakInventoryItem = 0x45;
 const byte kScene2020LabInventoryItem = 0x11;
 
-enum Scene2020OverlayHook {
-	kScene2020HatPickupPatchHook = 1,
-	kScene2020SunglassesPickupPatchHook = 2,
-	kScene2020TigerToothPickupPatchHook = 3
-};
-
 const byte kScene2020PoolFrameMap[] = {
 	0, 1, 0, 2
 };
@@ -83,24 +76,9 @@ const byte kScene2020PrincessFrameMap[] = {
 	0, 0, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30
 };
 
-const byte kScene2020PickupFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8
-};
-
-const byte kScene2020TigerToothPickupFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
-};
-
 const byte kScene2020TigerItemOverlayFrameMap[] = {
 	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 };
-
-static_assert(ARRAYSIZE(kScene2020PoolFrameMap) == 4, "Scene 2020 pool frame map size changed");
-static_assert(ARRAYSIZE(kScene2020TigerFrameMap) == 36, "Scene 2020 tiger frame map size changed");
-static_assert(ARRAYSIZE(kScene2020PrincessFrameMap) == 36, "Scene 2020 princess frame map size changed");
-static_assert(ARRAYSIZE(kScene2020PickupFrameMap) == 10, "Scene 2020 pickup frame map size changed");
-static_assert(ARRAYSIZE(kScene2020TigerToothPickupFrameMap) == 14, "Scene 2020 tooth pickup frame map size changed");
-static_assert(ARRAYSIZE(kScene2020TigerItemOverlayFrameMap) == 11, "Scene 2020 tiger item overlay frame map size changed");
 
 const SceneLayerSpec kScene2020LayerSpecs[] = {
 	{kSceneAnimationBehindActors, 5, kScene2020PoolDescriptorCount,
@@ -113,7 +91,7 @@ const SceneLayerSpec kScene2020LayerSpecs[] = {
 		nullptr, 0, false, 0}
 };
 
-static PlayableSceneConfig scene2020Config() {
+PlayableSceneConfig scene2020Config() {
 	PlayableSceneConfig config(2020,
 		SceneResourceLayout(19, 5, 18),
 		SceneViewport(0),
@@ -142,8 +120,7 @@ Scene2020::Scene2020(HollywoodEngine *vm) :
 		_tigerItemEffectEnabled(false),
 		_tigerReactionStarted(false) {
 	_sceneLayers.configure(kScene2020LayerSpecs);
-	_poolTrack = _realtimeAnimationTracks.addFrameMap(poolLayer(),
-		kScene2020PoolFrameMillis);
+	_poolTrack = _realtimeAnimationTracks.addFrameMap(kPoolLayer, kScene2020PoolFrameMillis);
 }
 
 void Scene2020::initializeCustomPreviewState() {
@@ -338,11 +315,6 @@ void Scene2020::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIn
 		princessLayer().setFrame(frameIndex);
 }
 
-void Scene2020::handleAnimationFrameHook(byte hookId, uint frame) {
-	(void)frame;
-	drawPickupPatch(hookId);
-}
-
 AmbientAudioProfile Scene2020::ambientAudioProfile() const {
 	return createRandomAmbientAudioProfile(0x16, 5, 10, 1, 0x0b, 3, 100, 50);
 }
@@ -518,13 +490,14 @@ void Scene2020::runPrincessExitCutscene() {
 	if (runCurtainRevealFromBlack())
 		return;
 
-	_princessSpeechTransitionActive = true;
-	playAndPresentAnimationTransition(princessLayer(),
-		AnimationTransition(0, 0x19, 0x19, kScene2020PrincessFrameMillis).unskippable());
-	playAndPresentAnimationTransition(princessLayer(),
-		AnimationTransition(0, 0x19, 0x19, kScene2020PrincessFrameMillis).unskippable());
-	_princessSpeechTransitionActive = false;
-	if (animationPlaybackShouldStop())
+	BlockingSequence sequence(*this);
+	sequence.commit(_princessSpeechTransitionActive, true)
+		.presentedLayerTransition(kPrincessLayer,
+			AnimationTransition(0, 0x19, 0x19, kScene2020PrincessFrameMillis).unskippable())
+		.presentedLayerTransition(kPrincessLayer,
+			AnimationTransition(0, 0x19, 0x19, kScene2020PrincessFrameMillis).unskippable())
+		.commit(_princessSpeechTransitionActive, false);
+	if (!sequence.completed())
 		return;
 
 	GameplayState &state = _vm->gameState();
@@ -675,11 +648,12 @@ void Scene2020::runPrincessSpeechTransition(bool opening) {
 	if (animationPlaybackShouldStop())
 		return;
 
-	_princessSpeechTransitionActive = true;
-	playAndPresentAnimationTransition(princessLayer(),
-		AnimationTransition(opening ? 0x19 : 0x20, opening ? 0x1f : 0x19,
-			opening ? 0x1f : 0x19, kScene2020PrincessFrameMillis).unskippable());
-	_princessSpeechTransitionActive = false;
+	BlockingSequence(*this)
+		.commit(_princessSpeechTransitionActive, true)
+		.presentedLayerTransition(kPrincessLayer,
+			AnimationTransition(opening ? 0x19 : 0x20, opening ? 0x1f : 0x19,
+				opening ? 0x1f : 0x19, kScene2020PrincessFrameMillis).unskippable())
+		.commit(_princessSpeechTransitionActive, false);
 }
 
 void Scene2020::beginPrincessSpeechLine(byte frameIndex) {
@@ -755,22 +729,22 @@ void Scene2020::runPrincessDialogue() {
 
 void Scene2020::initializePrincessDialogueRecords(Common::Array<DialogueChoiceRecord> &records) const {
 	records.resize(kScene2020PrincessDialogueChoiceRecordCount);
-	setDialogueRecord(records, 0, 1, 0, 1, 4, 4, 1, 0xff);
-	setDialogueRecord(records, 1, 1, 0, 3, 5, 5, 1, 0xff);
-	setDialogueRecord(records, 2, 1, 0, 3, 6, 6, 1, 0xff);
-	setDialogueRecord(records, 3, 1, 0, 0, 7, 7, 0, 0xff);
-	setDialogueRecord(records, 70, 1, 0, 1, 8, 8, 1, 0xff);
-	setDialogueRecord(records, 71, 1, 0, 3, 9, 9, 1, 0xff);
-	setDialogueRecord(records, 72, 1, 0, 3, 10, 10, 1, 0xff);
-	setDialogueRecord(records, 73, 1, 0, 2, 11, 11, 0, 0xff);
-	setDialogueRecord(records, 140, 1, 0, 3, 12, 12, 1, 0xff);
-	setDialogueRecord(records, 141, 1, 0, 3, 13, 13, 1, 0xff);
-	setDialogueRecord(records, 142, 1, 0, 2, 11, 11, 0, 0xff);
+	setDialogueRecord(records, 0, 1, 0, 1, 4, 4, 1);
+	setDialogueRecord(records, 1, 1, 0, 3, 5, 5, 1);
+	setDialogueRecord(records, 2, 1, 0, 3, 6, 6, 1);
+	setDialogueRecord(records, 3, 1, 0, 0, 7, 7, 0);
+	setDialogueRecord(records, 70, 1, 0, 1, 8, 8, 1);
+	setDialogueRecord(records, 71, 1, 0, 3, 9, 9, 1);
+	setDialogueRecord(records, 72, 1, 0, 3, 10, 10, 1);
+	setDialogueRecord(records, 73, 1, 0, 2, 11, 11, 0);
+	setDialogueRecord(records, 140, 1, 0, 3, 12, 12, 1);
+	setDialogueRecord(records, 141, 1, 0, 3, 13, 13, 1);
+	setDialogueRecord(records, 142, 1, 0, 2, 11, 11, 0);
 }
 
 void Scene2020::setDialogueRecord(Common::Array<DialogueChoiceRecord> &records, uint index,
 		byte enabled, byte nextNodeIndex, byte transitionMode, byte playerTextRowId,
-		byte responseFrameIndex, byte disableAfterUse, byte reserved) const {
+		byte responseFrameIndex, byte disableAfterUse) const {
 	if (index >= records.size())
 		return;
 
@@ -781,7 +755,6 @@ void Scene2020::setDialogueRecord(Common::Array<DialogueChoiceRecord> &records, 
 	record.playerTextRowId = playerTextRowId;
 	record.responseFrameIndex = responseFrameIndex;
 	record.disableAfterUse = disableAfterUse;
-	record.reserved = reserved;
 	record.selectable = enabled != 0;
 }
 
@@ -796,14 +769,15 @@ void Scene2020::runHatPickup() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(12, kScene2020PickupDescriptorCount,
-		kScene2020PickupFrameMap, ARRAYSIZE(kScene2020PickupFrameMap), kScene2020OverlayFrameMillis)
-		.hookAt(4, kScene2020HatPickupPatchHook)
-		.noFinalFrameDelay());
-	state.scene2020HatPresent = false;
-	applySceneStateToHotspotsAndPatches(0xff);
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(12, kScene2020PickupDescriptorCount,
+			kScene2020OverlayFrameMillis).holdFirstFrame()
+			.resourcePatchAt(4, state.scene2020SunglassesPresent ? 9 : 10)
+			.noFinalFrameDelay())
+		.commit(state.scene2020HatPresent, false)
+		.framebufferPatch(0xff);
 	addInventoryItem(kScene2020HatInventoryItem);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 	dispatchGenericSceneAction(21);
 }
 
@@ -818,14 +792,15 @@ void Scene2020::runSunglassesPickup() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(12, kScene2020PickupDescriptorCount,
-		kScene2020PickupFrameMap, ARRAYSIZE(kScene2020PickupFrameMap), kScene2020OverlayFrameMillis)
-		.hookAt(4, kScene2020SunglassesPickupPatchHook)
-		.noFinalFrameDelay());
-	state.scene2020SunglassesPresent = false;
-	applySceneStateToHotspotsAndPatches(0xff);
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(12, kScene2020PickupDescriptorCount,
+			kScene2020OverlayFrameMillis).holdFirstFrame()
+			.resourcePatchAt(4, state.scene2020HatPresent ? 8 : 10)
+			.noFinalFrameDelay())
+		.commit(state.scene2020SunglassesPresent, false)
+		.framebufferPatch(0xff);
 	addInventoryItem(kScene2020SunglassesInventoryItem);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 	dispatchGenericSceneAction(21);
 }
 
@@ -837,15 +812,16 @@ void Scene2020::runTigerToothPickup() {
 
 	const bool previousLongIdleAllowed = _princessLongIdleAllowed;
 	_princessLongIdleAllowed = false;
-	runActorReplacement(ActionOverlaySpec(18, kScene2020TigerToothPickupDescriptorCount,
-		kScene2020TigerToothPickupFrameMap, ARRAYSIZE(kScene2020TigerToothPickupFrameMap), kScene2020OverlayFrameMillis)
-		.hookAt(7, kScene2020TigerToothPickupPatchHook)
-		.noFinalFrameDelay());
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(18, kScene2020TigerToothPickupDescriptorCount,
+			kScene2020OverlayFrameMillis).holdFirstFrame()
+			.resourcePatchAt(7, 17)
+			.noFinalFrameDelay());
 	_princessLongIdleAllowed = previousLongIdleAllowed;
-	_vm->gameState().scene2020TigerToothState = 2;
-	applySceneStateToHotspotsAndPatches(2);
+	sequence.commit(_vm->gameState().scene2020TigerToothState, (byte)2)
+		.framebufferPatch(2);
 	addInventoryItem(kScene2020TigerToothInventoryItem);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 	dispatchGenericSceneAction(21);
 }
 
@@ -898,27 +874,6 @@ bool Scene2020::runTigerItemOverlaySequence(bool withEffect) {
 	drawPlayableComposite();
 	presentFrame();
 	return completed;
-}
-
-void Scene2020::drawPickupPatch(byte hookId) {
-	uint patchChunk = 0;
-	const GameplayState &state = _vm->gameState();
-	switch (hookId) {
-	case kScene2020HatPickupPatchHook:
-		patchChunk = state.scene2020SunglassesPresent ? 9 : 10;
-		break;
-	case kScene2020SunglassesPickupPatchHook:
-		patchChunk = state.scene2020HatPresent ? 8 : 10;
-		break;
-	case kScene2020TigerToothPickupPatchHook:
-		patchChunk = 17;
-		break;
-	default:
-		return;
-	}
-
-	if (_sceneChunkTable.isValidChunk(patchChunk))
-		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[patchChunk], _baseFramebuffer);
 }
 
 void Scene2020::replaceColorMapItem(byte sourceItem, byte destinationItem) {

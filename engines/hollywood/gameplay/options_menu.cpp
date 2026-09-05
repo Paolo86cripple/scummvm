@@ -19,8 +19,6 @@
  *
  */
 
-#include "hollywood/gameplay/options_menu.h"
-
 #include "common/events.h"
 #include "common/file.h"
 #include "common/formats/winexe.h"
@@ -32,11 +30,12 @@
 #include "graphics/pixelformat.h"
 #include "graphics/surface.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/font.h"
 #include "hollywood/game_strings.h"
 #include "hollywood/gameplay/game_state.h"
+#include "hollywood/gameplay/options_menu.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
 
 namespace Hollywood {
 
@@ -49,7 +48,6 @@ const uint kOptionsResource000OffsetTableSize = 400;
 const uint kOptionsResource000SizeTableSize = 400;
 const uint kOptionsFramebufferEntry = 0x2a;
 const uint kOptionsObjectPaletteResource000Entry = 0x31;
-const uint kOptionsFramebufferSize = 0x78000;
 const uint kOptionsViewportXOffset = 0x180;
 const uint kOptionsObjectPaletteOffset = 0x210;
 const uint kOptionsObjectPaletteSize = 0xf0;
@@ -199,12 +197,13 @@ bool GameplayOptionsMenu::loadMenuFramebuffer() {
 	}
 
 	const uint32 frameOffset = readUint32LE(offsetTable, tableOffset);
-	if (frameOffset > (uint32)file.size() || kOptionsFramebufferSize > (uint32)file.size() - frameOffset) {
+	if (frameOffset > (uint32)file.size() ||
+			kSceneBufferByteCount > (uint32)file.size() - frameOffset) {
 		warning("%s options menu framebuffer is out of range", kOptionsResource000Name);
 		return false;
 	}
 
-	_menuFramebuffer.resize(kOptionsFramebufferSize);
+	_menuFramebuffer.resize(kSceneBufferByteCount);
 	file.seek(frameOffset);
 	if (file.read(_menuFramebuffer.data(), _menuFramebuffer.size()) != _menuFramebuffer.size()) {
 		warning("Failed to read Hollywood options menu framebuffer");
@@ -284,7 +283,10 @@ void GameplayOptionsMenu::pollEvents(bool &done) {
 			_vm->cursor()->updatePosition(event.mouse);
 			break;
 		case Common::EVENT_KEYDOWN:
-			handleKeyDown(event.kbd.keycode, done);
+			if (!event.kbdRepeat ||
+					(event.kbd.keycode != Common::KEYCODE_RETURN &&
+					 event.kbd.keycode != Common::KEYCODE_KP_ENTER))
+				handleKeyDown(event.kbd.keycode, done);
 			break;
 		case Common::EVENT_LBUTTONDOWN:
 			_vm->cursor()->updatePosition(event.mouse);
@@ -786,7 +788,7 @@ byte GameplayOptionsMenu::nearestPreviewPaletteColor(uint red, uint green, uint 
 }
 
 void GameplayOptionsMenu::composeScreen() {
-	if (_menuFramebuffer.size() < kOptionsFramebufferSize) {
+	if (_menuFramebuffer.size() < kSceneBufferByteCount) {
 		_screen.fillRect(_screen.getBounds(), 0);
 		return;
 	}

@@ -34,12 +34,7 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
@@ -62,14 +57,10 @@ private:
 	void runBridgeOpeningOverlay();
 	void patchActionMovementModes();
 
-	SceneLayerStack _backgroundLayers;
-	SceneLayerStack _bridgeBackLayers;
-	SceneLayerStack _bridgeFrontLayers;
 	TimedAnimationChannel _backgroundChannel;
 	byte _backgroundSequence;
 	byte _backgroundFrameInSequence;
 	byte _backgroundRepeatCounter;
-	bool _bridgeSequenceActive;
 	uint32 _ambientSoundTimerAccumulator;
 	byte _lastAmbientLoopCue;
 	byte _previousAmbientSoundCue;

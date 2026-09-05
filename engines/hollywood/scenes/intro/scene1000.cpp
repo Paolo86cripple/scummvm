@@ -19,12 +19,10 @@
  *
  */
 
-#include "hollywood/scenes/intro/scene1000.h"
-
-#include "common/system.h"
-
-#include "hollywood/gameplay/game_state.h"
 #include "hollywood/hollywood.h"
+#include "hollywood/gameplay/game_state.h"
+#include "hollywood/scenes/intro/scene1000.h"
+#include "hollywood/scenes/shared_frame_sequences.h"
 
 namespace Hollywood {
 
@@ -42,13 +40,6 @@ const uint kTitleBackgroundRefreshPhase = 7;
 const uint kTitleEndPhase = 0x32;
 const uint kTitleNearEndPhase = 0x31;
 const uint kTitleBackgroundRefreshBytes = 0x10000;
-
-const byte kTitleBlinkDescriptorFrameMap[] = {
-	0, 11, 0, 1, 2, 1, 0, 0,
-	1, 2, 3, 4, 5, 6, 7, 8,
-	9, 10, 10, 10, 10, 10, 9, 8,
-	7, 6, 5, 4, 3, 2, 1, 0
-};
 
 Scene1000::Scene1000(HollywoodEngine *vm) :
 		ChapterIntroScene(vm, "title front-end"),
@@ -106,15 +97,10 @@ void Scene1000::runPresentation() {
 	uint32 paletteAccumulator = 0;
 	uint32 blinkAccumulator = 0;
 	uint32 secondaryAccumulator = 0;
-	uint32 lastMillis = g_system->getMillis();
+	uint32 delta = 0;
+	TimedPresentationLoop loop(*this, kTitleEndPhase * kTitlePhaseMillis);
 
-	while (phase < kTitleEndPhase && !_skipRequested && !Engine::shouldQuit()) {
-		if (pollEvents())
-			return;
-
-		const uint32 now = g_system->getMillis();
-		const uint32 delta = now - lastMillis;
-		lastMillis = now;
+	while (phase < kTitleEndPhase && loop.beginFrame()) {
 		phaseAccumulator += delta;
 		paletteAccumulator += delta;
 		blinkAccumulator += delta;
@@ -146,7 +132,7 @@ void Scene1000::runPresentation() {
 			phaseAccumulator -= kTitlePhaseMillis;
 			++phase;
 			if (phase == kTitlePatchPhase) {
-				drawResourceBlockList(_resourceArena, _resourceChunkOffsets[2],
+				drawResourceBlockList(_resources._arena, _resources._chunkOffsets[2],
 					_sceneFramebuffer.managedSurface());
 				_blinkDirty = true;
 			}
@@ -164,7 +150,7 @@ void Scene1000::runPresentation() {
 		}
 
 		renderOverlayFrame(false);
-		g_system->delayMillis(10);
+		delta = loop.finishFrame();
 	}
 }
 
@@ -215,24 +201,24 @@ void Scene1000::renderOverlayFrame(bool forceDirty) {
 			_secondaryDirty = true;
 	}
 
-	const uint blinkMapIndex = MIN<uint>(_blinkFrameIndex, ARRAYSIZE(kTitleBlinkDescriptorFrameMap) - 1);
-	const byte blinkDescriptor = kTitleBlinkDescriptorFrameMap[blinkMapIndex];
+	const uint blinkMapIndex = MIN<uint>(_blinkFrameIndex, kTitleBlinkFrameCount - 1);
+	const byte blinkDescriptor = kTitleBlinkFrames[blinkMapIndex];
 
 	if (_blinkDirty) {
-		restoreSpriteBackground(_resourceArena, _resourceChunkOffsets[3], 0,
+		restoreSpriteBackground(_resources._arena, _resources._chunkOffsets[3], 0,
 			kBlinkDescriptorCount, blinkDescriptor, _baseFramebuffer.surface(),
 			_sceneFramebuffer.surface());
 	}
 	if (_secondaryDirty && _secondaryVisible) {
-		restoreSpriteBackground(_resourceArena, _resourceChunkOffsets[4], 0,
+		restoreSpriteBackground(_resources._arena, _resources._chunkOffsets[4], 0,
 			kSecondaryDescriptorCount, _secondaryFrameIndex, _baseFramebuffer.surface(),
 			_sceneFramebuffer.surface());
 	}
 
-	drawStripSpriteFrame(_resourceArena, _resourceChunkOffsets[3], 0,
+	drawStripSpriteFrame(_resources._arena, _resources._chunkOffsets[3], 0,
 		kBlinkDescriptorCount, blinkDescriptor, _sceneFramebuffer.surface());
 	if (_secondaryVisible) {
-		drawStripSpriteFrame(_resourceArena, _resourceChunkOffsets[4], 0,
+		drawStripSpriteFrame(_resources._arena, _resources._chunkOffsets[4], 0,
 			kSecondaryDescriptorCount, _secondaryFrameIndex, _sceneFramebuffer.surface());
 	}
 

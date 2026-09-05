@@ -19,13 +19,12 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene3040.h"
-
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene3040.h"
 
 namespace Hollywood {
 
@@ -41,9 +40,10 @@ const uint32 kScene3040ForegroundFrameMillis = 75;
 const uint32 kScene3040ForegroundIdleFrameMillis = 150;
 const uint kScene3040ForegroundActorDescriptorCount = 0x14;
 const uint kScene3040LoopDescriptorCount = 8;
+const uint kScene3040ForegroundActorLayer = 0;
+const uint kScene3040LoopLayer = 1;
 const byte kScene3040HiddenObjectItemId = 3;
 const byte kScene3040HiddenObjectPatchChunk = 7;
-const byte kScene3040HiddenObjectPatchHook = 1;
 
 const byte kScene3040ForegroundFrameMap[] = {
 	0, 1, 2, 1, 4, 5, 6, 7, 8, 9,
@@ -51,7 +51,14 @@ const byte kScene3040ForegroundFrameMap[] = {
 	19
 };
 
-static PlayableSceneConfig scene3040Config() {
+const SceneLayerSpec kScene3040LayerSpecs[] = {
+	{kSceneAnimationActorReplacement, 5, kScene3040ForegroundActorDescriptorCount,
+		kScene3040ForegroundFrameMap, ARRAYSIZE(kScene3040ForegroundFrameMap), true, 0},
+	{kSceneAnimationInFrontOfActors, 6, kScene3040LoopDescriptorCount,
+		nullptr, 0, true, 0}
+};
+
+PlayableSceneConfig scene3040Config() {
 	PlayableSceneConfig config(3040,
 		SceneResourceLayout(8, 5, 7),
 		SceneViewport(kScene3040ViewportXOffset, kScene3040ViewportXOffset, kScene3040ViewportXOffset),
@@ -60,55 +67,18 @@ static PlayableSceneConfig scene3040Config() {
 	config.setTextResources(kScene3040Resource003RowsOffsetIndex, kScene3040SpeechCueDescriptorTableOffset);
 	config.setActorPathStepDeltas(kActorPathStepDeltaTableSet00);
 	config.walkablePaletteMaxRegion = 20;
+	config.drawDefaultActor = false;
 	return config;
-}
-
-static void drawLooseSpriteFrame(const Common::Array<byte> &resource, uint32 baseOffset,
-		uint16 descriptorCount, uint16 descriptorIndex, Graphics::ManagedSurface &destination) {
-	const uint entryOffset = baseOffset + kFrameDescriptorSize * descriptorIndex;
-	if (entryOffset + kFrameDescriptorSize > resource.size())
-		return;
-
-	const uint16 spanCount = readUint16LE(resource, entryOffset + 12);
-	uint cursor = baseOffset + kFrameDescriptorSize * descriptorCount + readUint32LE(resource, entryOffset);
-	if (cursor > resource.size())
-		return;
-
-	for (uint spanIndex = 0; spanIndex < spanCount; ++spanIndex) {
-		if (cursor + 5 > resource.size())
-			return;
-
-		const uint32 packedDestination = readUint32LE(resource, cursor);
-		const int dataLength = resource[cursor + 4];
-		cursor += 5;
-
-		if (cursor + dataLength > resource.size())
-			return;
-
-		const int x = packedDestination & 0xffff;
-		const int y = (int)((packedDestination >> 16) & 0xffff);
-		if (y >= 0 && y < destination.h && x >= 0 && x < destination.w) {
-			const int drawWidth = MIN<int>(dataLength, destination.w - x);
-			if (drawWidth > 0)
-				destination.copyRectToSurface(resource.data() + cursor, dataLength, x, y, drawWidth, 1);
-		}
-
-		cursor += dataLength;
-	}
 }
 
 Scene3040::Scene3040(HollywoodEngine *vm) :
 		PlayableScene(vm, scene3040Config()),
 		_foregroundActorChannel(),
-		_foregroundActorLayer(),
-		_loopLayer(),
 		_loopTrack(RealtimeAnimationTracks::kInvalidTrack),
 		_foregroundActorBlinkActive(false),
 		_foregroundActionActive(false) {
-	_foregroundActorLayer.configure(5, kScene3040ForegroundActorDescriptorCount,
-		kScene3040ForegroundFrameMap, ARRAYSIZE(kScene3040ForegroundFrameMap));
-	_loopLayer.configure(6, kScene3040LoopDescriptorCount, nullptr, 0);
-	_loopTrack = _realtimeAnimationTracks.addLoop(_loopLayer,
+	_sceneLayers.configure(kScene3040LayerSpecs);
+	_loopTrack = _realtimeAnimationTracks.addLoop(kScene3040LoopLayer,
 		kScene3040LoopFrameMillis, kScene3040LoopDescriptorCount);
 }
 
@@ -119,24 +89,8 @@ void Scene3040::initializeCustomPreviewState() {
 	setActiveActorPose(0x210, 0x139, 2);
 }
 
-void Scene3040::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)drawActiveActor;
-	(void)activeFacing;
-	(void)activeCel;
-	(void)activeWorldX;
-	(void)activeWorldY;
-	(void)drawSecondaryActor;
-	(void)secondaryFacing;
-	(void)secondaryFrame;
-	(void)secondaryWorldX;
-	(void)secondaryWorldY;
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawLooseResourceSpriteLayer(_foregroundActorLayer);
-	drawLooseResourceSpriteLayer(_loopLayer);
+bool Scene3040::shouldDrawSecondaryActorInPlayableComposite() const {
+	return false;
 }
 
 void Scene3040::runCustomEntrySequence() {
@@ -220,11 +174,9 @@ AmbientAudioProfile Scene3040::ambientAudioProfile() const {
 }
 
 void Scene3040::resetAnimationLayers() {
+	_sceneLayers.reset();
 	_realtimeAnimationTracks.reset(_loopTrack);
 	_foregroundActorChannel.reset(0, kScene3040ForegroundIdleFrameMillis);
-	_foregroundActorLayer.visible = true;
-	_loopLayer.visible = true;
-	_foregroundActorLayer.reset(0);
 	_foregroundActorBlinkActive = false;
 	_foregroundActionActive = false;
 }
@@ -247,32 +199,23 @@ void Scene3040::advanceForegroundActorLayer(uint32 delta) {
 			byte nextFrame;
 			do {
 				nextFrame = (byte)_random.getRandomNumber(4);
-			} while (nextFrame == _foregroundActorLayer.frameIndex);
-			_foregroundActorLayer.setFrame(nextFrame);
+			} while (nextFrame == _sceneLayers.layerFrame(kScene3040ForegroundActorLayer));
+			_sceneLayers.setLayerFrame(kScene3040ForegroundActorLayer, nextFrame);
 			_foregroundActorBlinkActive = false;
 			continue;
 		}
 
-		if (_foregroundActorLayer.frameIndex != 0) {
-			_foregroundActorLayer.setFrame(0);
+		if (_sceneLayers.layerFrame(kScene3040ForegroundActorLayer) != 0) {
+			_sceneLayers.setLayerFrame(kScene3040ForegroundActorLayer, 0);
 			_foregroundActorBlinkActive = false;
 			continue;
 		}
 
 		if (!_foregroundActorBlinkActive && _random.getRandomNumber(14) == 0) {
-			_foregroundActorLayer.setFrame(4);
+			_sceneLayers.setLayerFrame(kScene3040ForegroundActorLayer, 4);
 			_foregroundActorBlinkActive = true;
 		}
 	}
-}
-
-void Scene3040::drawLooseResourceSpriteLayer(const ResourceSpriteLayer &layer) {
-	if (!layer.visible || layer.chunkIndex >= HollywoodEngine::kResourceChunkCount ||
-			!_sceneChunkTable.isValidChunk(layer.chunkIndex))
-		return;
-
-	drawLooseSpriteFrame(_resourceArena, _resourceChunkOffsets[layer.chunkIndex],
-		layer.descriptorCount, layer.descriptorIndex(), _sceneFramebuffer);
 }
 
 void Scene3040::updateHiddenObjectHotspots() {
@@ -294,37 +237,32 @@ void Scene3040::updateHiddenObjectHotspots() {
 void Scene3040::runExitToScene3010() {
 	BlockingSequence(*this)
 		.commit(_foregroundActionActive, true)
-		.layerFrames(_foregroundActorLayer,
+		.layerFrames(kScene3040ForegroundActorLayer,
 			AnimationFrameRange(0x0e, 0x14, kScene3040ForegroundFrameMillis))
 		.commit(_foregroundActionActive, false)
 		.commit(_vm->gameState().mainFlowStateId, kScene3010EntryFromScene3040State);
 }
 
 void Scene3040::runInventoryPatchAction() {
+	GameplayState &state = _vm->gameState();
 	BlockingSequence sequence(*this);
 	sequence.secondarySpeech(1, 5)
 		.commit(_foregroundActionActive, true)
-		.layerFrames(_foregroundActorLayer,
+		.layerFrames(kScene3040ForegroundActorLayer,
 			AnimationFrameRange(4, 0x0e, kScene3040ForegroundFrameMillis)
-				.hookAt(0x0b, kScene3040HiddenObjectPatchHook))
+				.commitAt(0x0b, state.scene3040HiddenObjectVisible, true)
+				.patchAt(0x0b, 1))
 		.commit(_foregroundActionActive, false);
 
 	const byte inventoryItem = selectedInventoryItemForPatchAction();
 	if (inventoryItem != 0)
 		removeInventoryItem(inventoryItem);
 
-	sequence.commit(_vm->gameState().scene3040HiddenObjectVisible, true)
+	sequence.commit(state.scene3040HiddenObjectVisible, true)
 		.framebufferPatch(1)
 		.sound(1);
 	drawPlayableComposite();
 	presentFrame();
-}
-
-void Scene3040::handleAnimationFrameHook(byte hookId, uint frame) {
-	if (hookId == kScene3040HiddenObjectPatchHook && frame == 0x0b) {
-		_vm->gameState().scene3040HiddenObjectVisible = true;
-		applySceneStateToHotspotsAndPatches(1);
-	}
 }
 
 void Scene3040::applyHiddenObjectPatch() {

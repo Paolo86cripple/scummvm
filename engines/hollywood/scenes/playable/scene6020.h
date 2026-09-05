@@ -34,9 +34,8 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
+	void drawCustomBackgroundComposite(int activeWorldX, int activeWorldY) override;
+	void drawCustomForegroundComposite(int activeWorldX, int activeWorldY) override;
 	void runCustomEntrySequence() override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
@@ -46,7 +45,6 @@ private:
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
 	byte primarySpeechAnimationFrameCount(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetTaffyLayer();
@@ -92,7 +90,6 @@ private:
 
 	Common::Array<byte> _originalColorToItemMap;
 	TimedAnimationChannel _taffyChannel;
-	ResourceSpriteLayer _taffyLayer;
 	byte _taffyAnimationState;
 	byte _taffyHoldCounter;
 	bool _taffyDeskMagnifierHidden;
@@ -105,7 +102,6 @@ private:
 	uint16 _taffyDepartureFrameDescriptorCount;
 	uint16 _taffyDepartureFrameDescriptorIndex;
 	Common::Array<byte> _phoneResource;
-	ResourceSpriteLayer _phoneLayer;
 	bool _phoneAnimationActive;
 };
 

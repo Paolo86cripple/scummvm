@@ -26,31 +26,30 @@
 #include "common/random.h"
 
 #include "hollywood/music.h"
-#include "hollywood/scenes/intro/intro_resource_set.h"
-#include "hollywood/scenes/intro/intro_scene.h"
+#include "hollywood/scenes/presentation_scene.h"
 
 namespace Hollywood {
 
 class HollywoodEngine;
 
-class Scene9050 : public IntroSceneBase {
+class Scene9050 : public PresentationScene {
 public:
 	Scene9050(HollywoodEngine *vm);
 
 	bool play();
 
 private:
-	bool loadResourceChunk(uint index, Common::Array<byte> &destination, uint fixedSize);
-	bool loadResourceChunk(uint index, IndexedSurfaceBuffer &destination, uint fixedSize);
-	bool loadResourceArenaChunk(uint archiveIndex, uint localChunkIndex);
+	enum BlockingAnimationMode {
+		kNoBlockingAnimation,
+		kResourceI05ClipAnimation,
+		kInterClipRevealAnimation,
+		kInterClipReverseAnimation,
+		kResourceI08BlinkAnimation,
+		kResourceI07FinalAnimation
+	};
 
 	bool loadResourceI06Assets();
-	bool loadResourceI06Chunk(uint index, Common::Array<byte> &destination, uint fixedSize);
-	bool loadResourceI06ArenaChunk(uint index);
 	bool loadResourceI05ClipSegment(byte segmentId);
-	bool loadResourceI05Chunk(uint index, Common::Array<byte> &destination, uint fixedSize);
-	bool loadResourceI05Chunk(uint index, IndexedSurfaceBuffer &destination, uint fixedSize);
-	bool loadResourceI05ArenaChunk(uint archiveIndex, uint localChunkIndex);
 	bool loadResourceI08BlinkAssets();
 	bool loadResourceI07FinalAssets();
 
@@ -73,6 +72,8 @@ private:
 	void advanceResourceI06VerticalBob();
 	void advanceResourceI06PalettePulse();
 	void markResourceI06CompositeDirty();
+	bool runResourceI06AnimationLoop(bool interlude, bool runScriptedSpriteSequence);
+	void finishResourceI06AnimationLoop(bool interlude);
 	void ensureContinuousSound(byte cueId, byte volumePercent);
 	void stopContinuousSound();
 
@@ -89,6 +90,11 @@ private:
 	bool waitResourceI08BlinkLoop(uint32 millis);
 	bool runResourceI07FinalAnimation();
 	bool waitSceneCounterPast(uint threshold);
+	bool playBlockingAnimation(BlockingAnimationMode mode, byte firstFrame,
+		byte lastFrame, uint32 frameMillis, byte chunkIndex = 0,
+		bool waitAfterFinalFrame = false);
+	void presentAnimationFrame() override;
+	bool waitForAnimationFrame(uint32 millis, bool allowSkip) override;
 
 	void stopAudio() override;
 
@@ -100,24 +106,17 @@ private:
 		kI05InterClipFrameDescriptorCount = 10,
 		kI08BlinkFrameDescriptorCount = 2,
 		kI07FinalFrameDescriptorCount = 0x15,
-		kI06InitialBaseScrollOffset = 0xc0,
-		kI06SequenceDoneFrame = 0x17f,
-		kI06InterludeStartFrame = 0x80,
-		kI06InterludeDoneFrame = 0x1ff,
-		kI06FrameCounterWrap = 0x27f
+		kI06InitialBaseScrollOffset = 0xc0
 	};
 
 	MusicPlayer _music;
 	SoundBank0Player _continuousSound;
 	SoundBank0Player _effectSound;
 	Common::RandomSource _random;
-	IntroResourceSet _resources;
 	Common::Array<byte> _paletteResource;
 	IndexedSurfaceBuffer _clipBaseFramebuffer;
 	uint32 _i05ClipChunkSize;
-	uint32 _i05ClipFrameAccumulator;
-	uint32 _i05InterClipAccumulator;
-	uint32 _i08BlinkAccumulator;
+	byte _i05ClipFrameCount;
 	uint32 _i06ScrollAccumulator;
 	uint32 _i06PrimarySpriteAccumulator;
 	uint32 _i06SecondarySpriteAccumulator;
@@ -140,6 +139,9 @@ private:
 	byte _currentMusicCue;
 	byte _continuousSoundCue;
 	byte _i05EntriesPerSegment;
+	BlockingAnimationMode _blockingAnimationMode;
+	byte _blockingAnimationFrame;
+	byte _blockingAnimationChunk;
 	bool _i06OptionalOverlayChunk5Enabled;
 	bool _i06BaseFrameDirty;
 	bool _i06PrimarySpriteDirty;

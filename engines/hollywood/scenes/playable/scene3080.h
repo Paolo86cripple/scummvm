@@ -34,8 +34,7 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+	void drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
 	void prepareCustomGameplayLoop() override;
@@ -48,8 +47,6 @@ private:
 		int targetX, int targetY, int &requestedFacing, bool &restoredStepDeltas) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 
 	void resetAnimationLayers();
@@ -67,8 +64,6 @@ private:
 	void drawForegroundBlocks();
 
 	TimedAnimationChannel _smallIdleChannel;
-	ResourceSpriteLayer _largeLayer;
-	ResourceSpriteLayer _smallIdleLayer;
 	uint _largeTrack;
 	byte _smallIdleMode;
 };

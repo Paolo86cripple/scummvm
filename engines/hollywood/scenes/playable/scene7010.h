@@ -29,22 +29,16 @@ namespace Hollywood {
 
 class HollywoodEngine;
 
-/**
- * Uses separate transient-layer stacks behind and in front of the actors.
- *
- * Its custom tick advances primary speech, ambient audio, idle animation, and
- * the dialogue overlay. The base still advances secondary speech, viewport
- * scrolling, and actor-pose persistence.
- */
+// Coordinates Sue, Hannover, the doghouse, and the persistent note overlay.
 class Scene7010 : public PlayableScene {
 public:
 	Scene7010(HollywoodEngine *vm);
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+	void drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) override;
+	void drawCustomForegroundComposite(int activeWorldX, int activeWorldY) override;
 	bool shouldDrawSecondaryActorInPlayableComposite() const override;
 	void runCustomEntrySequence() override;
 	void prepareCustomGameplayLoop() override;
@@ -59,7 +53,6 @@ private:
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	bool shouldAnimatePrimarySpeechLine() const override;
 	void setPrimaryLeftSpeechFrame(byte frameIndex) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	void advanceFullscreenAnimation(uint32 delta) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 	void runSueEntryPath(int startX, int startY, int targetX, int targetY);
@@ -70,6 +63,7 @@ private:
 	void handleActionSlot01SecondarySpeech();
 	void handleActionSlot02SecondarySpeech();
 	void handleActionSlot03DialogueSequence();
+	bool runHannoverInterception();
 	void handleActionSlot04Item06Speech();
 	void handleActionSlot06DoghouseSequence();
 	void handleActionSlot07DialogueAndReturn();
@@ -105,6 +99,7 @@ private:
 
 	byte _dialogueOverlayMode;
 	bool _chunk8SpecialSequenceActive;
+	bool _returnEntryPathPending;
 	AlternatingRandomFramePair _chunk10IdlePairA;
 	AlternatingRandomFramePair _chunk10IdlePairB;
 	TimedAnimationChannel _chunk8Animation;

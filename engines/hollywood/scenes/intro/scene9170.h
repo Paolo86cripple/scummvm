@@ -25,9 +25,8 @@
 #include "common/random.h"
 
 #include "hollywood/music.h"
-#include "hollywood/scenes/intro/intro_resource_set.h"
-#include "hollywood/scenes/intro/intro_scene.h"
-#include "hollywood/scenes/intro/intro_text.h"
+#include "hollywood/scenes/presentation_scene.h"
+#include "hollywood/scenes/scene_text_store.h"
 
 namespace Hollywood {
 
@@ -35,24 +34,14 @@ class HollywoodEngine;
 
 // Renders the ending as a viewport over a tall canvas whose animated channels
 // restore clean rectangles before redrawing.
-class Scene9170 : public IntroSceneBase {
+class Scene9170 : public PresentationScene {
 public:
 	Scene9170(HollywoodEngine *vm);
 
 	bool play();
 
 private:
-	struct SubtitleOverlay {
-		bool visible;
-		byte colorIndex;
-		uint16 centerX;
-		uint16 topY;
-		Common::Array<Common::String> lines;
-	};
-
 	bool load();
-	bool loadChunk(uint index, Common::Array<byte> &destination, uint fixedSize);
-	bool loadArenaChunk(uint index);
 	void runSequence();
 	void buildInitialStaticFrame();
 	void switchToLowerRoomFrame();
@@ -84,26 +73,19 @@ private:
 	void runEventOverlayFrames();
 	void runShake();
 	uint presentRowOffset() const override;
+	int subtitleViewportYOffset() const override;
 	void stopAudio() override;
-	void clearSubtitle();
-	void drawFrameOverlays() override;
-	void wrapSubtitleText(const Common::String &text, uint16 anchorSceneX,
-		Common::Array<Common::String> &lines) const;
-	void calculateSubtitleBounds(uint16 anchorCenterX, uint16 anchorTopY);
-	uint subtitleTextWidth(const Common::String &text) const;
 
-	IntroResourceSet _resources;
 	MusicPlayer *_music;
 	SpeechPlayer _speech;
 	SpeechPlayer _ambientSpeech;
 	SoundBank0Player _sound;
 	SoundBank0Player _ambientSound;
-	IntroTextStore _text;
+	SceneTextStore _text;
 	Common::RandomSource _random;
 	Common::Array<byte> _paletteResource;
 	IndexedSurfaceBuffer _baseFramebuffer;
 	IndexedSurfaceBuffer _staticFramebuffer;
-	SubtitleOverlay _subtitle;
 	uint _rowOffset;
 	bool _upperActorsEnabled;
 	bool _lowerActorsEnabled;

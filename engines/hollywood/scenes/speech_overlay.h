@@ -19,17 +19,25 @@
  *
  */
 
-#ifndef HOLLYWOOD_SCENES_PLAYABLE_SPEECH_OVERLAY_H
-#define HOLLYWOOD_SCENES_PLAYABLE_SPEECH_OVERLAY_H
+#ifndef HOLLYWOOD_SCENES_SPEECH_OVERLAY_H
+#define HOLLYWOOD_SCENES_SPEECH_OVERLAY_H
 
 #include "common/array.h"
 #include "common/str.h"
 #include "common/types.h"
 
+namespace Graphics {
+struct Surface;
+}
+
 namespace Hollywood {
 
-// Text overlay produced from RESOURCE.003 speech rows and drawn over the scene.
+class HollywoodFont;
+
+// Wrapped subtitle text and its resolved scene position.
 struct SpeechOverlay {
+	SpeechOverlay() : visible(false), colorIndex(0), centerX(0), topY(0) {}
+
 	bool visible;
 	byte colorIndex;
 	uint16 centerX;
@@ -37,6 +45,19 @@ struct SpeechOverlay {
 	Common::Array<Common::String> lines;
 };
 
+enum SpeechOverlayWrapStyle {
+	kSpeechOverlayAdaptiveWrap,
+	kSpeechOverlayFixedEdgeWrap
+};
+
+void wrapSpeechOverlayText(const Common::String &text, int anchorX,
+	Common::Array<Common::String> &lines,
+	SpeechOverlayWrapStyle style = kSpeechOverlayAdaptiveWrap);
+void layoutSpeechOverlay(SpeechOverlay &overlay, const HollywoodFont *font,
+	int centerX, int anchorBottomY, int viewportXOffset = 0);
+void drawSpeechOverlayText(const SpeechOverlay &overlay, HollywoodFont *font,
+	Graphics::Surface &surface, int viewportXOffset = 0, int viewportYOffset = 0);
+
 } // End of namespace Hollywood
 
-#endif
+#endif // HOLLYWOOD_SCENES_SPEECH_OVERLAY_H

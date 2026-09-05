@@ -19,12 +19,11 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene5040.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
 #include "hollywood/resource.h"
+#include "hollywood/scenes/playable/scene5040.h"
 
 namespace Hollywood {
 
@@ -57,13 +56,8 @@ const byte kScene5040KarlPrizeItem = 0x4a;
 const byte kScene5040KeyItem = 0x4b;
 const byte kScene5040KarlSceneItem = 4;
 
-const byte kScene5040AmbientSoundVolumes[] = {
-	10, 10, 10, 2, 10, 10, 10, 100
-};
-
 enum {
-	kScene5040MineCartFrameHook = 1,
-	kScene5040PrizePatchHook = 2
+	kScene5040KarlLayer
 };
 
 enum {
@@ -94,18 +88,6 @@ const byte kScene5040KarlFrameMap[] = {
 	34, 34, 35, 36, 37, 0, 37, 38, 39, 40, 41, 42, 20, 21, 22, 21
 };
 
-const byte kScene5040MineBoxPickupFrameMap[] = {
-	12, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
-};
-
-const byte kScene5040Chunk15FrameMap[] = {
-	13, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
-};
-
-const byte kScene5040MagneticBombFrameMap[] = {
-	11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 11
-};
-
 const byte kScene5040DowsingRodSwapFrameMap[] = {
 	11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
 	9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 11
@@ -119,13 +101,13 @@ PlayableSceneConfig scene5040Config() {
 	config.setActorResources(kScene5040ActorBankTableEntry, kScene5040ActorPaletteTableEntry);
 	config.setTextResources(0, kScene5040SpeechCueDescriptorTableOffset);
 	config.walkablePaletteMaxRegion = 20;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
 Scene5040::Scene5040(HollywoodEngine *vm) :
 		PlayableScene(vm, scene5040Config()),
 		_karlIdleChannel(),
-		_karlLayer(),
 		_karlIdleFrame(0),
 		_karlIdleMode(kScene5040KarlIdleModeWait),
 		_karlStrikeRepeatCount(0),
@@ -133,7 +115,8 @@ Scene5040::Scene5040(HollywoodEngine *vm) :
 		_mineCartRumbleActive(false),
 		_lastKarlMiningSpeechFrame(kScene5040KarlMiningSpeechBaseFrame),
 		_previousKarlMiningSpeechFrame(kScene5040KarlMiningSpeechBaseFrame) {
-	_karlLayer.configure(9, kScene5040KarlDescriptorCount,
+	_sceneLayers.configureLayer(kScene5040KarlLayer, kSceneAnimationBehindActors,
+		9, kScene5040KarlDescriptorCount,
 		kScene5040KarlFrameMap, ARRAYSIZE(kScene5040KarlFrameMap));
 }
 
@@ -151,28 +134,27 @@ void Scene5040::initializeCustomPreviewState() {
 		setActiveActorPose(0x0f6, 0x0e9, 2);
 }
 
-void Scene5040::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
+void Scene5040::prepareCustomComposite(bool drawActors, byte activeFacing,
+		int activeWorldX, int activeWorldY, byte actorDrawOrderMode) {
+	(void)drawActors;
+	(void)activeFacing;
+	(void)activeWorldX;
+	(void)activeWorldY;
 	(void)actorDrawOrderMode;
+	if (_vm->gameState().scene5040MineGalleryState >= 2)
+		_sceneLayers.setLayerVisible(kScene5040KarlLayer, false);
+}
 
-	copyBaseFramebufferToSceneFramebuffer();
-	if (_karlLayer.visible && _vm->gameState().scene5040MineGalleryState < 2)
-		drawResourceSpriteLayer(_karlLayer);
-
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
+void Scene5040::drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
+		byte actorDrawOrderMode) {
+	(void)activeWorldX;
+	(void)actorDrawOrderMode;
 	if (activeWorldY < 0x138 && _sceneChunkTable.isValidChunk(7))
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[7], _sceneFramebuffer);
 	if (_sceneChunkTable.isValidChunk(5))
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[5], _sceneFramebuffer);
 	if (_sceneChunkTable.isValidChunk(16))
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[16], _sceneFramebuffer);
-	drawActionOverlayLayer();
-}
-
-bool Scene5040::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
 }
 
 void Scene5040::runCustomEntrySequence() {
@@ -188,9 +170,9 @@ void Scene5040::runCustomEntrySequence() {
 		beginStaticSecondarySpeechLine(0xd0, 0);
 		walkActiveActorTo(0x238, 0x145, 1, 0, false);
 		beginSecondarySpeechLine(8, 0);
-		runActorReplacement(ActionOverlaySpec(15, 0x0e,
-			kScene5040Chunk15FrameMap, ARRAYSIZE(kScene5040Chunk15FrameMap), kScene5040FrameMillis)
-			.hookAt(6, kScene5040PrizePatchHook));
+		runActorReplacement(ActionOverlaySpec(15, 0x0e, kScene5040FrameMillis)
+			.bookendWithLastFrame()
+			.resourcePatchAt(6, 14));
 		state.scene5040SpecialTransitionState = 2;
 		addInventoryItem(kScene5040KarlPrizeItem);
 		_soundBank0.playSample(1, 100);
@@ -354,12 +336,45 @@ bool Scene5040::applyCustomSceneStateToHotspotsAndPatches(byte selector) {
 		if (state.scene5040MineGalleryState != 1)
 			remapSceneColors(0x0d, 0);
 	}
-	if (state.scene5040OldSockTaken) {
-		remapSceneColors(6, 0);
-		if (state.scene5040MineGalleryState != 1)
+	// The pickaxe mask is split across authored pseudo-items 0x0b and 0x0c.
+	// Reproduce the original state-dependent remap so it becomes scene item 6
+	// while Karl is paused at the wall and remains part of Karl otherwise.
+	if (!state.scene5040OldSockTaken) {
+		remapSceneColors(6, 6);
+		switch (state.scene5040MineGalleryState) {
+		case 0:
 			remapSceneColors(0x0b, 0);
-		remapSceneColors(0x0c, 0);
-		clearSceneItemFromColorMap(6);
+			remapSceneColors(0x0c, 4);
+			break;
+		case 1:
+			remapSceneColors(0x0b, 6);
+			remapSceneColors(0x0c, 6);
+			break;
+		case 2:
+			remapSceneColors(0x0b, 0);
+			remapSceneColors(0x0c, 0);
+			break;
+		default:
+			break;
+		}
+	} else {
+		remapSceneColors(6, 0);
+		switch (state.scene5040MineGalleryState) {
+		case 0:
+			remapSceneColors(0x0b, 0);
+			remapSceneColors(0x0c, 4);
+			break;
+		case 1:
+			remapSceneColors(0x0b, 4);
+			remapSceneColors(0x0c, 0);
+			break;
+		case 2:
+			remapSceneColors(0x0b, 0);
+			remapSceneColors(0x0c, 0);
+			break;
+		default:
+			break;
+		}
 	}
 	switch (state.scene5040DialState) {
 	case 1:
@@ -403,42 +418,12 @@ bool Scene5040::customizeRouteFinal(byte currentRegion, byte targetRegion,
 	return false;
 }
 
-bool Scene5040::shouldRunExitSideEffectsAfterLoop() const {
-	return true;
-}
-
 void Scene5040::runExitSideEffectsAfterLoop() {
 	fadePaletteToBlack();
 }
 
 AmbientAudioProfile Scene5040::ambientAudioProfile() const {
-	return createRandomAmbientAudioProfile(0x0d, 8, 10, 25, 0x0b, 5, 100, 50);
-}
-
-byte Scene5040::ambientSoundCueVolume(byte cueId, byte defaultVolumePercent) const {
-	if (cueId >= 0x0d && cueId <= 0x14)
-		return kScene5040AmbientSoundVolumes[cueId - 0x0d];
-	return defaultVolumePercent;
-}
-
-void Scene5040::handleAnimationFrameHook(byte hookId, uint frame) {
-	switch (hookId) {
-	case kScene5040MineCartFrameHook:
-		if (frame == 0) {
-			drawPlayableComposite();
-			fadePaletteFromBlack();
-		} else if (frame == 0x32) {
-			_mineCartRumbleActive = false;
-		}
-		return;
-	case kScene5040PrizePatchHook:
-		if (_sceneChunkTable.isValidChunk(14))
-			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[14], _baseFramebuffer);
-		return;
-	default:
-		PlayableScene::handleAnimationFrameHook(hookId, frame);
-		return;
-	}
+	return createMineAmbientAudioProfile();
 }
 
 byte Scene5040::primarySpeechAnimationBaseFrame(byte animationGroup) const {
@@ -464,13 +449,14 @@ void Scene5040::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIn
 	} else {
 		return;
 	}
-	_karlLayer.setFrame(frameIndex);
+	_sceneLayers.setLayerFrame(kScene5040KarlLayer, frameIndex);
 }
 
 void Scene5040::primarySpeechAnimationStarted(byte animationGroup, byte baseFrame) {
 	if (animationGroup == kScene5040KarlDialogueSpeechGroup ||
 			animationGroup == kScene5040KarlMiningSpeechGroup) {
-		_karlLayer.visible = _vm->gameState().scene5040MineGalleryState < 2;
+		_sceneLayers.setLayerVisible(kScene5040KarlLayer,
+			_vm->gameState().scene5040MineGalleryState < 2);
 		if (animationGroup == kScene5040KarlMiningSpeechGroup) {
 			_lastKarlMiningSpeechFrame = baseFrame;
 			_previousKarlMiningSpeechFrame = baseFrame;
@@ -484,8 +470,9 @@ void Scene5040::primarySpeechAnimationRestored(byte animationGroup, byte baseFra
 			animationGroup != kScene5040KarlMiningSpeechGroup)
 		return;
 
-	_karlLayer.visible = _vm->gameState().scene5040MineGalleryState < 2;
-	if (!_karlLayer.visible)
+	_sceneLayers.setLayerVisible(kScene5040KarlLayer,
+		_vm->gameState().scene5040MineGalleryState < 2);
+	if (!_sceneLayers.layerVisible(kScene5040KarlLayer))
 		return;
 
 	if (animationGroup == kScene5040KarlDialogueSpeechGroup) {
@@ -499,7 +486,7 @@ void Scene5040::primarySpeechAnimationRestored(byte animationGroup, byte baseFra
 	} else {
 		_karlIdleFrame = 0x30;
 	}
-	_karlLayer.setFrame(_karlIdleFrame);
+	_sceneLayers.setLayerFrame(kScene5040KarlLayer, _karlIdleFrame);
 }
 
 void Scene5040::resetAnimationLayers() {
@@ -507,10 +494,10 @@ void Scene5040::resetAnimationLayers() {
 	state.scene5040LooseObjectTaken = true;
 	state.scene5040OldSockTaken = state.scene5040MineGalleryState != 1;
 	_karlIdleChannel.reset(0, kScene5040FrameMillis);
-	_karlLayer.visible = state.scene5040MineGalleryState < 2;
 	const bool karlPausedAtWall = state.scene5040MineGalleryState == 1;
-	_karlLayer.reset(karlPausedAtWall ? 0x49 : 0);
-	_karlIdleFrame = _karlLayer.frameIndex;
+	_sceneLayers.resetLayer(kScene5040KarlLayer, karlPausedAtWall ? 0x49 : 0);
+	_sceneLayers.setLayerVisible(kScene5040KarlLayer, state.scene5040MineGalleryState < 2);
+	_karlIdleFrame = _sceneLayers.layerFrame(kScene5040KarlLayer);
 	_karlIdleMode = karlPausedAtWall ? kScene5040KarlIdleModePausedAtWall : kScene5040KarlIdleModeWait;
 	_karlStrikeRepeatCount = 0;
 	_suspendKarlIdle = false;
@@ -520,7 +507,7 @@ void Scene5040::resetAnimationLayers() {
 }
 
 void Scene5040::advanceKarlLayer(uint32 delta) {
-	if (!_karlLayer.visible)
+	if (!_sceneLayers.layerVisible(kScene5040KarlLayer))
 		return;
 
 	GameplayState &state = _vm->gameState();
@@ -625,7 +612,7 @@ void Scene5040::advanceKarlLayer(uint32 delta) {
 		}
 
 		if (updateFrame)
-			_karlLayer.setFrame(_karlIdleFrame);
+			_sceneLayers.setLayerFrame(kScene5040KarlLayer, _karlIdleFrame);
 	}
 }
 
@@ -642,10 +629,10 @@ void Scene5040::advanceKarlMiningSpeech(uint32 delta) {
 bool Scene5040::playKarlFrames(byte firstFrame, byte lastFrame, uint32 frameMillis) {
 	const bool previousSuspendKarlIdle = _suspendKarlIdle;
 	_suspendKarlIdle = true;
-	_karlLayer.visible = true;
-	const bool completed = playAndPresentAnimationFrames(_karlLayer,
+	_sceneLayers.setLayerVisible(kScene5040KarlLayer, true);
+	const bool completed = playAndPresentAnimationFrames(kScene5040KarlLayer,
 		AnimationFrameRange(firstFrame, lastFrame, frameMillis));
-	_karlIdleFrame = _karlLayer.frameIndex;
+	_karlIdleFrame = _sceneLayers.layerFrame(kScene5040KarlLayer);
 	_suspendKarlIdle = previousSuspendKarlIdle;
 	return completed;
 }
@@ -654,10 +641,10 @@ bool Scene5040::playKarlTransition(byte firstFrame, byte lastFrame, byte finalFr
 		uint32 frameMillis) {
 	const bool previousSuspendKarlIdle = _suspendKarlIdle;
 	_suspendKarlIdle = true;
-	_karlLayer.visible = true;
-	const bool completed = playAndPresentAnimationTransition(_karlLayer,
+	_sceneLayers.setLayerVisible(kScene5040KarlLayer, true);
+	const bool completed = playAndPresentAnimationTransition(kScene5040KarlLayer,
 		AnimationTransition(firstFrame, lastFrame, finalFrame, frameMillis));
-	_karlIdleFrame = _karlLayer.frameIndex;
+	_karlIdleFrame = _sceneLayers.layerFrame(kScene5040KarlLayer);
 	_suspendKarlIdle = previousSuspendKarlIdle;
 	return completed;
 }
@@ -670,7 +657,7 @@ void Scene5040::settleKarlForConversation() {
 	_suspendKarlIdle = true;
 	if (_karlIdleMode == kScene5040KarlIdleModeToolExposedWait) {
 		_karlIdleFrame = 0x1f;
-		_karlLayer.setFrame(_karlIdleFrame);
+		_sceneLayers.setLayerFrame(kScene5040KarlLayer, _karlIdleFrame);
 		_karlIdleMode = kScene5040KarlIdleModeHideTool;
 	}
 
@@ -682,7 +669,7 @@ void Scene5040::settleKarlForConversation() {
 	_karlIdleFrame = 0;
 	_karlIdleMode = kScene5040KarlIdleModeWait;
 	_karlIdleChannel.reset(0, kScene5040FrameMillis);
-	_karlLayer.setFrame(0);
+	_sceneLayers.setLayerFrame(kScene5040KarlLayer, 0);
 	_vm->gameState().scene5040LooseObjectTaken = true;
 	applySceneStateToHotspotsAndPatches(2);
 	drawPlayableComposite();
@@ -698,8 +685,9 @@ void Scene5040::runMineCartEntryClip() {
 
 	runActorReplacement(ActionOverlaySpec(17, kScene5040MineCartDescriptorCount,
 		frameMap.data(), frameMap.size(), kScene5040MineCartFrameMillis)
-		.soundAt(0x32, 0x16)
-		.hookEveryFrame(kScene5040MineCartFrameHook));
+		.fadeFromBlackAt(0)
+		.commitAt(0x32, _mineCartRumbleActive, false)
+		.soundAt(0x32, 0x16));
 }
 
 void Scene5040::runExitToMineSwitches() {
@@ -792,7 +780,6 @@ void Scene5040::runMineBoxLook() {
 		state.scene5040DialState = 3;
 		applySceneStateToHotspotsAndPatches(4);
 		break;
-	case 4:
 	default:
 		beginSecondarySpeechLine(10, 2);
 		break;
@@ -802,8 +789,7 @@ void Scene5040::runMineBoxLook() {
 void Scene5040::runPatchedSockPickup() {
 	GameplayState &state = _vm->gameState();
 	runActorReplacement(ActionOverlaySpec(10, kScene5040MineBoxPickupDescriptorCount,
-		kScene5040MineBoxPickupFrameMap, ARRAYSIZE(kScene5040MineBoxPickupFrameMap),
-		kScene5040FrameMillis).noRedrawAtEnd());
+		kScene5040FrameMillis).bookendWithLastFrame());
 	state.scene5040DialState = 2;
 	applySceneStateToHotspotsAndPatches(4);
 	addInventoryItem(kScene5040PatchedSockItem);
@@ -815,8 +801,7 @@ void Scene5040::runPatchedSockPickup() {
 void Scene5040::runMineKeyPickup() {
 	GameplayState &state = _vm->gameState();
 	runActorReplacement(ActionOverlaySpec(10, kScene5040MineBoxPickupDescriptorCount,
-		kScene5040MineBoxPickupFrameMap, ARRAYSIZE(kScene5040MineBoxPickupFrameMap),
-		kScene5040FrameMillis).noRedrawAtEnd());
+		kScene5040FrameMillis).bookendWithLastFrame());
 	state.scene5040DialState = 4;
 	applySceneStateToHotspotsAndPatches(4);
 	addInventoryItem(kScene5040KeyItem);
@@ -836,8 +821,7 @@ void Scene5040::runSpecialMineExitWithMagneticPillbox() {
 
 	_suspendKarlIdle = true;
 	runActorReplacement(ActionOverlaySpec(12, kScene5040ItemSwapDescriptorCount,
-		kScene5040MagneticBombFrameMap, ARRAYSIZE(kScene5040MagneticBombFrameMap),
-		kScene5040FrameMillis));
+		kScene5040FrameMillis).bookendWithLastFrame().reverse());
 	removeInventoryItem(kScene5040MagneticBombPillboxItem);
 	_soundBank0.playSample(1, 100);
 	walkActiveActorTo(0x230, 0x16b, 3, 0, false);
@@ -872,7 +856,7 @@ void Scene5040::runDowsingRodSwap() {
 	state.dowsingRodKarlExchangeState = 2;
 	_suspendKarlIdle = true;
 	_karlIdleFrame = 0x1e;
-	_karlLayer.setFrame(_karlIdleFrame);
+	_sceneLayers.setLayerFrame(kScene5040KarlLayer, _karlIdleFrame);
 	runActorReplacement(ActionOverlaySpec(11, kScene5040ItemSwapDescriptorCount,
 		kScene5040DowsingRodSwapFrameMap, ARRAYSIZE(kScene5040DowsingRodSwapFrameMap),
 		kScene5040MineCartFrameMillis));
@@ -917,18 +901,18 @@ void Scene5040::initializeKarlDialogueRecords(Common::Array<DialogueChoiceRecord
 	records.clear();
 	records.resize(kScene5040KarlDialogueChoiceRecordCount);
 
-	// DAT_005091e0: root choices for Karl Hecker.
-	setKarlDialogueRecord(records, 0, 0, kScene5040DialogueTransitionDown, 3, 3, 1); // ¿Qué está haciendo aquí?
-	setKarlDialogueRecord(records, 1, 0, kScene5040DialogueTransitionStay, 4, 4, 1); // ¿Ha visto al hombre lobo?
-	setKarlDialogueRecord(records, 2, 0, kScene5040DialogueTransitionStay, 5, 5, 1); // ¿Cuánto tiempo ha pasado en estas galerías?
-	setKarlDialogueRecord(records, 3, 0, kScene5040DialogueTransitionStay, 6, 6, 1); // He oído hablar de usted y sus hermanos.
-	setKarlDialogueRecord(records, 4, 0, kScene5040DialogueTransitionEnd, 7, 7, 0); // Bueno, le dejo ya.
+	// Karl Hecker's root choices.
+	setKarlDialogueRecord(records, 0, 0, kScene5040DialogueTransitionDown, 3, 3, 1);
+	setKarlDialogueRecord(records, 1, 0, kScene5040DialogueTransitionStay, 4, 4, 1);
+	setKarlDialogueRecord(records, 2, 0, kScene5040DialogueTransitionStay, 5, 5, 1);
+	setKarlDialogueRecord(records, 3, 0, kScene5040DialogueTransitionStay, 6, 6, 1);
+	setKarlDialogueRecord(records, 4, 0, kScene5040DialogueTransitionEnd, 7, 7, 0);
 
 	// Depth 1, node 0: follow-up choices after Karl explains he is looking for the diamond.
-	setKarlDialogueRecord(records, 70, 0, kScene5040DialogueTransitionStay, 8, 8, 1); // Difícil encontrarlo en las galerías.
-	setKarlDialogueRecord(records, 71, 0, kScene5040DialogueTransitionStay, 9, 9, 1); // Por qué es importante el diamante.
-	setKarlDialogueRecord(records, 72, 0, kScene5040DialogueTransitionStay, 10, 10, 1); // Qué tipo de sorpresas.
-	setKarlDialogueRecord(records, 73, 0, kScene5040DialogueTransitionUp, 11, 11, 0); // Espero que tenga suerte.
+	setKarlDialogueRecord(records, 70, 0, kScene5040DialogueTransitionStay, 8, 8, 1);
+	setKarlDialogueRecord(records, 71, 0, kScene5040DialogueTransitionStay, 9, 9, 1);
+	setKarlDialogueRecord(records, 72, 0, kScene5040DialogueTransitionStay, 10, 10, 1);
+	setKarlDialogueRecord(records, 73, 0, kScene5040DialogueTransitionUp, 11, 11, 0);
 }
 
 void Scene5040::setKarlDialogueRecord(Common::Array<DialogueChoiceRecord> &records, uint index,
@@ -944,7 +928,6 @@ void Scene5040::setKarlDialogueRecord(Common::Array<DialogueChoiceRecord> &recor
 	record.playerTextRowId = playerTextRowId;
 	record.responseFrameIndex = responseFrameIndex;
 	record.disableAfterUse = disableAfterUse;
-	record.reserved = 0xff;
 	record.selectable = 1;
 }
 
@@ -965,7 +948,6 @@ bool Scene5040::applyKarlDialogueTransition(const DialogueChoiceRecord &record, 
 		nodeIndex = record.nextNodeIndex;
 		depthIndex = previousDepth > 1 ? (byte)(previousDepth - 2) : 0;
 		break;
-	case kScene5040DialogueTransitionStay:
 	default:
 		break;
 	}
@@ -1004,18 +986,8 @@ void Scene5040::remapSceneColors(byte sourceColor, byte itemId) {
 		return;
 
 	for (uint color = 0; color < kScenePaletteMapPageSize; ++color) {
-		if (_paletteMaskOriginal[color] == sourceColor)
+		if (_paletteMaskOriginal[kSceneColorToItemMap + color] == sourceColor)
 			_paletteMask[kSceneColorToItemMap + color] = itemId;
-	}
-}
-
-void Scene5040::clearSceneItemFromColorMap(byte itemId) {
-	if (_paletteMask.size() < kSceneColorToItemMap + kScenePaletteMapPageSize)
-		return;
-
-	for (uint color = 0; color < kScenePaletteMapPageSize; ++color) {
-		if (_paletteMask[kSceneColorToItemMap + color] == itemId)
-			_paletteMask[kSceneColorToItemMap + color] = 0;
 	}
 }
 

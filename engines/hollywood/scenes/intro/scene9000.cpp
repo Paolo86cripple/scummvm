@@ -19,32 +19,18 @@
  *
  */
 
-#include "hollywood/scenes/intro/scene9000.h"
-
-#include "common/debug.h"
-#include "common/events.h"
-#include "common/system.h"
-
 #include "hollywood/hollywood.h"
+#include "hollywood/scenes/intro/scene9000.h"
 
 namespace Hollywood {
 
 const char *const kIntroArchiveName = "RESOURCE.I00";
 
-const byte kIntroAnimationDescriptorSequence[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
-	12, 13, 14, 15, 16, 17, 18, 19, 20
-};
-
 Scene9000::Scene9000(HollywoodEngine *vm) :
-		_vm(vm),
-		_music(),
-		_skipRequested(false) {
-	_paletteSource.resize(0x300);
-	_paletteCurrent.resize(0x300);
-	_frameDecodeBuffer.resize(HollywoodEngine::kSceneBufferWidth * HollywoodEngine::kSceneBufferHeight);
-	_sceneFramebuffer.resize(HollywoodEngine::kSceneBufferWidth * HollywoodEngine::kSceneBufferHeight);
-	_screen.create(HollywoodEngine::kScreenWidth, HollywoodEngine::kScreenHeight, Graphics::PixelFormat::createFormatCLUT8());
+		PresentationScene(vm, "intro scene 9000", kSceneBufferByteCount, 0),
+		_music() {
+	_paletteSource.resize(kPaletteSize);
+	_frameDecodeBuffer.resize(kSceneBufferByteCount);
 }
 
 bool Scene9000::play() {
@@ -76,51 +62,19 @@ bool Scene9000::play() {
 }
 
 bool Scene9000::load() {
-	if (!_vm->resources()->readChunkTable(Common::Path(kIntroArchiveName), _chunkTable)) {
-		warning("Failed to read %s header", kIntroArchiveName);
-		return false;
-	}
-
-	for (uint i = 0; i < kIntroChunkCount * 2; ++i) {
-		if (!_chunkTable.isValidChunk(i)) {
-			warning("%s is missing intro chunk %u", kIntroArchiveName, i);
-			return false;
-		}
-	}
-
-	return true;
+	return _resources.loadChunkTable(kIntroArchiveName) &&
+		_resources.validateChunkRange(kIntroArchiveName, _debugName,
+			0, kIntroChunkCount * 2 - 1);
 }
 
 bool Scene9000::loadChunk(uint chunkIndex) {
 	const uint paletteChunk = chunkIndex * 2;
 	const uint spriteChunk = paletteChunk + 1;
 
-	Common::ScopedPtr<Common::SeekableReadStream> paletteStream(_vm->resources()->createChunkReadStream(Common::Path(kIntroArchiveName), paletteChunk));
-	if (!paletteStream || paletteStream->size() > _paletteSource.size()) {
-		warning("Failed to open %s palette chunk %u", kIntroArchiveName, paletteChunk);
+	if (!loadFixedChunk(paletteChunk, _paletteSource, kPaletteSize) ||
+			!loadVariableChunk(spriteChunk, _spriteResource))
 		return false;
-	}
 
-	memset(_paletteSource.data(), 0, _paletteSource.size());
-	if (paletteStream->read(_paletteSource.data(), paletteStream->size()) != (uint32)paletteStream->size()) {
-		warning("Failed to read %s palette chunk %u", kIntroArchiveName, paletteChunk);
-		return false;
-	}
-
-	Common::ScopedPtr<Common::SeekableReadStream> spriteStream(_vm->resources()->createChunkReadStream(Common::Path(kIntroArchiveName), spriteChunk));
-	if (!spriteStream) {
-		warning("Failed to open %s sprite chunk %u", kIntroArchiveName, spriteChunk);
-		return false;
-	}
-
-	_resourceArena.resize(spriteStream->size());
-	if (spriteStream->read(_resourceArena.data(), _resourceArena.size()) != _resourceArena.size()) {
-		warning("Failed to read %s sprite chunk %u", kIntroArchiveName, spriteChunk);
-		return false;
-	}
-
-	debugC(1, kDebugResources, "Loaded intro chunk %u: palette=%u bytes sprite=%u bytes",
-		chunkIndex, (uint)paletteStream->size(), (uint)_resourceArena.size());
 	resetChunkState();
 	return true;
 }
@@ -133,15 +87,13 @@ bool Scene9000::runChunk() {
 
 	presentFrame();
 
-	while ((frameIndex < 0x15 || !fadeInComplete) && !_skipRequested && !Engine::shouldQuit()) {
+	while ((frameIndex < kIntroFrameDescriptorCount || !fadeInComplete) && !_skipRequested && !Engine::shouldQuit()) {
 		if (pollEvents())
 			return true;
 
-		if (frameIndex < 0x15) {
+		if (frameIndex < kIntroFrameDescriptorCount) {
 			frameIndex++;
-			const byte descriptorIndex = kIntroAnimationDescriptorSequence[frameIndex];
-			restoreSpriteBackground(descriptorIndex);
-			drawStripSpriteFrame(descriptorIndex);
+			drawAnimationFrame(frameIndex - 1);
 		}
 
 		if (!fadeInComplete) {
@@ -173,9 +125,7 @@ bool Scene9000::runChunk() {
 
 		if (frameIndex > 1) {
 			frameIndex--;
-			const byte descriptorIndex = kIntroAnimationDescriptorSequence[frameIndex];
-			restoreSpriteBackground(descriptorIndex);
-			drawStripSpriteFrame(descriptorIndex);
+			drawAnimationFrame(frameIndex - 1);
 		}
 
 		if (!fadeOutComplete) {
@@ -198,42 +148,8 @@ bool Scene9000::runChunk() {
 	return true;
 }
 
-bool Scene9000::pollEvents() {
-	Common::Event event;
-	while (g_system->getEventManager()->pollEvent(event)) {
-		switch (event.type) {
-		case Common::EVENT_QUIT:
-		case Common::EVENT_RETURN_TO_LAUNCHER:
-			Engine::quitGame();
-			return true;
-		case Common::EVENT_KEYDOWN:
-			if (event.kbd.keycode == Common::KEYCODE_ESCAPE ||
-					event.kbd.keycode == Common::KEYCODE_RETURN ||
-					event.kbd.keycode == Common::KEYCODE_SPACE) {
-				_skipRequested = true;
-				return true;
-			}
-			break;
-		default:
-			break;
-		}
-	}
-
-	return false;
-}
-
-bool Scene9000::delay(uint32 millis) {
-	uint32 remaining = millis;
-	while (remaining != 0 && !_skipRequested && !Engine::shouldQuit()) {
-		if (pollEvents())
-			return true;
-
-		const uint32 slice = MIN<uint32>(remaining, 10);
-		g_system->delayMillis(slice);
-		remaining -= slice;
-	}
-
-	return _skipRequested || Engine::shouldQuit();
+void Scene9000::stopAudio() {
+	_music.stop();
 }
 
 void Scene9000::resetChunkState() {
@@ -242,87 +158,11 @@ void Scene9000::resetChunkState() {
 	memset(_sceneFramebuffer.data(), 0, _sceneFramebuffer.size());
 }
 
-void Scene9000::presentFrame() {
-	presentIndexedFrame(_sceneFramebuffer.surface(), _paletteCurrent, _screen, _displayPalette);
-}
-
-void Scene9000::restoreSpriteBackground(uint16 descriptorIndex) {
-	if (descriptorIndex >= kIntroFrameDescriptorCount)
-		return;
-
-	const uint entryOffset = kIntroFrameDescriptorSize * descriptorIndex;
-	if (entryOffset + kIntroFrameDescriptorSize > _resourceArena.size())
-		return;
-
-	const uint32 packedWidth = readUint32(entryOffset + 4);
-	const uint32 packedRows = readUint32(entryOffset + 8);
-	const uint copyWidth = (packedWidth >> 16) & 0xffff;
-	const uint x = packedWidth & 0xffff;
-	const uint firstRow = packedRows & 0xffff;
-	const uint lastRow = (packedRows >> 16) & 0xffff;
-
-	if (firstRow > lastRow || copyWidth == 0)
-		return;
-
-	for (uint row = firstRow; row <= lastRow && row < HollywoodEngine::kSceneBufferHeight; ++row) {
-		const uint destinationOffset = x + row * HollywoodEngine::kSceneBufferWidth;
-		if (destinationOffset + copyWidth > _sceneFramebuffer.size() ||
-				destinationOffset + copyWidth > _frameDecodeBuffer.size())
-			break;
-
-		memcpy(&_sceneFramebuffer[destinationOffset], &_frameDecodeBuffer[destinationOffset], copyWidth);
-	}
-}
-
-void Scene9000::drawStripSpriteFrame(uint16 descriptorIndex) {
-	if (descriptorIndex >= kIntroFrameDescriptorCount)
-		return;
-
-	const uint entryOffset = kIntroFrameDescriptorSize * descriptorIndex;
-	if (entryOffset + kIntroFrameDescriptorSize > _resourceArena.size())
-		return;
-
-	const uint16 spanCount = readUint16(entryOffset + 12);
-	uint cursor = kIntroFrameDescriptorSize * kIntroFrameDescriptorCount + readUint32(entryOffset);
-	if (cursor > _resourceArena.size())
-		return;
-
-	for (uint spanIndex = 0; spanIndex < spanCount; ++spanIndex) {
-		if (cursor + 5 > _resourceArena.size())
-			return;
-
-		const uint32 destination = readUint32(cursor);
-		const uint dataLength = _resourceArena[cursor + 4];
-		cursor += 5;
-
-		const uint x = destination & 0xffff;
-		const uint y = (destination >> 16) & 0xffff;
-		const uint destinationOffset = x + y * HollywoodEngine::kSceneBufferWidth;
-
-		if (cursor + dataLength > _resourceArena.size() ||
-				destinationOffset + dataLength > _sceneFramebuffer.size())
-			return;
-
-		memcpy(&_sceneFramebuffer[destinationOffset], &_resourceArena[cursor], dataLength);
-		cursor += dataLength;
-	}
-}
-
-uint16 Scene9000::readUint16(uint offset) const {
-	if (offset + 2 > _resourceArena.size())
-		return 0;
-
-	return _resourceArena[offset] | (_resourceArena[offset + 1] << 8);
-}
-
-uint32 Scene9000::readUint32(uint offset) const {
-	if (offset + 4 > _resourceArena.size())
-		return 0;
-
-	return _resourceArena[offset] |
-		(_resourceArena[offset + 1] << 8) |
-		(_resourceArena[offset + 2] << 16) |
-		(_resourceArena[offset + 3] << 24);
+void Scene9000::drawAnimationFrame(uint16 descriptorIndex) {
+	restoreSpriteBackground(_spriteResource, 0, 0, kIntroFrameDescriptorCount,
+		descriptorIndex, _frameDecodeBuffer.surface(), _sceneFramebuffer.surface());
+	drawStripSpriteFrame(_spriteResource, 0, 0, kIntroFrameDescriptorCount,
+		descriptorIndex, _sceneFramebuffer.surface());
 }
 
 } // End of namespace Hollywood

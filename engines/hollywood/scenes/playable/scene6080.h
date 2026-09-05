@@ -2,7 +2,7 @@
  *
  * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
- * file for details.
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef HOLLYWOOD_SCENES_PLAYABLE_SCENE6080_H
@@ -41,12 +42,8 @@ private:
 	};
 
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel,
-		int activeWorldX, int activeWorldY, bool drawSecondaryActor, byte secondaryFacing,
-		byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
+	bool shouldDrawSecondaryActorInPlayableComposite() const override;
 	void runCustomEntrySequence() override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
@@ -56,20 +53,16 @@ private:
 	uint32 primarySpeechAnimationFrameMillis(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
 	void primarySpeechAnimationRestored(byte animationGroup, byte baseFrame) override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetSceneLayers();
 	void advanceSueIdle(uint32 delta);
-	void advanceGuardIdle(uint32 delta);
 	void finishSueIdleSequence();
 	void runReturnConversation();
 	void runWaxBallEscapeSequence();
 	void startWaxBallAnimation();
 	void advanceWaxBallAnimation(uint32 delta);
-	void startManualActorPath(int targetX, int targetY, byte finalFacing);
-	void advanceManualActorPath(uint32 delta);
 	void runFinalSueAnimation();
 	void advanceFinalSueAnimation(uint32 delta);
 	void dimEscapePalette();
@@ -81,19 +74,16 @@ private:
 	ResourceSpriteLayer &guardAlternateLayer() { return _sceneLayers.layer(kGuardAlternateLayer); }
 
 	TimedAnimationChannel _sueIdleChannel;
-	TimedAnimationChannel _guardIdleChannel;
+	uint _guardIdleTrack;
 	TimedAnimationChannel _waxBallChannel;
 	TimedAnimationChannel _escapeSueChannel;
 	TimedAnimationChannel _escapeGuardChannel;
-	TimedAnimationChannel _manualActorPathChannel;
 	TimedAnimationChannel _finalSueChannel;
-	uint _manualActorPathFrameIndex;
 	bool _sueLongIdleActive;
 	bool _guardManualSequenceActive;
 	bool _manualSequenceActive;
 	bool _waxBallAnimationActive;
 	bool _escapeLayersSwitched;
-	bool _manualActorPathActive;
 	bool _finalSueAnimationActive;
 };
 

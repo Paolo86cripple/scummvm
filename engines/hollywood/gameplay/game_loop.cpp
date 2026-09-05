@@ -19,17 +19,17 @@
  *
  */
 
-#include "hollywood/gameplay/game_loop.h"
-
 #include "common/debug.h"
 #include "common/events.h"
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
+#include "hollywood/debug.h"
 #include "hollywood/game_strings.h"
+#include "hollywood/gameplay/game_loop.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/gameplay/inventory_actions.h"
 #include "hollywood/gameplay/options_menu.h"
-#include "hollywood/hollywood.h"
 
 namespace Hollywood {
 
@@ -172,7 +172,7 @@ bool GameplayLoop::run() {
 
 	uint32 lastMillis = g_system->getMillis();
 	while (!Engine::shouldQuit() && !_delegate->shouldExitGameplayLoop()) {
-		if (pollEvents())
+		if (pollEvents() || _delegate->shouldExitGameplayLoop())
 			break;
 
 		g_system->delayMillis(kGameplayLoopTickMillis);
@@ -186,6 +186,8 @@ bool GameplayLoop::run() {
 		const uint16 previousViewportX = _delegate->viewportXOffset();
 		const uint16 previousViewportY = _delegate->viewportYOffset();
 		_delegate->advanceGameplayLoop(delta);
+		if (Engine::shouldQuit() || _delegate->shouldExitGameplayLoop())
+			break;
 		const bool viewportChanged =
 			previousViewportX != _delegate->viewportXOffset() ||
 			previousViewportY != _delegate->viewportYOffset();
@@ -202,6 +204,8 @@ bool GameplayLoop::run() {
 				_delegate->viewportXOffset(), _delegate->viewportYOffset());
 		syncPanelState();
 
+		// Scene hooks do not expose complete visual invalidation, so rebuild the
+		// composite here and let the presenter discard an unchanged final frame.
 		_delegate->drawGameplayFrame();
 		_delegate->presentGameplayFrame(_hoverCaption, _panelState);
 	}
@@ -774,7 +778,18 @@ uint16 GameplayLoop::fixedInventoryActionHandler(byte owner, byte itemId, byte s
 }
 
 uint16 GameplayLoop::dialogueInventoryRelationHandler(byte primaryItemId, byte secondaryItemId, byte relationMode) const {
-	return _vm->gameState().dialogueInventoryRelationHandler(primaryItemId, secondaryItemId, relationMode);
+	const GameplayState &gameState = _vm->gameState();
+	const uint16 handlerId = gameState.dialogueInventoryRelationHandler(
+		primaryItemId, secondaryItemId, relationMode);
+	if (handlerId != 0)
+		return handlerId;
+
+	// Restore the dormant saw refusal for the omitted saw-with-wood relation.
+	if (_vm->restoredContentEnabled() && currentInventoryOwner() == 0 &&
+			relationMode == 1 && primaryItemId == 0x13 && secondaryItemId == 0x47)
+		return 31;
+
+	return 0;
 }
 
 bool GameplayLoop::scrollInventoryPanelPreviousPage() {

@@ -19,12 +19,11 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene6100.h"
-
 #include "common/system.h"
 
-#include "hollywood/gameplay/game_state.h"
 #include "hollywood/hollywood.h"
+#include "hollywood/gameplay/game_state.h"
+#include "hollywood/scenes/playable/scene6100.h"
 
 namespace Hollywood {
 
@@ -40,7 +39,6 @@ const byte kScene6100CharlieSpeechGroup = 0;
 const byte kScene6100LetterSpeechGroup = 1;
 const uint16 kScene6100CharlieDialogueRow = 99;
 const uint16 kScene6100EnvelopeRow = 9;
-const byte kScene6100BriefcasePatchHook = 1;
 const byte kScene6100BriefcaseItem = 0x65;
 const byte kScene6100BillyFordEnvelopeItem = 0x69;
 
@@ -54,15 +52,25 @@ const byte kScene6100CharlieFrameMap[] = {
 	40, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47
 };
 
-const byte kScene6100BriefcaseFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
-};
-
 const byte kScene6100LetterFrameMap[] = {
 	0, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
 };
 
-static PlayableSceneConfig scene6100Config() {
+enum Scene6100LayerId {
+	kScene6100CharlieLayer,
+	kScene6100LetterLayer,
+	kScene6100DepartureLayer
+};
+
+const SceneLayerSpec kScene6100LayerSpecs[] = {
+	{kSceneAnimationInFrontOfActors, 5, 0x31, kScene6100CharlieFrameMap,
+		ARRAYSIZE(kScene6100CharlieFrameMap), false, 2},
+	{kSceneAnimationInFrontOfActors, 8, 0x0c, kScene6100LetterFrameMap,
+		ARRAYSIZE(kScene6100LetterFrameMap), false, 0},
+	{kSceneAnimationBehindActors, 6, 0x17, nullptr, 0, false, 0}
+};
+
+PlayableSceneConfig scene6100Config() {
 	PlayableSceneConfig config(6100,
 		SceneResourceLayout(10, 5, 9),
 		SceneViewport(0x00a0, 0, 0x00a0),
@@ -76,20 +84,13 @@ static PlayableSceneConfig scene6100Config() {
 
 Scene6100::Scene6100(HollywoodEngine *vm) :
 		PlayableScene(vm, scene6100Config()),
-		_charlieLayer(),
-		_letterLayer(),
-		_departureLayer(),
 		_charlieIdleChannel(),
 		_charlieConversationChannel(),
 		_charlieIdleState(2),
 		_charliePose(0),
 		_charlieManualSequenceActive(false),
 		_charlieConversationActive(false) {
-	_charlieLayer.configure(5, 0x31, kScene6100CharlieFrameMap,
-		ARRAYSIZE(kScene6100CharlieFrameMap));
-	_letterLayer.configure(8, 0x0c, kScene6100LetterFrameMap,
-		ARRAYSIZE(kScene6100LetterFrameMap));
-	_departureLayer.configure(6, 0x17, nullptr, 0);
+	_sceneLayers.configure(kScene6100LayerSpecs);
 }
 
 void Scene6100::initializeCustomPreviewState() {
@@ -102,41 +103,13 @@ void Scene6100::initializeCustomPreviewState() {
 }
 
 void Scene6100::resetSceneLayers() {
-	_charlieLayer.reset(2);
-	_letterLayer.reset(0);
-	_departureLayer.reset(0);
-	_charlieLayer.visible = false;
-	_letterLayer.visible = false;
-	_departureLayer.visible = false;
+	_sceneLayers.reset();
 	_charlieIdleChannel.reset(2, kScene6100AnimationFrameMillis);
 	_charlieConversationChannel.reset(2, kScene6100SpeechFrameMillis);
 	_charlieIdleState = 2;
 	_charliePose = 0;
 	_charlieManualSequenceActive = false;
 	_charlieConversationActive = false;
-}
-
-void Scene6100::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel,
-		int activeWorldX, int activeWorldY, bool drawSecondaryActor, byte secondaryFacing,
-		byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-	copyBaseFramebufferToSceneFramebuffer();
-
-	if (_departureLayer.visible) {
-		drawResourceSpriteLayer(_departureLayer);
-		drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel,
-			activeWorldX, activeWorldY, drawSecondaryActor, secondaryFacing,
-			secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-		return;
-	}
-
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel,
-		activeWorldX, activeWorldY, drawSecondaryActor, secondaryFacing,
-		secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	drawResourceSpriteLayer(_charlieLayer);
-	drawResourceSpriteLayer(_letterLayer);
-	drawActionOverlayLayer();
 }
 
 void Scene6100::runCustomEntrySequence() {
@@ -156,10 +129,11 @@ void Scene6100::runCustomEntrySequence() {
 }
 
 void Scene6100::prepareCustomGameplayLoop() {
-	_charlieIdleChannel.reset(_charlieLayer.frameIndex, kScene6100AnimationFrameMillis);
-	_charlieConversationChannel.reset(_charlieLayer.frameIndex, kScene6100SpeechFrameMillis);
-	_letterLayer.visible = false;
-	_departureLayer.visible = false;
+	const byte charlieFrame = _sceneLayers.layerFrame(kScene6100CharlieLayer);
+	_charlieIdleChannel.reset(charlieFrame, kScene6100AnimationFrameMillis);
+	_charlieConversationChannel.reset(charlieFrame, kScene6100SpeechFrameMillis);
+	_sceneLayers.setLayerVisible(kScene6100LetterLayer, false);
+	_sceneLayers.setLayerVisible(kScene6100DepartureLayer, false);
 	_charlieManualSequenceActive = false;
 	_charlieConversationActive = false;
 }
@@ -182,8 +156,26 @@ void Scene6100::advancePrimarySpeechAnimation(uint32 delta) {
 		PlayableScene::advancePrimarySpeechAnimation(delta);
 }
 
+void Scene6100::prepareCustomComposite(bool drawActors, byte activeFacing,
+		int activeWorldX, int activeWorldY, byte actorDrawOrderMode) {
+	(void)drawActors;
+	(void)activeFacing;
+	(void)activeWorldX;
+	(void)activeWorldY;
+	_drawActorDepthYThresholds = _actorDepthYThresholds;
+	// The stair foreground covers Ron only while he is on the stairs.
+	if (_drawActorDepthYThresholds.size() > 3)
+		_drawActorDepthYThresholds[3] = actorDrawOrderMode == 3 ? 0x03e7 : 0;
+}
+
+bool Scene6100::shouldUseActorDepthTest(int actorWorldX, int actorWorldY) const {
+	(void)actorWorldY;
+	return _activeActorDrawOrderMode == 3 || actorWorldX <= 0x113 || actorWorldX >= 0x264;
+}
+
 void Scene6100::advanceCharlieIdle(uint32 delta) {
-	if (!_charlieLayer.visible)
+	ResourceSpriteLayer &layer = _sceneLayers.layer(kScene6100CharlieLayer);
+	if (!layer.visible)
 		return;
 
 	const uint ticks = _charlieIdleChannel.consumeFrames(delta);
@@ -191,27 +183,27 @@ void Scene6100::advanceCharlieIdle(uint32 delta) {
 		switch (_charlieIdleState) {
 		case 0:
 			if (_random.getRandomNumber(14) == 0) {
-				_charlieLayer.setFrame(1);
+				layer.setFrame(1);
 				_charlieIdleState = 1;
 			} else if (_random.getRandomNumber(19) == 0) {
-				_charlieLayer.setFrame(2);
+				layer.setFrame(2);
 				_charlieIdleState = 2;
 			}
 			break;
 		case 1:
-			_charlieLayer.setFrame(0);
+			layer.setFrame(0);
 			_charlieIdleState = 0;
 			break;
 		case 2:
-			if (_charlieLayer.frameIndex == 7) {
+			if (layer.frameIndex == 7) {
 				if (_random.getRandomNumber(19) == 0) {
-					_charlieLayer.setFrame(0);
+					layer.setFrame(0);
 					_charlieIdleState = 0;
 				} else {
-					_charlieLayer.setFrame(2);
+					layer.setFrame(2);
 				}
 			} else {
-				_charlieLayer.setFrame(_charlieLayer.frameIndex + 1);
+				layer.setFrame(layer.frameIndex + 1);
 			}
 			break;
 		default:
@@ -222,28 +214,30 @@ void Scene6100::advanceCharlieIdle(uint32 delta) {
 }
 
 void Scene6100::advanceCharlieConversationIdle(uint32 delta) {
-	if (!_charlieLayer.visible)
+	ResourceSpriteLayer &layer = _sceneLayers.layer(kScene6100CharlieLayer);
+	if (!layer.visible)
 		return;
 
 	const byte baseFrame = _charliePose == 0 ? 16 : (_charliePose == 1 ? 24 : 78);
 	const byte specialFrame = baseFrame + 4;
 	const uint ticks = _charlieConversationChannel.consumeFrames(delta);
 	for (uint tick = 0; tick < ticks; ++tick) {
-		if (_charlieLayer.frameIndex == specialFrame)
-			_charlieLayer.setFrame(baseFrame);
+		if (layer.frameIndex == specialFrame)
+			layer.setFrame(baseFrame);
 		else if (_random.getRandomNumber(14) == 0)
-			_charlieLayer.setFrame(specialFrame);
+			layer.setFrame(specialFrame);
 	}
 }
 
 void Scene6100::advanceLetterReadingSpeech(uint32 delta) {
+	ResourceSpriteLayer &layer = _sceneLayers.layer(kScene6100CharlieLayer);
 	_primaryDialogueSpeechTimerAccumulator += delta;
 	while (_primaryDialogueSpeechTimerAccumulator >= kScene6100SpeechFrameMillis) {
 		_primaryDialogueSpeechTimerAccumulator -= kScene6100SpeechFrameMillis;
-		if (_charlieLayer.frameIndex == 42)
-			_charlieLayer.setFrame(41);
+		if (layer.frameIndex == 42)
+			layer.setFrame(41);
 		else if (_random.getRandomNumber(2) == 0)
-			_charlieLayer.setFrame(42);
+			layer.setFrame(42);
 	}
 }
 
@@ -363,7 +357,8 @@ bool Scene6100::applyCustomSceneStateToHotspotsAndPatches(byte selector) {
 		_hotspots.setActionTarget(7, interactionPoint, target.approachPoint);
 	}
 
-	_charlieLayer.visible = state.scene6100CharlieState != 0;
+	_sceneLayers.setLayerVisible(kScene6100CharlieLayer,
+		state.scene6100CharlieState != 0);
 	return true;
 }
 
@@ -380,22 +375,21 @@ uint32 Scene6100::primarySpeechAnimationFrameMillis(byte animationGroup) const {
 
 void Scene6100::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) {
 	(void)animationGroup;
-	if (_charlieLayer.visible)
-		_charlieLayer.setFrame(frameIndex);
+	_sceneLayers.setVisibleLayerFrame(kScene6100CharlieLayer, frameIndex);
 }
 
 void Scene6100::primarySpeechAnimationRestored(byte animationGroup, byte baseFrame) {
 	(void)animationGroup;
-	if (_charlieLayer.visible)
-		_charlieLayer.setFrame(baseFrame);
+	_sceneLayers.setVisibleLayerFrame(kScene6100CharlieLayer, baseFrame);
 	_charlieConversationChannel.resetTimer();
 }
 
 void Scene6100::enterCharlieDialoguePose() {
 	_charlieManualSequenceActive = true;
-	if (_charlieLayer.frameIndex < 16) {
-		playAnimationFrames(_charlieLayer,
-			AnimationFrameRange(_charlieLayer.frameIndex + 1, 16,
+	const byte frameIndex = _sceneLayers.layerFrame(kScene6100CharlieLayer);
+	if (frameIndex < 16) {
+		playAnimationFrames(kScene6100CharlieLayer,
+			AnimationFrameRange(frameIndex + 1, 16,
 				kScene6100AnimationFrameMillis));
 	}
 	_charliePose = 0;
@@ -404,7 +398,7 @@ void Scene6100::enterCharlieDialoguePose() {
 
 void Scene6100::switchCharlieToAlternatePose() {
 	_charlieManualSequenceActive = true;
-	playAnimationFrames(_charlieLayer,
+	playAnimationFrames(kScene6100CharlieLayer,
 		AnimationFrameRange(20, 24, kScene6100AnimationFrameMillis));
 	_charliePose = 1;
 	_charlieManualSequenceActive = false;
@@ -412,7 +406,7 @@ void Scene6100::switchCharlieToAlternatePose() {
 
 void Scene6100::returnCharlieToDialoguePose() {
 	_charlieManualSequenceActive = true;
-	playAnimationFrames(_charlieLayer,
+	playAnimationFrames(kScene6100CharlieLayer,
 		AnimationFrameRange(28, 32, kScene6100AnimationFrameMillis));
 	_charliePose = 0;
 	_charlieManualSequenceActive = false;
@@ -421,11 +415,12 @@ void Scene6100::returnCharlieToDialoguePose() {
 void Scene6100::finishCharlieDialoguePose() {
 	_charlieConversationActive = false;
 	_charlieManualSequenceActive = true;
-	_charlieLayer.setFrame(16);
-	playAnimationFrames(_charlieLayer,
+	_sceneLayers.setLayerFrame(kScene6100CharlieLayer, 16);
+	playAnimationFrames(kScene6100CharlieLayer,
 		AnimationFrameRange(15, 7, kScene6100AnimationFrameMillis));
 	_charlieIdleState = 0;
-	_charlieIdleChannel.reset(_charlieLayer.frameIndex, kScene6100AnimationFrameMillis);
+	_charlieIdleChannel.reset(_sceneLayers.layerFrame(kScene6100CharlieLayer),
+		kScene6100AnimationFrameMillis);
 	_charlieManualSequenceActive = false;
 }
 
@@ -556,7 +551,6 @@ void Scene6100::setCharlieDialogueRecord(Common::Array<DialogueChoiceRecord> &re
 	record.playerTextRowId = playerTextRowId;
 	record.responseFrameIndex = responseFrameIndex;
 	record.disableAfterUse = disableAfterUse;
-	record.reserved = 0xff;
 	record.selectable = enabled != 0;
 }
 
@@ -569,27 +563,21 @@ void Scene6100::takeCharlieBriefcase() {
 	if (!state.scene6100BriefcasePresent)
 		return;
 
-	beginSecondarySpeechLine(7, 1);
-	_charlieManualSequenceActive = true;
-	runActorReplacement(ActionOverlaySpec(9, 0x0d, kScene6100BriefcaseFrameMap,
-		ARRAYSIZE(kScene6100BriefcaseFrameMap), kScene6100AnimationFrameMillis)
-		.hookAt(7, kScene6100BriefcasePatchHook));
-	_charlieManualSequenceActive = false;
+	BlockingSequence sequence(*this);
+	sequence.secondarySpeech(7, 1)
+		.commit(_charlieManualSequenceActive, true)
+		.actorReplacement(ActionOverlaySpec(9, 0x0d, kScene6100AnimationFrameMillis)
+			.holdFirstFrame()
+			.drawAt(kSceneAnimationInFrontOfActors)
+			.commitAt(7, state.scene6100BriefcasePresent, false)
+			.patchAt(7, 2))
+		.commit(_charlieManualSequenceActive, false);
 	if (state.scene6100BriefcasePresent) {
-		state.scene6100BriefcasePresent = false;
-		applySceneStateToHotspotsAndPatches(2);
+		sequence.commit(state.scene6100BriefcasePresent, false)
+			.framebufferPatch(2);
 	}
 	addInventoryItem(kScene6100BriefcaseItem);
-	_soundBank0.playSample(1, 100);
-}
-
-void Scene6100::handleAnimationFrameHook(byte hookId, uint frame) {
-	if (hookId != kScene6100BriefcasePatchHook || frame != 7)
-		return;
-
-	GameplayState &state = _vm->gameState();
-	state.scene6100BriefcasePresent = false;
-	applySceneStateToHotspotsAndPatches(2);
+	sequence.sound(1);
 }
 
 void Scene6100::giveBillyFordEnvelopeToCharlie() {
@@ -598,51 +586,49 @@ void Scene6100::giveBillyFordEnvelopeToCharlie() {
 			!hasInventoryItem(kScene6100BillyFordEnvelopeItem))
 		return;
 
-	beginSecondarySpeechLine(9, 0);
-	_charlieManualSequenceActive = true;
+	BlockingSequence sequence(*this);
+	sequence.secondarySpeech(9, 0)
+		.commit(_charlieManualSequenceActive, true);
 	enterCharlieDialoguePose();
-	_charlieManualSequenceActive = true;
+	sequence.commit(_charlieManualSequenceActive, true);
 	beginCharlieSpeechLine(kScene6100EnvelopeRow, 1, kScene6100CharlieSpeechGroup);
 
 	const bool previousHideActiveActor = _hideActiveActor;
 	_hideActiveActor = true;
-	_letterLayer.visible = true;
-	playAnimationFrames(_letterLayer,
-		AnimationFrameRange(0, 7, kScene6100AnimationFrameMillis));
-	playAnimationFrames(_charlieLayer,
-		AnimationFrameRange(32, 41, kScene6100AnimationFrameMillis));
-	playAnimationFrames(_letterLayer,
-		AnimationFrameRange(7, 12, kScene6100AnimationFrameMillis));
-	_letterLayer.visible = false;
+	_sceneLayers.showLayerAtFrame(kScene6100LetterLayer, 0);
+	sequence.layerFrames(kScene6100LetterLayer,
+			AnimationFrameRange(0, 7, kScene6100AnimationFrameMillis))
+		.layerFrames(kScene6100CharlieLayer,
+			AnimationFrameRange(32, 41, kScene6100AnimationFrameMillis))
+		.layerFrames(kScene6100LetterLayer,
+			AnimationFrameRange(7, 12, kScene6100AnimationFrameMillis));
+	_sceneLayers.setLayerVisible(kScene6100LetterLayer, false);
 	_hideActiveActor = previousHideActiveActor;
 
 	removeInventoryItem(kScene6100BillyFordEnvelopeItem);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 	beginCharlieSpeechLine(kScene6100EnvelopeRow, 2, kScene6100LetterSpeechGroup);
-	playAnimationFrames(_charlieLayer,
-		AnimationFrameRange(42, 78, kScene6100AnimationFrameMillis));
-	_charliePose = 2;
+	sequence.layerFrames(kScene6100CharlieLayer,
+			AnimationFrameRange(42, 78, kScene6100AnimationFrameMillis))
+		.commit(_charliePose, (byte)2);
 	beginCharlieSpeechLine(kScene6100EnvelopeRow, 3, kScene6100CharlieSpeechGroup);
 
-	_charlieLayer.visible = false;
-	_departureLayer.visible = true;
-	playAnimationFrames(_departureLayer,
+	_sceneLayers.setLayerVisible(kScene6100CharlieLayer, false);
+	_sceneLayers.showLayerAtFrame(kScene6100DepartureLayer, 0);
+	sequence.layerFrames(kScene6100DepartureLayer,
 		AnimationFrameRange(0, 22, kScene6100DepartureFrameMillis));
-	_departureLayer.visible = false;
-	state.scene6100CharlieState = 0;
-	applySceneStateToHotspotsAndPatches(1);
-	_charlieManualSequenceActive = false;
-
-	walkActiveActorTo(0x14f, 0x1df, 1, 0, false);
-	beginSecondarySpeechLine(9, 4);
-}
-
-bool Scene6100::shouldRunExitSideEffectsAfterLoop() const {
-	const uint16 stateId = _vm->gameState().mainFlowStateId;
-	return !Engine::shouldQuit() && stateId != 0xff && !isMainFlowStateInScene(stateId);
+	_sceneLayers.setLayerVisible(kScene6100DepartureLayer, false);
+	sequence.commit(state.scene6100CharlieState, (byte)0)
+		.framebufferPatch(1)
+		.commit(_charlieManualSequenceActive, false)
+		.actorPath(SceneActorPose(0x14f, 0x1df, 1))
+		.secondarySpeech(9, 4);
 }
 
 void Scene6100::runExitSideEffectsAfterLoop() {
+	if (!didLeaveSceneAfterLoop())
+		return;
+
 	fadePaletteToBlack();
 }
 

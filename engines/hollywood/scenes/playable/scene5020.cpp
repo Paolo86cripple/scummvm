@@ -19,12 +19,11 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene5020.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
 #include "hollywood/resource.h"
+#include "hollywood/scenes/playable/scene5020.h"
 
 namespace Hollywood {
 
@@ -68,10 +67,6 @@ const byte kScene5020MineCartDelayBuckets[] = {
 	12, 12, 12, 12
 };
 
-const byte kScene5020PickupFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
-};
-
 const uint kScene5020MineCartLayer = 0;
 const SceneLayerSpec kScene5020LayerSpecs[] = {
 	{kSceneAnimationInFrontOfActors, kScene5020MineCartOverlayChunk,
@@ -85,6 +80,7 @@ PlayableSceneConfig scene5020Config() {
 		SceneActorPose(0x27d, 0x16c, 4));
 	config.setActorResources(kScene5020ActorBankTableEntry, kScene5020ActorPaletteTableEntry);
 	config.setTextResources(0, kScene5020SpeechCueDescriptorTableOffset);
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
@@ -99,19 +95,10 @@ void Scene5020::initializeCustomPreviewState() {
 	setActiveActorPose(kScene5020EntryStartX, kScene5020EntryStartY, 4);
 }
 
-void Scene5020::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel,
-		int activeWorldX, int activeWorldY, bool drawSecondaryActor, byte secondaryFacing,
-		byte secondaryFrame, int secondaryWorldX, int secondaryWorldY, byte actorDrawOrderMode) {
-	copyBaseFramebufferToSceneFramebuffer();
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
+void Scene5020::drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
+		byte actorDrawOrderMode) {
+	(void)activeWorldX;
 	drawForeground(actorDrawOrderMode, activeWorldY);
-	drawActionOverlayLayer();
-	drawLayerStack(_sceneLayers, kSceneAnimationInFrontOfActors);
-}
-
-bool Scene5020::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
 }
 
 void Scene5020::runCustomEntrySequence() {
@@ -121,10 +108,6 @@ void Scene5020::runCustomEntrySequence() {
 
 	runEntryPath(kScene5020EntryStartX, kScene5020EntryStartY, 4,
 		kScene5020EntryTargetX, kScene5020EntryTargetY);
-}
-
-bool Scene5020::shouldRunExitSideEffectsAfterLoop() const {
-	return true;
 }
 
 void Scene5020::runExitSideEffectsAfterLoop() {
@@ -235,15 +218,7 @@ bool Scene5020::applyCustomSceneStateToHotspotsAndPatches(byte selector) {
 }
 
 AmbientAudioProfile Scene5020::ambientAudioProfile() const {
-	return createRandomAmbientAudioProfile(0x0d, 8, 10, 25, 0x0b, 5, 100, 50);
-}
-
-byte Scene5020::ambientSoundCueVolume(byte cueId, byte defaultVolumePercent) const {
-	if (cueId == 0x10)
-		return 2;
-	if (cueId == 0x14)
-		return 100;
-	return defaultVolumePercent;
+	return createMineAmbientAudioProfile();
 }
 
 void Scene5020::runMineCartArrival() {
@@ -299,8 +274,8 @@ void Scene5020::runPickupWoodenPlank() {
 		return;
 	}
 
-	runActorReplacement(kScene5020PickupOverlayChunk, kScene5020PickupOverlayDescriptorCount,
-		kScene5020PickupFrameMap, ARRAYSIZE(kScene5020PickupFrameMap), kScene5020OverlayFrameMillis);
+	runActorReplacement(ActionOverlaySpec(kScene5020PickupOverlayChunk,
+		kScene5020PickupOverlayDescriptorCount, kScene5020OverlayFrameMillis).holdFirstFrame());
 	addInventoryItem(kScene5020WoodenPlankItem);
 	_soundBank0.playSample(1, 100);
 	state.scene5020WoodenPlankTaken = true;

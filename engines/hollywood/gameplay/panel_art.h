@@ -27,9 +27,6 @@
 #include "common/str.h"
 #include "common/types.h"
 
-#include "hollywood/gameplay/dialogue_menu.h"
-#include "hollywood/gameplay/game_loop.h"
-
 namespace Graphics {
 struct Surface;
 }
@@ -37,6 +34,8 @@ struct Surface;
 namespace Hollywood {
 
 class HollywoodFont;
+struct DialogueMenuState;
+struct GameplayPanelState;
 struct GameplayState;
 
 class GameplayPanelArt {
@@ -48,10 +47,10 @@ public:
 
 	// The current actor resource owns colors 0xd0-0xff.
 	bool applyInteractiveObjectPalette(Common::Array<byte> &palette) const;
-	void drawVerbPanel(Graphics::Surface &surface, const Graphics::Surface &sceneBackground,
+	void drawVerbPanel(Graphics::Surface &surface, const Graphics::Surface &sceneComposite,
 		uint16 viewportXOffset, uint16 viewportYOffset, const GameplayPanelState &panelState,
 		HollywoodFont *font) const;
-	void drawDialogueInventoryPanel(Graphics::Surface &surface, const Graphics::Surface &sceneBackground,
+	void drawDialogueInventoryPanel(Graphics::Surface &surface, const Graphics::Surface &sceneComposite,
 		uint16 viewportXOffset, uint16 viewportYOffset, const GameplayPanelState &panelState,
 		const GameplayState &gameState, HollywoodFont *font) const;
 	void drawDialogueMenuPanel(Graphics::Surface &surface, const DialogueMenuState &menuState,
@@ -64,7 +63,7 @@ private:
 	bool loadObjectPalette();
 	bool loadObjectPaletteFromResource000();
 	bool loadInventoryItemTilePage(byte pageIndex, Common::Array<byte> &page) const;
-	void copySceneCaptionBand(Graphics::Surface &surface, const Graphics::Surface &sceneBackground,
+	void copySceneCaptionBand(Graphics::Surface &surface, const Graphics::Surface &sceneComposite,
 		uint16 viewportXOffset, uint16 viewportYOffset, uint16 screenY) const;
 	void copyBottomPanelRows(Graphics::Surface &surface, uint16 sourceRow, uint16 screenY,
 		uint16 rowCount) const;

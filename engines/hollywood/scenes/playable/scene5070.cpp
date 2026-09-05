@@ -19,11 +19,10 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene5070.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene5070.h"
 
 namespace Hollywood {
 
@@ -57,10 +56,6 @@ const int kScene5070CentralGapSplitX = 0x137;
 const int kScene5070CentralGapRightX = 0x188;
 const int kScene5070MaximumWalkY = 0x1df;
 
-enum Scene5070AnimationHookId {
-	kScene5070ShovelBackgroundPatchHook = 1
-};
-
 const byte kScene5070MineCartDelayBuckets[] = {
 	1, 1, 1, 1, 1, 1, 1, 1, 1,
 	2, 2, 2,
@@ -76,18 +71,6 @@ const byte kScene5070MineCartDelayBuckets[] = {
 	12, 12, 12, 12
 };
 
-const byte kScene5070AmbientSoundVolumes[] = {
-	10, 10, 10, 2, 10, 10, 10, 100
-};
-
-const byte kScene5070AviatorCapPickupFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
-};
-
-const byte kScene5070ShovelPickupFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
-};
-
 PlayableSceneConfig scene5070Config() {
 	PlayableSceneConfig config(5070,
 		SceneResourceLayout(5, 5, 11),
@@ -95,6 +78,7 @@ PlayableSceneConfig scene5070Config() {
 		SceneActorPose(0x2e3, 0x1d6, 5));
 	config.setActorResources(kScene5070ActorBankTableEntry, kScene5070ActorPaletteTableEntry);
 	config.setTextResources(0, kScene5070SpeechCueDescriptorTableOffset);
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
@@ -118,22 +102,11 @@ void Scene5070::initializeCustomPreviewState() {
 	setActiveActorPose(kScene5070EntryTargetX, kScene5070EntryTargetY, 5);
 }
 
-void Scene5070::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	drawActionOverlayLayer();
-	drawLayerStack(_sceneLayers, kSceneAnimationInFrontOfActors);
+void Scene5070::drawCustomForegroundComposite(int activeWorldX, int activeWorldY) {
+	(void)activeWorldX;
+	(void)activeWorldY;
 	if (_sceneLayers.layerVisible(kScene5070MineCartLayer))
 		drawMineCartForeground();
-}
-
-bool Scene5070::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
 }
 
 void Scene5070::runCustomEntrySequence() {
@@ -268,17 +241,7 @@ bool Scene5070::applyCustomSceneStateToHotspotsAndPatches(byte selector) {
 }
 
 AmbientAudioProfile Scene5070::ambientAudioProfile() const {
-	return createRandomAmbientAudioProfile(0x0d, 8, 10, 25, 0x0b, 5, 100, 50);
-}
-
-byte Scene5070::ambientSoundCueVolume(byte cueId, byte defaultVolumePercent) const {
-	if (cueId >= 0x0d && cueId <= 0x14)
-		return kScene5070AmbientSoundVolumes[cueId - 0x0d];
-	return defaultVolumePercent;
-}
-
-bool Scene5070::shouldRunExitSideEffectsAfterLoop() const {
-	return true;
+	return createMineAmbientAudioProfile();
 }
 
 void Scene5070::runExitSideEffectsAfterLoop() {
@@ -327,9 +290,10 @@ void Scene5070::runMineCartEntryClip() {
 }
 
 void Scene5070::runExitToMineSwitches() {
-	walkActiveActorTo(0x3ab, 0x1df, 0xff, 0, false);
-	_soundBank0.playSample(0x15, 100);
-	_vm->gameState().mainFlowStateId = kScene5010ReturnState;
+	BlockingSequence(*this)
+		.actorPath(SceneActorPose(0x3ab, 0x1df, 0xff))
+		.sound(0x15)
+		.commit(_vm->gameState().mainFlowStateId, kScene5010ReturnState);
 }
 
 void Scene5070::runShovelPickup() {
@@ -339,14 +303,18 @@ void Scene5070::runShovelPickup() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(8, kScene5070ShovelPickupDescriptorCount,
-		kScene5070ShovelPickupFrameMap, ARRAYSIZE(kScene5070ShovelPickupFrameMap), kScene5070FrameMillis)
-		.hookAt(6, kScene5070ShovelBackgroundPatchHook)
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(8, kScene5070ShovelPickupDescriptorCount,
+		kScene5070FrameMillis).holdFirstFrame()
+		.commitAt(6, state.scene5070ShovelTaken, true)
+		.patchAt(6, 0)
 		.noFinalFrameDelay());
 	addInventoryItem(kScene5070ShovelInventoryItem);
-	_soundBank0.playSample(1, 100);
-	state.scene5070ShovelTaken = true;
-	applySceneStateToHotspotsAndPatches(0);
+	sequence.sound(1);
+	if (!state.scene5070ShovelTaken) {
+		sequence.commit(state.scene5070ShovelTaken, true)
+			.framebufferPatch(0);
+	}
 }
 
 void Scene5070::runAviatorCapPickup() {
@@ -356,14 +324,14 @@ void Scene5070::runAviatorCapPickup() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(7, kScene5070AviatorCapPickupDescriptorCount,
-		kScene5070AviatorCapPickupFrameMap, ARRAYSIZE(kScene5070AviatorCapPickupFrameMap), kScene5070FrameMillis)
-		.noFinalFrameDelay()
-		.noRedrawAtEnd());
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(7, kScene5070AviatorCapPickupDescriptorCount,
+		kScene5070FrameMillis).holdFirstFrame()
+		.noFinalFrameDelay());
 	addInventoryItem(kScene5070AviatorCapInventoryItem);
-	_soundBank0.playSample(1, 100);
-	state.scene5070AviatorCapState = kScene5070AviatorCapTakenState;
-	applySceneStateToHotspotsAndPatches(1);
+	sequence.sound(1)
+		.commit(state.scene5070AviatorCapState, kScene5070AviatorCapTakenState)
+		.framebufferPatch(1);
 	drawPlayableComposite();
 	presentFrame();
 }
@@ -380,15 +348,6 @@ void Scene5070::copySlopeStepDeltasFromSet5A(uint firstOffset) {
 	for (uint i = 0; i < 0x0c && firstOffset + i < _actorPathStepDeltas.size() &&
 			firstOffset + i < ARRAYSIZE(kActorPathStepDeltaTableSet5A); ++i)
 		_actorPathStepDeltas[firstOffset + i] = kActorPathStepDeltaTableSet5A[firstOffset + i];
-}
-
-void Scene5070::handleAnimationFrameHook(byte hookId, uint frame) {
-	(void)frame;
-	if (hookId != kScene5070ShovelBackgroundPatchHook)
-		return;
-
-	_vm->gameState().scene5070ShovelTaken = true;
-	applySceneStateToHotspotsAndPatches(0);
 }
 
 void Scene5070::copyStageSmallRow(byte destinationRow, byte sourceRow) {

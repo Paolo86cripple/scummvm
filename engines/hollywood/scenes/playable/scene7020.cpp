@@ -19,14 +19,13 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene7020.h"
-
 #include "common/file.h"
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene7020.h"
 
 namespace Hollywood {
 
@@ -35,7 +34,7 @@ const uint16 kScene7020ViewportXOffset = 0;
 const uint16 kScene7020Chunk6DescriptorCount = 0x21;
 const uint16 kScene7020Chunk7DescriptorCount = 10;
 const uint kScene7020Chunk6Layer = 0;
-const uint kScene7020Chunk7Layer = 0;
+const uint kScene7020Chunk7Layer = 1;
 const uint32 kScene7020FrameMillis = 75;
 const uint32 kScene7020PrimarySpeechFrameMillis = 125;
 const uint32 kScene7020OpeningWaitMillis = 2000;
@@ -58,7 +57,14 @@ const byte kScene7020Chunk7RevealFrameMap[] = {
 	0, 0, 1, 2, 3, 4, 5, 6, 7
 };
 
-static PlayableSceneConfig scene7020Config() {
+const SceneLayerSpec kScene7020LayerSpecs[] = {
+	{kSceneAnimationBehindActors, 6, kScene7020Chunk6DescriptorCount,
+		kScene7020Chunk6FrameMap, ARRAYSIZE(kScene7020Chunk6FrameMap), false, 0},
+	{kSceneAnimationActorReplacement, 7, kScene7020Chunk7DescriptorCount,
+		nullptr, 0, false, 0}
+};
+
+PlayableSceneConfig scene7020Config() {
 	PlayableSceneConfig config(7020,
 		SceneResourceLayout(8, 5, 7),
 		SceneViewport(kScene7020ViewportXOffset),
@@ -73,9 +79,8 @@ Scene7020::Scene7020(HollywoodEngine *vm) :
 		_primaryPoseMode(0),
 		_drawChunk7OverlayInsteadOfActor(false),
 		_chunk7TimerAccumulator(0),
-		_primaryTimerAccumulator(0),
-		_backTransientLayers(),
-		_actorReplacementLayers() {
+		_primaryTimerAccumulator(0) {
+	_sceneLayers.configure(kScene7020LayerSpecs);
 }
 
 bool Scene7020::play() {
@@ -97,6 +102,11 @@ bool Scene7020::play() {
 }
 
 void Scene7020::initializeCustomPreviewState() {
+	for (uint paletteClass = 1; paletteClass <= 3; ++paletteClass) {
+		const uint offset = kPaletteDeltaTable + paletteClass;
+		_metadata[offset] = (byte)((int8)_metadata[offset] - 8);
+	}
+
 	_primaryPoseMode = 0;
 	resetTransientOverlayLayers();
 	_drawChunk7OverlayInsteadOfActor = false;
@@ -107,20 +117,10 @@ void Scene7020::initializeCustomPreviewState() {
 	clearAllSpeechOverlays();
 }
 
-void Scene7020::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+void Scene7020::drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) {
-	copyBaseFramebufferToSceneFramebuffer();
-
-	drawLayerStack(_backTransientLayers, kSceneAnimationScenePlaced);
-
-	if (_actorReplacementLayers.hasVisibleLayers()) {
-		drawLayerStack(_actorReplacementLayers, kSceneAnimationScenePlaced);
-	} else {
-		drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-			drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	}
-
+	(void)activeWorldX;
+	(void)activeWorldY;
 	if (actorDrawOrderMode != 2)
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[5], _sceneFramebuffer);
 }
@@ -168,7 +168,7 @@ byte Scene7020::primarySpeechAnimationBaseFrame(byte animationGroup) const {
 		return 0x13;
 	if (_primaryPoseMode == 2)
 		return 0x20;
-	return _backTransientLayers.layerFrame(kScene7020Chunk6Layer);
+	return _sceneLayers.layerFrame(kScene7020Chunk6Layer);
 }
 
 void Scene7020::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) {
@@ -346,7 +346,7 @@ void Scene7020::runScriptedSequence() {
 	_drawChunk7OverlayInsteadOfActor = false;
 	setChunk7Visible(false);
 	runOpeningSueEntryAndIdleWaits();
-	if (Engine::shouldQuit())
+	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
 		return;
 
 	beginSecondarySpeechLine(1, 0);
@@ -375,25 +375,48 @@ void Scene7020::runScriptedSequence() {
 void Scene7020::runOpeningSueEntryAndIdleWaits() {
 	runEntryPath(kScene7020SueStartX, kScene7020SueStartY, kScene7020SueStartFacing,
 		kScene7020SueTargetX, kScene7020SueTargetY);
-	waitSceneMillis(kScene7020OpeningWaitMillis);
-	walkActiveActorTo(kScene7020SueTargetX, kScene7020SueTargetY, kScene7020SueFirstTurnFacing, 0);
-	waitSceneMillis(kScene7020OpeningWaitMillis);
+	if (finishOpeningSueEntryAfterSkip())
+		return;
+
+	if (waitSceneMillis(kScene7020OpeningWaitMillis)) {
+		finishOpeningSueEntryAfterSkip();
+		return;
+	}
+
+	if (!walkActiveActorTo(kScene7020SueTargetX, kScene7020SueTargetY,
+			kScene7020SueFirstTurnFacing, 0) || finishOpeningSueEntryAfterSkip())
+		return;
+
+	if (waitSceneMillis(kScene7020OpeningWaitMillis))
+		finishOpeningSueEntryAfterSkip();
+}
+
+bool Scene7020::finishOpeningSueEntryAfterSkip() {
+	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
+		return true;
+	if (!_skipRequested)
+		return false;
+
+	consumeStepAdvanceRequest();
+	_skipRequested = false;
+	setActiveActorPose(kScene7020SueTargetX, kScene7020SueTargetY,
+		kScene7020SueFirstTurnFacing, 0);
+	drawPlayableComposite();
+	presentFrame();
+	return true;
 }
 
 void Scene7020::runChunk6FrameRange(byte firstFrame, byte lastFrame, byte finalPoseMode) {
 	setChunk6Visible(true);
-	if (_backTransientLayers.hasLayer(kScene7020Chunk6Layer)) {
-		playAnimationFrames(_backTransientLayers.layer(kScene7020Chunk6Layer),
-			AnimationFrameRange(firstFrame, lastFrame, kScene7020FrameMillis));
-	}
+	playAnimationFrames(kScene7020Chunk6Layer,
+		AnimationFrameRange(firstFrame, lastFrame, kScene7020FrameMillis));
 	_primaryPoseMode = finalPoseMode;
 }
 
 void Scene7020::runChunk7RevealFramesThenHold() {
 	setChunk7Visible(true);
-	if (_actorReplacementLayers.hasLayer(kScene7020Chunk7Layer))
-		playAnimationFrames(_actorReplacementLayers.layer(kScene7020Chunk7Layer),
-			AnimationFrameRange(kScene7020Chunk7RevealFrameMap, kScene7020FrameMillis));
+	playAnimationFrames(kScene7020Chunk7Layer,
+		AnimationFrameRange(kScene7020Chunk7RevealFrameMap, kScene7020FrameMillis));
 	_drawChunk7OverlayInsteadOfActor = true;
 	setChunk7Frame(8);
 }
@@ -404,43 +427,34 @@ void Scene7020::blackOutScenePalette() {
 		_paletteCurrent[i * 3 + 1] = 0;
 		_paletteCurrent[i * 3 + 2] = 0;
 	}
+	// Speech redraws rebuild actor colors from this cache unless it is blacked too.
+	memset(_actorPaletteBase.data(), 0, _actorPaletteBase.size());
 	drawPlayableComposite();
 	presentFrame();
 }
 
 void Scene7020::resetTransientOverlayLayers() {
-	_backTransientLayers.clear();
-	_backTransientLayers.configureLayer(kScene7020Chunk6Layer, kSceneAnimationScenePlaced,
-		6, kScene7020Chunk6DescriptorCount,
-		kScene7020Chunk6FrameMap, ARRAYSIZE(kScene7020Chunk6FrameMap), false);
-	_actorReplacementLayers.clear();
-	_actorReplacementLayers.configureLayer(kScene7020Chunk7Layer, kSceneAnimationScenePlaced,
-		7, kScene7020Chunk7DescriptorCount,
-		nullptr, 0, false);
+	_sceneLayers.reset();
 }
 
 void Scene7020::setChunk6Visible(bool visible) {
-	_backTransientLayers.setLayerVisible(kScene7020Chunk6Layer, visible);
+	_sceneLayers.setLayerVisible(kScene7020Chunk6Layer, visible);
 }
 
 void Scene7020::setChunk6Frame(byte frameMapIndex) {
-	if (_backTransientLayers.hasLayer(kScene7020Chunk6Layer))
-		_backTransientLayers.setLayerFrame(kScene7020Chunk6Layer, frameMapIndex);
+	_sceneLayers.setLayerFrame(kScene7020Chunk6Layer, frameMapIndex);
 }
 
 void Scene7020::setChunk7Visible(bool visible) {
-	_actorReplacementLayers.setLayerVisible(kScene7020Chunk7Layer, visible);
+	_sceneLayers.setLayerVisible(kScene7020Chunk7Layer, visible);
 }
 
 void Scene7020::setChunk7Frame(byte frameIndex) {
-	if (_actorReplacementLayers.hasLayer(kScene7020Chunk7Layer))
-		_actorReplacementLayers.setLayerFrame(kScene7020Chunk7Layer, frameIndex);
+	_sceneLayers.setLayerFrame(kScene7020Chunk7Layer, frameIndex);
 }
 
 byte Scene7020::chunk7Frame() const {
-	if (!_actorReplacementLayers.hasLayer(kScene7020Chunk7Layer))
-		return 0;
-	return _actorReplacementLayers.layer(kScene7020Chunk7Layer).frameIndex;
+	return _sceneLayers.layerFrame(kScene7020Chunk7Layer);
 }
 
 } // End of namespace Hollywood

@@ -23,14 +23,14 @@
 #define HOLLYWOOD_SCENES_INTRO_SCENE9150_H
 
 #include "hollywood/music.h"
-#include "hollywood/scenes/intro/intro_scene.h"
-#include "hollywood/scenes/intro/intro_text.h"
+#include "hollywood/scenes/presentation_scene.h"
+#include "hollywood/scenes/scene_text_store.h"
 
 namespace Hollywood {
 
 class HollywoodEngine;
 
-class Scene9150 : public IntroSceneBase {
+class Scene9150 : public PresentationScene {
 public:
 	Scene9150(HollywoodEngine *vm);
 
@@ -38,17 +38,19 @@ public:
 
 private:
 	bool load();
-	bool loadPalette();
 	bool loadClipChunk(uint chunkIndex);
 	void runClip(byte staticSpeechRowIndex);
 	void drawClipFrame(byte frameIndex);
 	void playStaticSpeechPair(byte rowIndex);
 	void fadeOutPalette();
+	void presentAnimationFrame() override;
+	void stopAudio() override;
 
 	SpeechPlayer _speech;
-	IntroTextStore _text;
+	SceneTextStore _text;
 	Common::Array<byte> _paletteResource;
 	Common::Array<byte> _clipResource;
+	byte _clipFrameIndex;
 };
 
 } // End of namespace Hollywood

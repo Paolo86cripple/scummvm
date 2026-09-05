@@ -34,14 +34,12 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+	void drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
 	void advancePrimarySpeechAnimation(uint32 delta) override;
-	void advanceAmbientAudio(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
@@ -54,6 +52,8 @@ private:
 	void replaceActorPaletteClassFromOriginal(byte sourceClass, byte destinationClass);
 	void copySmallTextRow(byte sourceRow, byte destinationRow);
 	void advanceBlindManLayer(uint32 delta);
+	bool stopBlindManPlaying();
+	void pauseBlindManMusic();
 	void beginBlindManSpeechAnimation();
 	void advanceBlindManSpeechAnimation(uint32 delta);
 	void endBlindManSpeechAnimation();
@@ -61,6 +61,7 @@ private:
 	void setBlindManPostConversationFrame();
 	void advancePuzzleLayer(uint32 delta);
 	void triggerPuzzleLayer();
+	void advanceWindowLayer(uint32 delta);
 	void runExitToScene3080();
 	void runBlindManConversation();
 	void initializeDialogueRecords(Common::Array<DialogueChoiceRecord> &records) const;
@@ -71,19 +72,21 @@ private:
 	void runSaltShakerPickup();
 	void runDowsingRodPickup();
 	void runUseStrawInFireplace();
+	void runWindowOpeningSequence();
 	void runSaxophoneHandoff();
 	void drawForegroundBlocks(int activeWorldY);
 
 	TimedAnimationChannel _blindManChannel;
 	TimedAnimationChannel _puzzleChannel;
-	ResourceSpriteLayer _frontLayer;
-	ResourceSpriteLayer _blindManLayer;
-	ResourceSpriteLayer _puzzleLayer;
+	TimedAnimationChannel _windowChannel;
 	uint _frontTrack;
 	bool _puzzleLayerTriggered;
+	bool _windowOpeningActive;
 	bool _dialogueMenuActive;
 	bool _blindManConversationActive;
 	bool _blindManSpeechActive;
+	bool _blindManMusicEnabled;
+	bool _blindManMusicResumePending;
 	byte _blindManSpeechLastRandomFrame;
 	uint32 _blindManSpeechTimerAccumulator;
 };

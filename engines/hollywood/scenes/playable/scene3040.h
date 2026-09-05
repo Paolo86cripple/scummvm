@@ -34,22 +34,18 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
+	bool shouldDrawSecondaryActorInPlayableComposite() const override;
 	void runCustomEntrySequence() override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
 	bool shouldPlayGameplayClickPath() const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
 	void resetAnimationLayers();
 	void rebuildWalkableMask();
 	void advanceForegroundActorLayer(uint32 delta);
-	void drawLooseResourceSpriteLayer(const ResourceSpriteLayer &layer);
 	void updateHiddenObjectHotspots();
 	void runExitToScene3010();
 	void runInventoryPatchAction();
@@ -57,8 +53,6 @@ private:
 	byte selectedInventoryItemForPatchAction() const;
 
 	TimedAnimationChannel _foregroundActorChannel;
-	ResourceSpriteLayer _foregroundActorLayer;
-	ResourceSpriteLayer _loopLayer;
 	uint _loopTrack;
 	bool _foregroundActorBlinkActive;
 	bool _foregroundActionActive;

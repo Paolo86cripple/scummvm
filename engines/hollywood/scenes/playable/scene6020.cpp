@@ -19,13 +19,12 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene6020.h"
-
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene6020.h"
 
 namespace Hollywood {
 
@@ -72,24 +71,17 @@ const byte kScene6020DialogueTransitionUp = 2;
 const byte kScene6020DialogueTransitionStay = 3;
 const byte kScene6020DialogueTransitionUpTwo = 4;
 const byte kScene6020DialogueNoResponseFrame = 0xff;
-const byte kScene6020EntryPhoneHook = 1;
-const byte kScene6020PhonePickupHook = 2;
-const byte kScene6020PhoneHangupHook = 3;
+enum {
+	kScene6020TaffyLayer,
+	kScene6020PhoneLayer
+};
 
 const byte kScene6020SmallObjectFrameMap[] = {
 	0, 1, 2, 3, 4, 5, 4, 3, 4, 5, 4, 3, 2, 1, 0
 };
 
-const byte kScene6020PickupForwardFrameMap[] = {
-	0x0b, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 0x0b
-};
-
 const byte kScene6020PickupShortFrameMap[] = {
 	0x0b, 0, 1, 2, 3, 2, 1, 0, 0x0b
-};
-
-const byte kScene6020PickupReverseFrameMap[] = {
-	0x0b, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0x0b
 };
 
 const byte kScene6020LateSceneObjectFrameMap[] = {
@@ -142,7 +134,7 @@ const byte kScene6020PhoneFrameMap[] = {
 
 const byte kScene6020PhoneSpeechFrameMap[] = { 24, 23, 22, 16 };
 
-static PlayableSceneConfig scene6020Config() {
+PlayableSceneConfig scene6020Config() {
 	PlayableSceneConfig config(6020,
 		SceneResourceLayout(21, 5, 20),
 		SceneViewport(kScene6020ViewportXOffset, kScene6020ViewportMinXOffset, kScene6020ViewportMaxXOffset),
@@ -157,7 +149,6 @@ Scene6020::Scene6020(HollywoodEngine *vm) :
 		PlayableScene(vm, scene6020Config()),
 		_originalColorToItemMap(),
 		_taffyChannel(),
-		_taffyLayer(),
 		_taffyAnimationState(0),
 		_taffyHoldCounter(0),
 		_taffyDeskMagnifierHidden(true),
@@ -170,11 +161,12 @@ Scene6020::Scene6020(HollywoodEngine *vm) :
 		_taffyDepartureFrameDescriptorCount(0),
 		_taffyDepartureFrameDescriptorIndex(0),
 		_phoneResource(),
-		_phoneLayer(),
 		_phoneAnimationActive(false) {
-	_taffyLayer.configure(12, kScene6020TaffyDescriptorCount,
-		kScene6020TaffyFrameMap, ARRAYSIZE(kScene6020TaffyFrameMap));
-	_phoneLayer.configure(0, kScene6020PhoneDescriptorCount, nullptr, 0);
+	_sceneLayers.configureLayer(kScene6020TaffyLayer, kSceneAnimationScenePlaced,
+		12, kScene6020TaffyDescriptorCount,
+		kScene6020TaffyFrameMap, ARRAYSIZE(kScene6020TaffyFrameMap), false);
+	_sceneLayers.configureLayer(kScene6020PhoneLayer, kSceneAnimationScenePlaced,
+		0, kScene6020PhoneDescriptorCount, nullptr, 0, false);
 }
 
 void Scene6020::initializeCustomPreviewState() {
@@ -193,18 +185,15 @@ void Scene6020::initializeCustomPreviewState() {
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 }
 
-void Scene6020::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawResourceSpriteLayer(_taffyLayer);
+void Scene6020::drawCustomBackgroundComposite(int activeWorldX, int activeWorldY) {
+	(void)activeWorldX;
+	(void)activeWorldY;
+	drawResourceSpriteLayer(_sceneLayers.layer(kScene6020TaffyLayer));
 	drawTaffyForegroundBlock();
+}
+
+void Scene6020::drawCustomForegroundComposite(int activeWorldX, int activeWorldY) {
 	drawTaffyDepartureLayer();
-	drawActionOverlayLayer();
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
 	drawForegroundBlocks(activeWorldX, activeWorldY);
 	drawPhoneLayer();
 }
@@ -356,28 +345,11 @@ void Scene6020::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIn
 	(void)animationGroup;
 	if (_phoneAnimationActive) {
 		if (frameIndex < ARRAYSIZE(kScene6020PhoneSpeechFrameMap))
-			_phoneLayer.setFrame(kScene6020PhoneSpeechFrameMap[frameIndex]);
+			_sceneLayers.setLayerFrame(kScene6020PhoneLayer,
+				kScene6020PhoneSpeechFrameMap[frameIndex]);
 		return;
 	}
-	_taffyLayer.setFrame(frameIndex);
-}
-
-void Scene6020::handleAnimationFrameHook(byte hookId, uint frame) {
-	(void)frame;
-	switch (hookId) {
-	case kScene6020EntryPhoneHook:
-	case kScene6020PhoneHangupHook:
-		applyPhoneFramebufferPatch(17);
-		_soundBank0.playSample(0x10, 100);
-		break;
-	case kScene6020PhonePickupHook:
-		applyPhoneFramebufferPatch(18);
-		_soundBank0.playSample(0x10, 100);
-		break;
-	default:
-		PlayableScene::handleAnimationFrameHook(hookId, frame);
-		break;
-	}
+	_sceneLayers.setLayerFrame(kScene6020TaffyLayer, frameIndex);
 }
 
 AmbientAudioProfile Scene6020::ambientAudioProfile() const {
@@ -393,90 +365,92 @@ AmbientAudioProfile Scene6020::ambientAudioProfile() const {
 
 void Scene6020::resetTaffyLayer() {
 	_taffyChannel.reset(0, kScene6020TaffyFrameMillis);
-	_taffyLayer.reset(0);
-	_taffyLayer.visible = !_vm->gameState().scene6020TaffyLeft;
+	_sceneLayers.resetLayer(kScene6020TaffyLayer, 0);
+	_sceneLayers.setLayerVisible(kScene6020TaffyLayer,
+		!_vm->gameState().scene6020TaffyLeft);
 	_taffyAnimationState = 0;
 	_taffyHoldCounter = 0;
 	_taffyDeskMagnifierHidden = !_vm->gameState().scene6020TaffyLeft ||
 		hasInventoryItem(kScene6020MagnifierInventoryItem);
 	_taffyDepartureAnimationActive = false;
 	_taffyDepartureFrameVisible = false;
-	_phoneLayer.visible = false;
-	_phoneLayer.reset(0);
+	_sceneLayers.resetLayer(kScene6020PhoneLayer, 0);
+	_sceneLayers.setLayerVisible(kScene6020PhoneLayer, false);
 	_phoneAnimationActive = false;
 }
 
 void Scene6020::advanceTaffyLayer(uint32 delta) {
-	if (!_taffyLayer.visible || _vm->gameState().scene6020TaffyLeft || _taffyDepartureAnimationActive)
+	ResourceSpriteLayer &taffyLayer = _sceneLayers.layer(kScene6020TaffyLayer);
+	if (!taffyLayer.visible || _vm->gameState().scene6020TaffyLeft || _taffyDepartureAnimationActive)
 		return;
 
 	const uint frameCount = _taffyChannel.consumeFrames(delta);
 	for (uint i = 0; i < frameCount; ++i) {
 		if (_taffyAnimationState == 0) {
-			if (_taffyLayer.frameIndex == 0) {
+			if (taffyLayer.frameIndex == 0) {
 				if (_random.getRandomNumber(14) == 0) {
-					_taffyLayer.setFrame(1);
+					taffyLayer.setFrame(1);
 				} else if (_random.getRandomNumber(29) == 0) {
 					_taffyAnimationState = 1;
 					_taffyHoldCounter = (byte)(_random.getRandomNumber(9) + 2);
-					_taffyLayer.setFrame(2);
+					taffyLayer.setFrame(2);
 				} else if (_random.getRandomNumber(49) == 0) {
 					_taffyAnimationState = 2;
-					_taffyLayer.setFrame(0x19);
+					taffyLayer.setFrame(0x19);
 				}
 			} else {
-				_taffyLayer.setFrame(0);
+				taffyLayer.setFrame(0);
 			}
 		} else if (_taffyAnimationState == 1) {
-			if (_taffyLayer.frameIndex < 6) {
-				_taffyLayer.setFrame(_taffyLayer.frameIndex + 1);
-			} else if (_taffyLayer.frameIndex == 6 && _taffyHoldCounter != 0) {
+			if (taffyLayer.frameIndex < 6) {
+				taffyLayer.setFrame(taffyLayer.frameIndex + 1);
+			} else if (taffyLayer.frameIndex == 6 && _taffyHoldCounter != 0) {
 				--_taffyHoldCounter;
-			} else if (_taffyLayer.frameIndex < 0x0b) {
-				_taffyLayer.setFrame(_taffyLayer.frameIndex + 1);
+			} else if (taffyLayer.frameIndex < 0x0b) {
+				taffyLayer.setFrame(taffyLayer.frameIndex + 1);
 			} else {
-				_taffyLayer.setFrame(0);
+				taffyLayer.setFrame(0);
 				_taffyAnimationState = 0;
 			}
 		} else if (_taffyAnimationState == 2) {
-			if (_taffyLayer.frameIndex > 0x21) {
+			if (taffyLayer.frameIndex > 0x21) {
 				_taffyAnimationState = 3;
 				_taffyHoldCounter = (byte)(_random.getRandomNumber(4) + 1);
-				_taffyLayer.setFrame(0x23);
+				taffyLayer.setFrame(0x23);
 			} else {
-				const byte nextFrame = _taffyLayer.frameIndex + 1;
+				const byte nextFrame = taffyLayer.frameIndex + 1;
 				if (nextFrame == 0x1f)
 					setTaffyDeskMagnifierHidden(false);
-				_taffyLayer.setFrame(nextFrame);
+				taffyLayer.setFrame(nextFrame);
 			}
 		} else if (_taffyAnimationState == 3) {
-			if (_taffyLayer.frameIndex < 0x29) {
-				_taffyLayer.setFrame(_taffyLayer.frameIndex + 1);
+			if (taffyLayer.frameIndex < 0x29) {
+				taffyLayer.setFrame(taffyLayer.frameIndex + 1);
 			} else if (_taffyHoldCounter != 0) {
 				--_taffyHoldCounter;
-				_taffyLayer.setFrame(0x23);
+				taffyLayer.setFrame(0x23);
 			} else if (!_taffyDeskMagnifierHidden) {
 				_taffyAnimationState = 4;
-				_taffyLayer.setFrame(0x2a);
+				taffyLayer.setFrame(0x2a);
 			} else {
 				_taffyAnimationState = 5;
-				_taffyLayer.setFrame(0x33);
+				taffyLayer.setFrame(0x33);
 			}
 		} else if (_taffyAnimationState == 4) {
-			if (_taffyLayer.frameIndex > 0x31) {
-				_taffyLayer.setFrame(0);
+			if (taffyLayer.frameIndex > 0x31) {
+				taffyLayer.setFrame(0);
 				_taffyAnimationState = 0;
 			} else {
-				const byte nextFrame = _taffyLayer.frameIndex + 1;
-				_taffyLayer.setFrame(nextFrame);
+				const byte nextFrame = taffyLayer.frameIndex + 1;
+				taffyLayer.setFrame(nextFrame);
 				if (nextFrame == 0x2c)
 					setTaffyDeskMagnifierHidden(true);
 			}
 		} else if (_taffyAnimationState == 5) {
-			if (_taffyLayer.frameIndex < 0x4f) {
-				_taffyLayer.setFrame(_taffyLayer.frameIndex + 1);
+			if (taffyLayer.frameIndex < 0x4f) {
+				taffyLayer.setFrame(taffyLayer.frameIndex + 1);
 			} else {
-				_taffyLayer.setFrame(0);
+				taffyLayer.setFrame(0);
 				_taffyAnimationState = 0;
 				setTaffyDeskMagnifierHidden(true);
 			}
@@ -491,10 +465,11 @@ void Scene6020::drawTaffyForegroundBlock() {
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[19], _sceneFramebuffer);
 		return;
 	}
-	if (!_taffyLayer.visible)
+	const ResourceSpriteLayer &taffyLayer = _sceneLayers.layer(kScene6020TaffyLayer);
+	if (!taffyLayer.visible)
 		return;
 
-	const byte descriptor = (byte)_taffyLayer.descriptorIndex();
+	const byte descriptor = (byte)taffyLayer.descriptorIndex();
 	if (descriptor == 8 || (descriptor > 0x2c && descriptor < 0x38) ||
 			(descriptor > 0x4b && descriptor < 0x56))
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[19], _sceneFramebuffer);
@@ -506,12 +481,10 @@ void Scene6020::drawForegroundBlocks(int activeWorldX, int activeWorldY) {
 }
 
 void Scene6020::setTaffyDeskMagnifierHidden(bool hidden) {
-	if (!hidden && hasInventoryItem(kScene6020MagnifierInventoryItem))
-		hidden = true;
-
 	if (_taffyDeskMagnifierHidden == hidden)
 		return;
 
+	// Track Taffy's current gesture independently of the collected desk item.
 	_taffyDeskMagnifierHidden = hidden;
 	applyTaffyDeskMagnifierPatch();
 	_hotspots.load(_paletteMask, _metadata, _stage003SmallRows);
@@ -581,11 +554,12 @@ bool Scene6020::loadPhoneResource() {
 }
 
 void Scene6020::drawPhoneLayer() {
-	if (!_phoneLayer.visible || _phoneResource.empty())
+	const ResourceSpriteLayer &phoneLayer = _sceneLayers.layer(kScene6020PhoneLayer);
+	if (!phoneLayer.visible || _phoneResource.empty())
 		return;
 
 	drawStripSpriteFrame(_phoneResource, 0, 0, kScene6020PhoneDescriptorCount,
-		_phoneLayer.descriptorIndex(), _sceneFramebuffer);
+		phoneLayer.descriptorIndex(), _sceneFramebuffer);
 }
 
 void Scene6020::applyPhoneFramebufferPatch(uint chunkIndex) {
@@ -596,7 +570,7 @@ void Scene6020::applyPhoneFramebufferPatch(uint chunkIndex) {
 void Scene6020::runEntryPhoneAnnouncement() {
 	const bool previousManualAnimation = _taffyDepartureAnimationActive;
 	_taffyDepartureAnimationActive = true;
-	_taffyLayer.setFrame(kScene6020TaffySpeechGroup3BaseFrame);
+	_sceneLayers.setLayerFrame(kScene6020TaffyLayer, kScene6020TaffySpeechGroup3BaseFrame);
 	applyPhoneFramebufferPatch(18);
 	drawPlayableComposite();
 	presentFrame();
@@ -610,13 +584,14 @@ void Scene6020::runEntryPhoneAnnouncement() {
 	}
 	if (!interrupted) {
 		beginPrimarySpeechLineWithAnimationGroup(21, 2, 499, 0xbd, 0x2a, 0x3f, 0x0e, 3);
-		interrupted = !playAndPresentAnimationFrames(_taffyLayer,
+		interrupted = !playAndPresentAnimationFrames(kScene6020TaffyLayer,
 			AnimationFrameRange(0x62, 0x70, kScene6020TaffyFrameMillis)
-				.hookAt(0x67, kScene6020EntryPhoneHook));
+				.resourcePatchAt(0x67, 17)
+				.soundAt(0x67, 0x10));
 	}
 
 	applyPhoneFramebufferPatch(17);
-	_taffyLayer.setFrame(0);
+	_sceneLayers.setLayerFrame(kScene6020TaffyLayer, 0);
 	_taffyDepartureAnimationActive = previousManualAnimation;
 	if (!interrupted && !Engine::shouldQuit() && !_vm->isSceneRestartRequested())
 		beginSecondarySpeechLine(21, 3);
@@ -683,9 +658,11 @@ void Scene6020::runEntryFromScene6030() {
 }
 
 void Scene6020::runSmallObjectAnimation() {
-	runActorReplacement(ActionOverlaySpec(8, kScene6020Chunk8DescriptorCount,
-		kScene6020SmallObjectFrameMap, ARRAYSIZE(kScene6020SmallObjectFrameMap), kScene6020FrameMillis));
-	beginSecondarySpeechLine(2, 0);
+	BlockingSequence(*this)
+		.actorReplacement(ActionOverlaySpec(8, kScene6020Chunk8DescriptorCount,
+			kScene6020SmallObjectFrameMap, ARRAYSIZE(kScene6020SmallObjectFrameMap),
+			kScene6020FrameMillis))
+		.secondarySpeech(2, 0);
 }
 
 void Scene6020::runPickupItem5A() {
@@ -697,14 +674,33 @@ void Scene6020::runPickupItem5A() {
 	if (_taffyAnimationState != 3)
 		return;
 
-	runActorReplacement(ActionOverlaySpec(15, kScene6020Chunk15DescriptorCount,
-		kScene6020PickupForwardFrameMap, ARRAYSIZE(kScene6020PickupForwardFrameMap), kScene6020FrameMillis)
-		.patchAt(6, 2));
-	_taffyDeskMagnifierHidden = true;
+	byte taffyFrames[kScene6020Chunk15DescriptorCount + 1];
+	byte taffyFrame = _sceneLayers.layer(kScene6020TaffyLayer).frameIndex;
+	taffyFrames[0] = taffyFrame;
+	for (uint frame = 1; frame < ARRAYSIZE(taffyFrames); ++frame) {
+		taffyFrame = taffyFrame < 0x29 ? taffyFrame + 1 : 0x23;
+		taffyFrames[frame] = taffyFrame;
+	}
+
+	const bool previousManualAnimation = _taffyDepartureAnimationActive;
+	_taffyDepartureAnimationActive = true;
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(15, kScene6020Chunk15DescriptorCount,
+			kScene6020FrameMillis).bookendWithLastFrame()
+			.mappedLayerFrames(kScene6020TaffyLayer, taffyFrames, ARRAYSIZE(taffyFrames))
+			.patchAt(6, 2));
+	_taffyDepartureAnimationActive = previousManualAnimation;
+	if (!sequence.completed())
+		return;
+
+	_taffyAnimationState = 3;
+	_taffyHoldCounter = 3;
+	_taffyChannel.resetTimer();
+	sequence.commit(_taffyDeskMagnifierHidden, true);
 	addInventoryItem(kScene6020MagnifierInventoryItem);
-	applySceneStateToHotspotsAndPatches(2);
-	_soundBank0.playSample(1, 100);
-	beginSecondarySpeechLine(8, 0);
+	sequence.framebufferPatch(2)
+		.sound(1)
+		.secondarySpeech(8, 0);
 }
 
 void Scene6020::runPickupItem5B() {
@@ -713,16 +709,16 @@ void Scene6020::runPickupItem5B() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(10, kScene6020Chunk10DescriptorCount,
-		kScene6020PickupForwardFrameMap, ARRAYSIZE(kScene6020PickupForwardFrameMap), kScene6020FrameMillis)
-		.patchAt(4, 3));
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(10, kScene6020Chunk10DescriptorCount,
+			kScene6020FrameMillis).bookendWithLastFrame().patchAt(4, 3));
 	addInventoryItem(0x5b);
-	applySceneStateToHotspotsAndPatches(3);
-	_soundBank0.playSample(1, 100);
-	beginPrimarySpeechLine(10, 0, 499, 0xbd, 0x2a, 0x3f, 0x0e);
-	beginSecondarySpeechLine(10, 1);
-	beginPrimarySpeechLine(10, 2, 499, 0xbd, 0x2a, 0x3f, 0x0e);
-	beginSecondarySpeechLine(10, 3);
+	sequence.framebufferPatch(3)
+		.sound(1)
+		.primarySpeech(10, 0, 499, 0xbd, 0x2a, 0x3f, 0x0e)
+		.secondarySpeech(10, 1)
+		.primarySpeech(10, 2, 499, 0xbd, 0x2a, 0x3f, 0x0e)
+		.secondarySpeech(10, 3);
 }
 
 void Scene6020::runPickupItem5E() {
@@ -732,21 +728,23 @@ void Scene6020::runPickupItem5E() {
 	}
 
 	if (!_vm->gameState().scene6020TaffyLeft) {
-		runActorReplacement(ActionOverlaySpec(9, kScene6020Chunk9DescriptorCount,
-			kScene6020PickupShortFrameMap, ARRAYSIZE(kScene6020PickupShortFrameMap), kScene6020FrameMillis));
-		beginPrimarySpeechLine(12, 0, 499, 0xbd, 0x2a, 0x3f, 0x0e);
-		beginSecondarySpeechLine(12, 1);
-		beginPrimarySpeechLine(12, 2, 499, 0xbd, 0x2a, 0x3f, 0x0e);
+		BlockingSequence(*this)
+			.actorReplacement(ActionOverlaySpec(9, kScene6020Chunk9DescriptorCount,
+				kScene6020PickupShortFrameMap, ARRAYSIZE(kScene6020PickupShortFrameMap),
+				kScene6020FrameMillis))
+			.primarySpeech(12, 0, 499, 0xbd, 0x2a, 0x3f, 0x0e)
+			.secondarySpeech(12, 1)
+			.primarySpeech(12, 2, 499, 0xbd, 0x2a, 0x3f, 0x0e);
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(9, kScene6020Chunk9DescriptorCount,
-		kScene6020PickupForwardFrameMap, ARRAYSIZE(kScene6020PickupForwardFrameMap), kScene6020FrameMillis)
-		.patchAt(6, 4));
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(9, kScene6020Chunk9DescriptorCount,
+			kScene6020FrameMillis).bookendWithLastFrame().patchAt(6, 4));
 	addInventoryItem(0x5e);
-	applySceneStateToHotspotsAndPatches(4);
-	_soundBank0.playSample(1, 100);
-	beginSecondarySpeechLine(12, 3);
+	sequence.framebufferPatch(4)
+		.sound(1)
+		.secondarySpeech(12, 3);
 }
 
 void Scene6020::runUseItem39Overlay() {
@@ -757,12 +755,13 @@ void Scene6020::runUseItem39Overlay() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(11, kScene6020Chunk11DescriptorCount,
-		kScene6020PickupReverseFrameMap, ARRAYSIZE(kScene6020PickupReverseFrameMap), kScene6020FrameMillis));
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(11, kScene6020Chunk11DescriptorCount,
+		kScene6020FrameMillis).bookendWithLastFrame().reverse());
 	removeInventoryItem(0x39);
-	state.scene6030CoffeeState = 1;
-	_soundBank0.playSample(1, 100);
-	beginSecondarySpeechLine(15, 0);
+	sequence.commit(state.scene6030CoffeeState, (byte)1)
+		.sound(1)
+		.secondarySpeech(15, 0);
 }
 
 void Scene6020::runUseItem64Overlay() {
@@ -780,7 +779,7 @@ void Scene6020::runUseItem64Overlay() {
 	runTaffyWalkOffAnimation();
 	_vm->gameState().scene6020TaffyLeft = true;
 	clearTaffyDepartureFrame();
-	_taffyLayer.visible = false;
+	_sceneLayers.setLayerVisible(kScene6020TaffyLayer, false);
 	_taffyAnimationState = 0;
 	_taffyDeskMagnifierHidden = hasInventoryItem(kScene6020MagnifierInventoryItem);
 	applySceneStateToHotspotsAndPatches(1);
@@ -794,10 +793,15 @@ void Scene6020::runTaffyRatHandoffAnimation() {
 	if (!loadTaffyDepartureResource())
 		return;
 
+	const bool previousHideActiveActor = _hideActiveActor;
+	const bool previousManualAnimation = _taffyDepartureAnimationActive;
+	// The handoff frames already contain Ron's entire body.
+	_hideActiveActor = true;
 	_taffyDepartureAnimationActive = true;
-	_taffyLayer.visible = true;
-	for (uint frame = 0; frame < ARRAYSIZE(kScene6020RatHandoffObjectFrames) && !Engine::shouldQuit(); ++frame) {
-		_taffyLayer.setFrame(kScene6020RatHandoffTaffyFrames[frame]);
+	_sceneLayers.setLayerVisible(kScene6020TaffyLayer, true);
+	for (uint frame = 0; frame < ARRAYSIZE(kScene6020RatHandoffObjectFrames) &&
+			!Engine::shouldQuit() && !_vm->isSceneRestartRequested(); ++frame) {
+		_sceneLayers.setLayerFrame(kScene6020TaffyLayer, kScene6020RatHandoffTaffyFrames[frame]);
 		setTaffyDepartureFrame(0, kScene6020RatHandoffDescriptorCount,
 			kScene6020RatHandoffObjectFrames[frame]);
 		if (frame == 3)
@@ -805,7 +809,9 @@ void Scene6020::runTaffyRatHandoffAnimation() {
 		if (waitSceneMillis(kScene6020FrameMillis))
 			break;
 	}
-	_taffyDepartureAnimationActive = false;
+	clearTaffyDepartureFrame();
+	_hideActiveActor = previousHideActiveActor;
+	_taffyDepartureAnimationActive = previousManualAnimation;
 }
 
 void Scene6020::runTaffyWalkOffAnimation() {
@@ -813,7 +819,7 @@ void Scene6020::runTaffyWalkOffAnimation() {
 		return;
 
 	_taffyDepartureAnimationActive = true;
-	_taffyLayer.visible = false;
+	_sceneLayers.setLayerVisible(kScene6020TaffyLayer, false);
 	for (uint frame = 0; frame < kScene6020WalkOffDescriptorCount && !Engine::shouldQuit(); ++frame) {
 		setTaffyDepartureFrame(_taffyWalkOffResourceOffset, kScene6020WalkOffDescriptorCount, frame);
 		if (waitSceneMillis(kScene6020FrameMillis))
@@ -829,16 +835,18 @@ void Scene6020::runLateSceneObjectAnimation() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(16, kScene6020Chunk16DescriptorCount,
-		kScene6020LateSceneObjectFrameMap, ARRAYSIZE(kScene6020LateSceneObjectFrameMap), kScene6020FrameMillis));
-	beginSecondarySpeechLine(18, 1);
-	state.scene6020AgendaRead = true;
+	BlockingSequence(*this)
+		.actorReplacement(ActionOverlaySpec(16, kScene6020Chunk16DescriptorCount,
+			kScene6020LateSceneObjectFrameMap, ARRAYSIZE(kScene6020LateSceneObjectFrameMap),
+			kScene6020FrameMillis))
+		.secondarySpeech(18, 1)
+		.commit(state.scene6020AgendaRead, true);
 }
 
 void Scene6020::runFinalSceneObjectAnimation() {
 	GameplayState &state = _vm->gameState();
 	if (!state.scene6020TaffyLeft || !state.scene6020AgendaRead ||
-			state.scene6020PhoneCallCompleted || !state.scene6090Visited || !loadPhoneResource()) {
+			state.scene6020PhoneCallCompleted || !state.scene6100EntryLineSeen || !loadPhoneResource()) {
 		beginSecondarySpeechLine(20, 0);
 		return;
 	}
@@ -847,15 +855,19 @@ void Scene6020::runFinalSceneObjectAnimation() {
 	state.scene6011PendingItem69Visible = true;
 	beginSecondarySpeechLine(20, 1);
 
+	const bool previousHideActiveActor = _hideActiveActor;
+	_hideActiveActor = true;
 	_phoneAnimationActive = true;
-	_phoneLayer.visible = true;
+	_sceneLayers.setLayerVisible(kScene6020PhoneLayer, true);
 	AnimationFrameRange firstPart(0, 59, kScene6020FrameMillis);
 	firstPart.frameOrder = kScene6020PhoneFrameMap;
-	firstPart.hookAt(10, kScene6020PhonePickupHook);
-	if (!playAndPresentAnimationFrames(_phoneLayer, firstPart)) {
+	firstPart.resourcePatchAt(10, 18)
+		.soundAt(10, 0x10);
+	if (!playAndPresentAnimationFrames(kScene6020PhoneLayer, firstPart)) {
 		applyPhoneFramebufferPatch(17);
-		_phoneLayer.visible = false;
+		_sceneLayers.setLayerVisible(kScene6020PhoneLayer, false);
 		_phoneAnimationActive = false;
+		_hideActiveActor = previousHideActiveActor;
 		return;
 	}
 
@@ -872,12 +884,14 @@ void Scene6020::runFinalSceneObjectAnimation() {
 		AnimationFrameRange secondPart(60, ARRAYSIZE(kScene6020PhoneFrameMap) - 1,
 			kScene6020FrameMillis);
 		secondPart.frameOrder = kScene6020PhoneFrameMap;
-		secondPart.hookAt(61, kScene6020PhoneHangupHook);
-		playAndPresentAnimationFrames(_phoneLayer, secondPart);
+		secondPart.resourcePatchAt(61, 17)
+			.soundAt(61, 0x10);
+		playAndPresentAnimationFrames(kScene6020PhoneLayer, secondPart);
 	}
 	applyPhoneFramebufferPatch(17);
-	_phoneLayer.visible = false;
+	_sceneLayers.setLayerVisible(kScene6020PhoneLayer, false);
 	_phoneAnimationActive = false;
+	_hideActiveActor = previousHideActiveActor;
 	if (!Engine::shouldQuit() && !_vm->isSceneRestartRequested()) {
 		drawPlayableComposite();
 		presentFrame();
@@ -946,7 +960,6 @@ void Scene6020::runDialogueAndMaybeEnterScene6030() {
 			nodeIndex = record.nextNodeIndex;
 			depthIndex = previousDepth - 2;
 			break;
-		case kScene6020DialogueTransitionStay:
 		default:
 			break;
 		}
@@ -957,8 +970,8 @@ void Scene6020::initializeTaffyDialogueRecords(Common::Array<DialogueChoiceRecor
 	records.clear();
 	records.resize(kScene6020TaffyDialogueChoiceRecordCount);
 
-	// DAT_0050bb30: root choices for Taffy. Choice 0 enters Hannover's office while the original
-	// one-shot late-scene guard is still clear.
+	// The first choice enters Hannover's office while the one-shot late-scene
+	// guard remains clear.
 	setTaffyDialogueRecord(records, 0, 1, 0, kScene6020DialogueTransitionStay, 2, 2, 3);
 	setTaffyDialogueRecord(records, 1, 1, 0, kScene6020DialogueTransitionDown, 3, 3, 1);
 	setTaffyDialogueRecord(records, 2, 1, 0, kScene6020DialogueTransitionStay, 4, 4, 1);
@@ -984,7 +997,6 @@ void Scene6020::setTaffyDialogueRecord(Common::Array<DialogueChoiceRecord> &reco
 	record.playerTextRowId = playerTextRowId;
 	record.responseFrameIndex = responseFrameIndex;
 	record.disableAfterUse = disableAfterUse;
-	record.reserved = 0xff;
 }
 
 void Scene6020::runTaffyLookUpTransition() {
@@ -992,13 +1004,14 @@ void Scene6020::runTaffyLookUpTransition() {
 }
 
 void Scene6020::runTaffyFrameSequence(const byte *frames, uint frameCount) {
-	if (!frames || frameCount == 0 || !_taffyLayer.visible || _vm->gameState().scene6020TaffyLeft)
+	if (!frames || frameCount == 0 || !_sceneLayers.layerVisible(kScene6020TaffyLayer) ||
+			_vm->gameState().scene6020TaffyLeft)
 		return;
 
 	const bool previousManualAnimation = _taffyDepartureAnimationActive;
 	_taffyDepartureAnimationActive = true;
 	for (uint i = 0; i < frameCount && !Engine::shouldQuit() && !_vm->isSceneRestartRequested(); ++i) {
-		_taffyLayer.setFrame(frames[i]);
+		_sceneLayers.setLayerFrame(kScene6020TaffyLayer, frames[i]);
 		if (waitSceneMillis(kScene6020FrameMillis))
 			break;
 	}
@@ -1016,10 +1029,12 @@ void Scene6020::runExitToScene6030() {
 	beginSecondarySpeechLine(0x0e, 2);
 	runTaffyFrameSequence(kScene6020TaffyExitOutroFrames, ARRAYSIZE(kScene6020TaffyExitOutroFrames));
 	walkActiveActorTo(0x0d3, 0x17b, 5, 0, false);
-	runActorReplacement(ActionOverlaySpec(8, kScene6020Chunk8DescriptorCount,
-		kScene6020SmallObjectFrameMap, ARRAYSIZE(kScene6020SmallObjectFrameMap), kScene6020FrameMillis)
-		.soundAt(ARRAYSIZE(kScene6020SmallObjectFrameMap) - 1, 3));
-	_vm->gameState().mainFlowStateId = kScene6030EntryState;
+	BlockingSequence(*this)
+		.actorReplacement(ActionOverlaySpec(8, kScene6020Chunk8DescriptorCount,
+			kScene6020SmallObjectFrameMap, ARRAYSIZE(kScene6020SmallObjectFrameMap),
+			kScene6020FrameMillis)
+			.soundAt(ARRAYSIZE(kScene6020SmallObjectFrameMap) - 1, 3))
+		.commit(_vm->gameState().mainFlowStateId, kScene6030EntryState);
 }
 
 } // End of namespace Hollywood

@@ -19,10 +19,9 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene4060.h"
-
-#include "hollywood/gameplay/game_state.h"
 #include "hollywood/hollywood.h"
+#include "hollywood/gameplay/game_state.h"
+#include "hollywood/scenes/playable/scene4060.h"
 
 namespace Hollywood {
 
@@ -55,6 +54,7 @@ const uint kScene4060PokerOverlayDescriptorCount = 0x0b;
 const uint kScene4060PokerRewardOverlayChunk = 17;
 const uint kScene4060PokerRewardOverlayDescriptorCount = 0x0c;
 const uint kScene4060PokerOverlayTransitionLayer = 1;
+const uint kScene4060ForegroundLayer = 2;
 const uint kScene4060EntryOverlayChunk = 19;
 const uint kScene4060EntryOverlayDescriptorCount = 4;
 const uint kScene4060ExitOverlayChunk = 15;
@@ -114,11 +114,6 @@ const byte kScene4060CardStateFirstWon = 1;
 const byte kScene4060CardStateMirrorInstalled = 2;
 const byte kScene4060SecondCardStatePrompted = 1;
 const byte kScene4060SecondCardStateWon = 2;
-const uint kScene4060PostSheetPokerAcceptRecord = 148;
-
-const byte kScene4060PokerOpenOverlayFrames[] = {
-	0, 1, 2, 3, 4, 5, 6
-};
 
 const byte kScene4060PokerOpenTableFrames[] = {
 	0x10, 0x11, 0x12, 0x13, 0x14, 0x14, 0x14
@@ -166,26 +161,6 @@ const byte kScene4060ForegroundState1FrameMap[] = {
 	18, 17, 16, 15, 0
 };
 
-const byte kScene4060EntryOverlayFrameMap[] = {
-	0, 0, 1, 2, 3
-};
-
-const byte kScene4060ExitOverlayFrameMap[] = {
-	1, 1, 2, 3
-};
-
-const byte kScene4060FirstCardFrameMap[] = {
-	0x0b, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0a, 0x0b
-};
-
-const byte kScene4060SecondCardFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0x0a, 0x0b
-};
-
-const byte kScene4060InstallMirrorFrameMap[] = {
-	0x0b, 0x0a, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0x0b
-};
-
 struct Scene4060DialogueSeedRecord {
 	uint16 index;
 	byte enabled;
@@ -194,37 +169,36 @@ struct Scene4060DialogueSeedRecord {
 	byte playerTextRowId;
 	byte responseFrameIndex;
 	byte disableAfterUse;
-	byte reserved;
 };
 
 const Scene4060DialogueSeedRecord kScene4060DialogueSeedRecords[] = {
-	{ 0, 0, 0, 1, 2, 2, 1, 0xff },
-	{ 1, 0, 1, 1, 3, 3, 1, 0xff },
-	{ 2, 0, 3, 1, 4, 4, 5, 0xff },
-	{ 3, 1, 2, 1, 5, 5, 1, 0xff },
-	{ 4, 0, 0, 3, 6, 6, 1, 0xff },
-	{ 5, 1, 0, 0, 7, 7, 0, 0x00 },
-	{ 70, 0, 0, 1, 8, 8, 1, 0xff },
-	{ 71, 1, 0, 3, 9, 9, 1, 0xff },
-	{ 72, 1, 0, 3, 10, 10, 1, 0xff },
-	{ 73, 1, 0, 2, 11, 11, 0, 0xff },
-	{ 77, 1, 1, 1, 12, 12, 1, 0xff },
-	{ 78, 1, 1, 3, 13, 13, 1, 0xff },
-	{ 79, 1, 1, 3, 14, 14, 1, 0xff },
-	{ 80, 1, 0, 2, 11, 11, 0, 0xff },
-	{ 84, 1, 2, 3, 15, 15, 1, 0xff },
-	{ 85, 1, 2, 3, 16, 16, 1, 0xff },
-	{ 86, 1, 0, 2, 11, 11, 1, 0xff },
-	{ 91, 1, 0, 0, 25, 0xff, 10, 0xff },
-	{ 140, 1, 0, 3, 17, 17, 1, 0xff },
-	{ 141, 1, 0, 1, 18, 18, 1, 0xff },
-	{ 142, 1, 0, 4, 19, 19, 0, 0xff },
-	{ 147, 1, 1, 3, 17, 20, 1, 0xff },
-	{ 148, 1, 0, 0, 20, 0, 1, 0xff },
-	{ 149, 1, 0, 4, 21, 19, 0, 0x00 },
-	{ 210, 0, 0, 0, 22, 21, 10, 0xff },
-	{ 211, 1, 0, 5, 23, 22, 0, 0xff },
-	{ 212, 1, 0, 5, 24, 23, 0, 0xff }
+	{ 0, 0, 0, 1, 2, 2, 1 },
+	{ 1, 0, 1, 1, 3, 3, 1 },
+	{ 2, 0, 3, 1, 4, 4, 5 },
+	{ 3, 1, 2, 1, 5, 5, 1 },
+	{ 4, 0, 0, 3, 6, 6, 1 },
+	{ 5, 1, 0, 0, 7, 7, 0 },
+	{ 70, 0, 0, 1, 8, 8, 1 },
+	{ 71, 1, 0, 3, 9, 9, 1 },
+	{ 72, 1, 0, 3, 10, 10, 1 },
+	{ 73, 1, 0, 2, 11, 11, 0 },
+	{ 77, 1, 1, 1, 12, 12, 1 },
+	{ 78, 1, 1, 3, 13, 13, 1 },
+	{ 79, 1, 1, 3, 14, 14, 1 },
+	{ 80, 1, 0, 2, 11, 11, 0 },
+	{ 84, 1, 2, 3, 15, 15, 1 },
+	{ 85, 1, 2, 3, 16, 16, 1 },
+	{ 86, 1, 0, 2, 11, 11, 1 },
+	{ 91, 1, 0, 0, 25, 0xff, 10 },
+	{ 140, 1, 0, 3, 17, 17, 1 },
+	{ 141, 1, 0, 1, 18, 18, 1 },
+	{ 142, 1, 0, 4, 19, 19, 0 },
+	{ 147, 1, 1, 3, 17, 20, 1 },
+	{ 148, 1, 0, 0, 20, 0, 1 },
+	{ 149, 1, 0, 4, 21, 19, 0 },
+	{ 210, 0, 0, 0, 22, 21, 10 },
+	{ 211, 1, 0, 5, 23, 22, 0 },
+	{ 212, 1, 0, 5, 24, 23, 0 }
 };
 
 PlayableSceneConfig scene4060Config() {
@@ -235,10 +209,11 @@ PlayableSceneConfig scene4060Config() {
 	config.setActorResources(kScene4060ActorBankTableEntry, kScene4060ActorPaletteTableEntry);
 	config.setTextResources(kScene4060Resource003RowsOffsetIndex, kScene4060SpeechCueDescriptorTableOffset);
 	config.walkablePaletteMaxRegion = 20;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
-static void setDialogueRecord(Common::Array<DialogueChoiceRecord> &records,
+void setDialogueRecord(Common::Array<DialogueChoiceRecord> &records,
 		const Scene4060DialogueSeedRecord &seed) {
 	if (seed.index >= records.size())
 		return;
@@ -250,12 +225,10 @@ static void setDialogueRecord(Common::Array<DialogueChoiceRecord> &records,
 	record.playerTextRowId = seed.playerTextRowId;
 	record.responseFrameIndex = seed.responseFrameIndex;
 	record.disableAfterUse = seed.disableAfterUse;
-	record.reserved = seed.reserved;
 }
 
 Scene4060::Scene4060(HollywoodEngine *vm) :
 		PlayableScene(vm, scene4060Config()),
-		_foregroundLayer(),
 		_foregroundChannel(),
 		_foregroundScrollStep(0),
 		_foregroundLongAnimationActive(false),
@@ -265,6 +238,11 @@ Scene4060::Scene4060(HollywoodEngine *vm) :
 		_pokerMidPatchVisible(false),
 		_sherilynDialogueActive(false),
 		_exitFrameVisible(false) {
+	_sceneLayers.configureLayer(kScene4060ForegroundLayer,
+		kSceneAnimationScenePlaced, kScene4060ForegroundState0Chunk,
+		kScene4060ForegroundState0DescriptorCount,
+		kScene4060ForegroundState0FrameMap,
+		ARRAYSIZE(kScene4060ForegroundState0FrameMap));
 }
 
 void Scene4060::initializeCustomPreviewState() {
@@ -297,17 +275,19 @@ void Scene4060::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 	configureForegroundLayerForState();
 	if (_exitFrameVisible) {
 		drawForegroundTableLayer();
-		drawMappedSpriteFrame(kScene4060ExitOverlayChunk, kScene4060ExitOverlayDescriptorCount,
-			kScene4060ExitOverlayFrameMap, ARRAYSIZE(kScene4060ExitOverlayFrameMap),
-			ARRAYSIZE(kScene4060ExitOverlayFrameMap) - 1);
+		drawStripSpriteFrame(_resourceArena, _resourceChunkOffsets[kScene4060ExitOverlayChunk], 0,
+			kScene4060ExitOverlayDescriptorCount, kScene4060ExitOverlayDescriptorCount - 1,
+			_sceneFramebuffer);
 		return;
 	}
 
-	if (_sceneLayers.hasVisibleLayers()) {
+	if (_sceneLayers.layerVisible(kScene4060PokerTableTransitionLayer) ||
+			_sceneLayers.layerVisible(kScene4060PokerOverlayTransitionLayer)) {
 		if (_pokerMidPatchVisible && _sceneChunkTable.isValidChunk(kScene4060ForegroundMidPatchChunk))
 			drawResourceBlockList(_resourceArena, _resourceChunkOffsets[kScene4060ForegroundMidPatchChunk],
 				_sceneFramebuffer);
-		drawLayerStack(_sceneLayers, kSceneAnimationScenePlaced);
+		drawSceneLayer(kScene4060PokerTableTransitionLayer);
+		drawSceneLayer(kScene4060PokerOverlayTransitionLayer);
 		return;
 	}
 
@@ -341,16 +321,10 @@ void Scene4060::runCustomEntrySequence() {
 	runFirstEntrySequence();
 }
 
-bool Scene4060::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
-}
-
-bool Scene4060::shouldRunExitSideEffectsAfterLoop() const {
-	const uint16 stateId = _vm->gameState().mainFlowStateId;
-	return !Engine::shouldQuit() && stateId != 0xff && !isMainFlowStateInScene(stateId);
-}
-
 void Scene4060::runExitSideEffectsAfterLoop() {
+	if (!didLeaveSceneAfterLoop())
+		return;
+
 	fadePaletteToBlack();
 	stopAmbientSoundCues();
 }
@@ -560,16 +534,6 @@ void Scene4060::primarySpeechAnimationRestored(byte animationGroup, byte baseFra
 	closeSherilynSpeechPose();
 }
 
-void Scene4060::handleAnimationFrameHook(byte hookId, uint frame) {
-	(void)frame;
-	if (hookId == 1 && _sceneChunkTable.isValidChunk(kScene4060FirstCardPatchChunk))
-		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[kScene4060FirstCardPatchChunk], _baseFramebuffer);
-	else if (hookId == 2 && _sceneChunkTable.isValidChunk(kScene4060SecondCardPatchChunk))
-		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[kScene4060SecondCardPatchChunk], _baseFramebuffer);
-	else if (hookId == 3 && _sceneChunkTable.isValidChunk(kScene4060MirrorInstalledPatchChunk))
-		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[kScene4060MirrorInstalledPatchChunk], _baseFramebuffer);
-}
-
 void Scene4060::resetForegroundLayer() {
 	_foregroundChannel.reset(0, kScene4060FrameMillis);
 	_foregroundScrollStep = 0;
@@ -582,11 +546,12 @@ void Scene4060::resetForegroundLayer() {
 
 void Scene4060::configureForegroundLayerForState() {
 	const bool foregroundState = _vm->gameState().scene4060SherilynSheetWon != 0;
-	_foregroundLayer.configure(foregroundState ? kScene4060ForegroundState1Chunk : kScene4060ForegroundState0Chunk,
+	_sceneLayers.setLayerResource(kScene4060ForegroundLayer,
+		foregroundState ? kScene4060ForegroundState1Chunk : kScene4060ForegroundState0Chunk,
 		foregroundState ? kScene4060ForegroundState1DescriptorCount : kScene4060ForegroundState0DescriptorCount,
 		foregroundState ? kScene4060ForegroundState1FrameMap : kScene4060ForegroundState0FrameMap,
 		foregroundState ? ARRAYSIZE(kScene4060ForegroundState1FrameMap) : ARRAYSIZE(kScene4060ForegroundState0FrameMap));
-	_foregroundLayer.visible = true;
+	_sceneLayers.setLayerVisible(kScene4060ForegroundLayer, true);
 	setForegroundScrollStep(_foregroundScrollStep);
 }
 
@@ -597,11 +562,12 @@ void Scene4060::setForegroundScrollStep(byte step) {
 		step = 0;
 	_foregroundScrollStep = step;
 	_foregroundChannel.frameIndex = step;
-	_foregroundLayer.setFrame(step);
+	_sceneLayers.setLayerFrame(kScene4060ForegroundLayer, step);
 }
 
 void Scene4060::advanceForegroundLayer(uint32 delta) {
-	if (_sceneLayers.hasVisibleLayers())
+	if (_sceneLayers.layerVisible(kScene4060PokerTableTransitionLayer) ||
+			_sceneLayers.layerVisible(kScene4060PokerOverlayTransitionLayer))
 		return;
 
 	if (_sherilynSpeechPoseMode != kScene4060SherilynSpeechPoseNone ||
@@ -634,7 +600,7 @@ void Scene4060::advanceForegroundLayer(uint32 delta) {
 }
 
 void Scene4060::drawForegroundTableLayer() {
-	drawResourceSpriteLayer(_foregroundLayer);
+	drawSceneLayer(kScene4060ForegroundLayer);
 }
 
 void Scene4060::drawSceneForegroundBlocks(int activeWorldY) {
@@ -649,25 +615,24 @@ void Scene4060::runFirstEntrySequence() {
 	setActiveActorPose(kScene4060EntryRonWorldX, kScene4060EntryRonWorldY, kScene4060EntryRonFacing);
 	const bool previousHideActiveActor = _actionOverlayPlayer.beginActorReplacement(
 		kScene4060EntryOverlayChunk, kScene4060EntryOverlayDescriptorCount,
-		kScene4060EntryOverlayFrameMap, ARRAYSIZE(kScene4060EntryOverlayFrameMap));
+		nullptr, 0);
 	_actionOverlayPlayer.setFrame(0);
 	drawPlayableComposite();
 	presentFrame();
 
-	const bool fadeInterrupted = fadePaletteFromBlack();
-	if (!fadeInterrupted) {
-		_soundBank0.playSample(0x31, 100);
-		playAndPresentAnimationFrames(_actionOverlayPlayer.layer,
-			AnimationFrameRange(1, ARRAYSIZE(kScene4060EntryOverlayFrameMap) - 1,
+	BlockingSequence sequence(*this);
+	sequence.fadeFromBlack()
+		.sound(0x31)
+		.presentedLayerFrames(_actionOverlayPlayer._layer,
+			AnimationFrameRange(kScene4060EntryOverlayDescriptorCount,
 				kScene4060FrameMillis).noFinalFrameDelay());
-	}
 	_actionOverlayPlayer.finish(previousHideActiveActor);
-	if (fadeInterrupted || Engine::shouldQuit() || _vm->isSceneRestartRequested())
+	if (!sequence.completed())
 		return;
 
 	if (!_vm->gameState().scene4060EntryLineSeen) {
-		beginSecondarySpeechLine(0, 0);
-		_vm->gameState().scene4060EntryLineSeen = true;
+		sequence.secondarySpeech(0, 0)
+			.commit(_vm->gameState().scene4060EntryLineSeen, true);
 	}
 }
 
@@ -682,12 +647,14 @@ void Scene4060::runReturnEntrySequence() {
 void Scene4060::runExitToNextRoom() {
 	drawPlayableComposite();
 	presentFrame();
-	runActorReplacement(ActionOverlaySpec(kScene4060ExitOverlayChunk, kScene4060ExitOverlayDescriptorCount,
-		kScene4060ExitOverlayFrameMap, ARRAYSIZE(kScene4060ExitOverlayFrameMap), kScene4060FrameMillis)
-		.noFinalFrameDelay().noRedrawAtEnd());
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(kScene4060ExitOverlayChunk,
+			kScene4060ExitOverlayDescriptorCount, kScene4060FrameMillis)
+			.holdFrame(1).startAt(1)
+			.noFinalFrameDelay());
 	_exitFrameVisible = true;
-	_soundBank0.playSample(3, 100);
-	_vm->gameState().mainFlowStateId = kScene4100EntryFromScene4060State;
+	sequence.sound(3)
+		.commit(_vm->gameState().mainFlowStateId, kScene4100EntryFromScene4060State);
 }
 
 void Scene4060::runFirstCardStage() {
@@ -697,14 +664,18 @@ void Scene4060::runFirstCardStage() {
 		return;
 	}
 
-	runActorReplacement(ActionOverlaySpec(kScene4060FirstCardOverlayChunk, kScene4060FirstCardOverlayDescriptorCount,
-		kScene4060FirstCardFrameMap, ARRAYSIZE(kScene4060FirstCardFrameMap), kScene4060FrameMillis)
-		.hookAt(6, 1).noFinalFrameDelay().noRedrawAtEnd());
-	state.scene4060PictureCardStage = kScene4060CardStateFirstWon;
-	applySceneStateToHotspotsAndPatches(0);
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(kScene4060FirstCardOverlayChunk,
+			kScene4060FirstCardOverlayDescriptorCount, kScene4060FrameMillis)
+			.bookendWithLastFrame()
+			.resourcePatchAt(6, kScene4060FirstCardPatchChunk)
+			.noFinalFrameDelay())
+		.commit(state.scene4060PictureCardStage, kScene4060CardStateFirstWon)
+		.framebufferPatch(0);
 	addInventoryItem(kScene4060FirstWonCardItem);
-	_soundBank0.playSample(1, 100);
-	beginSharedInventorySpeechLine(0x14, randomSharedInventorySpeechFrame(4));
+	sequence.sound(1);
+	if (sequence.completed())
+		beginSharedInventorySpeechLine(0x14, randomSharedInventorySpeechFrame(4));
 }
 
 void Scene4060::runSecondCardStage() {
@@ -712,14 +683,18 @@ void Scene4060::runSecondCardStage() {
 	if (state.scene4060PerfumeBottleCardStage == 0)
 		beginSecondarySpeechLine(9, 0);
 
-	runActorReplacement(ActionOverlaySpec(kScene4060SecondCardOverlayChunk, kScene4060SecondCardOverlayDescriptorCount,
-		kScene4060SecondCardFrameMap, ARRAYSIZE(kScene4060SecondCardFrameMap), kScene4060FrameMillis)
-		.hookAt(5, 2).noFinalFrameDelay().noRedrawAtEnd());
-	state.scene4060PerfumeBottleCardStage = kScene4060SecondCardStateWon;
-	applySceneStateToHotspotsAndPatches(1);
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(kScene4060SecondCardOverlayChunk,
+			kScene4060SecondCardOverlayDescriptorCount, kScene4060FrameMillis)
+			.holdFirstFrame()
+			.resourcePatchAt(5, kScene4060SecondCardPatchChunk)
+			.noFinalFrameDelay())
+		.commit(state.scene4060PerfumeBottleCardStage, kScene4060SecondCardStateWon)
+		.framebufferPatch(1);
 	addInventoryItem(kScene4060SecondWonCardItem);
-	_soundBank0.playSample(1, 100);
-	beginSharedInventorySpeechLine(0x14, randomSharedInventorySpeechFrame(4));
+	sequence.sound(1);
+	if (sequence.completed())
+		beginSharedInventorySpeechLine(0x14, randomSharedInventorySpeechFrame(4));
 }
 
 void Scene4060::runInstallMirrorStage() {
@@ -729,15 +704,18 @@ void Scene4060::runInstallMirrorStage() {
 		return;
 	}
 
-	beginSecondarySpeechLine(0x11, 1);
-	runActorReplacement(ActionOverlaySpec(kScene4060FirstCardOverlayChunk, kScene4060FirstCardOverlayDescriptorCount,
-		kScene4060InstallMirrorFrameMap, ARRAYSIZE(kScene4060InstallMirrorFrameMap), kScene4060FrameMillis)
-		.hookAt(7, 3).noFinalFrameDelay().noRedrawAtEnd());
-	state.scene4060PictureCardStage = kScene4060CardStateMirrorInstalled;
-	applySceneStateToHotspotsAndPatches(0);
+	BlockingSequence sequence(*this);
+	sequence.secondarySpeech(0x11, 1)
+		.actorReplacement(ActionOverlaySpec(kScene4060FirstCardOverlayChunk,
+			kScene4060FirstCardOverlayDescriptorCount, kScene4060FrameMillis)
+			.bookendWithLastFrame().reverse()
+			.resourcePatchAt(7, kScene4060MirrorInstalledPatchChunk)
+			.noFinalFrameDelay())
+		.commit(state.scene4060PictureCardStage, kScene4060CardStateMirrorInstalled)
+		.framebufferPatch(0);
 	removeInventoryItem(kScene4060MirrorItem);
-	_soundBank0.playSample(1, 100);
-	beginSecondarySpeechLine(0x11, 2);
+	sequence.sound(1)
+		.secondarySpeech(0x11, 2);
 }
 
 void Scene4060::runSherilynCardDialogue() {
@@ -833,13 +811,17 @@ void Scene4060::initializeSherilynCardDialogueRecords(Common::Array<DialogueChoi
 			records[2].enabled = 1;
 	} else {
 		records[1].enabled = 1;
-		// The original still draws this acceptance line, but the cursor cannot select it.
-		records[kScene4060PostSheetPokerAcceptRecord].enabled = 1;
-		records[kScene4060PostSheetPokerAcceptRecord].selectable = 0;
 	}
 
 	if (state.scene4080GwendolynStateTransition != 0)
 		records[4].enabled = 1;
+}
+
+byte Scene4060::redirectDialogueMenuChoice(byte depthIndex, byte nodeIndex, byte choiceIndex) const {
+	if (_vm->gameState().scene4060SherilynSheetWon != 0 && depthIndex == 2 && nodeIndex == 1 && choiceIndex == 1)
+		return 2;
+
+	return choiceIndex;
 }
 
 void Scene4060::runSherilynDialogueProgressReplay() {
@@ -875,10 +857,10 @@ void Scene4060::runSherilynDialogueTransition() {
 void Scene4060::runSherilynPokerTransitionAnimation(bool finalRewardBranch) {
 	_pokerMidPatchVisible = false;
 	bool interrupted = false;
-	for (uint i = 0; i < ARRAYSIZE(kScene4060PokerOpenOverlayFrames) && !Engine::shouldQuit() && !interrupted; ++i) {
+	for (uint i = 0; i < ARRAYSIZE(kScene4060PokerOpenTableFrames) && !Engine::shouldQuit() && !interrupted; ++i) {
 		if (presentPokerTransitionFrame(kScene4060PokerOpenTableFrames[i],
 				kScene4060PokerOverlayChunk, kScene4060PokerOverlayDescriptorCount,
-				kScene4060PokerOpenOverlayFrames[i]))
+				(byte)i))
 			interrupted = true;
 	}
 
@@ -951,7 +933,8 @@ bool Scene4060::presentPokerTransitionFrame(byte tableFrame, uint overlayChunk, 
 
 void Scene4060::clearPokerTransitionLayers() {
 	_pokerMidPatchVisible = false;
-	_sceneLayers.clear();
+	clearSceneLayer(kScene4060PokerTableTransitionLayer);
+	clearSceneLayer(kScene4060PokerOverlayTransitionLayer);
 }
 
 void Scene4060::beginSherilynSpeechLine(uint16 rowIndex, byte frameIndex, bool allowAlternatePose) {

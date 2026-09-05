@@ -19,11 +19,10 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene4040.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene4040.h"
 #include "hollywood/scenes/resource_delta_clip_player.h"
 
 namespace Hollywood {
@@ -53,6 +52,8 @@ const uint kScene4040DarkActorPaletteChunk = 11;
 const uint kScene4040LightActorPaletteChunk = 12;
 const uint kScene4040StairClipFrameCount = 0x3e;
 const uint kScene4040BackgroundDescriptorCount = 0x1a;
+const uint kScene4040RandomBackgroundLayer = 0;
+const uint kScene4040CyclicBackgroundLayer = 1;
 const uint kScene4040CandilOverlayChunk = 14;
 const uint kScene4040CandilOverlayDescriptorCount = 9;
 const byte kScene4040CandilItem = 0x3c;
@@ -70,8 +71,11 @@ const byte kScene4040ExitFootstepFrames[] = {
 	3, 9, 15, 23, 29, 35, 41, 47, 53, 59
 };
 
-const byte kScene4040CandilFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8
+const SceneLayerSpec kScene4040LayerSpecs[] = {
+	{kSceneAnimationBehindActors, kScene4040RandomBackgroundChunk,
+		kScene4040BackgroundDescriptorCount, nullptr, 0, true, 0},
+	{kSceneAnimationBehindActors, kScene4040CyclicBackgroundChunk,
+		kScene4040BackgroundDescriptorCount, nullptr, 0, true, 0}
 };
 
 PlayableSceneConfig scene4040Config() {
@@ -82,26 +86,22 @@ PlayableSceneConfig scene4040Config() {
 	config.setActorResources(kScene4040ActorBankTableEntry, kScene4040ActorPaletteTableEntry);
 	config.setTextResources(kScene4040Resource003RowsOffsetIndex, kScene4040SpeechCueDescriptorTableOffset);
 	config.walkablePaletteMaxRegion = 20;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
 Scene4040::Scene4040(HollywoodEngine *vm) :
 		PlayableScene(vm, scene4040Config()),
 		_randomBackgroundChannel(),
-		_cyclicBackgroundLayer(),
-		_randomBackgroundLayer(),
 		_cyclicBackgroundTrack(RealtimeAnimationTracks::kInvalidTrack),
 		_randomBackgroundState(0),
 		_randomBackgroundRepeatCount(0),
 		_ambientEffectTimerAccumulator(0),
 		_previousContinuousAmbientCue(0),
 		_previousRandomAmbientCue(0) {
-	_cyclicBackgroundLayer.configure(kScene4040CyclicBackgroundChunk,
-		kScene4040BackgroundDescriptorCount, nullptr, 0);
-	_randomBackgroundLayer.configure(kScene4040RandomBackgroundChunk,
-		kScene4040BackgroundDescriptorCount, nullptr, 0);
-	_cyclicBackgroundTrack = _realtimeAnimationTracks.addLoop(_cyclicBackgroundLayer,
-		kScene4040FrameMillis, kScene4040BackgroundDescriptorCount);
+	_sceneLayers.configure(kScene4040LayerSpecs);
+	_cyclicBackgroundTrack = _realtimeAnimationTracks.addLoop(kScene4040CyclicBackgroundLayer, kScene4040FrameMillis,
+		kScene4040BackgroundDescriptorCount);
 }
 
 void Scene4040::initializeCustomPreviewState() {
@@ -121,21 +121,12 @@ void Scene4040::initializeCustomPreviewState() {
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 }
 
-void Scene4040::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+void Scene4040::drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) {
+	(void)activeWorldX;
 	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawBackgroundLayers();
-	if (_actionOverlayPlayer.replacesActor()) {
-		drawActionOverlayLayer();
-		return;
-	}
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	drawForegroundBlocks(activeWorldY);
-	drawActionOverlayLayer();
+	if (!_actionOverlayPlayer.replacesActor())
+		drawForegroundBlocks(activeWorldY);
 }
 
 void Scene4040::runCustomEntrySequence() {
@@ -163,14 +154,6 @@ void Scene4040::runCustomEntrySequence() {
 		beginSecondarySpeechLine(0, 0);
 		state.scene4040EntryLineSeen = true;
 	}
-}
-
-bool Scene4040::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
-}
-
-bool Scene4040::shouldRunExitSideEffectsAfterLoop() const {
-	return true;
 }
 
 void Scene4040::runExitSideEffectsAfterLoop() {
@@ -276,19 +259,15 @@ void Scene4040::applyScenePaletteOverride() {
 }
 
 void Scene4040::resetBackgroundLayers() {
+	_sceneLayers.reset();
 	_realtimeAnimationTracks.reset(_cyclicBackgroundTrack);
-	_cyclicBackgroundLayer.visible = true;
-
-	_randomBackgroundLayer.visible = true;
-	_randomBackgroundLayer.reset(0);
 	_randomBackgroundChannel.reset(0, kScene4040FrameMillis);
 	_randomBackgroundState = 0;
 	_randomBackgroundRepeatCount = 0;
 }
 
 void Scene4040::drawBackgroundLayers() {
-	drawResourceSpriteLayer(_randomBackgroundLayer);
-	drawResourceSpriteLayer(_cyclicBackgroundLayer);
+	drawLayerStack(kSceneAnimationBehindActors);
 }
 
 void Scene4040::advanceRandomBackground(uint32 delta) {
@@ -369,7 +348,7 @@ void Scene4040::advanceRandomBackgroundTick() {
 	}
 
 	_randomBackgroundChannel.frameIndex = frameIndex;
-	_randomBackgroundLayer.setFrame(frameIndex);
+	_sceneLayers.setLayerFrame(kScene4040RandomBackgroundLayer, frameIndex);
 }
 
 bool Scene4040::isRandomBackgroundHoldFrame(byte frameIndex) const {
@@ -437,6 +416,7 @@ bool Scene4040::runStairDeltaClip(uint chunkIndex, const byte *footstepFrames,
 				break;
 			presentFrame();
 		}
+		consumeStepAdvanceRequest();
 		_skipRequested = false;
 	}
 
@@ -447,7 +427,7 @@ bool Scene4040::drawStairDeltaClipFrame(uint chunkIndex, byte frameIndex) {
 	copyBaseFramebufferToSceneFramebuffer();
 	drawBackgroundLayers();
 	for (uint frame = 0; frame <= frameIndex; ++frame) {
-		if (!ResourceDeltaClipPlayer::drawFrame(_resourceArena, _resourceChunkOffsets[chunkIndex],
+		if (!drawResourceDeltaClipFrame(_resourceArena, _resourceChunkOffsets[chunkIndex],
 				_sceneChunkTable.sizes[chunkIndex], kScene4040StairClipFrameCount,
 				(byte)frame, framebufferPixels(_sceneFramebuffer), framebufferByteCount()))
 			return false;
@@ -533,8 +513,8 @@ void Scene4040::takeCandil() {
 
 	beginSecondarySpeechLine(8, 0);
 	state.scene4040CandilTaken = true;
-	runActorReplacement(ActionOverlaySpec(kScene4040CandilOverlayChunk, kScene4040CandilOverlayDescriptorCount,
-		kScene4040CandilFrameMap, ARRAYSIZE(kScene4040CandilFrameMap), kScene4040FrameMillis)
+	runActorReplacement(ActionOverlaySpec(kScene4040CandilOverlayChunk,
+		kScene4040CandilOverlayDescriptorCount, kScene4040FrameMillis)
 		.patchAt(3, 1)
 		.noFinalFrameDelay());
 	addInventoryItem(kScene4040CandilItem);

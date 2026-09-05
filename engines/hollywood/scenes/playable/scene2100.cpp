@@ -19,13 +19,13 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene2100.h"
-
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene2100.h"
+#include "hollywood/scenes/shared_frame_sequences.h"
 
 namespace Hollywood {
 
@@ -64,8 +64,6 @@ const byte kScene2100SpecialExitDescriptorCount = 0x1b;
 const byte kScene2100DoorChunk = 16;
 const byte kScene2100DoorDescriptorCount = 0x2f;
 const byte kScene2100RaStaffItem = 0x2f;
-const byte kScene2100PrincessArrivalPathHook = 2;
-const byte kScene2100SpecialExitHook = 3;
 const byte kScene2100MummyDialogueStageId = 0x62;
 const byte kScene2100MummyPrimaryRow = 99;
 const uint kScene2100MummyDialogueChoiceRecordCount = 10 * 10 * 7;
@@ -89,15 +87,6 @@ const byte kScene2100PrincessArrivalFrameMap[] = {
 
 const byte kScene2100ReturnForegroundFrameMap[] = {
 	0, 0, 1, 2, 3, 4, 5
-};
-
-const byte kScene2100PassageFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8
-};
-
-const byte kScene2100PickupFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8,
-	9, 10, 11, 12, 13
 };
 
 const byte kScene2100TransitionFrameMap[] = {
@@ -130,32 +119,16 @@ const byte kScene2100SpecialExitFrameMap[] = {
 	20, 21, 22, 23, 24, 25, 26
 };
 
-static_assert(ARRAYSIZE(kScene2100ForegroundFrameMap) == 18,
-	"Scene 2100 foreground frame map size changed");
-static_assert(ARRAYSIZE(kScene2100PrincessArrivalFrameMap) == 0x21,
-	"Scene 2100 princess-arrival frame map size changed");
-static_assert(ARRAYSIZE(kScene2100ReturnForegroundFrameMap) == 7,
-	"Scene 2100 return foreground frame map size changed");
-static_assert(ARRAYSIZE(kScene2100PassageFrameMap) == 10,
-	"Scene 2100 passage frame map size changed");
-static_assert(ARRAYSIZE(kScene2100PickupFrameMap) == 15,
-	"Scene 2100 pickup frame map size changed");
-static_assert(ARRAYSIZE(kScene2100TransitionFrameMap) == 0x35,
-	"Scene 2100 transition frame map size changed");
-static_assert(kScene2100DoorDescriptorCount > 46,
-	"Scene 2100 transition descriptor count is too small");
-static_assert(ARRAYSIZE(kScene2100SpecialIntroFrameMap) == 0x17,
-	"Scene 2100 special intro frame map size changed");
-static_assert(ARRAYSIZE(kScene2100SpecialSpeechShortFrameMap) == 9,
-	"Scene 2100 short speech frame map size changed");
-static_assert(ARRAYSIZE(kScene2100SpecialSpeechLongFrameMap) == 20,
-	"Scene 2100 long speech frame map size changed");
-static_assert(ARRAYSIZE(kScene2100SpecialExitFrameMap) == 0x1b,
-	"Scene 2100 special exit frame map size changed");
-static_assert(ARRAYSIZE(kScene2100MummyDialogueTrackedRecordIndices) <= 16,
-	"Scene 2100 mummy dialogue choice mask is too small");
+const SceneLayerSpec kScene2100LayerSpecs[] = {
+	{kSceneAnimationBehindActors, kScene2100MummyChunk, kScene2100MummyDescriptorCount,
+		kScene2100ForegroundFrameMap, ARRAYSIZE(kScene2100ForegroundFrameMap), true, 0},
+	{kSceneAnimationBehindActors, kScene2100PassageChunk, kScene2100PassageDescriptorCount,
+		kHoldFirstNineFrames, kHoldFirstNineFrameCount, false, 0},
+	{kSceneAnimationInFrontOfActors, kScene2100DoorChunk, kScene2100DoorDescriptorCount,
+		kScene2100TransitionFrameMap, ARRAYSIZE(kScene2100TransitionFrameMap), false, 0}
+};
 
-static uint16 mummyDialogueChoiceBit(uint recordIndex) {
+uint16 mummyDialogueChoiceBit(uint recordIndex) {
 	for (uint bit = 0; bit < ARRAYSIZE(kScene2100MummyDialogueTrackedRecordIndices); ++bit) {
 		if (kScene2100MummyDialogueTrackedRecordIndices[bit] == recordIndex)
 			return (uint16)(1 << bit);
@@ -164,7 +137,7 @@ static uint16 mummyDialogueChoiceBit(uint recordIndex) {
 	return 0;
 }
 
-static PlayableSceneConfig scene2100Config() {
+PlayableSceneConfig scene2100Config() {
 	PlayableSceneConfig config(2100,
 		SceneResourceLayout(17, 5, 16),
 		SceneViewport(kScene2100ViewportXOffset, kScene2100ViewportXOffset, kScene2100ViewportMaxXOffset),
@@ -173,6 +146,7 @@ static PlayableSceneConfig scene2100Config() {
 	config.setTextResources(kScene2100Resource003RowsOffsetIndex, kScene2100SpeechCueDescriptorTableOffset);
 	config.walkablePaletteMaxRegion = 1;
 	config.useActorDepthTest = true;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
@@ -180,14 +154,9 @@ Scene2100::Scene2100(HollywoodEngine *vm) :
 		PlayableScene(vm, scene2100Config()),
 		_foregroundChannel(),
 		_auxChannel(),
-		_manualActorPathChannel(),
-		_mummyLayer(),
-		_frontLayer(),
-		_auxLayer(),
 		_foregroundAlternateFrameSet(false),
 		_mummySpeechUsesFrontLayer(false),
 		_suppressMummySpeechAnimation(false),
-		_auxLayerInFront(false),
 		_returnLayerAnimationActive(false),
 		_mummyIdleEnabled(false),
 		_doorCeremonyAnimationActive(false),
@@ -195,15 +164,8 @@ Scene2100::Scene2100(HollywoodEngine *vm) :
 		_doorCeremonyState(0),
 		_specialSpeechAnimationActive(false),
 		_specialSpeechFinishing(false),
-		_specialSpeechVariant(0),
-		_manualActorPathActive(false),
-		_manualActorPathFrameIndex(0) {
-	_mummyLayer.configure(kScene2100MummyChunk, kScene2100MummyDescriptorCount,
-		kScene2100ForegroundFrameMap, ARRAYSIZE(kScene2100ForegroundFrameMap));
-	_frontLayer.configure(kScene2100DoorChunk, kScene2100DoorDescriptorCount,
-		kScene2100TransitionFrameMap, ARRAYSIZE(kScene2100TransitionFrameMap));
-	_auxLayer.configure(kScene2100PassageChunk, kScene2100PassageDescriptorCount,
-		kScene2100PassageFrameMap, ARRAYSIZE(kScene2100PassageFrameMap));
+		_specialSpeechVariant(0) {
+	_sceneLayers.configure(kScene2100LayerSpecs);
 }
 
 void Scene2100::initializeCustomPreviewState() {
@@ -232,23 +194,6 @@ void Scene2100::initializeCustomPreviewState() {
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 }
 
-void Scene2100::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawResourceSpriteLayer(_mummyLayer);
-	if (!_auxLayerInFront)
-		drawResourceSpriteLayer(_auxLayer);
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	if (_auxLayerInFront)
-		drawResourceSpriteLayer(_auxLayer);
-	drawResourceSpriteLayer(_frontLayer);
-	drawActionOverlayLayer();
-}
-
 void Scene2100::runCustomEntrySequence() {
 	switch (_vm->gameState().mainFlowStateId) {
 	case kScene2100ReturnFromTreasureState:
@@ -263,14 +208,6 @@ void Scene2100::runCustomEntrySequence() {
 	}
 }
 
-bool Scene2100::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
-}
-
-bool Scene2100::shouldRunExitSideEffectsAfterLoop() const {
-	return true;
-}
-
 void Scene2100::runExitSideEffectsAfterLoop() {
 	fadePaletteToBlack();
 }
@@ -281,7 +218,6 @@ void Scene2100::prepareCustomGameplayLoop() {
 }
 
 void Scene2100::advanceCustomGameplayLoop(uint32 delta) {
-	advanceManualActorPath(delta);
 	if (_returnLayerAnimationActive)
 		advanceReturnLayers(delta);
 	else if (_doorCeremonyAnimationActive)
@@ -290,6 +226,10 @@ void Scene2100::advanceCustomGameplayLoop(uint32 delta) {
 		advanceSpecialSpeechAnimation(delta);
 	else
 		advanceMummyIdle(delta);
+}
+
+bool Scene2100::shouldDrawSecondaryActorInPlayableComposite() const {
+	return !_hideActiveActor && PlayableScene::shouldDrawSecondaryActorInPlayableComposite();
 }
 
 bool Scene2100::dispatchCustomSceneAction(uint16 handlerId) {
@@ -311,6 +251,9 @@ bool Scene2100::dispatchCustomSceneAction(uint16 handlerId) {
 		return true;
 	case 306: // Usar sillón (use armchair): Ron refuses to rest now.
 		beginSecondarySpeechLine(4, 0);
+		return true;
+	case 141: // Mirar bastón de Rá (look at Ra staff): inventory callback redirected here in scene 2100.
+		beginStaticSecondarySpeechLine(0x82, 0);
 		return true;
 	case 142: // Usar bastón de Rá (use Ra staff): inventory callback redirected here in scene 2100.
 	case 307: // Usar bastón de Rá (use Ra staff): open the passage to the treasure room.
@@ -384,7 +327,7 @@ void Scene2100::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIn
 	if (_suppressMummySpeechAnimation)
 		return;
 
-	ResourceSpriteLayer &layer = _mummySpeechUsesFrontLayer ? _frontLayer : _mummyLayer;
+	ResourceSpriteLayer &layer = _mummySpeechUsesFrontLayer ? frontLayer() : mummyLayer();
 	layer.visible = _mummySpeechUsesFrontLayer ||
 		_vm->gameState().scene2100MummyBranchState != 1;
 	layer.setFrame(frameIndex);
@@ -395,7 +338,7 @@ void Scene2100::primarySpeechAnimationRestored(byte animationGroup, byte baseFra
 	if (_suppressMummySpeechAnimation)
 		return;
 
-	ResourceSpriteLayer &layer = _mummySpeechUsesFrontLayer ? _frontLayer : _mummyLayer;
+	ResourceSpriteLayer &layer = _mummySpeechUsesFrontLayer ? frontLayer() : mummyLayer();
 	layer.visible = _mummySpeechUsesFrontLayer ||
 		_vm->gameState().scene2100MummyBranchState != 1;
 	layer.setFrame(baseFrame);
@@ -413,20 +356,14 @@ AmbientAudioProfile Scene2100::ambientAudioProfile() const {
 }
 
 void Scene2100::resetAnimationLayers() {
-	_mummyLayer.configure(kScene2100MummyChunk, kScene2100MummyDescriptorCount,
-		kScene2100ForegroundFrameMap, ARRAYSIZE(kScene2100ForegroundFrameMap));
-	_mummyLayer.visible = _vm->gameState().scene2100MummyBranchState != 1;
-	_frontLayer.visible = false;
-	_frontLayer.reset(0);
-	_auxLayer.visible = false;
-	_auxLayer.reset(0);
+	_sceneLayers.configure(kScene2100LayerSpecs);
+	_sceneLayers.setLayerVisible(kMummyLayer,
+		_vm->gameState().scene2100MummyBranchState != 1);
 	_foregroundChannel.reset(0, kScene2100PrimarySpeechFrameMillis);
 	_auxChannel.reset(0, kScene2100AuxFrameMillis);
-	_manualActorPathChannel.reset(0, kScene2100ActorPathFrameMillis);
 	_foregroundAlternateFrameSet = false;
 	_mummySpeechUsesFrontLayer = false;
 	_suppressMummySpeechAnimation = false;
-	_auxLayerInFront = false;
 	_returnLayerAnimationActive = false;
 	_mummyIdleEnabled = _vm->gameState().scene2020PrincessGone &&
 		_vm->gameState().scene2100MummyBranchState == 0;
@@ -436,26 +373,24 @@ void Scene2100::resetAnimationLayers() {
 	_specialSpeechAnimationActive = false;
 	_specialSpeechFinishing = false;
 	_specialSpeechVariant = 0;
-	_manualActorPathActive = false;
-	_manualActorPathFrameIndex = 0;
-	_actorPathPlaybackActive = false;
 }
 
 void Scene2100::advanceReturnLayers(uint32 delta) {
 	const uint foregroundFrames = _foregroundChannel.consumeFrames(delta);
-	for (uint i = 0; i < foregroundFrames && _frontLayer.frameIndex < 6; ++i)
-		_frontLayer.setFrame(_frontLayer.frameIndex + 1);
+	for (uint i = 0; i < foregroundFrames; ++i)
+		_sceneLayers.advanceLayerFrame(kFrontLayer, 6);
 
 	const uint auxFrames = _auxChannel.consumeFrames(delta);
-	for (uint i = 0; i < auxFrames && _auxLayer.frameIndex < 9; ++i)
-		_auxLayer.setFrame(_auxLayer.frameIndex + 1);
+	for (uint i = 0; i < auxFrames; ++i)
+		_sceneLayers.advanceLayerFrame(kAuxLayer, 9);
 
-	if (_frontLayer.frameIndex >= 6 && _auxLayer.frameIndex >= 9 && !_manualActorPathActive)
+	if (_sceneLayers.layerFrame(kFrontLayer) >= 6 &&
+			_sceneLayers.layerFrame(kAuxLayer) >= 9 && !concurrentActorPathActive())
 		_returnLayerAnimationActive = false;
 }
 
 void Scene2100::advanceMummyIdle(uint32 delta) {
-	ResourceSpriteLayer &layer = _mummySpeechUsesFrontLayer ? _frontLayer : _mummyLayer;
+	ResourceSpriteLayer &layer = _mummySpeechUsesFrontLayer ? frontLayer() : mummyLayer();
 	if (!_mummyIdleEnabled || _primaryDialogueSpeechActive || !layer.visible)
 		return;
 
@@ -475,48 +410,48 @@ void Scene2100::advanceDoorCeremony(uint32 delta) {
 	for (uint i = 0; i < frameCount && _doorCeremonyAnimationActive; ++i) {
 		switch (_doorCeremonyState) {
 		case 0:
-			if (_frontLayer.frameIndex < 29) {
-				_frontLayer.setFrame(_frontLayer.frameIndex + 1);
+			if (_sceneLayers.layerFrame(kFrontLayer) < 29) {
+				_sceneLayers.advanceLayerFrame(kFrontLayer, 29);
 			} else {
 				_doorCeremonyState = 2;
-				_frontLayer.setFrame(4);
+				_sceneLayers.setLayerFrame(kFrontLayer, 4);
 			}
 			break;
 		case 1:
-			if (_frontLayer.frameIndex < 11) {
-				_frontLayer.setFrame(_frontLayer.frameIndex + 1);
+			if (_sceneLayers.layerFrame(kFrontLayer) < 11) {
+				_sceneLayers.advanceLayerFrame(kFrontLayer, 11);
 			} else {
 				_doorCeremonyState = 3;
-				_frontLayer.setFrame(12);
+				_sceneLayers.setLayerFrame(kFrontLayer, 12);
 			}
 			break;
 		case 2:
-			if (_frontLayer.frameIndex < 8) {
-				_frontLayer.setFrame(_frontLayer.frameIndex + 1);
+			if (_sceneLayers.layerFrame(kFrontLayer) < 8) {
+				_sceneLayers.advanceLayerFrame(kFrontLayer, 8);
 			} else if (_doorCeremonyFinishing) {
 				_doorCeremonyAnimationActive = false;
 			} else if (_random.getRandomBit() == 0) {
-				_frontLayer.setFrame(4);
+				_sceneLayers.setLayerFrame(kFrontLayer, 4);
 			} else {
 				_doorCeremonyState = 1;
-				_frontLayer.setFrame(9);
+				_sceneLayers.setLayerFrame(kFrontLayer, 9);
 			}
 			break;
 		case 3:
-			if (_frontLayer.frameIndex < 25) {
-				_frontLayer.setFrame(_frontLayer.frameIndex + 1);
+			if (_sceneLayers.layerFrame(kFrontLayer) < 25) {
+				_sceneLayers.advanceLayerFrame(kFrontLayer, 25);
 			} else if (_doorCeremonyFinishing) {
 				_doorCeremonyAnimationActive = false;
 			} else if (_random.getRandomBit() == 0) {
-				_frontLayer.setFrame(12);
+				_sceneLayers.setLayerFrame(kFrontLayer, 12);
 			} else {
 				_doorCeremonyState = 0;
-				_frontLayer.setFrame(26);
+				_sceneLayers.setLayerFrame(kFrontLayer, 26);
 			}
 			break;
 		default:
 			_doorCeremonyState = 2;
-			_frontLayer.setFrame(4);
+			_sceneLayers.setLayerFrame(kFrontLayer, 4);
 			break;
 		}
 	}
@@ -528,78 +463,23 @@ void Scene2100::advanceSpecialSpeechAnimation(uint32 delta) {
 		const byte lastFrame = _specialSpeechVariant == 0 ?
 			ARRAYSIZE(kScene2100SpecialSpeechShortFrameMap) - 1 :
 			ARRAYSIZE(kScene2100SpecialSpeechLongFrameMap) - 1;
-		if (_frontLayer.frameIndex < lastFrame) {
-			_frontLayer.setFrame(_frontLayer.frameIndex + 1);
-			if (_specialSpeechFinishing && _frontLayer.frameIndex == lastFrame)
+		if (_sceneLayers.layerFrame(kFrontLayer) < lastFrame) {
+			_sceneLayers.advanceLayerFrame(kFrontLayer, lastFrame);
+			if (_specialSpeechFinishing &&
+					_sceneLayers.layerFrame(kFrontLayer) == lastFrame)
 				_specialSpeechAnimationActive = false;
 		} else if (_specialSpeechFinishing) {
 			_specialSpeechAnimationActive = false;
 		} else {
 			_specialSpeechVariant = _random.getRandomBit();
-			_frontLayer.frameMap = _specialSpeechVariant == 0 ?
-				kScene2100SpecialSpeechShortFrameMap : kScene2100SpecialSpeechLongFrameMap;
-			_frontLayer.frameMapSize = _specialSpeechVariant == 0 ?
-				ARRAYSIZE(kScene2100SpecialSpeechShortFrameMap) :
-				ARRAYSIZE(kScene2100SpecialSpeechLongFrameMap);
-			_frontLayer.setFrame(1);
+			_sceneLayers.setLayerFrameMap(kFrontLayer,
+				_specialSpeechVariant == 0 ? kScene2100SpecialSpeechShortFrameMap :
+					kScene2100SpecialSpeechLongFrameMap,
+				_specialSpeechVariant == 0 ? ARRAYSIZE(kScene2100SpecialSpeechShortFrameMap) :
+					ARRAYSIZE(kScene2100SpecialSpeechLongFrameMap));
+			_sceneLayers.setLayerFrame(kFrontLayer, 1);
 		}
 	}
-}
-
-void Scene2100::startManualActorPath(int targetX, int targetY, byte finalFacing, byte finalCel) {
-	queueActorPathWithPaletteRegionRouting(_activeActorWorldX, _activeActorWorldY,
-		targetX, targetY, finalFacing, finalCel);
-	_manualActorPathFrameIndex = 1;
-	_manualActorPathChannel.reset(0, kScene2100ActorPathFrameMillis);
-	_lastViewportScrollActorWorldX = _activeActorWorldX;
-	_manualActorPathActive = _actorPathFrames.size() > 1;
-	_actorPathPlaybackActive = _manualActorPathActive;
-	if (!_manualActorPathActive && !_actorPathFrames.empty()) {
-		const ActorPathFrame &frame = _actorPathFrames.back();
-		_activeActorWorldX = frame.worldX;
-		_activeActorWorldY = frame.worldY;
-		_activeActorFacing = frame.facing;
-		_activeActorCel = frame.cel;
-		_activeActorDrawOrderMode = frame.drawOrderMode;
-	}
-}
-
-void Scene2100::advanceManualActorPath(uint32 delta) {
-	if (!_manualActorPathActive)
-		return;
-
-	const uint frameCount = _manualActorPathChannel.consumeFrames(delta);
-	for (uint i = 0; i < frameCount && _manualActorPathFrameIndex < _actorPathFrames.size(); ++i) {
-		const ActorPathFrame &frame = _actorPathFrames[_manualActorPathFrameIndex++];
-		_activeActorWorldX = frame.worldX;
-		_activeActorWorldY = frame.worldY;
-		_activeActorFacing = frame.facing;
-		_activeActorCel = frame.cel;
-		_activeActorDrawOrderMode = frame.drawOrderMode;
-	}
-	if (_manualActorPathFrameIndex >= _actorPathFrames.size()) {
-		_manualActorPathActive = false;
-		_actorPathPlaybackActive = false;
-	}
-}
-
-void Scene2100::finishManualActorPath() {
-	while (_manualActorPathActive && !Engine::shouldQuit() &&
-			!_vm->isSceneRestartRequested()) {
-		if (waitSceneMillis(10, false))
-			break;
-	}
-
-	if (_manualActorPathActive && !_actorPathFrames.empty()) {
-		const ActorPathFrame &frame = _actorPathFrames.back();
-		_activeActorWorldX = frame.worldX;
-		_activeActorWorldY = frame.worldY;
-		_activeActorFacing = frame.facing;
-		_activeActorCel = frame.cel;
-		_activeActorDrawOrderMode = frame.drawOrderMode;
-	}
-	_manualActorPathActive = false;
-	_actorPathPlaybackActive = false;
 }
 
 bool Scene2100::isRaStaffAvailable() const {
@@ -612,12 +492,12 @@ void Scene2100::runEntryFromScene2010() {
 	const bool princessArrivalPending = state.scene2020PrincessGone &&
 		state.scene2100MummyBranchState == 0;
 	if (princessArrivalPending) {
-		_mummyLayer.visible = false;
-		_frontLayer.configure(kScene2100PrincessArrivalChunk,
+		_sceneLayers.setLayerVisible(kMummyLayer, false);
+		_sceneLayers.setLayerResource(kFrontLayer, kScene2100PrincessArrivalChunk,
 			kScene2100PrincessArrivalDescriptorCount,
 			kScene2100PrincessArrivalFrameMap,
 			ARRAYSIZE(kScene2100PrincessArrivalFrameMap));
-		_frontLayer.visible = true;
+		_sceneLayers.setLayerVisible(kFrontLayer, true);
 		_mummySpeechUsesFrontLayer = true;
 	}
 
@@ -657,19 +537,20 @@ void Scene2100::runEntryFromScene2010() {
 void Scene2100::runEntryFromScene2110() {
 	GameplayState &state = _vm->gameState();
 	setActiveActorPose(0x1d0, 0x14c, 2, 5);
-	_mummyLayer.visible = false;
-	_frontLayer.configure(kScene2100ReturnForegroundChunk,
+	_sceneLayers.setLayerVisible(kMummyLayer, false);
+	_sceneLayers.setLayerResource(kFrontLayer, kScene2100ReturnForegroundChunk,
 		kScene2100ReturnForegroundDescriptorCount,
 		kScene2100ReturnForegroundFrameMap,
 		ARRAYSIZE(kScene2100ReturnForegroundFrameMap));
-	_frontLayer.visible = true;
-	_auxLayer.configure(kScene2100PassageChunk, kScene2100PassageDescriptorCount,
-		kScene2100PassageFrameMap, ARRAYSIZE(kScene2100PassageFrameMap));
-	_auxLayer.visible = true;
-	_auxLayerInFront = false;
+	_sceneLayers.setLayerVisible(kFrontLayer, true);
+	_sceneLayers.setLayerResource(kAuxLayer, kScene2100PassageChunk,
+		kScene2100PassageDescriptorCount,
+		kHoldFirstNineFrames, kHoldFirstNineFrameCount);
+	_sceneLayers.setLayerVisible(kAuxLayer, true);
+	_sceneLayers.setLayerStratum(kAuxLayer, kSceneAnimationBehindActors);
 	_foregroundChannel.reset(0, kScene2100ForegroundFrameMillis);
 	_auxChannel.reset(0, kScene2100AuxFrameMillis);
-	startManualActorPath(0x277, 0x168, 1, 0);
+	startConcurrentActorPath(0x277, 0x168, 1, 0, kScene2100ActorPathFrameMillis);
 	_returnLayerAnimationActive = true;
 
 	drawPlayableComposite();
@@ -679,11 +560,11 @@ void Scene2100::runEntryFromScene2110() {
 		if (waitSceneMillis(10, false))
 			return;
 	}
-	finishManualActorPath();
-	_frontLayer.visible = false;
-	_auxLayer.visible = false;
-	_mummyLayer.visible = true;
-	_mummyLayer.reset(0);
+	finishConcurrentActorPath();
+	_sceneLayers.setLayerVisible(kFrontLayer, false);
+	_sceneLayers.setLayerVisible(kAuxLayer, false);
+	_sceneLayers.setLayerVisible(kMummyLayer, true);
+	_sceneLayers.resetLayer(kMummyLayer, 0);
 
 	state.scene2100PassageOpen = false;
 	applySceneStateToHotspotsAndPatches(4);
@@ -701,48 +582,51 @@ void Scene2100::runEntryFromLeftPassage() {
 	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
 		return;
 
-	_auxLayer.configure(kScene2100PassageChunk, kScene2100PassageDescriptorCount,
-		kScene2100PassageFrameMap, ARRAYSIZE(kScene2100PassageFrameMap));
-	_auxLayer.visible = true;
-	_auxLayerInFront = true;
-	if (!playAndPresentAnimationTransition(_auxLayer,
-			AnimationTransition(0, 9, 9, kScene2100AuxFrameMillis).unskippable()))
+	_sceneLayers.setLayerResource(kAuxLayer, kScene2100PassageChunk,
+		kScene2100PassageDescriptorCount,
+		kHoldFirstNineFrames, kHoldFirstNineFrameCount);
+	_sceneLayers.setLayerVisible(kAuxLayer, true);
+	_sceneLayers.setLayerStratum(kAuxLayer, kSceneAnimationInFrontOfActors);
+	BlockingSequence sequence(*this);
+	sequence.presentedLayerTransition(kAuxLayer,
+		AnimationTransition(0, 9, 9, kScene2100AuxFrameMillis).unskippable());
+	_sceneLayers.setLayerVisible(kAuxLayer, false);
+	_sceneLayers.setLayerStratum(kAuxLayer, kSceneAnimationBehindActors);
+	if (!sequence.completed())
 		return;
-	_auxLayer.visible = false;
-	_auxLayerInFront = false;
 
-	state.scene2100PassageOpen = false;
-	applySceneStateToHotspotsAndPatches(4);
+	sequence.commit(state.scene2100PassageOpen, false)
+		.framebufferPatch(4);
 	drawPlayableComposite();
 	presentFrame();
 }
 
 void Scene2100::runPrincessArrivalSequence() {
 	GameplayState &state = _vm->gameState();
-	_mummyLayer.visible = false;
-	_frontLayer.visible = true;
+	_sceneLayers.setLayerVisible(kMummyLayer, false);
+	_sceneLayers.setLayerVisible(kFrontLayer, true);
 	_mummySpeechUsesFrontLayer = true;
 	runPrincessArrivalPrimarySpeechLine(0);
-	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
-		return;
-
-	if (!playAnimationFrames(_frontLayer,
+	BlockingSequence sequence(*this);
+	sequence.layerFrames(kFrontLayer,
 		AnimationFrameRange(19, 31, kScene2100ForegroundFrameMillis)
 			.unskippable()
-			.hookAt(25, kScene2100PrincessArrivalPathHook)))
+			.actorPathAt(25, 0x281, 0x191, 2, 0,
+				kScene2100ActorPathFrameMillis));
+	if (!sequence.completed())
 		return;
-	_frontLayer.setFrame(32);
+	_sceneLayers.setLayerFrame(kFrontLayer, 32);
 	drawPlayableComposite();
 	presentFrame();
 
-	state.scene2100MummyBranchState = 1;
-	_frontLayer.visible = false;
+	sequence.commit(state.scene2100MummyBranchState, (byte)1);
+	_sceneLayers.setLayerVisible(kFrontLayer, false);
 	_mummySpeechUsesFrontLayer = false;
-	finishManualActorPath();
+	finishConcurrentActorPath();
 	beginSecondarySpeechLine(7, 1);
 	_mummyIdleEnabled = false;
-	_mummyLayer.visible = false;
-	_mummyLayer.reset(0);
+	_sceneLayers.setLayerVisible(kMummyLayer, false);
+	_sceneLayers.resetLayer(kMummyLayer, 0);
 	drawPlayableComposite();
 	presentFrame();
 }
@@ -876,26 +760,26 @@ void Scene2100::initializeMummyDialogueRecords(Common::Array<DialogueChoiceRecor
 	const GameplayState &state = _vm->gameState();
 	records.resize(kScene2100MummyDialogueChoiceRecordCount);
 
-	setDialogueRecord(records, 0, 1, 0, 3, 2, 3, 1, 0xff);
-	setDialogueRecord(records, 1, state.scene2020PrincessConversationSeen ? 1 : 0, 2, 1, 3, 4, 1, 0xff);
-	setDialogueRecord(records, 2, 1, 1, 1, 4, 5, 1, 0xff);
-	setDialogueRecord(records, 3, state.scene2040SphinxExitInterviewState != 0 ? 1 : 0, 3, 1, 5, 6, 4, 0xff);
+	setDialogueRecord(records, 0, 1, 0, 3, 2, 3, 1);
+	setDialogueRecord(records, 1, state.scene2020PrincessConversationSeen ? 1 : 0, 2, 1, 3, 4, 1);
+	setDialogueRecord(records, 2, 1, 1, 1, 4, 5, 1);
+	setDialogueRecord(records, 3, state.scene2040SphinxExitInterviewState != 0 ? 1 : 0, 3, 1, 5, 6, 4);
 	setDialogueRecord(records, 4,
 		state.mainFlowStateId == kScene2100EntryState &&
 			state.scene2100MummyBranchState == 0 ? 1 : 0,
-		0, 0, 7, 8, 5, 0xff);
-	setDialogueRecord(records, 5, 1, 0, 0, 8, 9, 0, 0xff);
-	setDialogueRecord(records, 70, 1, 0, 2, 9, 10, 1, 0xff);
-	setDialogueRecord(records, 77, 1, 0, 2, 10, 11, 1, 0xff);
-	setDialogueRecord(records, 84, 1, 2, 3, 11, 12, 2, 0xff);
-	setDialogueRecord(records, 85, 1, 2, 3, 12, 13, 1, 0xff);
+		0, 0, 7, 8, 5);
+	setDialogueRecord(records, 5, 1, 0, 0, 8, 9, 0);
+	setDialogueRecord(records, 70, 1, 0, 2, 9, 10, 1);
+	setDialogueRecord(records, 77, 1, 0, 2, 10, 11, 1);
+	setDialogueRecord(records, 84, 1, 2, 3, 11, 12, 2);
+	setDialogueRecord(records, 85, 1, 2, 3, 12, 13, 1);
 	setDialogueRecord(records, 86, state.scene2100AfterlifeBranchUnlocked ? 1 : 0,
-		0, 1, 13, 14, 3, 0xff);
-	setDialogueRecord(records, 87, 1, 0, 2, 15, 16, 1, 0xff);
-	setDialogueRecord(records, 91, 1, 0, 2, 6, 7, 1, 0xff);
-	setDialogueRecord(records, 140, 1, 0, 1, 14, 15, 1, 0xff);
-	setDialogueRecord(records, 210, 1, 0, 1, 16, 17, 1, 0xff);
-	setDialogueRecord(records, 280, 1, 0, 5, 17, 18, 1, 0xff);
+		0, 1, 13, 14, 3);
+	setDialogueRecord(records, 87, 1, 0, 2, 15, 16, 1);
+	setDialogueRecord(records, 91, 1, 0, 2, 6, 7, 1);
+	setDialogueRecord(records, 140, 1, 0, 1, 14, 15, 1);
+	setDialogueRecord(records, 210, 1, 0, 1, 16, 17, 1);
+	setDialogueRecord(records, 280, 1, 0, 5, 17, 18, 1);
 
 	for (uint bit = 0; bit < ARRAYSIZE(kScene2100MummyDialogueTrackedRecordIndices); ++bit) {
 		if ((state.scene2100MummyDialogueUsedChoiceMask & (1 << bit)) == 0)
@@ -909,7 +793,7 @@ void Scene2100::initializeMummyDialogueRecords(Common::Array<DialogueChoiceRecor
 
 void Scene2100::setDialogueRecord(Common::Array<DialogueChoiceRecord> &records, uint index,
 		byte enabled, byte nextNodeIndex, byte transitionMode, byte playerTextRowId,
-		byte responseFrameIndex, byte disableAfterUse, byte reserved) const {
+		byte responseFrameIndex, byte disableAfterUse) const {
 	if (index >= records.size())
 		return;
 
@@ -920,7 +804,6 @@ void Scene2100::setDialogueRecord(Common::Array<DialogueChoiceRecord> &records, 
 	record.playerTextRowId = playerTextRowId;
 	record.responseFrameIndex = responseFrameIndex;
 	record.disableAfterUse = disableAfterUse;
-	record.reserved = reserved;
 	record.selectable = enabled != 0;
 }
 
@@ -928,45 +811,46 @@ void Scene2100::runMummyPrimarySpeechLine(byte frameIndex) {
 	_mummySpeechUsesFrontLayer = false;
 	const bool useAlternateFrameSet = _random.getRandomBit() != 0;
 	if (useAlternateFrameSet)
-		runMummyFrameSetTransition(_mummyLayer, true, 17);
+		runMummyFrameSetTransition(kMummyLayer, true, 17);
 	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
 		return;
 
 	beginPrimarySpeechLineWithAnimationGroup(kScene2100MummyPrimaryRow, frameIndex,
 		0x2e7, 0x83, 0x32, 0x32, 0x3f, 0);
 	if (useAlternateFrameSet && !Engine::shouldQuit() && !_vm->isSceneRestartRequested())
-		runMummyFrameSetTransition(_mummyLayer, false, 17);
+		runMummyFrameSetTransition(kMummyLayer, false, 17);
 }
 
 void Scene2100::runPrincessArrivalPrimarySpeechLine(byte frameIndex) {
 	_mummySpeechUsesFrontLayer = true;
 	const bool useAlternateFrameSet = _random.getRandomBit() != 0;
 	if (useAlternateFrameSet)
-		runMummyFrameSetTransition(_frontLayer, true, 18);
+		runMummyFrameSetTransition(kFrontLayer, true, 18);
 	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
 		return;
 
 	beginPrimarySpeechLineWithAnimationGroup(7, frameIndex,
 		0x2f3, 0xa1, 0x32, 0x32, 0x3f, 0);
 	if (useAlternateFrameSet && !Engine::shouldQuit() && !_vm->isSceneRestartRequested())
-		runMummyFrameSetTransition(_frontLayer, false, 18);
+		runMummyFrameSetTransition(kFrontLayer, false, 18);
 }
 
-void Scene2100::runMummyFrameSetTransition(ResourceSpriteLayer &layer, bool opening,
-		byte closingFinalFrame) {
+void Scene2100::runMummyFrameSetTransition(uint layerId, bool opening, byte closingFinalFrame) {
 	const bool previousIdleEnabled = _mummyIdleEnabled;
-	_mummyIdleEnabled = false;
+	BlockingSequence sequence(*this);
+	sequence.commit(_mummyIdleEnabled, false);
 	if (opening) {
-		playAndPresentAnimationTransition(layer,
+		sequence.presentedLayerTransition(layerId,
 			AnimationTransition(5, 8, 8, kScene2100ForegroundFrameMillis).unskippable());
 	} else {
-		playAndPresentAnimationTransition(layer,
+		sequence.presentedLayerTransition(layerId,
 			AnimationTransition(14, closingFinalFrame, closingFinalFrame,
 				kScene2100ForegroundFrameMillis).unskippable());
 	}
-	_foregroundAlternateFrameSet = opening;
-	_foregroundChannel.reset(layer.frameIndex, kScene2100PrimarySpeechFrameMillis);
-	_mummyIdleEnabled = previousIdleEnabled;
+	sequence.commit(_foregroundAlternateFrameSet, opening);
+	_foregroundChannel.reset(_sceneLayers.layerFrame(layerId),
+		kScene2100PrimarySpeechFrameMillis);
+	sequence.commit(_mummyIdleEnabled, previousIdleEnabled);
 }
 
 void Scene2100::beginMummyDialogueSecondarySpeechLine(uint16 rowIndex, byte frameIndex) {
@@ -975,53 +859,60 @@ void Scene2100::beginMummyDialogueSecondarySpeechLine(uint16 rowIndex, byte fram
 
 void Scene2100::runTreasureIntroductionSequence() {
 	_mummyIdleEnabled = false;
-	_mummyLayer.visible = false;
-	_frontLayer.configure(kScene2100SpecialSpeechChunk,
+	_sceneLayers.setLayerVisible(kMummyLayer, false);
+	_sceneLayers.setLayerResource(kFrontLayer, kScene2100SpecialSpeechChunk,
 		kScene2100SpecialSpeechDescriptorCount,
 		kScene2100SpecialIntroFrameMap,
 		ARRAYSIZE(kScene2100SpecialIntroFrameMap));
-	_frontLayer.visible = true;
-	startManualActorPath(0x277, 0x168, 2, 0);
-	if (!playAndPresentAnimationTransition(_frontLayer,
-			AnimationTransition(0, ARRAYSIZE(kScene2100SpecialIntroFrameMap) - 1,
-				ARRAYSIZE(kScene2100SpecialIntroFrameMap) - 1,
-				kScene2100ForegroundFrameMillis).unskippable()))
+	_sceneLayers.setLayerVisible(kFrontLayer, true);
+	startConcurrentActorPath(0x277, 0x168, 2, 0, kScene2100ActorPathFrameMillis);
+	BlockingSequence sequence(*this);
+	sequence.presentedLayerTransition(kFrontLayer,
+		AnimationTransition(0, ARRAYSIZE(kScene2100SpecialIntroFrameMap) - 1,
+			ARRAYSIZE(kScene2100SpecialIntroFrameMap) - 1,
+			kScene2100ForegroundFrameMillis).unskippable());
+	if (!sequence.completed())
 		return;
-	finishManualActorPath();
-	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
+	finishConcurrentActorPath();
+	if (!sequence.completed())
 		return;
 
 	runSpecialTransitionSpeech();
-	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
+	if (!sequence.completed())
 		return;
 
-	_frontLayer.configure(kScene2100SpecialExitChunk,
+	_sceneLayers.setLayerResource(kFrontLayer, kScene2100SpecialExitChunk,
 		kScene2100SpecialExitDescriptorCount,
 		kScene2100SpecialExitFrameMap,
 		ARRAYSIZE(kScene2100SpecialExitFrameMap));
-	_frontLayer.visible = true;
-	if (!playAnimationFrames(_frontLayer,
+	_sceneLayers.setLayerVisible(kFrontLayer, true);
+	sequence.layerFrames(kFrontLayer,
 		AnimationFrameRange(0, 25, kScene2100ForegroundFrameMillis)
 			.unskippable()
-			.hookEveryFrame(kScene2100SpecialExitHook))) {
+			.soundAt(3, 0x10)
+			.stopSoundAt(14)
+			.actorPathAt(14, 0x1b5, 0x151,
+				kScene2100InvalidFacing, kScene2100InvalidCel,
+				kScene2100ActorPathFrameMillis));
+	if (!sequence.completed()) {
 		_soundBank0.stop();
 		return;
 	}
-	_frontLayer.setFrame(26);
+	_sceneLayers.setLayerFrame(kFrontLayer, 26);
 	drawPlayableComposite();
 	presentFrame();
-	finishManualActorPath();
-	_frontLayer.visible = false;
+	finishConcurrentActorPath();
+	_sceneLayers.setLayerVisible(kFrontLayer, false);
 }
 
 void Scene2100::runSpecialTransitionSpeech() {
 	_specialSpeechVariant = _random.getRandomBit();
-	_frontLayer.frameMap = _specialSpeechVariant == 0 ?
-		kScene2100SpecialSpeechShortFrameMap : kScene2100SpecialSpeechLongFrameMap;
-	_frontLayer.frameMapSize = _specialSpeechVariant == 0 ?
-		ARRAYSIZE(kScene2100SpecialSpeechShortFrameMap) :
-		ARRAYSIZE(kScene2100SpecialSpeechLongFrameMap);
-	_frontLayer.reset(0);
+	_sceneLayers.setLayerFrameMap(kFrontLayer,
+		_specialSpeechVariant == 0 ? kScene2100SpecialSpeechShortFrameMap :
+			kScene2100SpecialSpeechLongFrameMap,
+		_specialSpeechVariant == 0 ? ARRAYSIZE(kScene2100SpecialSpeechShortFrameMap) :
+			ARRAYSIZE(kScene2100SpecialSpeechLongFrameMap));
+	_sceneLayers.resetLayer(kFrontLayer, 0);
 	_foregroundChannel.reset(0, kScene2100ForegroundFrameMillis);
 	_specialSpeechAnimationActive = true;
 	_specialSpeechFinishing = false;
@@ -1050,16 +941,23 @@ void Scene2100::runStoneDoorToTreasureRoom() {
 		return;
 	}
 
-	walkActiveActorTo(0x24a, 0x163, 4, 0, false);
-	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
+	BlockingSequence sequence(*this);
+	sequence.actorPath(SceneActorPose(0x24a, 0x163, 4));
+	if (!sequence.completed())
 		return;
 
-	_frontLayer.configure(kScene2100DoorChunk, kScene2100DoorDescriptorCount,
+	const bool previousHideActiveActor = _hideActiveActor;
+	_hideActiveActor = true;
+	_sceneLayers.setLayerResource(kFrontLayer, kScene2100DoorChunk,
+		kScene2100DoorDescriptorCount,
 		kScene2100TransitionFrameMap, ARRAYSIZE(kScene2100TransitionFrameMap));
-	_frontLayer.visible = true;
-	if (!playAndPresentAnimationTransition(_frontLayer,
-			AnimationTransition(0, 3, 3, kScene2100AuxFrameMillis).unskippable()))
+	_sceneLayers.setLayerVisible(kFrontLayer, true);
+	sequence.presentedLayerTransition(kFrontLayer,
+		AnimationTransition(0, 3, 3, kScene2100AuxFrameMillis).unskippable());
+	if (!sequence.completed()) {
+		_hideActiveActor = previousHideActiveActor;
 		return;
+	}
 	_auxChannel.reset(3, kScene2100AuxFrameMillis);
 	_doorCeremonyState = 2;
 	_doorCeremonyFinishing = false;
@@ -1072,37 +970,46 @@ void Scene2100::runStoneDoorToTreasureRoom() {
 	_doorCeremonyFinishing = true;
 	while (_doorCeremonyAnimationActive && !Engine::shouldQuit() &&
 			!_vm->isSceneRestartRequested()) {
-		if (waitSceneMillis(10, false))
+		if (waitSceneMillis(10, false)) {
+			_hideActiveActor = previousHideActiveActor;
 			return;
+		}
 	}
-	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
+	if (Engine::shouldQuit() || _vm->isSceneRestartRequested()) {
+		_hideActiveActor = previousHideActiveActor;
 		return;
+	}
 
-	_frontLayer.setFrame(31);
+	_sceneLayers.setLayerFrame(kFrontLayer, 31);
 	drawPlayableComposite();
 	presentFrame();
-	if (waitSceneMillis(kScene2100AuxFrameMillis, false))
+	if (waitSceneMillis(kScene2100AuxFrameMillis, false)) {
+		_hideActiveActor = previousHideActiveActor;
 		return;
+	}
 	_soundBank0.playSample(0x10, 100);
 	if (waitSceneMillis(kScene2100AuxFrameMillis, false)) {
 		_soundBank0.stop();
+		_hideActiveActor = previousHideActiveActor;
 		return;
 	}
 	for (byte frame = 32; frame <= 50; ++frame) {
-		_frontLayer.setFrame(frame);
+		_sceneLayers.setLayerFrame(kFrontLayer, frame);
 		if (waitSceneMillis(kScene2100AuxFrameMillis, false)) {
 			_soundBank0.stop();
+			_hideActiveActor = previousHideActiveActor;
 			return;
 		}
 	}
 	_soundBank0.stop();
-	_frontLayer.setFrame(51);
+	_sceneLayers.setLayerFrame(kFrontLayer, 51);
 	drawPlayableComposite();
 	presentFrame();
+	_hideActiveActor = previousHideActiveActor;
 
 	GameplayState &state = _vm->gameState();
-	state.scene2100PassageOpen = true;
-	state.mainFlowStateId = kScene2110EntryState;
+	sequence.commit(state.scene2100PassageOpen, true)
+		.commit(state.mainFlowStateId, kScene2110EntryState);
 }
 
 void Scene2100::runRaStaffPickup() {
@@ -1112,39 +1019,18 @@ void Scene2100::runRaStaffPickup() {
 	}
 
 	GameplayState &state = _vm->gameState();
-	state.scene2100RaStaffTaken = true;
-
-	runActorReplacement(ActionOverlaySpec(kScene2100PickupChunk, kScene2100PickupDescriptorCount,
-		kScene2100PickupFrameMap, ARRAYSIZE(kScene2100PickupFrameMap),
-		kScene2100AuxFrameMillis)
-		.patchAt(5, 1)
-		.noFinalFrameDelay());
-
-	applySceneStateToHotspotsAndPatches(1);
+	BlockingSequence sequence(*this);
+	sequence.commit(state.scene2100RaStaffTaken, true)
+		.actorReplacement(ActionOverlaySpec(kScene2100PickupChunk, kScene2100PickupDescriptorCount,
+			kScene2100AuxFrameMillis)
+			.holdFirstFrame()
+			.patchAt(5, 1)
+			.noFinalFrameDelay())
+		.framebufferPatch(1);
 	if (!hasInventoryItem(kScene2100RaStaffItem))
 		addInventoryItem(kScene2100RaStaffItem);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 	dispatchGenericSceneAction(21);
-}
-
-void Scene2100::handleAnimationFrameHook(byte hookId, uint frame) {
-	switch (hookId) {
-	case kScene2100PrincessArrivalPathHook:
-		if (frame == 25)
-			startManualActorPath(0x281, 0x191, 2, 0);
-		break;
-	case kScene2100SpecialExitHook:
-		if (frame == 3) {
-			_soundBank0.playSample(0x10, 100);
-		} else if (frame == 14) {
-			_soundBank0.stop();
-			startManualActorPath(0x1b5, 0x151,
-				kScene2100InvalidFacing, kScene2100InvalidCel);
-		}
-		break;
-	default:
-		break;
-	}
 }
 
 void Scene2100::removeColorMapItemFromOriginal(byte itemId) {

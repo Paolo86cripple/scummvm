@@ -19,12 +19,9 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene8000.h"
-
-#include "common/system.h"
-
-#include "hollywood/graphics.h"
 #include "hollywood/hollywood.h"
+#include "hollywood/graphics.h"
+#include "hollywood/scenes/playable/scene8000.h"
 
 namespace Hollywood {
 
@@ -119,17 +116,12 @@ void Scene8000::runPresentation() {
 	uint32 paletteAccumulator = 0;
 	uint32 mainAccumulator = 0;
 	uint32 secondaryAccumulator = 0;
-	uint32 lastMillis = g_system->getMillis();
+	uint32 delta = 0;
 	bool mainDirty = false;
 	bool secondaryDirty = false;
+	TimedPresentationLoop loop(*this, TimedPresentationLoop::kUntilStopped);
 
-	while (_tick < kScene8000EndTick && !_skipRequested && !Engine::shouldQuit()) {
-		if (pollEvents())
-			break;
-
-		const uint32 now = g_system->getMillis();
-		const uint32 delta = now - lastMillis;
-		lastMillis = now;
+	while (_tick < kScene8000EndTick && loop.beginFrame()) {
 		secondAccumulator += delta;
 		paletteAccumulator += delta;
 		mainAccumulator += delta;
@@ -163,7 +155,7 @@ void Scene8000::runPresentation() {
 			secondAccumulator -= kScene8000SecondMillis;
 			++_tick;
 			if (_tick == kScene8000PatchTick) {
-				drawResourceBlockList(_resourceArena, _resourceChunkOffsets[2],
+				drawResourceBlockList(_resources._arena, _resources._chunkOffsets[2],
 					_sceneFramebuffer.managedSurface());
 				_secondaryVisible = true;
 				secondaryAccumulator = kScene8000SecondarySpriteMillis;
@@ -179,7 +171,7 @@ void Scene8000::runPresentation() {
 			secondaryDirty = false;
 		}
 
-		g_system->delayMillis(10);
+		delta = loop.finishFrame();
 	}
 
 	_backgroundSound.stop();
@@ -250,18 +242,18 @@ bool Scene8000::advanceMainSprite() {
 void Scene8000::drawPresentationFrame(bool mainDirty, bool secondaryDirty) {
 	const byte mainFrame = kScene8000MainFrameMap[MIN<uint>(_mainFrame, ARRAYSIZE(kScene8000MainFrameMap) - 1)];
 	if (mainDirty) {
-		restoreSpriteBackground(_resourceArena, _resourceChunkOffsets[3], 0,
+		restoreSpriteBackground(_resources._arena, _resources._chunkOffsets[3], 0,
 			kScene8000MainDescriptorCount, mainFrame, _baseFramebuffer.surface(),
 			_sceneFramebuffer.surface());
 	}
 	if (secondaryDirty) {
 		const byte secondaryFrame = kScene8000SecondaryFrameMap[MIN<uint>(_secondaryFrame,
 			ARRAYSIZE(kScene8000SecondaryFrameMap) - 1)];
-		restoreSpriteBackground(_resourceArena, _resourceChunkOffsets[4], 0,
+		restoreSpriteBackground(_resources._arena, _resources._chunkOffsets[4], 0,
 			kScene8000SecondaryDescriptorCount, secondaryFrame, _baseFramebuffer.surface(),
 			_sceneFramebuffer.surface());
 	}
-	drawStripSpriteFrame(_resourceArena, _resourceChunkOffsets[3], 0,
+	drawStripSpriteFrame(_resources._arena, _resources._chunkOffsets[3], 0,
 		kScene8000MainDescriptorCount, mainFrame, _sceneFramebuffer.managedSurface());
 	drawSecondarySpriteIfVisible();
 	presentFrame();
@@ -272,7 +264,7 @@ void Scene8000::drawSecondarySpriteIfVisible() {
 		return;
 
 	const byte frame = kScene8000SecondaryFrameMap[MIN<uint>(_secondaryFrame, ARRAYSIZE(kScene8000SecondaryFrameMap) - 1)];
-	drawStripSpriteFrame(_resourceArena, _resourceChunkOffsets[4], 0,
+	drawStripSpriteFrame(_resources._arena, _resources._chunkOffsets[4], 0,
 		kScene8000SecondaryDescriptorCount, frame, _sceneFramebuffer.managedSurface());
 }
 

@@ -19,14 +19,13 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene6010.h"
-
 #include "common/debug.h"
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene6010.h"
 
 namespace Hollywood {
 
@@ -59,10 +58,6 @@ const uint kScene6010PendingItem69DescriptorCount = 0x0e;
 const uint kScene6010MuseumDoorUseVerbRecordIndex = 0x15;
 const uint kScene6010MuseumDoorOpenVerbRecordIndex = 0x16;
 
-const byte kScene6010PendingItem69FrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
-};
-
 const byte kScene6010DoorRevealPrimaryFrameMap[] = {
 	0, 0, 0, 1, 2, 3, 3, 3, 3, 3, 1, 1, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -75,19 +70,13 @@ const byte kScene6010DoorRevealSecondaryFrameMap[] = {
 	12, 12, 13, 14, 15, 16, 17, 18
 };
 
-const byte kScene6010ExitFrameMap[] = { 0, 1, 2, 3, 4, 5 };
-
-const byte kScene6010Pickup59FrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
-};
-
 const byte kScene6010Pickup58FrameMap[] = {
 	0, 8, 7, 6, 5, 4, 3, 2, 1, 0,
 	1, 2, 1, 0, 1, 2, 1, 0, 1, 2,
 	3, 4, 5, 6, 7, 8, 9
 };
 
-static PlayableSceneConfig scene6010Config() {
+PlayableSceneConfig scene6010Config() {
 	PlayableSceneConfig config(6010,
 		SceneResourceLayout(19, 5, 18),
 		SceneViewport(kScene6010ViewportXOffset, kScene6010ViewportMinXOffset, kScene6010ViewportMaxXOffset),
@@ -128,15 +117,11 @@ void Scene6010::initializeCustomPreviewState() {
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 }
 
-void Scene6010::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	copyBaseFramebufferToSceneFramebuffer();
+void Scene6010::prepareCustomComposite(bool drawActors, byte activeFacing,
+		int activeWorldX, int activeWorldY, byte actorDrawOrderMode) {
+	(void)drawActors;
+	(void)activeFacing;
 	updateSceneDepthThresholds(actorDrawOrderMode, activeWorldX, activeWorldY);
-	drawLayerStack(_sceneLayers, kSceneAnimationScenePlaced);
-	drawActionOverlayLayer();
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
 }
 
 void Scene6010::runCustomEntrySequence() {
@@ -250,7 +235,7 @@ bool Scene6010::dispatchCustomSceneAction(uint16 handlerId) {
 			beginSecondarySpeechLine(0, 1);
 			return true;
 		}
-		state.requestTravelScreenSelection(6);
+		requestTravelScreenSelection(6);
 		return true;
 	default:
 		return false;
@@ -377,12 +362,10 @@ bool Scene6010::shouldUseActorDepthTest(int actorWorldX, int actorWorldY) const 
 	return PlayableScene::shouldUseActorDepthTest(actorWorldX, actorWorldY);
 }
 
-bool Scene6010::shouldRunExitSideEffectsAfterLoop() const {
-	const uint16 stateId = _vm->gameState().mainFlowStateId;
-	return !Engine::shouldQuit() && stateId != 0xff && !isMainFlowStateInScene(stateId);
-}
-
 void Scene6010::runExitSideEffectsAfterLoop() {
+	if (!didLeaveSceneAfterLoop())
+		return;
+
 	fadePaletteToBlack();
 }
 
@@ -528,6 +511,7 @@ void Scene6010::runStudioClipSequence(bool exitAfterPlayback) {
 		if (!fastForward && waitDeltaClipFrameMillis(kScene6010ClipFrameMillis)) {
 			if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
 				return;
+			consumeStepAdvanceRequest();
 			_skipRequested = false;
 			fastForward = true;
 		}
@@ -549,8 +533,8 @@ void Scene6010::runPendingItem69PickupOverlay() {
 
 	GameplayState &state = _vm->gameState();
 	state.scene6011PendingItem69Visible = false;
-	runActorReplacement(ActionOverlaySpec(12, kScene6010PendingItem69DescriptorCount,
-		kScene6010PendingItem69FrameMap, ARRAYSIZE(kScene6010PendingItem69FrameMap), kScene6010FrameMillis)
+	runActorReplacement(ActionOverlaySpec(12, kScene6010PendingItem69DescriptorCount, kScene6010FrameMillis)
+		.holdFirstFrame()
 		.patchAt(7, 5));
 
 	addInventoryItem(0x69);
@@ -571,8 +555,7 @@ void Scene6010::runDoorRevealOverlay() {
 }
 
 void Scene6010::runExitToScene6020Overlay() {
-	runActorReplacement(ActionOverlaySpec(9, kScene6010ExitDescriptorCount,
-		kScene6010ExitFrameMap, ARRAYSIZE(kScene6010ExitFrameMap), kScene6010FrameMillis));
+	runActorReplacement(ActionOverlaySpec(9, kScene6010ExitDescriptorCount, kScene6010FrameMillis));
 	_soundBank0.playSample(3, 100);
 	_vm->gameState().scene6010ExitOverlayPlayed = true;
 	_vm->gameState().mainFlowStateId = kScene6020State;
@@ -580,9 +563,9 @@ void Scene6010::runExitToScene6020Overlay() {
 
 void Scene6010::runPickupItem59Overlay() {
 	dispatchGenericSceneAction(21);
-	runLayeredOverlay(18, kScene6010Pickup59DescriptorCount,
-		kScene6010Pickup59FrameMap, ARRAYSIZE(kScene6010Pickup59FrameMap),
-		0, 0, nullptr, 0, kScene6010FrameMillis);
+	runActorReplacement(ActionOverlaySpec(18, kScene6010Pickup59DescriptorCount, kScene6010FrameMillis)
+		.holdFirstFrame()
+		.drawAt(kSceneAnimationBehindActors));
 	addInventoryItem(0x59);
 	_vm->gameState().scene6010Item59Visible = false;
 	applySceneStateToHotspotsAndPatches(1);
@@ -617,12 +600,12 @@ void Scene6010::runLayeredOverlay(uint primaryChunkIndex, uint primaryDescriptor
 	_sceneLayers.clear();
 	uint secondaryLayer = SceneLayerStack::kInvalidLayer;
 	if (secondaryFrameMap != nullptr && secondaryFrameMapSize != 0) {
-		secondaryLayer = _sceneLayers.addLayer(kSceneAnimationScenePlaced,
+		secondaryLayer = _sceneLayers.addLayer(kSceneAnimationBehindActors,
 			secondaryChunkIndex,
 			(uint16)secondaryDescriptorCount, secondaryFrameMap, secondaryFrameMapSize);
 	}
 	const uint primaryLayer = primaryFrameMap != nullptr && primaryFrameMapSize != 0 ?
-		_sceneLayers.addLayer(kSceneAnimationScenePlaced,
+		_sceneLayers.addLayer(kSceneAnimationBehindActors,
 			primaryChunkIndex, (uint16)primaryDescriptorCount,
 			primaryFrameMap, primaryFrameMapSize) :
 		SceneLayerStack::kInvalidLayer;

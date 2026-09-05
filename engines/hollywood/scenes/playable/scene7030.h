@@ -34,9 +34,8 @@ public:
 
 private:
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) override;
+	void prepareCustomComposite(bool drawActors, byte activeFacing, int activeWorldX,
+		int activeWorldY, byte actorDrawOrderMode) override;
 	bool shouldDrawSecondaryActorInPlayableComposite() const override;
 	void runCustomEntrySequence() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
@@ -49,14 +48,12 @@ private:
 		int targetX, int targetY, int &requestedFacing, bool &restoredStepDeltas) override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	void setPrimaryLeftSpeechFrame(byte frameIndex) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 	void advanceChunk5AmbientOverlay();
 	void advanceChunk6IdleFrames();
 	void configureAnimationLayers();
 	void setChunk5Frame(byte frameIndex);
 	byte chunk5Frame() const;
-	void runPunchBowlPatchOverlay(uint chunkIndex, uint descriptorCount, const byte *frameMap,
-		uint frameMapSize, uint32 frameMillis, int statePatchFrame = -1);
+	void runPunchBowlPatchOverlay(ActionOverlaySpec spec, int statePatchFrame = -1);
 	void handleActionSlot00TransitionToG04();
 	void handleActionSlot01SecondarySpeech();
 	void handleActionSlot02TransitionToG01Alt();

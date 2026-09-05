@@ -19,20 +19,6 @@
  *
  */
 
-#include "hollywood/hollywood.h"
-#include "hollywood/console.h"
-#include "hollywood/font.h"
-#include "hollywood/gameplay/travel_screen.h"
-#include "hollywood/scenes/scene_registry.h"
-#include "hollywood/scenes/intro/scene9000.h"
-#include "hollywood/scenes/intro/scene9010.h"
-#include "hollywood/scenes/intro/scene9030.h"
-#include "hollywood/scenes/intro/scene9050.h"
-#include "hollywood/scenes/intro/scene9100.h"
-#include "hollywood/scenes/intro/scene9110.h"
-#include "hollywood/scenes/intro/scene9120.h"
-#include "hollywood/resource.h"
-
 #include "audio/mixer.h"
 #include "common/archive.h"
 #include "common/config-manager.h"
@@ -42,6 +28,21 @@
 #include "engines/util.h"
 #include "graphics/pixelformat.h"
 #include "graphics/thumbnail.h"
+
+#include "hollywood/hollywood.h"
+#include "hollywood/console.h"
+#include "hollywood/debug.h"
+#include "hollywood/font.h"
+#include "hollywood/gameplay/travel_screen.h"
+#include "hollywood/resource.h"
+#include "hollywood/scenes/intro/scene9000.h"
+#include "hollywood/scenes/intro/scene9010.h"
+#include "hollywood/scenes/intro/scene9030.h"
+#include "hollywood/scenes/intro/scene9050.h"
+#include "hollywood/scenes/intro/scene9100.h"
+#include "hollywood/scenes/intro/scene9110.h"
+#include "hollywood/scenes/intro/scene9120.h"
+#include "hollywood/scenes/scene_registry.h"
 
 namespace Hollywood {
 
@@ -146,7 +147,6 @@ int optionsLevelToConfigTalkSpeed(byte level) {
 HollywoodEngine::HollywoodEngine(OSystem *syst, const ADGameDescription *gameDesc) :
 		Engine(syst),
 		_gameDescription(gameDesc),
-		_resources(new ResourceManager()),
 		_font(new HollywoodFont()),
 		_introMusic(),
 		_gameplayMusic(),
@@ -162,7 +162,6 @@ HollywoodEngine::HollywoodEngine(OSystem *syst, const ADGameDescription *gameDes
 HollywoodEngine::~HollywoodEngine() {
 	_lastGameplayThumbnail.free();
 	delete _font;
-	delete _resources;
 }
 
 void HollywoodEngine::initializePath(const Common::FSNode &gamePath) {
@@ -330,11 +329,19 @@ Common::Error HollywoodEngine::run() {
 			handledState = true;
 			TravelScreen travelScreen(this);
 			uint16 selectedStateId = stateId;
+			const uint16 returnStateId = gameState().activeActorPoseStateId;
 			const byte currentChapterId = gameState().travelScreenCurrentChapterId != 0 ?
 				gameState().travelScreenCurrentChapterId : 1;
 			if (!travelScreen.runSelection(currentChapterId, selectedStateId))
 				return Common::kReadingFailed;
 			if (!Engine::shouldQuit() && !isSceneRestartRequested()) {
+				if (selectedStateId == kTravelScreenSelectionState) {
+					if (!isImplementedGameplayState(returnStateId) ||
+							returnStateId == kTravelScreenSelectionState)
+						return Common::kReadingFailed;
+					selectedStateId = returnStateId;
+					gameState().activeActorPoseValid = true;
+				}
 				gameState().mainFlowStateId = selectedStateId;
 				gameState().travelScreenCurrentChapterId = 0;
 			}
@@ -418,6 +425,11 @@ Common::Platform HollywoodEngine::getPlatform() const {
 
 bool HollywoodEngine::isDemo() const {
 	return (_gameDescription->flags & ADGF_DEMO) != 0;
+}
+
+bool HollywoodEngine::isFirstEdition() const {
+	return _gameDescription->extra != nullptr &&
+		!strcmp(_gameDescription->extra, "1st edition");
 }
 
 bool HollywoodEngine::hasSpeechData() const {

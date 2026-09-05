@@ -19,16 +19,15 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene8010.h"
-
 #include "common/debug.h"
 #include "common/events.h"
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/cursor.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene8010.h"
 
 namespace Hollywood {
 
@@ -77,6 +76,11 @@ const uint32 kScene8010SelectedAnswerLineMillis = 900;
 const byte kScene8010SelectedAnswerFirstNameSpeechRow = 0x46;
 const byte kScene8010SelectedAnswerSurnameSpeechRow = 0x47;
 
+enum {
+	kScene8010FishermanLayer,
+	kScene8010BoatLayer
+};
+
 const byte kScene8010FishermanFrameMap[] = {
 	0, 23, 1, 2, 3, 4, 5, 6,
 	7, 8, 9, 10, 11, 10, 9, 8,
@@ -84,8 +88,11 @@ const byte kScene8010FishermanFrameMap[] = {
 	19, 20, 21, 22
 };
 
-const byte kScene8010BoatFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7
+const SceneLayerSpec kScene8010LayerSpecs[] = {
+	{ kSceneAnimationBehindActors, 5, kScene8010FishermanDescriptorCount,
+		kScene8010FishermanFrameMap, ARRAYSIZE(kScene8010FishermanFrameMap), true, 0 },
+	{ kSceneAnimationBehindActors, 6, kScene8010BoatDescriptorCount,
+		nullptr, 0, true, 0 }
 };
 
 const byte kScene8010FishermanQuizLinePermutation[] = {
@@ -99,7 +106,7 @@ const byte kScene8010FishermanQuizLinePermutation[] = {
 	6, 5, 1, 4, 3, 2, 0, 7
 };
 
-static void appendFishermanPromptFragment(Common::String &text, const Common::String &fragment) {
+void appendFishermanPromptFragment(Common::String &text, const Common::String &fragment) {
 	if (fragment.empty())
 		return;
 	if (!text.empty())
@@ -116,13 +123,12 @@ PlayableSceneConfig scene8010Config() {
 	config.setTextResources(kScene8010Resource003RowsOffsetIndex, kScene8010SpeechCueDescriptorTableOffset);
 	config.setActorPathStepDeltas(kActorPathStepDeltaTableSet00);
 	config.loadActorDepthTables = false;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
 Scene8010::Scene8010(HollywoodEngine *vm) :
 		PlayableScene(vm, scene8010Config()),
-		_fishermanLayer(),
-		_boatLayer(),
 		_boatTrack(RealtimeAnimationTracks::kInvalidTrack),
 		_fishermanChannel(),
 		_fishermanSpeechIdleChannel(),
@@ -131,9 +137,8 @@ Scene8010::Scene8010(HollywoodEngine *vm) :
 		_fishermanRepeatCount(0),
 		_previousSecondaryAmbientCue(0),
 		_fishermanQuizAlternatePattern(_random.getRandomBit() != 0) {
-	_boatLayer.configure(6, kScene8010BoatDescriptorCount,
-		kScene8010BoatFrameMap, ARRAYSIZE(kScene8010BoatFrameMap));
-	_boatTrack = _realtimeAnimationTracks.addLoop(_boatLayer,
+	_sceneLayers.configure(kScene8010LayerSpecs);
+	_boatTrack = _realtimeAnimationTracks.addLoop(kScene8010BoatLayer,
 		kScene8010BoatFrameMillis, kScene8010BoatDescriptorCount);
 }
 
@@ -143,19 +148,13 @@ void Scene8010::initializeCustomPreviewState() {
 	setActiveActorPose(kScene8010EntryTargetX, kScene8010EntryTargetY, kScene8010EntryFacing);
 }
 
-void Scene8010::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+void Scene8010::drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) {
+	(void)activeWorldX;
+	(void)activeWorldY;
 	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawResourceSpriteLayer(_fishermanLayer);
-	drawResourceSpriteLayer(_boatLayer);
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
 	if (_sceneChunkTable.isValidChunk(7))
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[7], _sceneFramebuffer);
-	drawActionOverlayLayer();
 }
 
 void Scene8010::runCustomEntrySequence() {
@@ -171,10 +170,6 @@ void Scene8010::runCustomEntrySequence() {
 	}
 
 	runFirstEntry();
-}
-
-bool Scene8010::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
 }
 
 void Scene8010::advanceCustomGameplayLoop(uint32 delta) {
@@ -283,14 +278,14 @@ void Scene8010::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIn
 	(void)animationGroup;
 	_fishermanState = 5;
 	_fishermanRepeatCount = 0;
-	_fishermanLayer.setFrame(frameIndex);
+	_sceneLayers.setLayerFrame(kScene8010FishermanLayer, frameIndex);
 }
 
 void Scene8010::primarySpeechAnimationRestored(byte animationGroup, byte baseFrame) {
 	(void)animationGroup;
 	_fishermanState = 5;
 	_fishermanRepeatCount = 0;
-	_fishermanLayer.setFrame(baseFrame);
+	_sceneLayers.setLayerFrame(kScene8010FishermanLayer, baseFrame);
 	_fishermanSpeechIdleChannel.resetTimer();
 }
 
@@ -305,21 +300,15 @@ AmbientAudioProfile Scene8010::ambientAudioProfile() const {
 	return profile;
 }
 
-bool Scene8010::shouldRunExitSideEffectsAfterLoop() const {
-	const uint16 stateId = _vm->gameState().mainFlowStateId;
-	return !Engine::shouldQuit() && stateId != 0xff && !isMainFlowStateInScene(stateId);
-}
-
 void Scene8010::runExitSideEffectsAfterLoop() {
+	if (!didLeaveSceneAfterLoop())
+		return;
+
 	fadePaletteToBlack();
 }
 
 void Scene8010::resetSceneAnimations() {
-	_fishermanLayer.configure(5, kScene8010FishermanDescriptorCount,
-		kScene8010FishermanFrameMap, ARRAYSIZE(kScene8010FishermanFrameMap));
-	_fishermanLayer.visible = true;
-	_boatLayer.visible = true;
-	_fishermanLayer.reset(0);
+	_sceneLayers.reset();
 	_realtimeAnimationTracks.reset(_boatTrack);
 	_fishermanChannel.reset(0, kScene8010FishermanFrameMillis);
 	_fishermanSpeechIdleChannel.reset(0, kScene8010FishermanSpeechFrameMillis);
@@ -330,13 +319,14 @@ void Scene8010::resetSceneAnimations() {
 }
 
 void Scene8010::advanceFishermanIdle(uint32 delta) {
+	ResourceSpriteLayer &fishermanLayer = _sceneLayers.layer(kScene8010FishermanLayer);
 	if (_fishermanState == 5) {
 		const uint frameCount = _fishermanSpeechIdleChannel.consumeFrames(delta);
 		for (uint frame = 0; frame < frameCount; ++frame) {
-			if (_fishermanLayer.frameIndex == kScene8010PrimarySpeechIdleBlinkFrame)
-				_fishermanLayer.setFrame(kScene8010PrimarySpeechRestFrame);
+			if (fishermanLayer.frameIndex == kScene8010PrimarySpeechIdleBlinkFrame)
+				fishermanLayer.setFrame(kScene8010PrimarySpeechRestFrame);
 			else if (_random.getRandomNumber(14) == 0)
-				_fishermanLayer.setFrame(kScene8010PrimarySpeechIdleBlinkFrame);
+				fishermanLayer.setFrame(kScene8010PrimarySpeechIdleBlinkFrame);
 		}
 		return;
 	}
@@ -344,28 +334,28 @@ void Scene8010::advanceFishermanIdle(uint32 delta) {
 	const uint frameCount = _fishermanChannel.consumeFrames(delta);
 	for (uint frame = 0; frame < frameCount; ++frame) {
 		if (_fishermanState == 0) {
-			if (_fishermanLayer.frameIndex == 1) {
-				_fishermanLayer.setFrame(0);
+			if (fishermanLayer.frameIndex == 1) {
+				fishermanLayer.setFrame(0);
 				continue;
 			}
 			if (_random.getRandomNumber(14) == 0) {
-				_fishermanLayer.setFrame(1);
+				fishermanLayer.setFrame(1);
 				continue;
 			}
 			if (_random.getRandomNumber(49) == 0) {
-				_fishermanLayer.setFrame(9);
+				fishermanLayer.setFrame(9);
 				_fishermanState = 3;
 				continue;
 			}
 			if (_random.getRandomNumber(49) == 0) {
-				_fishermanLayer.setFrame(2);
+				fishermanLayer.setFrame(2);
 				_fishermanState = 1;
 				_fishermanRepeatCount = (byte)_random.getRandomNumber(5);
 				_soundBank0.playSample(0x0b, 100, true);
 				continue;
 			}
 			if (_random.getRandomNumber(49) == 0) {
-				_fishermanLayer.setFrame(8);
+				fishermanLayer.setFrame(8);
 				_fishermanState = 2;
 				_fishermanRepeatCount = (byte)_random.getRandomNumber(5);
 				_soundBank0.playSample(0x0b, 100, true);
@@ -375,63 +365,63 @@ void Scene8010::advanceFishermanIdle(uint32 delta) {
 		}
 
 		if (_fishermanState == 1) {
-			if (_fishermanLayer.frameIndex == 8) {
+			if (fishermanLayer.frameIndex == 8) {
 				if (_fishermanRepeatCount == 0) {
-					_fishermanLayer.setFrame(0);
+					fishermanLayer.setFrame(0);
 					_fishermanState = 0;
 					_soundBank0.stop();
 				} else {
-					_fishermanLayer.setFrame(2);
+					fishermanLayer.setFrame(2);
 					--_fishermanRepeatCount;
 				}
 			} else {
-				_fishermanLayer.setFrame(_fishermanLayer.frameIndex + 1);
+				fishermanLayer.setFrame(fishermanLayer.frameIndex + 1);
 			}
 			continue;
 		}
 
 		if (_fishermanState == 2) {
-			if (_fishermanLayer.frameIndex == 2) {
+			if (fishermanLayer.frameIndex == 2) {
 				if (_fishermanRepeatCount == 0) {
-					_fishermanLayer.setFrame(0);
+					fishermanLayer.setFrame(0);
 					_fishermanState = 0;
 					_soundBank0.stop();
 				} else {
-					_fishermanLayer.setFrame(8);
+					fishermanLayer.setFrame(8);
 					--_fishermanRepeatCount;
 				}
 			} else {
-				_fishermanLayer.setFrame(_fishermanLayer.frameIndex - 1);
+				fishermanLayer.setFrame(fishermanLayer.frameIndex - 1);
 			}
 			continue;
 		}
 
 		if (_fishermanState == 3) {
-			if (_fishermanLayer.frameIndex == 0x0f) {
-				_fishermanLayer.setFrame(0);
+			if (fishermanLayer.frameIndex == 0x0f) {
+				fishermanLayer.setFrame(0);
 				_fishermanState = 0;
 			} else {
-				_fishermanLayer.setFrame(_fishermanLayer.frameIndex + 1);
+				fishermanLayer.setFrame(fishermanLayer.frameIndex + 1);
 			}
 			continue;
 		}
 
 		if (_fishermanState == 4) {
-			if (_fishermanLayer.frameIndex == kScene8010PrimarySpeechRestFrame) {
+			if (fishermanLayer.frameIndex == kScene8010PrimarySpeechRestFrame) {
 				_fishermanState = 5;
 				_fishermanSpeechIdleChannel.resetTimer();
 			} else {
-				_fishermanLayer.setFrame(_fishermanLayer.frameIndex + 1);
+				fishermanLayer.setFrame(fishermanLayer.frameIndex + 1);
 			}
 			continue;
 		}
 
 		if (_fishermanState == 6) {
-			if (_fishermanLayer.frameIndex == kScene8010FishermanConversationStartFrame) {
-				_fishermanLayer.setFrame(0);
+			if (fishermanLayer.frameIndex == kScene8010FishermanConversationStartFrame) {
+				fishermanLayer.setFrame(0);
 				_fishermanState = 0;
 			} else {
-				_fishermanLayer.setFrame(_fishermanLayer.frameIndex - 1);
+				fishermanLayer.setFrame(fishermanLayer.frameIndex - 1);
 			}
 		}
 	}
@@ -464,6 +454,8 @@ void Scene8010::advanceAmbientAudio(uint32 delta) {
 }
 
 bool Scene8010::waitTransitionFrameMillis(uint32 millis) {
+	ResourceSpriteLayer &fishermanLayer = _sceneLayers.layer(kScene8010FishermanLayer);
+	ResourceSpriteLayer &boatLayer = _sceneLayers.layer(kScene8010BoatLayer);
 	uint32 remaining = millis;
 	while (remaining != 0 && !Engine::shouldQuit() && !_vm->isSceneRestartRequested()) {
 		if (pollEvents(true))
@@ -473,25 +465,25 @@ bool Scene8010::waitTransitionFrameMillis(uint32 millis) {
 		g_system->delayMillis(slice);
 		remaining -= slice;
 
-		const uint16 previousFishermanDescriptor = _fishermanLayer.descriptorIndex();
-		const uint16 previousBoatDescriptor = _boatLayer.descriptorIndex();
+		const uint16 previousFishermanDescriptor = fishermanLayer.descriptorIndex();
+		const uint16 previousBoatDescriptor = boatLayer.descriptorIndex();
 		advanceFishermanIdle(slice);
 		_realtimeAnimationTracks.advance(_boatTrack, slice, _random);
 		advanceAmbientAudio(slice);
 
-		const bool fishermanDirty = previousFishermanDescriptor != _fishermanLayer.descriptorIndex();
-		const bool boatDirty = previousBoatDescriptor != _boatLayer.descriptorIndex();
+		const bool fishermanDirty = previousFishermanDescriptor != fishermanLayer.descriptorIndex();
+		const bool boatDirty = previousBoatDescriptor != boatLayer.descriptorIndex();
 		if (fishermanDirty) {
 			restoreSpriteBackground(_resourceArena, _resourceChunkOffsets[5], 0,
 				kScene8010FishermanDescriptorCount, previousFishermanDescriptor,
 				_baseFramebuffer.rawSurface(), *_sceneFramebuffer.surfacePtr());
-			drawResourceSpriteLayer(_fishermanLayer);
+			drawResourceSpriteLayer(fishermanLayer);
 		}
 		if (boatDirty) {
 			restoreSpriteBackground(_resourceArena, _resourceChunkOffsets[6], 0,
 				kScene8010BoatDescriptorCount, previousBoatDescriptor,
 				_baseFramebuffer.rawSurface(), *_sceneFramebuffer.surfacePtr());
-			drawResourceSpriteLayer(_boatLayer);
+			drawResourceSpriteLayer(boatLayer);
 		}
 		if (fishermanDirty || boatDirty)
 			presentFrame();
@@ -517,6 +509,7 @@ void Scene8010::drawTransitionClip(uint chunkIndex, bool showFirstFrameImmediate
 		if (!fastForward && waitTransitionFrameMillis(kScene8010TransitionFrameMillis)) {
 			if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
 				return;
+			consumeStepAdvanceRequest();
 			_skipRequested = false;
 			fastForward = true;
 		}
@@ -550,7 +543,7 @@ bool Scene8010::enterFishermanConversationPose() {
 	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
 		return false;
 
-	_fishermanLayer.setFrame(kScene8010FishermanConversationStartFrame);
+	_sceneLayers.setLayerFrame(kScene8010FishermanLayer, kScene8010FishermanConversationStartFrame);
 	_fishermanState = 4;
 	_fishermanChannel.resetTimer();
 	while (_fishermanState != 5 && !Engine::shouldQuit() && !_vm->isSceneRestartRequested()) {
@@ -624,7 +617,7 @@ void Scene8010::runExitToScene8020() {
 }
 
 void Scene8010::runTravelScreenAction() {
-	_vm->gameState().requestTravelScreenSelection(6);
+	requestTravelScreenSelection(6);
 }
 
 void Scene8010::applyFishermanNameTextPatch() {
@@ -955,8 +948,10 @@ byte Scene8010::chooseFishermanQuizLine() {
 					_vm->cursor()->leaveInteractiveMode();
 					return 0xff;
 				}
-				if ((event.kbd.keycode == Common::KEYCODE_RETURN ||
-						event.kbd.keycode == Common::KEYCODE_SPACE) &&
+				if (!event.kbdRepeat &&
+						(event.kbd.keycode == Common::KEYCODE_RETURN ||
+						 event.kbd.keycode == Common::KEYCODE_KP_ENTER ||
+						 event.kbd.keycode == Common::KEYCODE_SPACE) &&
 						state.highlightedLineIndex != 0xff) {
 					_vm->cursor()->leaveInteractiveMode();
 					return state.choiceForLine(state.highlightedLineIndex);

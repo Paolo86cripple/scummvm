@@ -25,37 +25,26 @@
 #include "common/random.h"
 
 #include "hollywood/music.h"
-#include "hollywood/scenes/intro/intro_resource_set.h"
-#include "hollywood/scenes/intro/intro_scene.h"
-#include "hollywood/scenes/intro/intro_text.h"
+#include "hollywood/scenes/presentation_scene.h"
+#include "hollywood/scenes/scene_text_store.h"
 
 namespace Hollywood {
 
 class HollywoodEngine;
 
-class Scene9180 : public IntroSceneBase {
+class Scene9180 : public PresentationScene {
 public:
 	Scene9180(HollywoodEngine *vm);
 
 	bool play();
 
 private:
-	struct SubtitleOverlay {
-		bool visible;
-		byte colorIndex;
-		uint16 centerX;
-		uint16 topY;
-		Common::Array<Common::String> lines;
-	};
-
 	bool load();
-	bool loadChunk(uint index, IndexedSurfaceBuffer &destination, uint fixedSize);
-	bool loadChunk(uint index, Common::Array<byte> &destination, uint fixedSize);
-	bool loadArenaChunk(uint index);
 	void runSequence();
 	void drawComposite();
 	void drawFrameIndex(byte frameMapIndex);
-	void animateFrameRange(byte firstFrameMapIndex, byte lastFrameMapIndex, int step);
+	void animateFrameRange(byte firstFrameMapIndex, byte lastFrameMapIndex);
+	void presentAnimationFrame() override;
 	void waitWithEffects(uint32 millis);
 	void runSpeechLine(byte frameIndex);
 	void runSpeechCue(uint16 textRecordId, byte continuationCount, uint16 voiceSampleId);
@@ -67,23 +56,16 @@ private:
 	void fillBlackPixelsForMemoryFlash();
 	void waitForFinalInput();
 	void stopAudio() override;
-	void clearSubtitle();
-	void drawFrameOverlays() override;
-	void wrapSubtitleText(const Common::String &text, uint16 anchorSceneX,
-		Common::Array<Common::String> &lines) const;
-	uint subtitleTextWidth(const Common::String &text) const;
 
-	IntroResourceSet _resources;
 	SpeechPlayer _speech;
 	SoundBank0Player _loopSound;
 	SoundBank0Player _effectSound;
-	IntroTextStore _text;
+	SceneTextStore _text;
 	Common::RandomSource _random;
 	Common::Array<byte> _paletteResource;
 	Common::Array<byte> _normalPalette;
 	Common::Array<byte> _brightPalette;
 	IndexedSurfaceBuffer _baseFramebuffer;
-	SubtitleOverlay _subtitle;
 	byte _frameMapIndex;
 	byte _flickerModulus;
 	bool _brightPaletteActive;

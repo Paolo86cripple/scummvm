@@ -19,15 +19,13 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene4010.h"
-
-#include "common/system.h"
 #include "graphics/pixelformat.h"
 
-#include "hollywood/detection.h"
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene4010.h"
+#include "hollywood/scenes/shared_frame_sequences.h"
 
 namespace Hollywood {
 
@@ -74,9 +72,7 @@ const byte kScene4010HeckerSpeechGreen = 0x30;
 const byte kScene4010HeckerSpeechBlue = 0x3f;
 const byte kScene4010PaletteCycleFirstColor = 0x80;
 const byte kScene4010PaletteCycleLastColor = 0x9f;
-const byte kScene4010CameoPatchHook = 1;
-const byte kScene4010ThrownItemPatchHook = 2;
-const byte kScene4010DestinationSoundHook = 3;
+const uint kScene4010RoomIdleLayer = 0;
 
 struct Scene4010ReleaseProfile {
 	uint16 drawbridgeExitState;
@@ -115,8 +111,7 @@ const Scene4010ReleaseProfile kScene4010ItalianDemoProfile = {
 
 const Scene4010ReleaseProfile &scene4010ReleaseProfile(const HollywoodEngine *vm) {
 	if (!vm->isDemo()) {
-		const char *extra = vm->getGameDescription()->extra;
-		if (extra != nullptr && Common::String(extra) == "1st edition")
+		if (vm->isFirstEdition())
 			return kScene4010FirstEditionProfile;
 		return kScene4010FullGameProfile;
 	}
@@ -132,29 +127,16 @@ const byte kScene4010RoomIdleFrameMap[] = {
 	2, 1, 0, 0
 };
 
-const byte kScene4010ExitOverlayFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8,
-	9, 10, 11, 12, 13, 14, 15, 16, 17, 18
+const byte kScene4010HeckerResponsePoseFrames[] = {
+	0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e
 };
 
-const byte kScene4010Item3AFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8,
-	9, 10, 11, 12, 13
+const SceneLayerSpec kScene4010LayerSpecs[] = {
+	{kSceneAnimationBehindActors, 6, kScene4010RoomIdleDescriptorCount,
+		kScene4010RoomIdleFrameMap, ARRAYSIZE(kScene4010RoomIdleFrameMap), true, 0}
 };
 
-const byte kScene4010DestinationFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8,
-	9, 10, 11, 12, 12, 13, 14, 15, 16, 11,
-	10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
-	0
-};
-
-const byte kScene4010PillboxFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8,
-	9, 10, 11, 12, 13
-};
-
-static PlayableSceneConfig scene4010Config() {
+PlayableSceneConfig scene4010Config() {
 	PlayableSceneConfig config(4010,
 		SceneResourceLayout(5, 6, 17),
 		SceneViewport(kScene4010ViewportXOffset, kScene4010ViewportXOffset, kScene4010ViewportMaxXOffset),
@@ -171,7 +153,6 @@ Scene4010::Scene4010(HollywoodEngine *vm) :
 		_roomIdleChannel(),
 		_paletteCycleChannel(),
 		_secondaryAmbientChannel(),
-		_roomIdleLayer(),
 		_normalBaseFramebuffer(),
 		_normalBaseFramebufferInitialized(false),
 		_heckerAnimationState(0),
@@ -180,9 +161,8 @@ Scene4010::Scene4010(HollywoodEngine *vm) :
 		_heckerAlternateSpeechPose(false),
 		_heckerManualSequenceActive(false),
 		_heckerPoseTransitionPending(false),
-		_roomAnimationPaused(false),
-		_destinationSoundStartFrame(0),
-		_destinationSoundStopFrame(0) {
+		_roomAnimationPaused(false) {
+	_sceneLayers.configure(kScene4010LayerSpecs);
 	_normalBaseFramebuffer.create(HollywoodEngine::kSceneBufferWidth, HollywoodEngine::kSceneBufferHeight,
 		Graphics::PixelFormat::createFormatCLUT8());
 }
@@ -211,18 +191,11 @@ void Scene4010::initializeCustomPreviewState() {
 	}
 }
 
-void Scene4010::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+void Scene4010::drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) {
+	(void)activeWorldX;
 	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	if (!alternateBackgroundActive())
-		drawResourceSpriteLayer(_roomIdleLayer);
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
 	drawForegroundBlocks(activeWorldY);
-	drawActionOverlayLayer();
 }
 
 void Scene4010::runCustomEntrySequence() {
@@ -318,7 +291,7 @@ bool Scene4010::dispatchCustomSceneAction(uint16 handlerId) {
 		beginSecondarySpeechLine(16, 0);
 		return true;
 	case 319: // Usar coche (use car): open Ron's destination selector.
-		_vm->gameState().requestTravelScreenSelection(4);
+		requestTravelScreenSelection(4);
 		return true;
 	default:
 		return false;
@@ -429,7 +402,8 @@ bool Scene4010::applyCustomSceneStateToHotspotsAndPatches(byte selector) {
 		_hotspots.setVerbActionHandlerByGlobalRecordIndex(kScene4010HeckerUseVerbRecordIndex, 312);
 		_hotspots.setVerbMovementModeByGlobalRecordIndex(kScene4010HeckerUseVerbRecordIndex, 0);
 	}
-	_roomIdleLayer.visible = !alternateBackgroundActive() && _sceneChunkTable.isValidChunk(6);
+	_sceneLayers.setLayerVisible(kScene4010RoomIdleLayer,
+		!alternateBackgroundActive() && _sceneChunkTable.isValidChunk(6));
 	return true;
 }
 
@@ -466,27 +440,14 @@ void Scene4010::primarySpeechAnimationRestored(byte animationGroup, byte baseFra
 	setHeckerFrame(baseFrame);
 }
 
-void Scene4010::handleAnimationFrameHook(byte hookId, uint frame) {
-	if (hookId == kScene4010CameoPatchHook) {
-		applyBaseFramebufferPatch(8);
-	} else if (hookId == kScene4010ThrownItemPatchHook) {
-		applyBaseFramebufferPatch(11);
-	} else if (hookId == kScene4010DestinationSoundHook) {
-		if (frame == _destinationSoundStartFrame)
-			_soundBank0.playSample(0x38, 25, true);
-		else if (frame == _destinationSoundStopFrame)
-			_soundBank0.stop();
-	}
-}
-
 bool Scene4010::alternateBackgroundActive() const {
 	return _vm->gameState().scene4010AlternateBackgroundState != 0;
 }
 
 void Scene4010::initializeRoomIdleLayer() {
-	_roomIdleLayer.configure(6, kScene4010RoomIdleDescriptorCount,
-		kScene4010RoomIdleFrameMap, ARRAYSIZE(kScene4010RoomIdleFrameMap));
-	_roomIdleLayer.visible = !alternateBackgroundActive() && _sceneChunkTable.isValidChunk(6);
+	_sceneLayers.reset();
+	_sceneLayers.setLayerVisible(kScene4010RoomIdleLayer,
+		!alternateBackgroundActive() && _sceneChunkTable.isValidChunk(6));
 	_roomIdleChannel.reset(0, kScene4010RoomIdleFrameMillis);
 	_heckerAnimationState = 0;
 	_heckerLoopCount = 0;
@@ -682,8 +643,8 @@ void Scene4010::runEntryFromRightSide() {
 
 void Scene4010::runEntryFromLeftSide() {
 	runEntryPath(0x01ad, 0x01ce, 4, 0x01ad, 0x01ce);
-	runActorReplacement(ActionOverlaySpec(17, kScene4010ExitOverlayDescriptorCount,
-		kScene4010ExitOverlayFrameMap, ARRAYSIZE(kScene4010ExitOverlayFrameMap), kScene4010OverlayFrameMillis)
+	runActorReplacement(ActionOverlaySpec(17, kScene4010ExitOverlayDescriptorCount, kScene4010OverlayFrameMillis)
+		.holdFirstFrame()
 		.startAt(1));
 }
 
@@ -699,7 +660,7 @@ void Scene4010::setActiveActorPose(int x, int y, byte facing) {
 
 void Scene4010::setHeckerFrame(byte frameIndex) {
 	_roomIdleChannel.frameIndex = frameIndex;
-	_roomIdleLayer.setFrame(frameIndex);
+	_sceneLayers.setLayerFrame(kScene4010RoomIdleLayer, frameIndex);
 }
 
 void Scene4010::runHeckerFrameSequence(const byte *frames, uint frameCount) {
@@ -741,8 +702,8 @@ void Scene4010::runHeckerDialoguePoseStart() {
 		return;
 	}
 
-	const byte frames[] = { 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e };
-	runHeckerFrameSequence(frames, ARRAYSIZE(frames));
+	runHeckerFrameSequence(kScene4010HeckerResponsePoseFrames,
+		ARRAYSIZE(kScene4010HeckerResponsePoseFrames));
 	_heckerAnimationState = 6;
 }
 
@@ -763,8 +724,8 @@ void Scene4010::runHeckerResponsePoseEnd() {
 	if (!_heckerAlternateSpeechPose)
 		return;
 
-	const byte frames[] = { 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e };
-	runHeckerFrameSequence(frames, ARRAYSIZE(frames));
+	runHeckerFrameSequence(kScene4010HeckerResponsePoseFrames,
+		ARRAYSIZE(kScene4010HeckerResponsePoseFrames));
 }
 
 void Scene4010::finishHeckerDialoguePose() {
@@ -786,26 +747,10 @@ void Scene4010::beginD01SpeechLine(uint16 rowIndex, byte normalFrame, byte alter
 }
 
 void Scene4010::beginSecondarySpeechLineAndEnterHeckerPose(uint16 rowIndex, byte frameIndex) {
-	const uint32 startMillis = g_system->getMillis();
-	const bool started = startSecondarySpeechLine(rowIndex, frameIndex);
-	const uint32 duration = started ? MAX<uint32>(_speech.lastSampleDurationMillis(), 750) :
-		MAX<uint32>(1200, (uint32)_speechOverlay.lines.size() * 1100);
-
+	const bool started = startRealtimeSecondarySpeechLine(rowIndex, frameIndex, 0);
 	runHeckerDialoguePoseStart();
-
-	while (!Engine::shouldQuit() && !_vm->isSceneRestartRequested()) {
-		const bool speechActive = _speech.isPlaying();
-		const uint32 elapsed = g_system->getMillis() - startMillis;
-		if (!speechActive && elapsed >= duration)
-			break;
-
-		const uint32 slice = speechActive ? 50 : MIN<uint32>(50, duration - elapsed);
-		if (waitSceneMillis(slice))
-			break;
-	}
-
-	_speech.stop();
-	clearSpeechOverlay();
+	if (started)
+		waitForRealtimeSpeech();
 }
 
 void Scene4010::beginHeckerSpeechLine(byte frameIndex) {
@@ -961,21 +906,21 @@ void Scene4010::setHeckerDialogueRecord(Common::Array<DialogueChoiceRecord> &rec
 	record.playerTextRowId = playerTextRowId;
 	record.responseFrameIndex = responseFrameIndex;
 	record.disableAfterUse = disableAfterUse;
-	record.reserved = 0xff;
 	record.selectable = enabled != 0;
 }
 
 void Scene4010::runProgressiveExitSpeech() {
 	GameplayState &state = _vm->gameState();
 	const byte frame = MIN<byte>(state.scene4010ProgressiveExitSpeechState, 3);
-	beginSecondarySpeechLine(6, frame);
+	BlockingSequence sequence(*this);
+	sequence.secondarySpeech(6, frame);
 	if (state.scene4010ProgressiveExitSpeechState > 1) {
-		runActorReplacement(ActionOverlaySpec(16, kScene4010ExitOverlayDescriptorCount,
-			kScene4010ExitOverlayFrameMap, ARRAYSIZE(kScene4010ExitOverlayFrameMap), kScene4010OverlayFrameMillis)
-			.soundAt(11, 0x27)
-			.noRedrawAtEnd()
-			.startAt(1));
-		state.mainFlowStateId = _releaseProfile.moatExitState;
+		sequence.actorReplacement(ActionOverlaySpec(16, kScene4010ExitOverlayDescriptorCount,
+				kScene4010OverlayFrameMillis)
+				.holdFirstFrame()
+				.soundAt(11, 0x27)
+				.startAt(1))
+			.commit(state.mainFlowStateId, _releaseProfile.moatExitState);
 	}
 	if (state.scene4010ProgressiveExitSpeechState < 3)
 		++state.scene4010ProgressiveExitSpeechState;
@@ -987,21 +932,22 @@ void Scene4010::takeAnimatedItem3A() {
 			hasInventoryItem(kScene4010Item3A))
 		return;
 
-	if (state.scene4010Item3APickupState == 1) {
-		beginSecondarySpeechLine(13, 0);
-	}
+	BlockingSequence sequence(*this);
+	if (state.scene4010Item3APickupState == 1)
+		sequence.secondarySpeech(13, 0);
 
-	beginSecondarySpeechLine(12, 0);
-	_roomAnimationPaused = true;
-	runActorReplacement(ActionOverlaySpec(9, kScene4010Item3AOverlayDescriptorCount,
-		kScene4010Item3AFrameMap, ARRAYSIZE(kScene4010Item3AFrameMap), kScene4010OverlayFrameMillis)
-		.startAt(1)
-		.hookAt(7, kScene4010CameoPatchHook));
-	_roomAnimationPaused = false;
-	state.scene4010Item3APickupState = 3;
-	applySceneStateToHotspotsAndPatches(3);
+	sequence.secondarySpeech(12, 0)
+		.commit(_roomAnimationPaused, true)
+		.actorReplacement(ActionOverlaySpec(9, kScene4010Item3AOverlayDescriptorCount,
+			kScene4010OverlayFrameMillis)
+			.holdFirstFrame()
+			.startAt(1)
+			.resourcePatchAt(7, 8))
+		.commit(_roomAnimationPaused, false)
+		.commit(state.scene4010Item3APickupState, (byte)3)
+		.framebufferPatch(3);
 	addInventoryItem(kScene4010Item3A);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 }
 
 void Scene4010::handlePendingItem3A() {
@@ -1044,33 +990,35 @@ void Scene4010::unlockDestinationFromRoomAction() {
 void Scene4010::runDestinationUnlockAnimation() {
 	Common::Array<byte> frameMap;
 	for (byte logicalFrame = 1; logicalFrame <= 0x0d; ++logicalFrame)
-		frameMap.push_back(kScene4010DestinationFrameMap[logicalFrame]);
+		frameMap.push_back(kTravelUnlockFrames[logicalFrame]);
 
 	byte logicalFrame = 0x0d;
-	_destinationSoundStartFrame = frameMap.size();
+	const uint soundStartFrame = frameMap.size();
 	for (uint hold = 0; hold < 25; ++hold) {
 		byte nextFrame = logicalFrame;
 		do {
 			nextFrame = (byte)(0x0d + _random.getRandomNumber(4));
 		} while (nextFrame == logicalFrame);
 		logicalFrame = nextFrame;
-		frameMap.push_back(kScene4010DestinationFrameMap[logicalFrame]);
+		frameMap.push_back(kTravelUnlockFrames[logicalFrame]);
 	}
 
-	_destinationSoundStopFrame = 0;
+	uint soundStopFrame = 0;
 	while (logicalFrame < 0x1e) {
 		if (logicalFrame == 0x14)
-			_destinationSoundStopFrame = frameMap.size();
+			soundStopFrame = frameMap.size();
 		++logicalFrame;
-		frameMap.push_back(kScene4010DestinationFrameMap[logicalFrame]);
+		frameMap.push_back(kTravelUnlockFrames[logicalFrame]);
 	}
 
-	_roomAnimationPaused = true;
-	runActorReplacement(ActionOverlaySpec(15, kScene4010DestinationOverlayDescriptorCount,
-		frameMap.data(), frameMap.size(), kScene4010OverlayFrameMillis)
-		.hookEveryFrame(kScene4010DestinationSoundHook));
-	_roomAnimationPaused = false;
-	_soundBank0.stop();
+	BlockingSequence(*this)
+		.commit(_roomAnimationPaused, true)
+		.actorReplacement(ActionOverlaySpec(15, kScene4010DestinationOverlayDescriptorCount,
+			frameMap.data(), frameMap.size(), kScene4010OverlayFrameMillis)
+			.loopingSoundAt(soundStartFrame, 0x38, 25)
+			.stopSoundAt(soundStopFrame))
+		.commit(_roomAnimationPaused, false)
+		.stopSound();
 }
 
 void Scene4010::takeThrownItem() {
@@ -1078,17 +1026,19 @@ void Scene4010::takeThrownItem() {
 	if (state.scene4010PillboxPickupState != 1 || hasInventoryItem(_releaseProfile.thrownItemId))
 		return;
 
-	_roomAnimationPaused = true;
-	runActorReplacement(ActionOverlaySpec(12, kScene4010PillboxOverlayDescriptorCount,
-		kScene4010PillboxFrameMap, ARRAYSIZE(kScene4010PillboxFrameMap), kScene4010OverlayFrameMillis)
-		.startAt(1)
-		.hookAt(7, kScene4010ThrownItemPatchHook));
-	_roomAnimationPaused = false;
+	BlockingSequence sequence(*this);
+	sequence.commit(_roomAnimationPaused, true)
+		.actorReplacement(ActionOverlaySpec(12, kScene4010PillboxOverlayDescriptorCount,
+			kScene4010OverlayFrameMillis)
+			.holdFirstFrame()
+			.startAt(1)
+			.resourcePatchAt(7, 11))
+		.commit(_roomAnimationPaused, false);
 	applyBaseFramebufferPatch(11);
-	state.scene4010PillboxPickupState = 2;
-	applySceneStateToHotspotsAndPatches(5);
+	sequence.commit(state.scene4010PillboxPickupState, (byte)2)
+		.framebufferPatch(5);
 	addInventoryItem(_releaseProfile.thrownItemId);
-	_soundBank0.playSample(1, 100);
+	sequence.sound(1);
 	dispatchGenericSceneAction(21);
 }
 
@@ -1107,7 +1057,7 @@ void Scene4010::ensureNormalBaseFramebuffer() {
 
 void Scene4010::applyD01BackgroundForCurrentState() {
 	if (alternateBackgroundActive()) {
-		loadFixedChunk(5, _baseFramebuffer, kFrameBufferSize);
+		loadFixedChunk(5, _baseFramebuffer, kSceneBufferByteCount);
 		_baseFramebufferOriginal.copyFrom(_baseFramebuffer);
 		return;
 	}

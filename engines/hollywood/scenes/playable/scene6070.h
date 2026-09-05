@@ -2,7 +2,7 @@
  *
  * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
- * file for details.
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef HOLLYWOOD_SCENES_PLAYABLE_SCENE6070_H
@@ -36,10 +37,7 @@ private:
 	bool isAlternatePaletteResourceActive() const override;
 	bool shouldLoadArenaChunk(uint index) const override;
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel,
-							 int activeWorldX, int activeWorldY, bool drawSecondaryActor, byte secondaryFacing,
-							 byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-							 byte actorDrawOrderMode) override;
+	void drawCustomForegroundComposite(int activeWorldX, int activeWorldY) override;
 	void runCustomEntrySequence() override;
 	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	void prepareCustomGameplayLoop() override;
@@ -58,8 +56,6 @@ private:
 	byte primarySpeechVolumePercent(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
 	void primarySpeechAnimationRestored(byte animationGroup, byte baseFrame) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	AmbientAudioProfile ambientAudioProfile() const override;
 
@@ -80,11 +76,6 @@ private:
 	void rebuildSceneWalkableMask();
 
 	Common::Array<byte> _originalColorToItemMap;
-	ResourceSpriteLayer _sueLayer;
-	ResourceSpriteLayer _arrivalLayer;
-	ResourceSpriteLayer _state609SueLayer;
-	ResourceSpriteLayer _state609PropLayer;
-	ResourceSpriteLayer _state609NpcLayer;
 	TimedAnimationChannel _sueIdleChannel;
 	uint _state609PropTrack;
 	uint32 _sueSpeechTimerAccumulator;

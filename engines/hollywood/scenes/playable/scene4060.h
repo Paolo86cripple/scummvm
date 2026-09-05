@@ -38,8 +38,6 @@ private:
 		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 	void prepareCustomGameplayLoop() override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
@@ -47,13 +45,13 @@ private:
 	bool adjustCustomWalkTargetToFloorMask(int &targetX, int &targetY) const override;
 	bool applyCustomSceneStateToHotspotsAndPatches(byte selector) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
+	byte redirectDialogueMenuChoice(byte depthIndex, byte nodeIndex, byte choiceIndex) const override;
 
 	byte primarySpeechAnimationBaseFrame(byte animationGroup) const override;
 	byte primarySpeechAnimationFrameCount(byte animationGroup) const override;
 	byte primarySpeechVolumePercent(byte animationGroup) const override;
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
 	void primarySpeechAnimationRestored(byte animationGroup, byte baseFrame) override;
-	void handleAnimationFrameHook(byte hookId, uint frame) override;
 
 	void resetForegroundLayer();
 	void configureForegroundLayerForState();
@@ -85,7 +83,6 @@ private:
 	void replaceColorMapItem(byte sourceItem, byte destinationItem);
 	void copySmallTextRow(byte destinationRow, byte sourceRow);
 
-	ResourceSpriteLayer _foregroundLayer;
 	TimedAnimationChannel _foregroundChannel;
 	byte _foregroundScrollStep;
 	bool _foregroundLongAnimationActive;

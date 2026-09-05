@@ -19,18 +19,17 @@
  *
  */
 
-#include "hollywood/scenes/intro/scene9090.h"
-
 #include "common/debug.h"
 #include "common/file.h"
 #include "common/path.h"
-#include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/font.h"
 #include "hollywood/gameplay/actor_renderer.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/intro/scene9090.h"
+#include "hollywood/scenes/shared_frame_sequences.h"
 
 namespace Hollywood {
 
@@ -45,7 +44,6 @@ const uint16 kScene9090NextState = 0x23aa;
 const uint kScene9090SpeechRow = 4;
 const byte kScene9090PrimarySpeechColor = 0xfb;
 const byte kScene9090SecondarySpeechColor = 0xfd;
-const int kScene9090SpeechLineHeight = 20;
 const uint kScene9090Resource000TableSize = 400;
 const uint kScene9090SecondaryActorBankEntry = 0x00d0;
 const uint kScene9090SecondaryActorPaletteEntry = 0x0108;
@@ -107,19 +105,12 @@ const Scene9090SpeechStep kScene9090SpeechSteps[] = {
 	{ 7, kScene9090DeskSpeaker,      0x078, 0x0aa, kScene9090PrimarySpeechColor,   0x00, 0x26, 0x3f, true,  kScene9090NoTurn, 0 }
 };
 
-const byte kScene9090DeskFrameMap[] = {
-	0, 31, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 13,
-	32, 33, 34, 35, 14, 15, 16, 16, 17, 18, 19, 29, 20, 21, 22, 23,
-	23, 24, 25, 26, 30, 22, 21, 20, 16
-};
-
 const byte kScene9090InsetFrameMap[] = {
 	0, 1, 2, 3, 0, 4, 5, 5, 6, 7, 8, 5, 4, 0
 };
 
 Scene9090::Scene9090(HollywoodEngine *vm) :
-		IntroSceneBase(vm, "Scene 9090"),
-		_resources(),
+		PresentationScene(vm, "Scene 9090"),
 		_music(vm->introMusic()),
 		_primarySpeech(vm->getLanguage()),
 		_secondarySpeech(vm->getLanguage()),
@@ -147,18 +138,11 @@ Scene9090::Scene9090(HollywoodEngine *vm) :
 		_insetFrameAccumulator(0),
 		_secondaryFrameAccumulator(0),
 		_clockAccumulator(0),
-		_secondarySpeechVisible(false) {
+		_secondarySpeechVisible(false),
+		_advanceClockDuringAnimation(false) {
 	_paletteResource.resize(kPaletteSize);
 	_presentationPaletteRemapTable.resize(256);
-	_baseFramebuffer.resize(kFrameBufferSize);
-	_primarySubtitle.visible = false;
-	_primarySubtitle.colorIndex = kScene9090PrimarySpeechColor;
-	_primarySubtitle.centerX = 0;
-	_primarySubtitle.topY = 0;
-	_secondarySubtitle.visible = false;
-	_secondarySubtitle.colorIndex = kScene9090SecondarySpeechColor;
-	_secondarySubtitle.centerX = 0;
-	_secondarySubtitle.topY = 0;
+	_baseFramebuffer.resize(kSceneBufferByteCount);
 	_clockFrames[0] = 10;
 	_clockFrames[1] = 7;
 	_clockFrames[2] = 3;
@@ -207,8 +191,8 @@ bool Scene9090::load() {
 	if (!_resources.validateChunkRange(kScene9090ArchiveName, _debugName, 0, 12))
 		return false;
 
-	if (!loadChunk(0, _baseFramebuffer, kFrameBufferSize) ||
-			!loadChunk(1, _paletteResource, kPaletteSize))
+	if (!loadFixedChunk(0, _baseFramebuffer, kSceneBufferByteCount) ||
+			!loadFixedChunk(1, _paletteResource, kPaletteSize))
 		return false;
 
 	_resources.allocateArena(_resources.totalChunkSize(5, 12));
@@ -226,18 +210,6 @@ bool Scene9090::load() {
 	_paletteResource[kScene9090SecondarySpeechColor * 3 + 2] = 0x32;
 	buildPresentationPaletteRemapTable(_paletteResource, _presentationPaletteRemapTable);
 	return true;
-}
-
-bool Scene9090::loadChunk(uint index, Common::Array<byte> &destination, uint fixedSize) {
-	return _resources.loadFixedChunk(_debugName, index, destination, fixedSize);
-}
-
-bool Scene9090::loadChunk(uint index, IndexedSurfaceBuffer &destination, uint fixedSize) {
-	return _resources.loadFixedChunk(_debugName, index, destination, fixedSize);
-}
-
-bool Scene9090::loadArenaChunk(uint index) {
-	return _resources.loadArenaChunk(_debugName, index, index);
 }
 
 bool Scene9090::loadActorResources() {
@@ -405,12 +377,19 @@ void Scene9090::initializeOfficeState() {
 	_insetFrameAccumulator = 0;
 	_secondaryFrameAccumulator = 0;
 	_clockAccumulator = 0;
+	_advanceClockDuringAnimation = false;
 	clearSubtitles();
 }
 
 void Scene9090::composeFrame() {
 	memcpy(_sceneFramebuffer.data(), _baseFramebuffer.data(), _sceneFramebuffer.size());
 	drawOfficePatch(6);
+	// Chunk 7 replaces the upper portion of Ron's static chunk-6 pose.
+	if (_insetFrame < ARRAYSIZE(kScene9090InsetFrameMap)) {
+		restoreSpriteBackground(_resources._arena, _resources._chunkOffsets[7], 0,
+			kScene9090InsetDescriptorCount, kScene9090InsetFrameMap[_insetFrame],
+			_baseFramebuffer.surface(), _sceneFramebuffer.surface());
+	}
 	drawDeskActor();
 	drawSecondaryActor();
 	drawInsetActor();
@@ -419,31 +398,31 @@ void Scene9090::composeFrame() {
 }
 
 void Scene9090::drawOfficePatch(uint chunkIndex) {
-	if (chunkIndex >= IntroResourceSet::kResourceChunkCount)
+	if (chunkIndex >= kResourceChunkCount)
 		return;
-	drawResourceBlockList(_resources.arena, _resources.chunkOffsets[chunkIndex],
+	drawResourceBlockList(_resources._arena, _resources._chunkOffsets[chunkIndex],
 		_sceneFramebuffer.surface());
 }
 
 void Scene9090::drawDeskActor() {
-	if (_deskFrame >= ARRAYSIZE(kScene9090DeskFrameMap))
+	if (_deskFrame >= kQuillDeskFrameCount)
 		return;
-	drawStripSpriteFrame(_resources.arena, _resources.chunkOffsets[5], 0,
-		kScene9090DeskDescriptorCount, kScene9090DeskFrameMap[_deskFrame],
+	drawStripSpriteFrame(_resources._arena, _resources._chunkOffsets[5], 0,
+		kScene9090DeskDescriptorCount, kQuillDeskFrames[_deskFrame],
 		_sceneFramebuffer.surface());
 }
 
 void Scene9090::drawInsetActor() {
 	if (_insetFrame >= ARRAYSIZE(kScene9090InsetFrameMap))
 		return;
-	drawStripSpriteFrame(_resources.arena, _resources.chunkOffsets[7], 0,
+	drawStripSpriteFrame(_resources._arena, _resources._chunkOffsets[7], 0,
 		kScene9090InsetDescriptorCount, kScene9090InsetFrameMap[_insetFrame],
 		_sceneFramebuffer.surface());
 }
 
 void Scene9090::drawClock() {
 	for (uint i = 0; i < 3; ++i) {
-		drawStripSpriteFrame(_resources.arena, _resources.chunkOffsets[10 + i], 0,
+		drawStripSpriteFrame(_resources._arena, _resources._chunkOffsets[10 + i], 0,
 			kScene9090ClockDescriptorCount, _clockFrames[i], _sceneFramebuffer.surface());
 	}
 }
@@ -523,14 +502,8 @@ void Scene9090::returnDeskActorToForward() {
 }
 
 void Scene9090::animateDeskFrames(byte firstFrame, byte lastFrame) {
-	for (byte frame = firstFrame; frame <= lastFrame && !_skipRequested && !Engine::shouldQuit(); ++frame) {
-		_deskFrame = frame;
-		composeFrame();
-		presentFrame();
-		if (delay(kScene9090PrimaryFrameMillis))
-			return;
-		advanceClock(kScene9090PrimaryFrameMillis);
-	}
+	playClockedCompositeRange(_deskFrame, firstFrame, lastFrame,
+		kScene9090PrimaryFrameMillis);
 }
 
 void Scene9090::setInsetVariant(byte variant) {
@@ -539,14 +512,9 @@ void Scene9090::setInsetVariant(byte variant) {
 
 	const byte firstFrame = variant == 2 ? 4 : 0x0b;
 	const byte lastFrame = variant == 2 ? 6 : 0x0d;
-	for (byte frame = firstFrame; frame <= lastFrame && !_skipRequested && !Engine::shouldQuit(); ++frame) {
-		_insetFrame = frame;
-		composeFrame();
-		presentFrame();
-		if (delay(kScene9090PrimaryFrameMillis))
-			return;
-		advanceClock(kScene9090PrimaryFrameMillis);
-	}
+	if (!playClockedCompositeRange(_insetFrame, firstFrame, lastFrame,
+			kScene9090PrimaryFrameMillis))
+		return;
 	_insetVariant = variant;
 	_insetFrame = variant == 2 ? 7 : 0;
 }
@@ -560,14 +528,30 @@ void Scene9090::animateSecondaryTurn(byte facing) {
 	_secondarySpeechVisible = false;
 	_secondarySpeechFrame = 0;
 	_secondaryCel = kScene9090TurnCelByFacing[facing];
-	composeFrame();
-	presentFrame();
-	if (delay(kScene9090TurnFrameMillis))
-		return;
+	AnimationTransition transition(_secondaryCel, _secondaryCel, 0,
+		kScene9090TurnFrameMillis);
+	_animationPlayer.transitionAndPresent(_secondaryCel, transition);
+}
 
-	_secondaryCel = 0;
+bool Scene9090::playClockedCompositeRange(byte &targetFrame, byte firstFrame,
+		byte lastFrame, uint32 frameMillis) {
+	_advanceClockDuringAnimation = true;
+	AnimationFrameRange range(firstFrame, lastFrame, frameMillis);
+	const bool completed = _animationPlayer.playAndPresent(targetFrame, range);
+	_advanceClockDuringAnimation = false;
+	return completed;
+}
+
+void Scene9090::presentAnimationFrame() {
 	composeFrame();
 	presentFrame();
+}
+
+bool Scene9090::waitForAnimationFrame(uint32 millis, bool allowSkip) {
+	const bool stopped = PresentationScene::waitForAnimationFrame(millis, allowSkip);
+	if (!stopped && _advanceClockDuringAnimation)
+		advanceClock(millis);
+	return stopped;
 }
 
 void Scene9090::runSpeechLine(byte stepIndex) {
@@ -612,7 +596,7 @@ void Scene9090::runSpeechSteps(const byte *stepIndices, uint stepCount) {
 				_paletteCurrent[step.colorIndex * 3 + 2] = step.blue;
 			}
 
-			SubtitleOverlay &subtitle = step.speaker == kScene9090SecondarySpeaker ?
+			SpeechOverlay &subtitle = step.speaker == kScene9090SecondarySpeaker ?
 				_secondarySubtitle : _primarySubtitle;
 			beginSubtitle(subtitle, textRecordIds[i] + segment, step.colorIndex,
 				step.anchorX, step.anchorY, step.speaker == kScene9090SecondarySpeaker);
@@ -633,7 +617,7 @@ void Scene9090::runSpeechSteps(const byte *stepIndices, uint stepCount) {
 
 		composeFrame();
 		presentFrame();
-		const uint32 startMillis = g_system->getMillis();
+		uint32 elapsed = 0;
 		if (segment == 0) {
 			for (uint i = 0; i < stepCount && !_skipRequested && !Engine::shouldQuit(); ++i) {
 				const Scene9090SpeechStep &step = kScene9090SpeechSteps[stepIndices[i]];
@@ -645,7 +629,6 @@ void Scene9090::runSpeechSteps(const byte *stepIndices, uint stepCount) {
 		}
 
 		while (!_skipRequested && !Engine::shouldQuit()) {
-			const uint32 elapsed = g_system->getMillis() - startMillis;
 			bool deskSpeaking = false;
 			bool secondarySpeaking = false;
 			bool insetSpeaking = false;
@@ -673,23 +656,26 @@ void Scene9090::runSpeechSteps(const byte *stepIndices, uint stepCount) {
 			}
 			if (!anyActive)
 				break;
-			if (pollEvents())
-				return;
-			g_system->delayMillis(10);
+			if (delay(10)) {
+				if (_skipRequested || Engine::shouldQuit())
+					return;
+				break;
+			}
+			elapsed += 10;
 			advanceDialogueAnimations(10, deskSpeaking, secondarySpeaking, insetSpeaking);
 		}
+		_primarySpeech.stop();
+		_secondarySpeech.stop();
 
 		for (uint i = 0; i < stepCount; ++i) {
 			if (!activeStep[i])
 				continue;
 			if (kScene9090SpeechSteps[stepIndices[i]].speaker == kScene9090SecondarySpeaker) {
-				_secondarySubtitle.visible = false;
-				_secondarySubtitle.lines.clear();
+				clearSubtitle(_secondarySubtitle);
 				_secondarySpeechFrame = 0;
 				_secondarySpeechVisible = false;
 			} else {
-				_primarySubtitle.visible = false;
-				_primarySubtitle.lines.clear();
+				clearSubtitle(_primarySubtitle);
 				if (kScene9090SpeechSteps[stepIndices[i]].speaker == kScene9090InsetSpeaker)
 					_insetFrame = _insetVariant == 2 ? 7 : 0;
 				else if (_deskFacingMode == 3)
@@ -818,105 +804,22 @@ byte Scene9090::nextFrameExcluding(byte maximumFrame, byte previousFrame) {
 	return frame;
 }
 
-void Scene9090::beginSubtitle(SubtitleOverlay &subtitle, uint16 textRecordId,
+void Scene9090::beginSubtitle(SpeechOverlay &subtitle, uint16 textRecordId,
 		byte colorIndex, uint16 anchorX, uint16 anchorY, bool secondaryActor) {
-	subtitle.visible = false;
-	subtitle.lines.clear();
-	if (!_vm->subtitlesEnabled() || !_vm->font() || !_vm->font()->isLoaded())
-		return;
-
 	const Common::String text = _text.largeTextRecord(textRecordId);
-	if (text.empty())
-		return;
-
-	subtitle.colorIndex = colorIndex;
-	wrapSubtitleText(text, anchorX, subtitle.lines);
-	calculateSubtitleBounds(subtitle, anchorX, anchorY, secondaryActor);
-	subtitle.visible = !subtitle.lines.empty();
-}
-
-void Scene9090::calculateSubtitleBounds(SubtitleOverlay &subtitle, int anchorX, int anchorY,
-		bool secondaryActor) const {
-	uint textWidth = 0;
-	for (uint i = 0; i < subtitle.lines.size(); ++i)
-		textWidth = MAX<uint>(textWidth, subtitleTextWidth(subtitle.lines[i]));
-
-	int centerX = anchorX;
-	if (((centerX - (int)(textWidth >> 1)) - 1 + (int)textWidth) > 0x27e)
-		centerX = (textWidth & 1) == 0 ? 0x27e - (textWidth >> 1) : 0x27d - (textWidth >> 1);
-	if (centerX - (int)(textWidth >> 1) < 1)
-		centerX = (textWidth >> 1) + 1;
-
-	int topY = anchorY - (int)subtitle.lines.size() * kScene9090SpeechLineHeight;
-	if (secondaryActor)
-		topY -= kScene9090SecondarySpeechYOffsetBias;
-
-	subtitle.centerX = (uint16)centerX;
-	subtitle.topY = (uint16)MAX(1, topY);
+	showAnchoredSubtitle(subtitle, text, colorIndex, anchorX,
+		anchorY - (secondaryActor ? kScene9090SecondarySpeechYOffsetBias : 0),
+		kSpeechOverlayFixedEdgeWrap);
 }
 
 void Scene9090::clearSubtitles() {
-	_primarySubtitle.visible = false;
-	_primarySubtitle.lines.clear();
-	_secondarySubtitle.visible = false;
-	_secondarySubtitle.lines.clear();
+	clearSubtitle(_primarySubtitle);
+	clearSubtitle(_secondarySubtitle);
 }
 
 void Scene9090::drawFrameOverlays() {
-	drawSubtitle(_primarySubtitle);
-	drawSubtitle(_secondarySubtitle);
-}
-
-void Scene9090::drawSubtitle(const SubtitleOverlay &subtitle) {
-	if (!subtitle.visible || !_vm->font() || !_vm->font()->isLoaded())
-		return;
-
-	HollywoodFont *font = _vm->font();
-	font->setShadowColor(0);
-	for (uint lineIndex = 0; lineIndex < subtitle.lines.size(); ++lineIndex) {
-		const Common::String &line = subtitle.lines[lineIndex];
-		const int lineWidth = subtitleTextWidth(line);
-		int x = (int)subtitle.centerX - (lineWidth >> 1);
-		x = CLIP<int>(x, 0, MAX<int>(0, HollywoodEngine::kScreenWidth - lineWidth));
-		const int y = (int)subtitle.topY + lineIndex * kScene9090SpeechLineHeight;
-		font->drawString(_screen.surfacePtr(), line, x, y, lineWidth, subtitle.colorIndex,
-			Graphics::kTextAlignLeft, 0, false, true);
-	}
-}
-
-void Scene9090::wrapSubtitleText(const Common::String &text, uint16 anchorSceneX,
-		Common::Array<Common::String> &lines) const {
-	lines.clear();
-	if (text.empty())
-		return;
-
-	uint maxChars = anchorSceneX < 0xa0 || HollywoodEngine::kScreenWidth - anchorSceneX < 0xa0 ? 0x24 : 0x32;
-	const char *source = text.c_str();
-	const uint textLength = text.size();
-	uint cursor = 0;
-	while (cursor < textLength && lines.size() < 10) {
-		uint end = textLength;
-		if (cursor + maxChars < textLength) {
-			end = cursor + maxChars;
-			while (end > cursor && (byte)source[end] != 0x20 && source[end] != 0)
-				--end;
-			while (end > cursor && (byte)source[end - 1] == 0x20)
-				--end;
-			if (end == cursor)
-				end = MIN<uint>(textLength, cursor + maxChars);
-		}
-		lines.push_back(Common::String(source + cursor, end - cursor));
-		cursor = end;
-		while (cursor < textLength && (byte)source[cursor] == 0x20)
-			++cursor;
-		maxChars = maxChars > 2 ? maxChars - 2 : 1;
-	}
-}
-
-uint Scene9090::subtitleTextWidth(const Common::String &text) const {
-	if (!_vm->font() || !_vm->font()->isLoaded())
-		return 0;
-	return _vm->font()->getStringWidth(text) + 2;
+	drawSpeechOverlayText(_primarySubtitle, _vm->font(), *_screen.surfacePtr());
+	drawSpeechOverlayText(_secondarySubtitle, _vm->font(), *_screen.surfacePtr());
 }
 
 void Scene9090::stopAudio() {

@@ -19,16 +19,10 @@
  *
  */
 
-#include "hollywood/scenes/intro/scene9150.h"
-
-#include "common/debug.h"
-#include "common/path.h"
-#include "common/system.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
-#include "hollywood/resource.h"
+#include "hollywood/scenes/intro/scene9150.h"
 
 namespace Hollywood {
 
@@ -37,7 +31,11 @@ const char *const kScene9150TextArchiveName = "RESOURCE.003";
 const uint16 kScene9150NextState = 0x2382;
 const uint kScene9150DescriptorCount = 0x1f;
 const uint kScene9150FrameIntervalMillis = 30;
+const uint kScene9150InventoryRowsOffsetIndex = 0;
 const uint kScene9150StaticSpeechTableOffset = 0x1135;
+const byte kScene9150SubtitleColor = 0xfb;
+const int kScene9150SubtitleCenterX = 320;
+const int kScene9150SubtitleBottomY = 456;
 
 struct Scene9150ClipStep {
 	byte chunkIndex;
@@ -52,11 +50,12 @@ const Scene9150ClipStep kScene9150ClipSteps[] = {
 };
 
 Scene9150::Scene9150(HollywoodEngine *vm) :
-		IntroSceneBase(vm, "Scene 9150"),
+		PresentationScene(vm, "Scene 9150"),
 		_speech(vm->getLanguage()),
 		_text(),
 		_paletteResource(),
-		_clipResource() {
+		_clipResource(),
+		_clipFrameIndex(0) {
 	_paletteResource.resize(kPaletteSize);
 }
 
@@ -83,54 +82,41 @@ bool Scene9150::play() {
 }
 
 bool Scene9150::load() {
-	return loadPalette() &&
-		_text.loadStaticSpeechCues(kScene9150TextArchiveName, _debugName, kScene9150StaticSpeechTableOffset);
-}
-
-bool Scene9150::loadPalette() {
-	ChunkArchive archive;
-	if (!archive.open(Common::Path(kScene9150ArchiveName))) {
-		warning("Failed to read %s header", kScene9150ArchiveName);
-		return false;
-	}
-
-	if (!archive.readFixedChunk(0, _paletteResource, kPaletteSize, _debugName))
+	if (!_resources.loadChunkTable(kScene9150ArchiveName) ||
+			!_resources.validateChunkRange(kScene9150ArchiveName, _debugName, 0, 4) ||
+			!loadFixedChunk(0, _paletteResource, kPaletteSize))
 		return false;
 
-	return true;
+	return _text.loadStaticSpeech(kScene9150TextArchiveName, _debugName,
+		kScene9150InventoryRowsOffsetIndex, kScene9150StaticSpeechTableOffset);
 }
 
 bool Scene9150::loadClipChunk(uint chunkIndex) {
-	ChunkArchive archive;
-	if (!archive.open(Common::Path(kScene9150ArchiveName))) {
-		warning("Failed to read %s header", kScene9150ArchiveName);
-		return false;
-	}
-
-	if (!archive.readVariableChunk(chunkIndex, _clipResource)) {
-		warning("Failed to read %s clip chunk %u", kScene9150ArchiveName, chunkIndex);
-		return false;
-	}
-
-	return true;
+	return loadVariableChunk(chunkIndex, _clipResource);
 }
 
 void Scene9150::runClip(byte staticSpeechRowIndex) {
 	memset(_sceneFramebuffer.data(), 0, _sceneFramebuffer.size());
 	memcpy(_paletteCurrent.data(), _paletteResource.data(), _paletteCurrent.size());
 
-	for (byte frame = 0; frame < kScene9150DescriptorCount && !_skipRequested && !Engine::shouldQuit(); ++frame) {
-		if (pollEvents())
-			return;
-
-		drawClipFrame(frame);
-		presentFrame();
-		if (delay(kScene9150FrameIntervalMillis))
-			return;
+	_clipFrameIndex = 0;
+	AnimationFrameRange range(0, kScene9150DescriptorCount - 1,
+		kScene9150FrameIntervalMillis);
+	const bool completed = _animationPlayer.playAndPresent(_clipFrameIndex, range);
+	if (animationPlaybackShouldStop())
+		return;
+	if (!completed) {
+		_clipFrameIndex = kScene9150DescriptorCount - 1;
+		presentAnimationFrame();
 	}
 
 	playStaticSpeechPair(staticSpeechRowIndex);
 	fadeOutPalette();
+}
+
+void Scene9150::presentAnimationFrame() {
+	drawClipFrame(_clipFrameIndex);
+	presentFrame();
 }
 
 void Scene9150::drawClipFrame(byte frameIndex) {
@@ -141,24 +127,35 @@ void Scene9150::drawClipFrame(byte frameIndex) {
 }
 
 void Scene9150::playStaticSpeechPair(byte rowIndex) {
-	for (byte frameIndex = 0; frameIndex < 2 && !_skipRequested && !Engine::shouldQuit(); ++frameIndex) {
+	for (byte cueIndex = 0; cueIndex < 2 && !_skipRequested && !Engine::shouldQuit(); ++cueIndex) {
 		uint16 textRecordId = 0;
 		byte continuationCount = 0;
 		uint16 voiceSampleId = 0;
-		if (!_text.getStaticSpeechCue(rowIndex, frameIndex, textRecordId, continuationCount, voiceSampleId))
+		if (!_text.getStaticSpeechCue(rowIndex, cueIndex, textRecordId,
+				continuationCount, voiceSampleId))
 			continue;
-		(void)textRecordId;
-		(void)continuationCount;
 
-		const bool started = voiceSampleId != 0 && _speech.playSample(voiceSampleId, 100);
-		const uint32 duration = started ? MAX<uint32>(_speech.lastSampleDurationMillis(), 750) : 1200;
-		uint32 elapsed = 0;
-		while (elapsed < duration && !_skipRequested && !Engine::shouldQuit()) {
-			if (pollEvents())
+		const byte lineCount = MAX<byte>(1, continuationCount);
+		for (byte part = 0; part < lineCount && !_skipRequested && !Engine::shouldQuit(); ++part) {
+			if (_vm->restoredContentEnabled()) {
+				_paletteCurrent[kScene9150SubtitleColor * 3] = 0x3f;
+				_paletteCurrent[kScene9150SubtitleColor * 3 + 1] = 0x3f;
+				_paletteCurrent[kScene9150SubtitleColor * 3 + 2] = 0x3f;
+				showAnchoredSubtitle(_text.largeTextRecord(textRecordId + part),
+					kScene9150SubtitleColor, kScene9150SubtitleCenterX,
+					kScene9150SubtitleBottomY, kSpeechOverlayFixedEdgeWrap);
+				presentFrame();
+			}
+
+			const uint16 sampleId = voiceSampleId == 0 ? 0 : voiceSampleId + part;
+			const bool started = sampleId != 0 && _speech.playSample(sampleId, 100);
+			const uint32 duration = started ?
+				MAX<uint32>(_speech.lastSampleDurationMillis(), 750) :
+				MAX<uint32>(1200, _subtitle.lines.size() * 1100);
+			if (delay(duration) && (_skipRequested || Engine::shouldQuit()))
 				return;
-			const uint32 slice = MIN<uint32>(duration - elapsed, 10);
-			g_system->delayMillis(slice);
-			elapsed += slice;
+			_speech.stop();
+			clearSubtitle();
 		}
 	}
 }
@@ -173,6 +170,11 @@ void Scene9150::fadeOutPalette() {
 		if (delay(10))
 			return;
 	}
+}
+
+void Scene9150::stopAudio() {
+	_speech.stop();
+	clearSubtitle();
 }
 
 } // End of namespace Hollywood

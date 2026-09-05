@@ -22,9 +22,9 @@
 #ifndef HOLLYWOOD_SCENES_PLAYABLE_SCENE8010_H
 #define HOLLYWOOD_SCENES_PLAYABLE_SCENE8010_H
 
-#include "hollywood/scenes/playable/playable_scene.h"
-
 #include "common/str.h"
+
+#include "hollywood/scenes/playable/playable_scene.h"
 
 namespace Hollywood {
 
@@ -47,11 +47,9 @@ private:
 	};
 
 	void initializeCustomPreviewState() override;
-	void drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
+	void drawCustomActorForegroundComposite(int activeWorldX, int activeWorldY,
 		byte actorDrawOrderMode) override;
 	void runCustomEntrySequence() override;
-	bool shouldPresentPreviewBeforeEntrySequence() const override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
 	void advanceAmbientAudio(uint32 delta) override;
 	bool dispatchCustomSceneAction(uint16 handlerId) override;
@@ -63,7 +61,6 @@ private:
 	void setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) override;
 	void primarySpeechAnimationRestored(byte animationGroup, byte baseFrame) override;
 	AmbientAudioProfile ambientAudioProfile() const override;
-	bool shouldRunExitSideEffectsAfterLoop() const override;
 	void runExitSideEffectsAfterLoop() override;
 
 	void resetSceneAnimations();
@@ -93,8 +90,6 @@ private:
 	byte randomUnusedRow(byte firstRow, byte rowCount, bool *usedRows, uint usedRowCount);
 	bool runFishermanQuiz();
 
-	ResourceSpriteLayer _fishermanLayer;
-	ResourceSpriteLayer _boatLayer;
 	uint _boatTrack;
 	TimedAnimationChannel _fishermanChannel;
 	TimedAnimationChannel _fishermanSpeechIdleChannel;

@@ -19,11 +19,10 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene3060.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene3060.h"
 
 namespace Hollywood {
 
@@ -46,26 +45,23 @@ const uint kScene3060FrontDescriptorCount = 0x13;
 const uint kScene3060GlobeDescriptorCount = 0x1e;
 const uint kScene3060ButtonDescriptorCount = 5;
 const uint kScene3060SecretDoorDescriptorCount = 0x0e;
-
-const byte kScene3060FrontFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-	10, 11, 12, 13, 14, 15, 16, 17, 18
-};
-
-const byte kScene3060GlobeFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-	10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-	20, 21, 22, 23, 24, 25, 26, 27, 28, 29
-};
+const uint kScene3060FrontLayer = 0;
+const uint kScene3060GlobeLayer = 1;
+const uint kScene3060ButtonLayer = 2;
 
 const byte kScene3060LeftButtonFrameMap[] = { 0, 1, 2, 2, 1, 0 };
 const byte kScene3060RightButtonFrameMap[] = { 0, 1, 4, 4, 1, 0 };
 const byte kScene3060RedButtonFrameMap[] = { 0, 1, 3, 3, 1, 0 };
-const byte kScene3060SecretDoorRevealFrameMap[] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
+const SceneLayerSpec kScene3060LayerSpecs[] = {
+	{kSceneAnimationInFrontOfActors, 5, kScene3060FrontDescriptorCount,
+		nullptr, 0, true, 0},
+	{kSceneAnimationScenePlaced, 6, kScene3060GlobeDescriptorCount,
+		nullptr, 0, true, 0},
+	{kSceneAnimationInFrontOfActors, 7, kScene3060ButtonDescriptorCount,
+		kScene3060LeftButtonFrameMap, ARRAYSIZE(kScene3060LeftButtonFrameMap), false, 0}
 };
 
-static PlayableSceneConfig scene3060Config() {
+PlayableSceneConfig scene3060Config() {
 	PlayableSceneConfig config(3060,
 		SceneResourceLayout(10, 5, 9),
 		SceneViewport(0),
@@ -79,17 +75,9 @@ static PlayableSceneConfig scene3060Config() {
 Scene3060::Scene3060(HollywoodEngine *vm) :
 		PlayableScene(vm, scene3060Config()),
 		_frontChannel(),
-		_frontLayer(),
-		_globeLayer(),
-		_buttonLayer(),
 		_frontLayerMode(0),
 		_secretDoorRevealActive(false) {
-	_frontLayer.configure(5, kScene3060FrontDescriptorCount,
-		kScene3060FrontFrameMap, ARRAYSIZE(kScene3060FrontFrameMap));
-	_globeLayer.configure(6, kScene3060GlobeDescriptorCount,
-		kScene3060GlobeFrameMap, ARRAYSIZE(kScene3060GlobeFrameMap));
-	_buttonLayer.configure(7, kScene3060ButtonDescriptorCount,
-		kScene3060LeftButtonFrameMap, ARRAYSIZE(kScene3060LeftButtonFrameMap));
+	_sceneLayers.configure(kScene3060LayerSpecs);
 }
 
 void Scene3060::initializeCustomPreviewState() {
@@ -119,22 +107,22 @@ void Scene3060::drawCustomComposite(bool drawActiveActor, byte activeFacing, byt
 	if (_secretDoorRevealActive) {
 		drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
 			drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-		drawResourceSpriteLayer(_frontLayer);
+		drawSceneLayer(kScene3060FrontLayer);
 		drawActionOverlayLayer();
-		drawResourceSpriteLayer(_globeLayer);
+		drawSceneLayer(kScene3060GlobeLayer);
 		return;
 	}
 
 	if (actorDrawOrderMode < 4)
-		drawResourceSpriteLayer(_globeLayer);
+		drawSceneLayer(kScene3060GlobeLayer);
 	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
 		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
 	if (actorDrawOrderMode >= 4)
-		drawResourceSpriteLayer(_globeLayer);
+		drawSceneLayer(kScene3060GlobeLayer);
 
 	drawActionOverlayLayer();
-	drawResourceSpriteLayer(_frontLayer);
-	drawResourceSpriteLayer(_buttonLayer);
+	drawSceneLayer(kScene3060FrontLayer);
+	drawSceneLayer(kScene3060ButtonLayer);
 }
 
 void Scene3060::runCustomEntrySequence() {
@@ -340,23 +328,17 @@ AmbientAudioProfile Scene3060::ambientAudioProfile() const {
 	return profile;
 }
 
-bool Scene3060::shouldRunExitSideEffectsAfterLoop() const {
-	const uint16 stateId = _vm->gameState().mainFlowStateId;
-	return !Engine::shouldQuit() && stateId != 0xff && !isMainFlowStateInScene(stateId);
-}
-
 void Scene3060::runExitSideEffectsAfterLoop() {
+	if (!didLeaveSceneAfterLoop())
+		return;
+
 	fadePaletteToBlack();
 }
 
 void Scene3060::resetAnimationLayers() {
+	_sceneLayers.reset();
 	_frontChannel.reset(0, kScene3060FrontFrameMillis);
-	_frontLayer.visible = true;
-	_globeLayer.visible = true;
-	_buttonLayer.visible = false;
-	_frontLayer.reset(0);
-	_globeLayer.reset(_vm->gameState().scene3060GlobeFrame);
-	_buttonLayer.reset(0);
+	_sceneLayers.resetLayer(kScene3060GlobeLayer, _vm->gameState().scene3060GlobeFrame);
 	_frontLayerMode = 0;
 	_secretDoorRevealActive = false;
 }
@@ -438,6 +420,11 @@ void Scene3060::updateSceneDepthThresholds(byte actorDrawOrderMode) {
 	}
 }
 
+void Scene3060::setFrontFrame(byte frameIndex) {
+	_frontChannel.frameIndex = frameIndex;
+	_sceneLayers.setLayerFrame(kScene3060FrontLayer, frameIndex);
+}
+
 void Scene3060::advanceFrontLayer(uint32 delta) {
 	const uint frameCount = _frontChannel.consumeFrames(delta);
 	for (uint frame = 0; frame < frameCount; ++frame) {
@@ -477,21 +464,19 @@ void Scene3060::advanceFrontLayer(uint32 delta) {
 			}
 			break;
 		}
-		_frontLayer.setFrame(_frontChannel.frameIndex);
+		setFrontFrame(_frontChannel.frameIndex);
 	}
 }
 
 void Scene3060::runEntryFromScene3050() {
-	_frontChannel.frameIndex = 18;
+	setFrontFrame(18);
 	_frontLayerMode = 4;
-	_frontLayer.setFrame(18);
 	runEntryPath(0x2e3, 0x128, 4, 0x22d, 0x156);
 }
 
 void Scene3060::runEntryFromSecretPassage() {
-	_frontChannel.frameIndex = 18;
+	setFrontFrame(18);
 	_frontLayerMode = 4;
-	_frontLayer.setFrame(18);
 	runEntryPath(0x08a, 0x184, 2, 0x1aa, 0x161);
 }
 
@@ -501,7 +486,7 @@ void Scene3060::rotateGlobe(int delta) {
 	while (nextFrame < 0)
 		nextFrame += kScene3060GlobeDescriptorCount;
 	state.scene3060GlobeFrame = (byte)(nextFrame % kScene3060GlobeDescriptorCount);
-	_globeLayer.setFrame(state.scene3060GlobeFrame);
+	_sceneLayers.setLayerFrame(kScene3060GlobeLayer, state.scene3060GlobeFrame);
 }
 
 void Scene3060::markGlobeButtonsDiscovered() {
@@ -556,16 +541,17 @@ void Scene3060::runGlobeButtonSequence(byte button, const byte *frameMap, uint f
 		return;
 	}
 
-	_buttonLayer.configure(7, kScene3060ButtonDescriptorCount, frameMap, frameMapSize);
-	_buttonLayer.visible = true;
+	_sceneLayers.setLayerResource(kScene3060ButtonLayer, 7,
+		kScene3060ButtonDescriptorCount, frameMap, frameMapSize);
+	_sceneLayers.setLayerVisible(kScene3060ButtonLayer, true);
 	if (frameMapSize != 0) {
 		const byte hookId = globeDelta > 0 ? kScene3060RotateGlobeForwardHook :
 			kScene3060RotateGlobeBackwardHook;
-		playAnimationFrames(_buttonLayer,
+		playAnimationFrames(kScene3060ButtonLayer,
 			AnimationFrameRange(0, frameMapSize - 1, kScene3060ButtonFrameMillis)
 				.unskippable().hookAt(3, hookId));
 	}
-	_buttonLayer.visible = false;
+	_sceneLayers.setLayerVisible(kScene3060ButtonLayer, false);
 	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
 		return;
 
@@ -576,8 +562,7 @@ void Scene3060::runGlobeButtonSequence(byte button, const byte *frameMap, uint f
 }
 
 void Scene3060::handleAnimationFrameHook(byte hookId, uint frame) {
-	if (frame != 3)
-		return;
+	(void)frame;
 	if (hookId == kScene3060RotateGlobeForwardHook)
 		rotateGlobe(1);
 	else if (hookId == kScene3060RotateGlobeBackwardHook)
@@ -591,10 +576,11 @@ void Scene3060::runRedButtonSequence() {
 		return;
 	}
 
-	_buttonLayer.configure(7, kScene3060ButtonDescriptorCount,
-		kScene3060RedButtonFrameMap, ARRAYSIZE(kScene3060RedButtonFrameMap));
-	_buttonLayer.visible = true;
-	_buttonLayer.setFrame(0);
+	_sceneLayers.setLayerResource(kScene3060ButtonLayer, 7,
+		kScene3060ButtonDescriptorCount, kScene3060RedButtonFrameMap,
+		ARRAYSIZE(kScene3060RedButtonFrameMap));
+	_sceneLayers.setLayerVisible(kScene3060ButtonLayer, true);
+	_sceneLayers.setLayerFrame(kScene3060ButtonLayer, 0);
 	drawPlayableComposite();
 	presentFrame();
 
@@ -621,7 +607,7 @@ void Scene3060::runRedButtonSequence() {
 
 		if (buttonAnimating && buttonRemaining == 0) {
 			++buttonFrame;
-			_buttonLayer.setFrame((byte)buttonFrame);
+			_sceneLayers.setLayerFrame(kScene3060ButtonLayer, (byte)buttonFrame);
 			buttonRemaining = kScene3060ButtonFrameMillis;
 			if (buttonFrame == 3) {
 				spinning = true;
@@ -646,7 +632,7 @@ void Scene3060::runRedButtonSequence() {
 		}
 	}
 
-	_buttonLayer.visible = false;
+	_sceneLayers.setLayerVisible(kScene3060ButtonLayer, false);
 	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
 		return;
 
@@ -667,8 +653,7 @@ void Scene3060::runSecretDoorReveal() {
 	_soundBank0.playSample(0x10, 100);
 	_secretDoorRevealActive = true;
 	runSceneOverlay(ActionOverlaySpec(8, kScene3060SecretDoorDescriptorCount,
-		kScene3060SecretDoorRevealFrameMap, ARRAYSIZE(kScene3060SecretDoorRevealFrameMap), kScene3060SecretDoorFrameMillis)
-		.noRedrawAtEnd());
+		kScene3060SecretDoorFrameMillis));
 	_secretDoorRevealActive = false;
 	_soundBank0.stop();
 	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())

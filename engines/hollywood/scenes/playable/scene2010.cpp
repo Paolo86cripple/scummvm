@@ -19,13 +19,12 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene2010.h"
-
 #include "common/system.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene2010.h"
 
 namespace Hollywood {
 
@@ -46,8 +45,8 @@ const uint kScene2010SecondOverlayDescriptorCount = 0x10;
 const uint kScene2010GatekeeperDescriptorCount = 0x1c;
 const byte kScene2010GatekeeperSpeechBaseFrame = 0x15;
 const byte kScene2010GatekeeperBlinkFrame = 0x19;
-const byte kScene2010RingSoundHook = 1;
-const byte kScene2010GateSoundHook = 2;
+const uint kScene2010ScriptLayer = 0;
+const uint kScene2010GatekeeperLayer = 1;
 
 const byte kScene2010FirstOverlayFrameMap[] = {
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
@@ -59,13 +58,13 @@ const byte kScene2010GatekeeperFrameMap[] = {
 	26, 27
 };
 
-static_assert(ARRAYSIZE(kScene2010FirstOverlayFrameMap) == 19, "Scene 2010 anilla first overlay frame map size changed");
-static_assert(ARRAYSIZE(kScene2010GatekeeperFrameMap) == 32, "Scene 2010 gatekeeper frame map size changed");
-static_assert(kScene2010FirstOverlayDescriptorCount > 9, "Scene 2010 anilla first overlay descriptor count is too small");
-static_assert(kScene2010SecondOverlayDescriptorCount > 15, "Scene 2010 anilla second overlay descriptor count is too small");
-static_assert(kScene2010GatekeeperDescriptorCount > 27, "Scene 2010 gatekeeper descriptor count is too small");
+const SceneLayerSpec kScene2010LayerSpecs[] = {
+	{kSceneAnimationBehindActors, 0, 0, nullptr, 0, false, 0},
+	{kSceneAnimationBehindActors, 7, kScene2010GatekeeperDescriptorCount,
+		kScene2010GatekeeperFrameMap, ARRAYSIZE(kScene2010GatekeeperFrameMap), false, 0}
+};
 
-static PlayableSceneConfig scene2010Config() {
+PlayableSceneConfig scene2010Config() {
 	PlayableSceneConfig config(2010,
 		SceneResourceLayout(11, 5, 10),
 		SceneViewport(kScene2010ViewportXOffset, kScene2010ViewportXOffset, kScene2010ViewportXOffset),
@@ -79,11 +78,9 @@ static PlayableSceneConfig scene2010Config() {
 
 Scene2010::Scene2010(HollywoodEngine *vm) :
 		PlayableScene(vm, scene2010Config()),
-		_scriptLayer(),
-		_scriptLayerStratum(kSceneAnimationBehindActors),
-		_gatekeeperLayer(),
 		_gatekeeperIdleAccumulator(0),
 		_gatekeeperSequenceActive(false) {
+	_sceneLayers.configure(kScene2010LayerSpecs);
 }
 
 void Scene2010::initializeCustomPreviewState() {
@@ -113,30 +110,6 @@ void Scene2010::initializeCustomPreviewState() {
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 }
 
-void Scene2010::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-
-	copyBaseFramebufferToSceneFramebuffer();
-	if (_scriptLayer.visible && _scriptLayerStratum == kSceneAnimationBehindActors)
-		drawResourceSpriteLayer(_scriptLayer);
-	drawResourceSpriteLayer(_gatekeeperLayer);
-	if (_actionOverlayPlayer.isVisible() &&
-			_actionOverlayPlayer.stratum == kSceneAnimationBehindActors)
-		drawActionOverlayLayer();
-	const bool scriptReplacesActor = _scriptLayer.visible &&
-		_scriptLayerStratum == kSceneAnimationActorReplacement;
-	drawActiveAndSecondaryActorFrames(drawActiveActor && !scriptReplacesActor,
-		activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	if (_scriptLayer.visible && _scriptLayerStratum != kSceneAnimationBehindActors)
-		drawResourceSpriteLayer(_scriptLayer);
-	if (_actionOverlayPlayer.isVisible() &&
-			_actionOverlayPlayer.stratum != kSceneAnimationBehindActors)
-		drawActionOverlayLayer();
-}
-
 void Scene2010::runCustomEntrySequence() {
 	switch (_vm->gameState().mainFlowStateId) {
 	case kScene2010EntryFromB02State:
@@ -152,7 +125,8 @@ void Scene2010::runCustomEntrySequence() {
 }
 
 void Scene2010::advanceCustomGameplayLoop(uint32 delta) {
-	if (_gatekeeperLayer.visible && !_gatekeeperSequenceActive && !_primaryDialogueSpeechActive)
+	if (_sceneLayers.layerVisible(kScene2010GatekeeperLayer) &&
+			!_gatekeeperSequenceActive && !_primaryDialogueSpeechActive)
 		advanceGatekeeperIdle(delta);
 }
 
@@ -286,23 +260,7 @@ byte Scene2010::primarySpeechAnimationBaseFrame(byte animationGroup) const {
 
 void Scene2010::setPrimarySpeechAnimationFrame(byte animationGroup, byte frameIndex) {
 	(void)animationGroup;
-	_gatekeeperLayer.setFrame(frameIndex);
-}
-
-void Scene2010::handleAnimationFrameHook(byte hookId, uint frame) {
-	(void)frame;
-
-	switch (hookId) {
-	case kScene2010RingSoundHook:
-		_soundBank0.playSample(0x0b, 100);
-		break;
-	case kScene2010GateSoundHook:
-		_soundBank0.playSample(0x0c, 100);
-		break;
-	default:
-		PlayableScene::handleAnimationFrameHook(hookId, frame);
-		break;
-	}
+	_sceneLayers.setLayerFrame(kScene2010GatekeeperLayer, frameIndex);
 }
 
 AmbientAudioProfile Scene2010::ambientAudioProfile() const {
@@ -310,11 +268,7 @@ AmbientAudioProfile Scene2010::ambientAudioProfile() const {
 }
 
 void Scene2010::resetAnimationLayers() {
-	clearResourceLayer(_scriptLayer);
-	_scriptLayerStratum = kSceneAnimationBehindActors;
-	_gatekeeperLayer.configure(7, kScene2010GatekeeperDescriptorCount,
-		kScene2010GatekeeperFrameMap, ARRAYSIZE(kScene2010GatekeeperFrameMap));
-	_gatekeeperLayer.visible = false;
+	_sceneLayers.reset();
 	_gatekeeperIdleAccumulator = 0;
 	_gatekeeperSequenceActive = false;
 }
@@ -323,10 +277,11 @@ void Scene2010::advanceGatekeeperIdle(uint32 delta) {
 	_gatekeeperIdleAccumulator += delta;
 	while (_gatekeeperIdleAccumulator >= kScene2010OverlayFrameMillis) {
 		_gatekeeperIdleAccumulator -= kScene2010OverlayFrameMillis;
-		if (_gatekeeperLayer.frameIndex == kScene2010GatekeeperBlinkFrame)
-			_gatekeeperLayer.setFrame(kScene2010GatekeeperSpeechBaseFrame);
+		if (_sceneLayers.layerFrame(kScene2010GatekeeperLayer) == kScene2010GatekeeperBlinkFrame)
+			_sceneLayers.setLayerFrame(kScene2010GatekeeperLayer,
+				kScene2010GatekeeperSpeechBaseFrame);
 		else if (_random.getRandomNumber(14) == 0)
-			_gatekeeperLayer.setFrame(kScene2010GatekeeperBlinkFrame);
+			_sceneLayers.setLayerFrame(kScene2010GatekeeperLayer, kScene2010GatekeeperBlinkFrame);
 	}
 }
 
@@ -400,16 +355,20 @@ void Scene2010::runPatchedEntrySequence() {
 	setActiveActorPose(0x130, 0x105, 2, 0);
 	drawPlayableComposite();
 	presentFrame();
-	_soundBank0.playSample(0x0c, 100);
-	if (!walkActiveActorTo(0x21c, 0x126, 0xff, 0, false))
+	BlockingSequence sequence(*this);
+	sequence.sound(0x0c)
+		.actorPath(SceneActorPose(0x21c, 0x126, 0xff));
+	if (!sequence.completed())
 		return;
 
-	_scriptLayerStratum = kSceneAnimationBehindActors;
+	_sceneLayers.setLayerStratum(kScene2010ScriptLayer, kSceneAnimationBehindActors);
 	if (_sceneChunkTable.isValidChunk(10)) {
-		if (!playResourceLayerSequence(_scriptLayer, 10, kScene2010SecondOverlayDescriptorCount,
-				AnimationFrameRange(0, 0x0f, kScene2010OverlayFrameMillis).unskippable()))
-			return;
+		sequence.resourceLayerFrames(kScene2010ScriptLayer, 10,
+			kScene2010SecondOverlayDescriptorCount,
+			AnimationFrameRange(0, 0x0f, kScene2010OverlayFrameMillis).unskippable());
 	}
+	if (!sequence.completed())
+		return;
 
 	if (_sceneChunkTable.isValidChunk(9)) {
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[9], _baseFramebuffer);
@@ -427,71 +386,67 @@ void Scene2010::runPatchedEntrySequence() {
 }
 
 void Scene2010::runLongSequenceToScene2100() {
-	_scriptLayerStratum = kSceneAnimationActorReplacement;
+	BlockingSequence sequence(*this);
+	_sceneLayers.setLayerStratum(kScene2010ScriptLayer, kSceneAnimationActorReplacement);
 	if (_sceneChunkTable.isValidChunk(5)) {
-		playResourceLayerSequence(_scriptLayer, 5, kScene2010FirstOverlayDescriptorCount,
+		sequence.resourceLayerFrames(kScene2010ScriptLayer, 5,
+			kScene2010FirstOverlayDescriptorCount,
 			kScene2010FirstOverlayFrameMap,
 			AnimationFrameRange(0, ARRAYSIZE(kScene2010FirstOverlayFrameMap) - 1,
 				kScene2010OverlayFrameMillis)
 				.unskippable()
-				.hookAt(9, kScene2010RingSoundHook), false);
+				.soundAt(9, 0x0b), false);
 	}
-	if (!waitForSoundOrTimeout(kScene2010SoundWaitMillis))
+	if (!sequence.completed() || !waitForSoundOrTimeout(kScene2010SoundWaitMillis))
 		return;
 
-	_scriptLayerStratum = kSceneAnimationBehindActors;
+	_sceneLayers.setLayerStratum(kScene2010ScriptLayer, kSceneAnimationBehindActors);
 	if (_sceneChunkTable.isValidChunk(6)) {
-		playResourceLayerSequence(_scriptLayer, 6, kScene2010SecondOverlayDescriptorCount,
+		sequence.resourceLayerFrames(kScene2010ScriptLayer, 6,
+			kScene2010SecondOverlayDescriptorCount,
 			AnimationFrameRange(0, 0x0f, kScene2010OverlayFrameMillis)
 				.unskippable()
-				.hookAt(0, kScene2010GateSoundHook), false);
+				.soundAt(0, 0x0c), false);
 	}
-	if (!waitForSoundOrTimeout(kScene2010SoundWaitMillis))
+	if (!sequence.completed() || !waitForSoundOrTimeout(kScene2010SoundWaitMillis))
 		return;
-	clearResourceLayer(_scriptLayer);
+	clearSceneLayer(kScene2010ScriptLayer);
 
 	if (_sceneChunkTable.isValidChunk(8))
 		drawResourceBlockList(_resourceArena, _resourceChunkOffsets[8], _baseFramebuffer);
 
 	_gatekeeperSequenceActive = true;
 	if (_sceneChunkTable.isValidChunk(7)) {
-		playResourceLayerSequence(_gatekeeperLayer, 7, kScene2010GatekeeperDescriptorCount,
+		sequence.resourceLayerFrames(kScene2010GatekeeperLayer, 7,
+			kScene2010GatekeeperDescriptorCount,
 			kScene2010GatekeeperFrameMap,
 			AnimationFrameRange(0, kScene2010GatekeeperSpeechBaseFrame,
 				kScene2010OverlayFrameMillis).unskippable(), false);
 	}
 	_gatekeeperSequenceActive = false;
-	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
+	if (!sequence.completed())
 		return;
 
-	beginPrimarySpeechLine(3, 0, 0x1c2, 0x78, 0, 0x3f, 0x3f);
-	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
+	sequence.primarySpeech(3, 0, 0x1c2, 0x78, 0, 0x3f, 0x3f);
+	if (!sequence.completed())
 		return;
 
 	GameplayState &state = _vm->gameState();
 	const byte replyFrame = state.scene2010LongSequenceFirstSpeechSeen ? 2 : 1;
 	state.scene2010LongSequenceFirstSpeechSeen = true;
-	beginSecondarySpeechLine(3, replyFrame);
-	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
+	sequence.secondarySpeech(3, replyFrame)
+		.primarySpeech(3, state.scene2100MummyBranchState == 1 ? 4 : 3,
+			0x1c2, 0x78, 0, 0x3f, 0x3f);
+	if (!sequence.completed())
 		return;
 
-	beginPrimarySpeechLine(3, state.scene2100MummyBranchState == 1 ? 4 : 3,
-		0x1c2, 0x78, 0, 0x3f, 0x3f);
-	if (Engine::shouldQuit() || _vm->isSceneRestartRequested())
-		return;
-
-	_gatekeeperSequenceActive = true;
-	if (!playAndPresentAnimationFrames(_gatekeeperLayer,
-			AnimationFrameRange(0x1a, 0x1f, kScene2010OverlayFrameMillis).unskippable())) {
-		_gatekeeperSequenceActive = false;
-		return;
-	}
-	if (!walkActiveActorTo(0x130, 0x105, 0xff, 0, false)) {
-		_gatekeeperSequenceActive = false;
-		return;
-	}
-	_gatekeeperSequenceActive = false;
-	state.mainFlowStateId = kScene2100EntryState;
+	sequence.commit(_gatekeeperSequenceActive, true)
+		.presentedLayerFrames(kScene2010GatekeeperLayer,
+			AnimationFrameRange(0x1a, 0x1f, kScene2010OverlayFrameMillis).unskippable())
+		.actorPath(SceneActorPose(0x130, 0x105, 0xff))
+		.commit(_gatekeeperSequenceActive, false);
+	if (sequence.completed())
+		sequence.commit(state.mainFlowStateId, kScene2100EntryState);
 }
 
 } // End of namespace Hollywood

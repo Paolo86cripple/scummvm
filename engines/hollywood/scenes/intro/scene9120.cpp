@@ -19,12 +19,9 @@
  *
  */
 
-#include "hollywood/scenes/intro/scene9120.h"
-
-#include "common/system.h"
-
-#include "hollywood/graphics.h"
 #include "hollywood/hollywood.h"
+#include "hollywood/graphics.h"
+#include "hollywood/scenes/intro/scene9120.h"
 
 namespace Hollywood {
 
@@ -33,11 +30,10 @@ const uint16 kScene9120MusicCueId = 0x000c;
 const uint16 kScene9120OverlaySoundId = 0x001a;
 
 Scene9120::Scene9120(HollywoodEngine *vm) :
-		IntroSceneBase(vm, "Scene 9120", kScene9120FramebufferSize, kFrameBufferSize),
+		PresentationScene(vm, "Scene 9120", kScene9120FramebufferSize, kSceneBufferByteCount),
 		_music(vm->introMusic()),
 		_soundBank0(),
 		_random("hollywood_scene9120"),
-		_resources(),
 		_overlayAccumulator(0),
 		_scrollAccumulator(0),
 		_actorBobAccumulator(0),
@@ -51,7 +47,7 @@ Scene9120::Scene9120(HollywoodEngine *vm) :
 		_smallAnimFrame(0),
 		_viewportDirty(false) {
 	_paletteResource.resize(kPaletteSize);
-	_descriptorBackground.resize(kFrameBufferSize);
+	_descriptorBackground.resize(kSceneBufferByteCount);
 	memset(_paletteResource.data(), 0, _paletteResource.size());
 	memset(_descriptorBackground.data(), 0, _descriptorBackground.size());
 }
@@ -121,18 +117,18 @@ bool Scene9120::loadResourceI12Assets() {
 			return false;
 	}
 
-	if (!loadResourceI12Chunk(0, _sceneFramebuffer, kScene9120FramebufferSize) ||
-			!loadResourceI12Chunk(1, _paletteResource, kPaletteSize))
+	if (!loadFixedChunk(0, _sceneFramebuffer, kScene9120FramebufferSize) ||
+			!loadFixedChunk(1, _paletteResource, kPaletteSize))
 		return false;
 
 	uint32 resourceArenaSize = 0;
 	for (uint i = 2; i < kI12RequiredChunkCount; ++i)
-		resourceArenaSize += _resources.chunkTable.sizes[i];
+		resourceArenaSize += _resources._chunkTable.sizes[i];
 
 	_resources.allocateArena(resourceArenaSize);
 
 	for (uint i = 2; i < kI12RequiredChunkCount; ++i) {
-		if (!loadResourceI12ArenaChunk(i))
+		if (!loadArenaChunk(i))
 			return false;
 	}
 
@@ -147,30 +143,12 @@ bool Scene9120::loadResourceI12Assets() {
 	return true;
 }
 
-bool Scene9120::loadResourceI12Chunk(uint index, Common::Array<byte> &destination, uint fixedSize) {
-	return _resources.loadFixedChunk(_debugName, index, destination, fixedSize);
-}
-
-bool Scene9120::loadResourceI12Chunk(uint index, IndexedSurfaceBuffer &destination, uint fixedSize) {
-	return _resources.loadFixedChunk(_debugName, index, destination, fixedSize);
-}
-
-bool Scene9120::loadResourceI12ArenaChunk(uint index) {
-	return _resources.loadArenaChunk(_debugName, index, index);
-}
-
 void Scene9120::runTimedOverlayPhase() {
 	_overlayAccumulator = kScene9120OverlayInterval;
 	uint16 tickIndex = 0;
-	uint32 lastFrameMillis = g_system->getMillis();
 	while (tickIndex < kScene9120TimedOverlayTicks && !_skipRequested && !Engine::shouldQuit()) {
 		if (pollEvents())
 			return;
-
-		const uint32 now = g_system->getMillis();
-		const uint32 elapsed = now - lastFrameMillis;
-		lastFrameMillis = now;
-		_overlayAccumulator += elapsed;
 
 		if (_overlayAccumulator >= kScene9120OverlayInterval) {
 			_overlayAccumulator %= kScene9120OverlayInterval;
@@ -179,11 +157,13 @@ void Scene9120::runTimedOverlayPhase() {
 			if (chunkIndex != 0) {
 				if ((chunkIndex & 1) == 0)
 					_soundBank0.playSample(kScene9120OverlaySoundId, 100);
-				drawTimedOverlayChunk(_resources.chunkOffsets[chunkIndex]);
+				drawTimedOverlayChunk(_resources._chunkOffsets[chunkIndex]);
 			}
 		}
 
-		g_system->delayMillis(1);
+		if (tickIndex < kScene9120TimedOverlayTicks && delay(10))
+			return;
+		_overlayAccumulator += 10;
 	}
 }
 
@@ -193,17 +173,10 @@ void Scene9120::runHoldScrollAndIdlePhase() {
 	_smallAnimAccumulator = kScene9120SmallAnimInterval;
 
 	uint32 elapsedTotal = 0;
-	uint32 lastFrameMillis = g_system->getMillis();
 	while (elapsedTotal < kScene9120HoldMillis && !_skipRequested && !Engine::shouldQuit()) {
 		if (pollEvents())
 			return;
 
-		const uint32 now = g_system->getMillis();
-		const uint32 elapsed = now - lastFrameMillis;
-		lastFrameMillis = now;
-		elapsedTotal += elapsed;
-
-		_scrollAccumulator += elapsed;
 		if (_scrollAccumulator >= kScene9120ScrollInterval) {
 			_scrollAccumulator %= kScene9120ScrollInterval;
 			if (_yOffset != 0) {
@@ -212,13 +185,11 @@ void Scene9120::runHoldScrollAndIdlePhase() {
 			}
 		}
 
-		_actorBobAccumulator += elapsed;
 		if (_actorBobAccumulator >= kScene9120ActorBobInterval) {
 			_actorBobAccumulator %= kScene9120ActorBobInterval;
 			advanceActorBob();
 		}
 
-		_smallAnimAccumulator += elapsed;
 		if (_smallAnimAccumulator >= kScene9120SmallAnimInterval) {
 			_smallAnimAccumulator %= kScene9120SmallAnimInterval;
 			advanceSmallAnimation();
@@ -229,7 +200,13 @@ void Scene9120::runHoldScrollAndIdlePhase() {
 			_viewportDirty = false;
 		}
 
-		g_system->delayMillis(1);
+		const uint32 slice = MIN<uint32>(10, kScene9120HoldMillis - elapsedTotal);
+		if (delay(slice))
+			return;
+		elapsedTotal += slice;
+		_scrollAccumulator += slice;
+		_actorBobAccumulator += slice;
+		_smallAnimAccumulator += slice;
 	}
 }
 
@@ -279,14 +256,14 @@ void Scene9120::advanceSmallAnimation() {
 
 void Scene9120::restoreAndDrawResourceDescriptorFrame(byte localChunkIndex, byte descriptorCount, byte descriptorIndex,
 		bool drawFrame) {
-	if (localChunkIndex >= IntroResourceSet::kResourceChunkCount)
+	if (localChunkIndex >= kResourceChunkCount)
 		return;
 
-	const uint32 baseOffset = _resources.chunkOffsets[localChunkIndex];
-	restoreSpriteBackground(_resources.arena, baseOffset, 0, descriptorCount, descriptorIndex,
+	const uint32 baseOffset = _resources._chunkOffsets[localChunkIndex];
+	restoreSpriteBackground(_resources._arena, baseOffset, 0, descriptorCount, descriptorIndex,
 		_descriptorBackground.surface(), _sceneFramebuffer.surface());
 	if (drawFrame)
-		drawStripSpriteFrame(_resources.arena, baseOffset, 0, descriptorCount, descriptorIndex, _sceneFramebuffer.surface());
+		drawStripSpriteFrame(_resources._arena, baseOffset, 0, descriptorCount, descriptorIndex, _sceneFramebuffer.surface());
 }
 
 byte Scene9120::getTimedOverlayChunk(uint tickIndex) const {
@@ -320,33 +297,33 @@ void Scene9120::copyViewportToSavedFramebuffer() {
 
 void Scene9120::clearActiveViewport() {
 	const uint32 destinationOffset = (uint32)_yOffset * HollywoodEngine::kSceneBufferWidth + _xOffset;
-	if (destinationOffset + kFrameBufferSize > _sceneFramebuffer.size())
+	if (destinationOffset + kSceneBufferByteCount > _sceneFramebuffer.size())
 		return;
 
-	memset(_sceneFramebuffer.data() + destinationOffset, 0, kFrameBufferSize);
+	memset(_sceneFramebuffer.data() + destinationOffset, 0, kSceneBufferByteCount);
 }
 
 void Scene9120::drawTimedOverlayChunk(uint32 baseOffset) {
-	if (baseOffset + 2 > _resources.arena.size())
+	if (baseOffset + 2 > _resources._arena.size())
 		return;
 
-	const uint16 blockCount = readUint16LE(_resources.arena, baseOffset);
+	const uint16 blockCount = readUint16LE(_resources._arena, baseOffset);
 	uint cursor = baseOffset + 2;
 	for (uint blockIndex = 0; blockIndex < blockCount; ++blockIndex) {
-		if (cursor + 6 > _resources.arena.size())
+		if (cursor + 6 > _resources._arena.size())
 			return;
 
-		const uint32 packedDestination = readUint32LE(_resources.arena, cursor);
-		const uint16 size = readUint16LE(_resources.arena, cursor + 4);
+		const uint32 packedDestination = readUint32LE(_resources._arena, cursor);
+		const uint16 size = readUint16LE(_resources._arena, cursor + 4);
 		cursor += 6;
 
-		if (cursor + size > _resources.arena.size())
+		if (cursor + size > _resources._arena.size())
 			return;
 
 		const uint32 destinationOffset = ((packedDestination >> 16) + _yOffset) * HollywoodEngine::kSceneBufferWidth +
 			(packedDestination & 0xffff) + 0x2800;
 		if (destinationOffset + size <= _sceneFramebuffer.size())
-			memcpy(_sceneFramebuffer.data() + destinationOffset, _resources.arena.data() + cursor, size);
+			memcpy(_sceneFramebuffer.data() + destinationOffset, _resources._arena.data() + cursor, size);
 
 		cursor += size;
 	}

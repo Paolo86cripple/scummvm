@@ -23,50 +23,34 @@
 #define HOLLYWOOD_SCENES_INTRO_SCENE9130_H
 
 #include "hollywood/music.h"
-#include "hollywood/scenes/intro/intro_resource_set.h"
-#include "hollywood/scenes/intro/intro_scene.h"
-#include "hollywood/scenes/intro/intro_text.h"
+#include "hollywood/scenes/presentation_scene.h"
+#include "hollywood/scenes/scene_text_store.h"
 
 namespace Hollywood {
 
 class HollywoodEngine;
 
-class Scene9130 : public IntroSceneBase {
+class Scene9130 : public PresentationScene {
 public:
 	Scene9130(HollywoodEngine *vm);
 
 	bool play();
 
 private:
-	struct SubtitleOverlay {
-		bool visible;
-		byte colorIndex;
-		uint16 centerX;
-		uint16 topY;
-		Common::Array<Common::String> lines;
-	};
-
 	bool load();
-	bool loadChunk(uint index, Common::Array<byte> &destination, uint fixedSize);
-	bool loadChunk(uint index, IndexedSurfaceBuffer &destination, uint fixedSize);
-	bool loadArenaChunk(uint index);
 	void runClipAndDialogue();
 	void drawClipFrame(byte frameIndex);
 	void maybeStartNextSpeechLine();
 	bool prepareSpeechLine(byte frameIndex);
 	bool startCurrentSpeechSegment();
-	void clearSubtitle();
-	void drawFrameOverlays() override;
-	void wrapSubtitleText(const Common::String &text, uint16 anchorSceneX, Common::Array<Common::String> &lines) const;
-	uint subtitleTextWidth(const Common::String &text) const;
+	void presentAnimationFrame() override;
+	bool waitForAnimationFrame(uint32 millis, bool allowSkip) override;
 	void stopAudio() override;
 
-	IntroResourceSet _resources;
 	MusicPlayer *_music;
 	SpeechPlayer _speech;
-	IntroTextStore _text;
+	SceneTextStore _text;
 	Common::Array<byte> _paletteResource;
-	SubtitleOverlay _subtitle;
 	uint16 _activeTextRecordId;
 	uint16 _activeVoiceSampleId;
 	byte _activeContinuationCount;
@@ -74,6 +58,7 @@ private:
 	byte _activeSpeechStyleIndex;
 	bool _activeSpeechCue;
 	byte _nextSpeechFrameIndex;
+	byte _clipFrameIndex;
 };
 
 } // End of namespace Hollywood

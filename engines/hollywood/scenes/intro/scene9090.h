@@ -26,15 +26,15 @@
 
 #include "hollywood/gameplay/actor_renderer.h"
 #include "hollywood/music.h"
-#include "hollywood/scenes/intro/intro_resource_set.h"
-#include "hollywood/scenes/intro/intro_scene.h"
-#include "hollywood/scenes/intro/intro_text.h"
+#include "hollywood/scenes/presentation_scene.h"
+#include "hollywood/scenes/scene_text_store.h"
+#include "hollywood/scenes/speech_overlay.h"
 
 namespace Hollywood {
 
 class HollywoodEngine;
 
-class Scene9090 : public IntroSceneBase {
+class Scene9090 : public PresentationScene {
 public:
 	Scene9090(HollywoodEngine *vm);
 
@@ -54,18 +54,7 @@ private:
 		Common::Array<ActorSpeechDescriptor> descriptors;
 	};
 
-	struct SubtitleOverlay {
-		bool visible;
-		byte colorIndex;
-		uint16 centerX;
-		uint16 topY;
-		Common::Array<Common::String> lines;
-	};
-
 	bool load();
-	bool loadChunk(uint index, Common::Array<byte> &destination, uint fixedSize);
-	bool loadChunk(uint index, IndexedSurfaceBuffer &destination, uint fixedSize);
-	bool loadArenaChunk(uint index);
 	bool loadActorResources();
 	void initializeOfficeState();
 	void composeFrame();
@@ -81,6 +70,10 @@ private:
 	void animateDeskFrames(byte firstFrame, byte lastFrame);
 	void setInsetVariant(byte variant);
 	void animateSecondaryTurn(byte facing);
+	bool playClockedCompositeRange(byte &targetFrame, byte firstFrame,
+		byte lastFrame, uint32 frameMillis);
+	void presentAnimationFrame() override;
+	bool waitForAnimationFrame(uint32 millis, bool allowSkip) override;
 	void runSpeechLine(byte stepIndex);
 	void runConcurrentSpeechLines(byte firstStepIndex, byte secondStepIndex);
 	void runSpeechSteps(const byte *stepIndices, uint stepCount);
@@ -88,32 +81,26 @@ private:
 		bool secondarySpeaking, bool insetSpeaking);
 	void advanceClock(uint32 deltaMillis);
 	byte nextFrameExcluding(byte maximumFrame, byte previousFrame);
-	void beginSubtitle(SubtitleOverlay &subtitle, uint16 textRecordId, byte colorIndex,
+	void beginSubtitle(SpeechOverlay &subtitle, uint16 textRecordId, byte colorIndex,
 		uint16 anchorX, uint16 anchorY, bool secondaryActor);
-	void calculateSubtitleBounds(SubtitleOverlay &subtitle, int anchorX, int anchorY,
-		bool secondaryActor) const;
 	void clearSubtitles();
 	void drawFrameOverlays() override;
-	void drawSubtitle(const SubtitleOverlay &subtitle);
-	void wrapSubtitleText(const Common::String &text, uint16 anchorSceneX, Common::Array<Common::String> &lines) const;
-	uint subtitleTextWidth(const Common::String &text) const;
 	void stopAudio() override;
 
-	IntroResourceSet _resources;
 	MusicPlayer *_music;
 	SpeechPlayer _primarySpeech;
 	SpeechPlayer _secondarySpeech;
 	SoundBank0Player _clockSound;
 	SoundBank0Player _ambientSound;
-	IntroTextStore _text;
+	SceneTextStore _text;
 	Common::RandomSource _random;
 	Common::Array<byte> _paletteResource;
 	Common::Array<byte> _presentationPaletteRemapTable;
 	IndexedSurfaceBuffer _baseFramebuffer;
 	ActorSpriteBank _secondaryActorBank;
 	ActorSpeechBank _secondarySpeechBank;
-	SubtitleOverlay _primarySubtitle;
-	SubtitleOverlay _secondarySubtitle;
+	SpeechOverlay _primarySubtitle;
+	SpeechOverlay _secondarySubtitle;
 	byte _deskFrame;
 	byte _deskFacingMode;
 	byte _insetFrame;
@@ -129,6 +116,7 @@ private:
 	uint32 _secondaryFrameAccumulator;
 	uint32 _clockAccumulator;
 	bool _secondarySpeechVisible;
+	bool _advanceClockDuringAnimation;
 };
 
 } // End of namespace Hollywood

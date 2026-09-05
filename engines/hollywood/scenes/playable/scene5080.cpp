@@ -19,11 +19,10 @@
  *
  */
 
-#include "hollywood/scenes/playable/scene5080.h"
-
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/graphics.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/scenes/playable/scene5080.h"
 
 namespace Hollywood {
 
@@ -40,25 +39,14 @@ const uint kScene5080WardrobeDescriptorCount = 6;
 const byte kScene5080KeyInventoryItem = 0x4b;
 const byte kScene5080BookInventoryItem = 0x51;
 const byte kScene5080BookSourceItem = 10;
+const byte kScene5080StairSceneItem = 7;
 const byte kScene5080StairDoorSceneItem = 8;
-
-enum {
-	kScene5080MineCartArrivalHook = 1
-};
-
-const byte kScene5080AmbientSoundVolumes[] = {
-	10, 10, 10, 2, 10, 10, 10, 100
-};
-
-const byte kScene5080BookPickupFrameMap[] = {
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
-};
 
 const byte kScene5080WardrobeFrameMap[] = {
 	0, 1, 2, 3, 4, 5, 4, 3, 4, 5, 4, 3, 4, 5, 4, 3, 2, 1, 0
 };
 
-static PlayableSceneConfig scene5080Config() {
+PlayableSceneConfig scene5080Config() {
 	PlayableSceneConfig config(5080,
 		SceneResourceLayout(5, 5, 8),
 		SceneViewport(kScene5080ViewportXOffset, kScene5080ViewportXOffset, kScene5080ViewportXOffset),
@@ -68,6 +56,7 @@ static PlayableSceneConfig scene5080Config() {
 	config.setActorPathStepDeltas(kActorPathStepDeltaTableSet5A);
 	config.walkablePaletteMaxRegion = 20;
 	config.useActorDepthTest = true;
+	config.entrySequenceOwnsFirstPresentation = true;
 	return config;
 }
 
@@ -117,22 +106,11 @@ void Scene5080::initializeCustomPreviewState() {
 	_activeActorDrawOrderMode = paletteRegionAt(_activeActorWorldX, _activeActorWorldY);
 }
 
-void Scene5080::drawCustomComposite(bool drawActiveActor, byte activeFacing, byte activeCel, int activeWorldX, int activeWorldY,
-		bool drawSecondaryActor, byte secondaryFacing, byte secondaryFrame, int secondaryWorldX, int secondaryWorldY,
-		byte actorDrawOrderMode) {
-	(void)actorDrawOrderMode;
-	if (drawActiveActor || drawSecondaryActor)
-		updateSceneActorDepthAndPalette(activeFacing, activeWorldX, activeWorldY);
-
-	copyBaseFramebufferToSceneFramebuffer();
-	drawActiveAndSecondaryActorFrames(drawActiveActor, activeFacing, activeCel, activeWorldX, activeWorldY,
-		drawSecondaryActor, secondaryFacing, secondaryFrame, secondaryWorldX, secondaryWorldY, -1);
-	drawActionOverlayLayer();
-	drawLayerStack(_sceneLayers, kSceneAnimationInFrontOfActors);
-}
-
-bool Scene5080::shouldPresentPreviewBeforeEntrySequence() const {
-	return false;
+void Scene5080::prepareCustomComposite(bool drawActors, byte activeFacing,
+		int activeWorldX, int activeWorldY, byte actorDrawOrderMode) {
+	(void)activeFacing;
+	if (drawActors)
+		updateSceneActorDepthAndPalette(actorDrawOrderMode, activeWorldX, activeWorldY);
 }
 
 void Scene5080::runCustomEntrySequence() {
@@ -165,14 +143,17 @@ void Scene5080::advanceCustomGameplayLoop(uint32 delta) {
 
 bool Scene5080::dispatchCustomSceneAction(uint16 handlerId) {
 	switch (handlerId) {
+	case 183: // Mirar libro (look at book): use Karl's book description.
+		beginStaticSecondarySpeechLine(0xaa, 0);
+		return true;
 	case 301: // Usar vagoneta (use mine cart): return to the switch room.
 		runExitToMineSwitches();
 		return true;
 	case 302: // Coger libro (take book): play the pickup and grant Karl's book.
 		runBookPickup();
 		return true;
-	case 303: // Unreferenced original fallback: a random generic failure remark.
-		beginStaticSecondarySpeechLine(1, (byte)_random.getRandomNumber(2));
+	case 303: // Dormant scene-local alias for looking at Karl's book.
+		beginStaticSecondarySpeechLine(0xaa, 0);
 		return true;
 	case 304: // Mirar armario (look at wardrobe): Karl keeps his belongings here.
 		beginSecondarySpeechLine(2, 0);
@@ -332,6 +313,9 @@ bool Scene5080::applyCustomSceneStateToHotspotsAndPatches(byte selector) {
 
 	rebuildWalkableMaskForCurrentSide();
 	_hotspots.load(_paletteMask, _metadata, _stage003SmallRows);
+	if (state.scene5080AlternatePassageSide)
+		_hotspots.addFallbackRectHotspot(kScene5080StairSceneItem,
+			Common::Rect(0x182, 0x074, 0x1c8, 0x0c5));
 
 	if (state.scene5080PassageUnlocked) {
 		_hotspots.setVerbMovementModeByGlobalRecordIndex(0x44, 0);
@@ -358,37 +342,16 @@ bool Scene5080::applyCustomSceneStateToHotspotsAndPatches(byte selector) {
 		approachPoint.x = 0x286;
 		approachPoint.y = 0x13a;
 	}
-	_hotspots.setActionTarget(7, interactionPoint, approachPoint);
+	_hotspots.setActionTarget(kScene5080StairSceneItem, interactionPoint, approachPoint);
 	return true;
 }
 
 AmbientAudioProfile Scene5080::ambientAudioProfile() const {
-	return createRandomAmbientAudioProfile(0x0d, 8, 10, 25, 0x0b, 5, 100, 50);
-}
-
-byte Scene5080::ambientSoundCueVolume(byte cueId, byte defaultVolumePercent) const {
-	if (cueId >= 0x0d && cueId <= 0x14)
-		return kScene5080AmbientSoundVolumes[cueId - 0x0d];
-	return defaultVolumePercent;
-}
-
-bool Scene5080::shouldRunExitSideEffectsAfterLoop() const {
-	return true;
+	return createMineAmbientAudioProfile();
 }
 
 void Scene5080::runExitSideEffectsAfterLoop() {
 	fadePaletteToBlack();
-}
-
-void Scene5080::handleAnimationFrameHook(byte hookId, uint frame) {
-	(void)frame;
-	if (hookId != kScene5080MineCartArrivalHook) {
-		PlayableScene::handleAnimationFrameHook(hookId, frame);
-		return;
-	}
-
-	_mineCartRumbleActive = false;
-	_soundBank0.playSample(0x16, 100);
 }
 
 void Scene5080::runMineCartEntryClip() {
@@ -404,7 +367,9 @@ void Scene5080::runMineCartEntryClip() {
 	mineCartLayer.visible = true;
 	mineCartLayer.reset(0);
 	drawPlayableComposite();
-	if (fadePaletteFromBlack()) {
+	BlockingSequence sequence(*this);
+	sequence.fadeFromBlack();
+	if (!sequence.completed()) {
 		mineCartLayer.visible = false;
 		_hideActiveActor = previousHideActiveActor;
 		return;
@@ -412,12 +377,13 @@ void Scene5080::runMineCartEntryClip() {
 
 	ensureAmbientSoundCuePlaying(1, 0x0c, 10);
 	_mineCartRumbleActive = true;
-	_soundBank0.playSample(0x18, 100);
-	playAndPresentAnimationFrames(mineCartLayer,
-		AnimationFrameRange(0, kScene5080EntryDescriptorCount - 1, kScene5080FrameMillis)
-			.hookAt(0x3c, kScene5080MineCartArrivalHook)
-			.unskippable()
-			.noFinalFrameDelay());
+	sequence.sound(0x18)
+		.presentedLayerFrames(mineCartLayer,
+			AnimationFrameRange(0, kScene5080EntryDescriptorCount - 1, kScene5080FrameMillis)
+				.commitAt(0x3c, _mineCartRumbleActive, false)
+				.soundAt(0x3c, 0x16)
+				.unskippable()
+				.noFinalFrameDelay());
 
 	_mineCartRumbleActive = false;
 	mineCartLayer.visible = false;
@@ -425,9 +391,10 @@ void Scene5080::runMineCartEntryClip() {
 }
 
 void Scene5080::runExitToMineSwitches() {
-	walkActiveActorTo(0x348, 0x15e, 0xff, 0, false);
-	_soundBank0.playSample(0x15, 100);
-	_vm->gameState().mainFlowStateId = kScene5010ReturnState;
+	BlockingSequence(*this)
+		.actorPath(SceneActorPose(0x348, 0x15e, 0xff))
+		.sound(0x15)
+		.commit(_vm->gameState().mainFlowStateId, kScene5010ReturnState);
 }
 
 void Scene5080::runBookPickup() {
@@ -436,23 +403,24 @@ void Scene5080::runBookPickup() {
 		return;
 
 	beginStaticSecondarySpeechLine(0x14, (byte)_random.getRandomNumber(4));
-	runActorReplacement(ActionOverlaySpec(7, kScene5080BookPickupDescriptorCount,
-		kScene5080BookPickupFrameMap, ARRAYSIZE(kScene5080BookPickupFrameMap), kScene5080FrameMillis)
-		.noFinalFrameDelay()
-		.noRedrawAtEnd());
+	BlockingSequence sequence(*this);
+	sequence.actorReplacement(ActionOverlaySpec(7, kScene5080BookPickupDescriptorCount, kScene5080FrameMillis)
+		.holdFirstFrame()
+		.noFinalFrameDelay());
 	addInventoryItem(kScene5080BookInventoryItem);
-	_soundBank0.playSample(1, 100);
-	state.scene5080BookTaken = true;
-	applySceneStateToHotspotsAndPatches(3);
+	sequence.sound(1)
+		.commit(state.scene5080BookTaken, true)
+		.framebufferPatch(3);
 	drawPlayableComposite();
 	presentFrame();
 }
 
 void Scene5080::runWardrobeAttempt() {
-	runActorReplacement(ActionOverlaySpec(8, kScene5080WardrobeDescriptorCount,
-		kScene5080WardrobeFrameMap, ARRAYSIZE(kScene5080WardrobeFrameMap), kScene5080FrameMillis)
-		.noFinalFrameDelay());
-	beginSecondarySpeechLine(3, 0);
+	BlockingSequence(*this)
+		.actorReplacement(ActionOverlaySpec(8, kScene5080WardrobeDescriptorCount,
+			kScene5080WardrobeFrameMap, ARRAYSIZE(kScene5080WardrobeFrameMap), kScene5080FrameMillis)
+			.noFinalFrameDelay())
+		.secondarySpeech(3, 0);
 }
 
 void Scene5080::runPassageSideSwitch() {
@@ -468,14 +436,12 @@ void Scene5080::runPassageSideSwitch() {
 	applySceneStateToHotspotsAndPatches(0xff);
 
 	if (state.scene5080AlternatePassageSide) {
-		setActiveActorPose(0x230, 0x157, 4);
-		drawPlayableComposite();
-		presentFrame();
+		setActiveActorPose(0x230, 0x157, 5);
+		walkActiveActorTo(0x230, 0x157, 4, 0, false);
 		walkActiveActorTo(0x166, 0x0d6, 0xff, 0, false);
 	} else {
-		setActiveActorPose(0x258, 0x0fd, 2);
-		drawPlayableComposite();
-		presentFrame();
+		setActiveActorPose(0x258, 0x0fd, 3);
+		walkActiveActorTo(0x258, 0x0fd, 2, 0, false);
 		walkActiveActorTo(0x2b8, 0x188, 0xff, 0, false);
 	}
 }
@@ -534,7 +500,7 @@ void Scene5080::handlePassageUnlock() {
 	if (!state.scene5080PassageUnlocked) {
 		state.scene5080PassageUnlocked = true;
 		applySceneStateToHotspotsAndPatches(1);
-		beginStaticSecondarySpeechLine(8, 0);
+		beginStaticSecondarySpeechLine(_vm->restoredContentEnabled() ? 0x35 : 8, 0);
 		runPassageSideSwitch();
 		return;
 	}
@@ -558,19 +524,20 @@ void Scene5080::rebuildWalkableMaskForCurrentSide() {
 	}
 }
 
-void Scene5080::updateSceneActorDepthAndPalette(byte facing, int worldX, int worldY) {
+void Scene5080::updateSceneActorDepthAndPalette(byte drawOrderMode, int worldX, int worldY) {
 	_drawActorDepthYThresholds = _actorDepthYThresholds;
 	if (_drawActorDepthYThresholds.size() > 2) {
-		const bool sideFacing = facing >= 1 && facing <= 4;
-		_drawActorDepthYThresholds[1] = sideFacing ? 0x01a2 : 0;
-		_drawActorDepthYThresholds[2] = sideFacing ? 0x03e7 : 0x010c;
+		const bool lowerDrawOrder = drawOrderMode >= 1 && drawOrderMode <= 4;
+		_drawActorDepthYThresholds[1] = lowerDrawOrder ? 0x01a2 : 0;
+		_drawActorDepthYThresholds[2] = lowerDrawOrder ? 0x03e7 : 0x010c;
 	}
 	if (_drawActorDepthYThresholds.size() > 4) {
 		_drawActorDepthYThresholds[4] =
-			((facing >= 1 && facing <= 5) || (worldX > 0x178 && worldY < 0x0cf)) ? 0x03e7 : 0;
+			((drawOrderMode >= 1 && drawOrderMode <= 5) ||
+			(worldX > 0x178 && worldY < 0x0cf)) ? 0x03e7 : 0;
 	}
 
-	if (facing != 5 ||
+	if (drawOrderMode != 5 ||
 			_paletteMaskOriginal.size() < kSceneColorToFootstepSoundMap + kScenePaletteMapPageSize ||
 			_paletteMask.size() < kSceneColorToFootstepSoundMap + kScenePaletteMapPageSize)
 		return;

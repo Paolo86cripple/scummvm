@@ -19,23 +19,21 @@
  *
  */
 
-#include "hollywood/gameplay/travel_screen.h"
-
 #include "common/events.h"
 #include "common/path.h"
 #include "common/ptr.h"
 #include "common/system.h"
 #include "common/textconsole.h"
 
+#include "hollywood/hollywood.h"
 #include "hollywood/gameplay/cursor.h"
 #include "hollywood/gameplay/game_state.h"
-#include "hollywood/hollywood.h"
+#include "hollywood/gameplay/travel_screen.h"
 #include "hollywood/resource.h"
 
 namespace Hollywood {
 
 const char *const kTravelScreenArchiveName = "RESOURCE.I04";
-const uint kTravelScreenFramebufferBytes = HollywoodEngine::kSceneBufferWidth * HollywoodEngine::kSceneBufferHeight;
 const uint kTravelScreenPaletteChunk = 0;
 const uint kTravelScreenFramebufferChunk = 1;
 const uint kTravelScreenFirstTileChunk = 2;
@@ -56,6 +54,8 @@ const byte kEgyptChapterId = 2;
 const uint16 kEgyptChapterEntryState = 2000;
 const byte kCastleChapterId = 4;
 const uint16 kCastleChapterEntryState = 4000;
+const byte kAustraliaChapterId = 5;
+const uint16 kAustraliaChapterEntryState = 5000;
 const uint16 kTravelInterludeState = 9140;
 const uint32 kTravelUnlockTransitionMillis = 5000;
 const byte kTravelScreenNormalRamp[] = {
@@ -198,9 +198,14 @@ bool TravelScreen::runSelection(byte currentChapterId, uint16 &selectedStateId) 
 				requestedSlot = slotAtPoint(event.mouse.x, event.mouse.y);
 				break;
 			case Common::EVENT_KEYDOWN:
-				if (event.kbd.keycode == Common::KEYCODE_RETURN ||
-						event.kbd.keycode == Common::KEYCODE_KP_ENTER ||
-						event.kbd.keycode == Common::KEYCODE_SPACE) {
+				if (!event.kbdRepeat && event.kbd.keycode == Common::KEYCODE_ESCAPE) {
+					_vm->cursor()->leaveInteractiveMode();
+					return true;
+				}
+				if (!event.kbdRepeat &&
+						(event.kbd.keycode == Common::KEYCODE_RETURN ||
+						 event.kbd.keycode == Common::KEYCODE_KP_ENTER ||
+						 event.kbd.keycode == Common::KEYCODE_SPACE)) {
 					selectRequested = true;
 					requestedSlot = slotAtPoint(_vm->cursor()->surfaceX(), _vm->cursor()->surfaceY());
 				}
@@ -229,6 +234,12 @@ bool TravelScreen::runSelection(byte currentChapterId, uint16 &selectedStateId) 
 				state.scene2100MummyBranchState = 2;
 				state.scene2010TravelReturnSpeechState = 1;
 				state.scene9140ReturnStateId = kEgyptChapterEntryState;
+				selectedStateId = kTravelInterludeState;
+			} else if (currentChapterId != kAustraliaChapterId &&
+					selectedStateId == kAustraliaChapterEntryState &&
+					state.scene5110SalonTransformState == 2 && state.scene5050TrophyBoxTaken) {
+				state.scene5110SalonTransformState = 3;
+				state.scene9140ReturnStateId = kAustraliaChapterEntryState;
 				selectedStateId = kTravelInterludeState;
 			}
 			_vm->cursor()->leaveInteractiveMode();
@@ -262,10 +273,10 @@ bool TravelScreen::runSelection(byte currentChapterId, uint16 &selectedStateId) 
 bool TravelScreen::load(bool loadSelectionMask) {
 	Common::Array<byte> framebufferChunk;
 	if (!readChunk(kTravelScreenPaletteChunk, _palette, kPaletteSize) ||
-			!readChunk(kTravelScreenFramebufferChunk, framebufferChunk, kTravelScreenFramebufferBytes))
+			!readChunk(kTravelScreenFramebufferChunk, framebufferChunk, kSceneBufferByteCount))
 		return false;
 
-	_framebuffer.resize(kTravelScreenFramebufferBytes);
+	_framebuffer.resize(kSceneBufferByteCount);
 	memcpy(_framebuffer.data(), framebufferChunk.data(), framebufferChunk.size());
 
 	_tilePixels.resize(kTravelScreenTileBytes * kTravelScreenTileChunkCount);
@@ -290,7 +301,7 @@ bool TravelScreen::load(bool loadSelectionMask) {
 
 bool TravelScreen::readChunk(uint index, Common::Array<byte> &destination, uint expectedSize) {
 	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		_vm->resources()->createChunkReadStream(Common::Path(kTravelScreenArchiveName), index));
+		createResourceChunkReadStream(Common::Path(kTravelScreenArchiveName), index));
 	if (!stream) {
 		warning("Failed to open %s chunk %u", kTravelScreenArchiveName, index);
 		return false;
@@ -346,7 +357,7 @@ void TravelScreen::composeUnlockedSlots() {
 }
 
 void TravelScreen::expandSelectionMask() {
-	_selectionMask.resize(kTravelScreenFramebufferBytes);
+	_selectionMask.resize(kSceneBufferByteCount);
 	_selectionMask.clear(kTravelScreenInvalidSlot);
 
 	uint destinationOffset = 0;

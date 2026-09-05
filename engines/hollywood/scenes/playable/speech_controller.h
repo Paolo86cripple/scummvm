@@ -26,11 +26,16 @@
 #include "common/types.h"
 
 #include "hollywood/music.h"
-#include "hollywood/scenes/playable/speech_overlay.h"
+#include "hollywood/scenes/speech_overlay.h"
 
 namespace Hollywood {
 
-// Owns speech playback, subtitles, and actor speech-animation state.
+/**
+ * Owns speech playback, subtitle overlays, and actor speech-animation state.
+ *
+ * PlayableScene supplies elapsed time and draws the result; this helper owns
+ * and mutates the playback state but never presents a frame.
+ */
 class SpeechController {
 public:
 	SpeechController(Common::Language language, bool speechEnabled = true);
@@ -51,18 +56,18 @@ public:
 	void startPrimaryDialogueSpeech(byte animationGroup, byte baseFrame);
 	void stopPrimaryDialogueSpeech(byte invalidPrimaryGroup, byte defaultPrimaryFrame);
 
-	SpeechPlayer player;
-	SpeechOverlay secondaryOverlay;
-	SpeechOverlay primaryOverlay;
-	byte primaryLeftSpeechLastFrame;
-	byte primaryDialogueSpeechLastFrame;
-	byte primaryDialogueSpeechGroup;
-	bool primaryLeftSpeechActive;
-	bool primaryDialogueSpeechActive;
-	uint32 secondaryActorTimerAccumulator;
-	uint32 primaryLeftSpeechTimerAccumulator;
-	uint32 primaryDialogueSpeechTimerAccumulator;
-	byte secondaryActorFrame;
+	SpeechPlayer _player;
+	SpeechOverlay _secondaryOverlay;
+	SpeechOverlay _primaryOverlay;
+	byte _primaryLeftSpeechLastFrame;
+	byte _primaryDialogueSpeechLastFrame;
+	byte _primaryDialogueSpeechGroup;
+	bool _primaryLeftSpeechActive;
+	bool _primaryDialogueSpeechActive;
+	uint32 _secondaryActorTimerAccumulator;
+	uint32 _primaryLeftSpeechTimerAccumulator;
+	uint32 _primaryDialogueSpeechTimerAccumulator;
+	byte _secondaryActorFrame;
 };
 
 } // End of namespace Hollywood

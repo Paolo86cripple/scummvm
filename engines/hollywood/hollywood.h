@@ -19,14 +19,14 @@
  *
  */
 
-#ifndef HOLLYWOOD_HOLLYWOOD_H
-#define HOLLYWOOD_HOLLYWOOD_H
+#ifndef HOLLYWOOD_H
+#define HOLLYWOOD_H
 
 #include "common/language.h"
 #include "common/platform.h"
-
 #include "engines/engine.h"
 #include "graphics/surface.h"
+
 #include "hollywood/gameplay/cursor.h"
 #include "hollywood/gameplay/game_state.h"
 #include "hollywood/music.h"
@@ -39,14 +39,6 @@ class Serializer;
 
 namespace Hollywood {
 
-enum HollywoodDebugChannels {
-	kDebugGeneral = 1,
-	kDebugResources,
-	kDebugScene,
-	kDebugPath
-};
-
-class ResourceManager;
 class HollywoodFont;
 
 class HollywoodEngine : public Engine {
@@ -69,9 +61,9 @@ public:
 	Common::Language getLanguage() const;
 	Common::Platform getPlatform() const;
 	bool isDemo() const;
+	bool isFirstEdition() const;
 	bool hasSpeechData() const;
 
-	ResourceManager *resources() const { return _resources; }
 	HollywoodFont *font() const { return _font; }
 	HollywoodCursor *cursor() { return &_cursor; }
 	MusicPlayer *introMusic() { return &_introMusic; }
@@ -99,7 +91,6 @@ public:
 		kScreenHeight = 480,
 		kSceneBufferWidth = 1024,
 		kSceneBufferHeight = 480,
-		kResourceChunkCount = 40,
 		kSceneItemCount = 21
 	};
 
@@ -108,7 +99,6 @@ private:
 	void normalizeLoadedGameState();
 
 	const ADGameDescription *_gameDescription;
-	ResourceManager *_resources;
 	HollywoodFont *_font;
 	HollywoodCursor _cursor;
 	MusicPlayer _introMusic;
@@ -124,4 +114,4 @@ private:
 
 } // End of namespace Hollywood
 
-#endif // HOLLYWOOD_HOLLYWOOD_H
+#endif // HOLLYWOOD_H
