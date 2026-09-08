@@ -19,28 +19,22 @@
  *
  */
 
-#ifndef FREESCAPE_LANGUAGE_EXECUTION_3DCK16_H
-#define FREESCAPE_LANGUAGE_EXECUTION_3DCK16_H
+#ifndef FREESCAPE_SOUND_3DCK_H
+#define FREESCAPE_SOUND_3DCK_H
 
-#include "common/hashmap.h"
-#include "freescape/language/execution.h"
+#include "common/array.h"
+
+namespace Audio {
+class Mixer;
+}
 
 namespace Freescape {
 
-struct FCLKit16Loop {
-	uint32 start = 0;
-	uint16 remaining = 0;
-};
+class Sound;
 
-// Each condition or animator keeps its own continuation and predicate.
-struct FCLKit16ExecutionState : FCLExecutionFrame {
-	const FCLInstructionVector *source = nullptr;
-	uint32 restart = 0;
-	uint32 resumeTick = 0;
-	Common::HashMap<uint32, FCLKit16Loop> loops;
-	bool running = false;
-	FCLPredicateState predicate = FCLPredicateState(true);
-};
+static const uint32 kKitPITClock = 1193182;
+
+Sound *createKitAdLibSound(Audio::Mixer *mixer, const Common::Array<byte> &data);
 
 } // namespace Freescape
 
