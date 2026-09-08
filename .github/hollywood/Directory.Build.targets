@@ -3,6 +3,8 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <!-- create_project uses an obsolete vcpkg variable for this subdirectory. -->
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)vcpkg_installed\$(VcpkgTriplet)\include\SDL2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
 </Project>

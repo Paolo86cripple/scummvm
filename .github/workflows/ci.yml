@@ -22,7 +22,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -35,7 +35,8 @@ jobs:
             --enable-release --disable-debug --enable-zlib --enable-png \
             --disable-mad --disable-fribidi --disable-ogg --disable-vorbis --disable-flac \
             --disable-mpeg2 --disable-theoradec --disable-freetype2 --disable-jpeg --disable-faad --disable-a52 \
-            --disable-libcurl --disable-sdlnet --disable-tts --disable-libunity --disable-gtk
+            --disable-libcurl --disable-sdlnet --disable-tts --disable-libunity --disable-gtk \
+            --disable-alsa --disable-sndio
           test "$(sed -n 's/^ENABLE_\([A-Z0-9_]*\) = .*PLUGIN$/\1/p' config.mk)" = HOLLYWOOD
           ! grep -q '^DETECTION_FULL = 1' config.mk
       - name: Build ScummVM
@@ -49,7 +50,7 @@ jobs:
           cp LICENSES/* package/licenses/
           tar -czf scummvm-hollywood-linux-x86_64.tar.gz -C package .
       - name: Upload Linux download
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: scummvm-hollywood-linux-x86_64
           path: scummvm-hollywood-linux-x86_64.tar.gz
@@ -67,9 +68,9 @@ jobs:
       VCPKG_DEFAULT_TRIPLET: x86-windows-static
       VCPKG_DISABLE_METRICS: 1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Checkout pinned vcpkg
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: microsoft/vcpkg
           ref: 9e593bb18ea69cc5095e012465dcd675a822ed0d # 2026.07.29
@@ -105,7 +106,7 @@ jobs:
           }
       - name: Install static libraries
         run: ./vcpkg/vcpkg.exe install --triplet x86-windows-static --x-manifest-root=build-scummvm
-      - uses: microsoft/setup-msbuild@v2
+      - uses: microsoft/setup-msbuild@v3
         with:
           vs-version: '[17.0,18.0)'
       - name: Build ScummVM
@@ -126,7 +127,7 @@ jobs:
             Copy-Item "build-scummvm/vcpkg_installed/x86-windows-static/share/$port/copyright" "package/licenses/$port.txt"
           }
       - name: Upload Win32 download
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: scummvm-hollywood-win32
           path: package/
