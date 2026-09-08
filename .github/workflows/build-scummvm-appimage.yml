@@ -50,7 +50,7 @@ jobs:
     if: needs.check-updates.outputs.should_build == 'true'
     runs-on: ubuntu-22.04
     container:
-      image: debian:bullseye
+      image: debian:bookworm
     strategy:
       fail-fast: false
       matrix:
@@ -62,9 +62,15 @@ jobs:
             cflags: "-O3 -msse4.2 -mpopcnt -mavx -mavx2 -mfma -mbmi -mbmi2 -mmovbe"
             configure_extra: "--enable-ext-sse2 --enable-ext-avx2 --disable-debug"
     steps:
-      - name: Abilita repo contrib/non-free
+      - name: Prepara repository APT Bookworm
+        shell: bash
         run: |
-          sed -i 's/main$/main contrib non-free/' /etc/apt/sources.list
+          set -euo pipefail
+          if [ -f /etc/apt/sources.list.d/debian.sources ]; then
+            sed -i 's/^Components: main$/Components: main contrib non-free non-free-firmware/' /etc/apt/sources.list.d/debian.sources
+          elif [ -f /etc/apt/sources.list ]; then
+            sed -Ei 's/^(deb .* main)$/\1 contrib non-free non-free-firmware/' /etc/apt/sources.list
+          fi
           apt-get update
 
       - name: Installa dipendenze di build
@@ -132,7 +138,6 @@ jobs:
           if [ -f "dists/scummvm.desktop" ]; then
             DESKTOP_FILE="dists/scummvm.desktop"
           else
-            # Fallback: cerca un .desktop valido escludendo varianti per handheld/console
             DESKTOP_FILE=$(find dists -maxdepth 1 -iname "*.desktop" | head -n1)
           fi
           ICON_FILE=$(find icons dists gui -iname "scummvm.svg" -o -iname "scummvm.png" 2>/dev/null | head -n1)
@@ -154,15 +159,76 @@ jobs:
             --output appimage
           mv ScummVM*.AppImage "ScummVM-x86_64-${{ matrix.variant }}-${{ needs.check-updates.outputs.short_sha }}.AppImage"
 
+      - name: Verifica e aggiorna compatibilità runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          APPIMAGE=$(find "$GITHUB_WORKSPACE" -maxdepth 1 -type f -name "ScummVM-x86_64-${{ matrix.variant }}-*.AppImage" -print -quit)
+          test -n "$APPIMAGE"
+
+          . /etc/os-release
+          BUILD_BASELINE="${PRETTY_NAME:-Debian Bookworm}"
+          BUILDER_GLIBC=$(getconf GNU_LIBC_VERSION | awk '{print $2}')
+
+          EXTRACT_DIR="$RUNNER_TEMP/scummvm-appimage-${{ matrix.variant }}"
+          rm -rf "$EXTRACT_DIR"
+          mkdir -p "$EXTRACT_DIR"
+          (
+            cd "$EXTRACT_DIR"
+            "$APPIMAGE" --appimage-extract >/dev/null
+          )
+
+          MAX_GLIBC=$(
+            find "$EXTRACT_DIR/squashfs-root" -type f -print0 |
+            while IFS= read -r -d '' candidate; do
+              if file -b "$candidate" 2>/dev/null | grep -q '^ELF'; then
+                readelf --version-info "$candidate" 2>/dev/null || true
+              fi
+            done |
+            grep -oE 'GLIBC_[0-9]+(\.[0-9]+)*' |
+            sed 's/^GLIBC_//' |
+            sort -V |
+            tail -n1 || true
+          )
+
+          if [ -z "$MAX_GLIBC" ]; then
+            echo "::error::Impossibile determinare la GLIBC minima richiesta dall'AppImage"
+            exit 1
+          fi
+
+          if ! dpkg --compare-versions "$MAX_GLIBC" le "$BUILDER_GLIBC"; then
+            echo "::error::L'AppImage richiede GLIBC $MAX_GLIBC, più nuova della baseline del builder $BUILDER_GLIBC"
+            exit 1
+          fi
+
+          REPORT="$GITHUB_WORKSPACE/ScummVM-x86_64-${{ matrix.variant }}-${{ needs.check-updates.outputs.short_sha }}-compatibility.txt"
+          {
+            echo "ScummVM AppImage compatibility report"
+            echo "Generated automatically by GitHub Actions"
+            echo
+            echo "Variant: ${{ matrix.variant }}"
+            echo "Source commit: ${{ needs.check-updates.outputs.upstream_sha }}"
+            echo "Build baseline: $BUILD_BASELINE"
+            echo "Builder glibc: $BUILDER_GLIBC"
+            echo "Minimum GLIBC symbol version required by final AppImage payload: $MAX_GLIBC"
+            echo "Compiler CPU flags: ${{ matrix.cflags }}"
+            echo
+            echo "This file is regenerated on every build; compatibility values are not maintained manually."
+          } > "$REPORT"
+
+          cat "$REPORT"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: appimage-${{ matrix.variant }}
-          path: ScummVM-*.AppImage
+          path: |
+            ScummVM-*.AppImage
+            ScummVM-*-compatibility.txt
 
   # ---------------------------------------------------------------------
-  # 3) Pacchetto Arch/CachyOS (.pkg.tar.zst), mirato AVX2 dato che CachyOS
-  #    assume già hardware moderno (coerente coi repo v3 di CachyOS stessi)
+  # 3) Pacchetto Arch/CachyOS (.pkg.tar.zst), mirato AVX2
   # ---------------------------------------------------------------------
   build-arch-pkg:
     needs: check-updates
@@ -231,8 +297,11 @@ jobs:
             Tutti i motori, release mode, shader OpenGL abilitati.
 
             Varianti AppImage:
-            - generic: compatibile con qualsiasi CPU x86_64 (baseline SSE4.2)
-            - avx2: ottimizzato per CPU moderne (AVX2 + FMA)
+            - generic: baseline CPU SSE4.2 + POPCNT
+            - avx2: ottimizzato per CPU moderne (AVX2 + FMA + BMI/BMI2)
+
+            La compatibilità runtime Linux viene rilevata automaticamente su ogni build dal payload finale dell'AppImage.
+            I file *-compatibility.txt pubblicati nella release riportano la GLIBC minima realmente richiesta e la baseline del builder.
 
             Pacchetto Arch/CachyOS: ottimizzato AVX2.
 
