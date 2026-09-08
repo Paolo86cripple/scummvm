@@ -115,6 +115,7 @@ jobs:
           $buildArgs = @(
             "scummvm.sln", "/m:2", "/v:minimal", "/p:Configuration=Release", "/p:Platform=Win32",
             "/p:PreferredToolArchitecture=x64", "/p:VcpkgTriplet=x86-windows-static",
+            "/p:VcpkgInstalledDir=$env:GITHUB_WORKSPACE\build-scummvm\vcpkg_installed\",
             "/p:VcpkgEnableManifest=true", "/p:VcpkgManifestInstall=false"
           )
           msbuild @buildArgs
