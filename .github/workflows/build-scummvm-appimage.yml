@@ -180,12 +180,15 @@ jobs:
           )
 
           MAX_GLIBC=$(
-            find "$EXTRACT_DIR/squashfs-root" -type f -print0 |
-            while IFS= read -r -d '' candidate; do
-              if file -b "$candidate" 2>/dev/null | grep -q '^ELF'; then
-                readelf --version-info "$candidate" 2>/dev/null || true
-              fi
-            done |
+            {
+              readelf --version-info "$APPIMAGE" 2>/dev/null || true
+              find "$EXTRACT_DIR/squashfs-root" -type f -print0 |
+              while IFS= read -r -d '' candidate; do
+                if file -b "$candidate" 2>/dev/null | grep -q '^ELF'; then
+                  readelf --version-info "$candidate" 2>/dev/null || true
+                fi
+              done
+            } |
             grep -oE 'GLIBC_[0-9]+(\.[0-9]+)*' |
             sed 's/^GLIBC_//' |
             sort -V |
@@ -218,6 +221,14 @@ jobs:
           } > "$REPORT"
 
           cat "$REPORT"
+
+          {
+            printf '### AppImage compatibility — %s\n' '${{ matrix.variant }}'
+            printf -- '- Build baseline: `%s`\n' "$BUILD_BASELINE"
+            printf -- '- Builder glibc: `%s`\n' "$BUILDER_GLIBC"
+            printf -- '- Minimum required GLIBC: `%s`\n' "$MAX_GLIBC"
+            printf -- '- CPU flags: `%s`\n' '${{ matrix.cflags }}'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -287,25 +298,57 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Genera descrizione release con compatibilità rilevata
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          REPORTS=(dist/ScummVM-*-compatibility.txt)
+
+          if [ ${#REPORTS[@]} -eq 0 ]; then
+            echo "::error::Nessun report di compatibilità trovato"
+            exit 1
+          fi
+
+          {
+            echo "Build automatica di ScummVM da upstream master."
+            echo "Tutti i motori, release mode, shader OpenGL abilitati."
+            echo
+            echo "### Compatibilità AppImage rilevata automaticamente"
+            echo
+
+            for REPORT in "${REPORTS[@]}"; do
+              VARIANT=$(awk -F': ' '$1 == "Variant" {print $2}' "$REPORT")
+              BUILD_BASELINE=$(sed -n 's/^Build baseline: //p' "$REPORT")
+              MIN_GLIBC=$(sed -n 's/^Minimum GLIBC symbol version required by final AppImage payload: //p' "$REPORT")
+              CPU_FLAGS=$(sed -n 's/^Compiler CPU flags: //p' "$REPORT")
+
+              if [ -z "$VARIANT" ] || [ -z "$BUILD_BASELINE" ] || [ -z "$MIN_GLIBC" ] || [ -z "$CPU_FLAGS" ]; then
+                echo "::error::Report di compatibilità incompleto: $REPORT"
+                exit 1
+              fi
+
+              printf -- '- **%s**: GLIBC >= `%s`; builder `%s`; CPU flags `%s`\n' \
+                "$VARIANT" "$MIN_GLIBC" "$BUILD_BASELINE" "$CPU_FLAGS"
+            done
+
+            echo
+            echo "I valori sopra sono rigenerati dal payload finale degli AppImage a ogni build: non sono mantenuti manualmente."
+            echo
+            echo "Pacchetto Arch/CachyOS: ottimizzato AVX2."
+            echo
+            echo "Commit sorgente: ${{ needs.check-updates.outputs.upstream_sha }}"
+          } > release-body.md
+
+          cat release-body.md
+          cat release-body.md >> "$GITHUB_STEP_SUMMARY"
+
       - name: Pubblica/aggiorna release "continuous"
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ env.RELEASE_TAG }}
           name: "ScummVM (build automatica)"
-          body: |
-            Build automatica di ScummVM da upstream master.
-            Tutti i motori, release mode, shader OpenGL abilitati.
-
-            Varianti AppImage:
-            - generic: baseline CPU SSE4.2 + POPCNT
-            - avx2: ottimizzato per CPU moderne (AVX2 + FMA + BMI/BMI2)
-
-            La compatibilità runtime Linux viene rilevata automaticamente su ogni build dal payload finale dell'AppImage.
-            I file *-compatibility.txt pubblicati nella release riportano la GLIBC minima realmente richiesta e la baseline del builder.
-
-            Pacchetto Arch/CachyOS: ottimizzato AVX2.
-
-            Commit sorgente: ${{ needs.check-updates.outputs.upstream_sha }}
+          bodyFile: release-body.md
           allowUpdates: true
           removeArtifacts: true
           artifacts: "dist/*"
