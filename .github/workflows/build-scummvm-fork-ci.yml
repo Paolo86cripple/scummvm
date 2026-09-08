@@ -139,12 +139,15 @@ jobs:
           )
 
           MAX_GLIBC=$(
-            find "$EXTRACT_DIR/squashfs-root" -type f -print0 |
-            while IFS= read -r -d '' candidate; do
-              if file -b "$candidate" 2>/dev/null | grep -q '^ELF'; then
-                readelf --version-info "$candidate" 2>/dev/null || true
-              fi
-            done |
+            {
+              readelf --version-info "$APPIMAGE" 2>/dev/null || true
+              find "$EXTRACT_DIR/squashfs-root" -type f -print0 |
+              while IFS= read -r -d '' candidate; do
+                if file -b "$candidate" 2>/dev/null | grep -q '^ELF'; then
+                  readelf --version-info "$candidate" 2>/dev/null || true
+                fi
+              done
+            } |
             grep -oE 'GLIBC_[0-9]+(\.[0-9]+)*' |
             sed 's/^GLIBC_//' |
             sort -V |
@@ -177,6 +180,14 @@ jobs:
           } > "$REPORT"
 
           cat "$REPORT"
+
+          {
+            printf '### AppImage compatibility — %s\n' '${{ matrix.variant }}'
+            printf -- '- Build baseline: `%s`\n' "$BUILD_BASELINE"
+            printf -- '- Builder glibc: `%s`\n' "$BUILDER_GLIBC"
+            printf -- '- Minimum required GLIBC: `%s`\n' "$MAX_GLIBC"
+            printf -- '- CPU flags: `%s`\n' '${{ matrix.cflags }}'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
