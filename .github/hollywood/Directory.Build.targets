@@ -1,0 +1,8 @@
+<Project>
+  <!-- Match x86-windows-static so the executable needs no VC runtime DLLs. -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>
