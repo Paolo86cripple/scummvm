@@ -682,7 +682,8 @@ public:
 	Common::RandomSource *_rnd;
 
 	// C64 specifics
-	byte *decompressC64RLE(byte *buffer, int *size, byte marker);
+	Common::Array<byte> unpackC64Snapshot(const Common::Array<byte> &packed);
+	Common::Array<byte> unpackC64Snapshot(Common::SeekableReadStream *file, const Common::Path &continuation);
 	byte *_extraBuffer;
 };
 
@@ -700,6 +701,7 @@ enum GameReleaseFlags {
 	GF_ATARI_BUDGET = (1 << 10),
 	GF_C64_TAPE = (1 << 11),
 	GF_C64_DISC = (1 << 12),
+	GF_C64_PACKED = (1 << 13),
 };
 
 extern FreescapeEngine *g_freescape;
