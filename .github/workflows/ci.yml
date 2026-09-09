@@ -127,10 +127,58 @@ jobs:
           foreach ($port in "sdl2", "zlib", "libpng") {
             Copy-Item "build-scummvm/vcpkg_installed/x86-windows-static/share/$port/copyright" "package/licenses/$port.txt"
           }
+          Compress-Archive -Path package/* -DestinationPath scummvm-hollywood-win32.zip
       - name: Upload Win32 download
         uses: actions/upload-artifact@v7
         with:
           name: scummvm-hollywood-win32
-          path: package/
+          path: scummvm-hollywood-win32.zip
           if-no-files-found: error
           retention-days: 30
+
+  prerelease:
+    name: Publish Hollywood prerelease
+    needs: [linux, win32]
+    if: github.repository == 'neuromancer/scummvm' && github.ref == 'refs/heads/dev-hollywood-builds'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download both build archives
+        uses: actions/download-artifact@v8
+        with:
+          pattern: scummvm-hollywood-*
+          merge-multiple: true
+          path: release-assets
+      - name: Publish prerelease downloads
+        working-directory: release-assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test -s scummvm-hollywood-win32.zip
+          test -s scummvm-hollywood-linux-x86_64.tar.gz
+          unzip -tq scummvm-hollywood-win32.zip
+          tar -tzf scummvm-hollywood-linux-x86_64.tar.gz > /dev/null
+          sha256sum scummvm-hollywood-win32.zip scummvm-hollywood-linux-x86_64.tar.gz > SHA256SUMS
+
+          release_tag="hollywood-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          release_notes="Unofficial Hollywood-only ScummVM development build.
+
+          - Windows: 32-bit x86; no extra library DLLs required.
+          - Linux: x86_64, built on Ubuntu 22.04; requires SDL2, zlib and libpng.
+          - Only the Hollywood engine and its detector are included. Game data is not included.
+
+          Source: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/tree/${GITHUB_SHA}
+          Build: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+
+          These prerelease downloads do not have the 30-day CI artifact expiry."
+          gh release create "$release_tag" \
+            scummvm-hollywood-win32.zip scummvm-hollywood-linux-x86_64.tar.gz SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --prerelease --latest=false \
+            --title "Hollywood development build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} (${GITHUB_SHA:0:8})" \
+            --notes "$release_notes"
+          printf 'Prerelease downloads: %s/%s/releases/tag/%s\n' \
+            "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$release_tag" >> "$GITHUB_STEP_SUMMARY"
