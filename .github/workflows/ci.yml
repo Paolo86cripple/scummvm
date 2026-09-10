@@ -1,259 +1,184 @@
-name: CI
-on: [push, pull_request]
-#  schedule:
-#    - cron: '0 0-23/4 * * *'
+name: Hollywood builds
+
+on:
+  push:
+    branches:
+      - dev-hollywood-builds
+  workflow_dispatch:
+
 permissions:
   contents: read
+
+concurrency:
+  group: hollywood-builds-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  emscripten:
-    name: Emscripten
-    runs-on: ubuntu-latest
-    strategy: 
-      fail-fast: false
-      matrix:
-        include:
-          - name: emscripten
-            configFlags: --enable-gif --enable-jpeg --enable-ogg --enable-png --enable-vorbis --enable-zlib --enable-freetype2
-          - name: emscripten (extra libs)
-            configFlags: --enable-gif --enable-jpeg --enable-ogg --enable-png --enable-vorbis --enable-zlib  --enable-freetype2 --enable-a52 --enable-faad --enable-fluidlite --enable-fribidi --enable-mad --enable-mpcdec --enable-mpeg2 --enable-mpeg2 --enable-mikmod --enable-retrowave --enable-theoradec --enable-vpx
+  linux:
+    name: Linux x86_64 (Hollywood only)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@v4
-      - name: Build cache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: ${{ matrix.platform }}
-          max-size: 1G
-          create-symlink: true
-      - name: Restore libs cache
-        uses: actions/cache/restore@v4
-        with:
-          key: ${{ matrix.configFlags }}
-          path: |
-            dists/emscripten/libs/
-      - name: Call configure
+      - uses: actions/checkout@v7
+      - name: Install build dependencies
         run: |
-          CXX='ccache emcc' dists/emscripten/build.sh configure --enable-all-engines ${{ matrix.configFlags }}
-      - name: Save libs cache
-        uses: actions/cache/save@v4
-        with:
-          key: ${{ matrix.configFlags }}
-          path: |
-            dists/emscripten/libs/
-      - name: Build scummvm
-        run: |
-          dists/emscripten/build.sh make 
-  windows:
-    name: Windows
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: win32
-            triplet: x86-windows
-            arch: x86
-            configFlags: --enable-discord --enable-faad --enable-gif --enable-mikmod --enable-mpeg2 --enable-vpx
-            useNasm: 'true'
-          - platform: x64
-            arch: x64
-            triplet: x64-windows
-            configFlags: --enable-discord --enable-faad --enable-gif --enable-mikmod --enable-mpeg2 --enable-vpx
-          - platform: arm64
-            arch: arm64
-            triplet: arm64-windows
-            configFlags: --enable-discord --enable-faad --enable-gif --enable-mikmod --enable-mpeg2 --enable-vpx
-    env:
-      CONFIGURATION: Debug
-      PLATFORM: ${{ matrix.platform }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      VCPKG_FEATURE_FLAGS: dependencygraph
-      VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
-      VCPKG_INSTALLED_DIR: ${{ github.workspace }}/vcpkg_installed
-      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/vcpkg_cache,readwrite
-      VCPKG_OVERLAY_PORTS: ${{ github.workspace }}/.github/vcpkg-ports
-      GIT_VCPKG_COMMIT: ef7dbf94b9198bc58f45951adcf1f041fcbc5ea0
-    permissions:
-      contents: write # For dependencygraph
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup nasm
-        uses: ilammy/setup-nasm@v1
-        if: matrix.useNasm == 'true'
-      - name: Install vcpkg
-        uses: lukka/run-vcpkg@v11
-        id: runvcpkg
-        with:
-          vcpkgGitCommitId: ${{ env.GIT_VCPKG_COMMIT }}
-      - name: Integrate vcpkg
-        run: |
-          ${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/vcpkg integrate install
-      - name: Restore vcpkg cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ github.workspace }}/vcpkg_cache
-          key: vcpkg-${{ env.GIT_VCPKG_COMMIT }}-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json', 'vcpkg_installed/compiler-file-hash-cache.json', 'vcpkg_installed/status') }}
-          restore-keys: vcpkg-${{ env.GIT_VCPKG_COMMIT }}-${{ matrix.triplet }}-
-      - name: Build create_project
-        run: |
-          cd devtools/create_project/cmake
-          cmake .
-          cmake --build . -j 2
-          ls
-          cd ../../../
-      - name: Call create_project
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential libsdl2-dev zlib1g-dev libpng-dev
+      - name: Configure Hollywood only
         run: |
           mkdir build-scummvm
           cd build-scummvm
-          ../devtools/create_project/cmake/Debug/create_project.exe .. --msvc --vcpkg --enable-all-engines ${{ matrix.configFlags }}
-          ls
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
-      - name: Install vcpkg packages
+          ../configure --disable-all-engines --enable-engine=hollywood --disable-detection-full \
+            --enable-release --disable-debug --enable-zlib --enable-png \
+            --disable-mad --disable-fribidi --disable-ogg --disable-vorbis --disable-flac \
+            --disable-mpeg2 --disable-theoradec --disable-freetype2 --disable-jpeg --disable-faad --disable-a52 \
+            --disable-libcurl --disable-sdlnet --disable-tts --disable-libunity --disable-gtk \
+            --disable-alsa --disable-sndio
+          test "$(sed -n 's/^ENABLE_\([A-Z0-9_]*\) = .*PLUGIN$/\1/p' config.mk)" = HOLLYWOOD
+          ! grep -q '^DETECTION_FULL = 1' config.mk
+      - name: Build ScummVM
+        working-directory: build-scummvm
+        run: make -j2 scummvm
+      - name: Package executable
         run: |
-          vcpkg install
-      - name: Save vcpkg cache
-        uses: actions/cache/save@v4
+          strip build-scummvm/scummvm
+          mkdir -p package/licenses
+          cp build-scummvm/scummvm COPYING COPYRIGHT .github/hollywood/README.md package/
+          cp LICENSES/* package/licenses/
+          tar -czf scummvm-hollywood-linux-x86_64.tar.gz -C package .
+      - name: Upload Linux download
+        uses: actions/upload-artifact@v7
         with:
-          path: ${{ github.workspace }}/vcpkg_cache
-          key: vcpkg-${{ env.GIT_VCPKG_COMMIT }}-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json', 'vcpkg_installed/compiler-file-hash-cache.json', 'vcpkg_installed/status') }}
-      - name: Build scummvm
-        run: |
-          cd build-scummvm
-          ls
-          msbuild scummvm.sln /m /p:VcpkgEnableManifest=true /p:BuildInParallel=true /p:Configuration=${{ env.CONFIGURATION }} /p:PreferredToolArchitecture=x64 /p:Platform=${{ matrix.platform }} /v:minimal
-      - name: Upload scummvm
-        uses: actions/upload-artifact@v4
-        if: matrix.buildArtifacts == 'true'
-        with:
-          name: scummvm-${{ matrix.arch }}
-          path: build-scummvm/${{ env.CONFIGURATION }}${{ matrix.arch }}/*.exe
-      - name: Upload scummvm libs
-        uses: actions/upload-artifact@v4
-        if: matrix.buildArtifacts == 'true'
-        with:
-          name: libs-${{ matrix.arch }}
-          path: ${{ env.VCPKG_INSTALLED_DIR }}\\${{ matrix.triplet }}\\bin\\*.dll
-      - name: Upload scummvm symbols
-        uses: actions/upload-artifact@v4
-        if: matrix.buildArtifacts == 'true' && env.CONFIGURATION == 'Debug'
-        with:
-          name: symbols-${{ matrix.arch }}
-          path: build-scummvm/${{ env.CONFIGURATION }}${{ matrix.arch }}/*.pdb
-      - name: Upload scummvm libs symbols
-        uses: actions/upload-artifact@v4
-        if: matrix.buildArtifacts == 'true' && env.CONFIGURATION == 'Debug'
-        with:
-          name: lib-symbols-${{ matrix.arch }}
-          path: ${{ env.VCPKG_INSTALLED_DIR }}\\${{ matrix.triplet }}\\bin\\*.pdb
-  xcode:
-    name: Xcode
-    runs-on: macos-15-intel
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macosx
-            buildFlags: -scheme ScummVM-macOS -destination 'platform=macOS,arch=x86_64'
-            configFlags: --enable-faad --enable-gif --enable-mikmod --enable-mpeg2 --enable-vpx
-            brewPackages: a52dec faad2 flac fluid-synth freetype fribidi giflib jpeg mad libmikmod libmpeg2 libogg libpng libvorbis libvpx sdl2 sdl2_net theora
-          - platform: ios7
-            buildFlags: -scheme ScummVM-iOS CODE_SIGN_IDENTITY="" CODE_SIGNING_ALLOWED=NO
-            configFlags: --ios --use-xcframework --enable-faad --enable-gif --enable-mikmod --enable-vpx --enable-mpc --enable-a52 --disable-taskbar --disable-tts
-            packagesUrl: https://downloads.scummvm.org/frs/build/scummvm-ios7-libs-v4.zip
+          name: scummvm-hollywood-linux-x86_64
+          path: scummvm-hollywood-linux-x86_64.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
+  win32:
+    name: Windows x86 (Hollywood only)
+    runs-on: windows-2022
+    timeout-minutes: 45
     defaults:
       run:
-        # Must be explicit for proper pipefail support
-        shell: bash
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install packages
-        if: ${{ matrix.brewPackages }}
-        run: brew install ${{ matrix.brewPackages }}
-      - name: Download libraries
-        if: ${{ matrix.packagesUrl }}
-        run: |
-          curl -L -o libs.zip ${{ matrix.packagesUrl }}
-          unzip libs.zip
-          ls
-      - name: Build create_project
-        run: |
-          cd devtools/create_project/xcode
-          xcodebuild
-          ls
-          cd ../../../
-      - name: Call create_project
-        run: |
-          ./devtools/create_project/xcode/build/Release/create_project . --xcode --enable-all-engines ${{ matrix.configFlags }}
-          ls
-      - name: Build cache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: ${{ matrix.platform }}
-          max-size: 1G
-          create-symlink: true
-      - name: Build scummvm
-        run: |
-          xcodebuild CC=clang CPLUSPLUS=clang++ LD=clang LDPLUSPLUS=clang++ build -project scummvm.xcodeproj ${{ matrix.buildFlags }} | awk '$1 !~ /^(export|cd|clang++)/'
-          ls
-  ubuntu:
-    name: Ubuntu
-    runs-on: ${{ matrix.platform }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: ubuntu-latest
-            sdlConfig: sdl2-config
-            cxx: ccache g++
-            aptPackages: 'liba52-dev libcurl4-openssl-dev libfaad-dev libflac-dev libfluidsynth-dev libfreetype6-dev libfribidi-dev libgif-dev libgtk-3-dev libjpeg-turbo8-dev libmad0-dev libmikmod-dev libmpeg2-4-dev libogg-dev libpng-dev libsdl2-dev libsdl2-net-dev libsndio-dev libspeechd-dev libtheora-dev libunity-dev libvorbis-dev libvpx-dev zlib1g-dev'
-            configFlags: --enable-discord --with-discord-prefix=/usr/local
-          - platform: ubuntu-22.04
-            sdlConfig: sdl-config
-            cxx: ccache g++-4.8
-            aptPackages: 'g++-4.8 liba52-dev libcurl4-openssl-dev libfaad-dev libflac-dev libfluidsynth-dev libfreetype6-dev libfribidi-dev libgif-dev libgtk-3-dev libjpeg-turbo8-dev libmad0-dev libmikmod-dev libmpeg2-4-dev libogg-dev libpng-dev libsdl-net1.2-dev libsdl1.2-dev libsndio-dev libspeechd-dev libtheora-dev libunity-dev libvorbis-dev libvpx-dev zlib1g-dev'
-            configFlags: --enable-discord --with-discord-prefix=/usr/local
+        shell: pwsh
     env:
-      SDL_CONFIG: ${{ matrix.sdlConfig }}
-    defaults:
-      run:
-        # Must be explicit for proper pipefail support
-        shell: bash
+      VCPKG_DEFAULT_TRIPLET: x86-windows-static
+      VCPKG_DISABLE_METRICS: 1
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Add Ubuntu Xenial package sources
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key 40976EAF437D05B5
-          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key 3B4FE6ACC0B21F32
-          sudo apt-add-repository 'deb http://azure.archive.ubuntu.com/ubuntu/ xenial main'
-          sudo apt-add-repository 'deb http://azure.archive.ubuntu.com/ubuntu/ xenial universe'
-      - name: Install packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install ${{ matrix.aptPackages }}
-      - name: Download and install Discord RPC libraries
-        run: |
-          curl -L -o discord-rpc-linux.zip https://github.com/discord/discord-rpc/releases/download/v3.4.0/discord-rpc-linux.zip
-          echo 'dac1f5dc6bedaeab1cc3c2c7fd4261e00838c81619c3ee325f3723c3d55ee03a discord-rpc-linux.zip' | sha256sum --check && unzip discord-rpc-linux.zip
-          sudo cp -v -pR discord-rpc/linux-dynamic/include/*.* /usr/local/include/
-          sudo cp -v -pR discord-rpc/linux-dynamic/lib/*.* /usr/local/lib/
-      - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+      - uses: actions/checkout@v7
+      - name: Checkout pinned vcpkg
+        uses: actions/checkout@v7
         with:
-          key: ${{ matrix.platform }}
-          max-size: 1G
-      - name: Call configure
+          repository: microsoft/vcpkg
+          ref: 9e593bb18ea69cc5095e012465dcd675a822ed0d # 2026.07.29
+          path: vcpkg
+      - name: Set up vcpkg
         run: |
-          CXX='${{ matrix.cxx }}' ./configure --enable-all-engines ${{ matrix.configFlags }}
-      - name: Build scummvm
+          ./vcpkg/bootstrap-vcpkg.bat -disableMetrics
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./vcpkg/vcpkg.exe integrate install
+      - name: Build project generator
         run: |
-          make -j2
-      - name: Build tests
+          cmake -S devtools/create_project/cmake -B build-create-project -G "Visual Studio 17 2022" -A x64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cmake --build build-create-project --config Release --parallel 2
+      - name: Configure Hollywood only
         run: |
-          make test
-      - name: Build devtools
+          New-Item -ItemType Directory build-scummvm
+          Copy-Item .github/hollywood/vcpkg.json, .github/hollywood/Directory.Build.targets build-scummvm/
+          $configureArgs = @(
+            ".", "--output-dir", "build-scummvm", "--file-prefix", "..", "--msvc", "--msvc-version", "17", "--vcpkg",
+            "--disable-all-engines", "--enable-engine=hollywood", "--disable-detection-full",
+            "--use-windows-subsystem", "--disable-nasm", "--disable-tts",
+            "--disable-mad", "--disable-fribidi", "--disable-ogg", "--disable-vorbis", "--disable-flac",
+            "--disable-mpeg2", "--disable-theoradec", "--disable-freetype2", "--disable-jpeg",
+            "--disable-libcurl", "--disable-sdlnet"
+          )
+          ./build-create-project/Release/create_project.exe @configureArgs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $props = Get-Content build-scummvm/ScummVM_Globalx86.props -Raw
+          $engines = [regex]::Matches($props, '\bENABLE_[A-Z0-9_]+\b') | ForEach-Object { $_.Value } | Sort-Object -Unique
+          if (($engines -join ",") -ne "ENABLE_HOLLYWOOD" -or $props.Contains("DETECTION_FULL")) {
+            throw "Expected only the Hollywood engine and detector"
+          }
+      - name: Install static libraries
+        run: ./vcpkg/vcpkg.exe install --triplet x86-windows-static --x-manifest-root=build-scummvm
+      - uses: microsoft/setup-msbuild@v3
+        with:
+          vs-version: '[17.0,18.0)'
+      - name: Build ScummVM
+        working-directory: build-scummvm
         run: |
-          make devtools
+          $buildArgs = @(
+            "scummvm.sln", "/m:2", "/v:minimal", "/p:Configuration=Release", "/p:Platform=Win32",
+            "/p:PreferredToolArchitecture=x64", "/p:VcpkgTriplet=x86-windows-static",
+            "/p:VcpkgInstalledDir=$env:GITHUB_WORKSPACE\build-scummvm\vcpkg_installed\",
+            "/p:VcpkgEnableManifest=true", "/p:VcpkgManifestInstall=false"
+          )
+          msbuild @buildArgs
+      - name: Package executable
+        run: |
+          New-Item -ItemType Directory -Force package/licenses
+          Copy-Item build-scummvm/Releasex86/scummvm.exe, COPYING, COPYRIGHT, .github/hollywood/README.md package/
+          Copy-Item LICENSES/* package/licenses/
+          foreach ($port in "sdl2", "zlib", "libpng") {
+            Copy-Item "build-scummvm/vcpkg_installed/x86-windows-static/share/$port/copyright" "package/licenses/$port.txt"
+          }
+          Compress-Archive -Path package/* -DestinationPath scummvm-hollywood-win32.zip
+      - name: Upload Win32 download
+        uses: actions/upload-artifact@v7
+        with:
+          name: scummvm-hollywood-win32
+          path: scummvm-hollywood-win32.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  prerelease:
+    name: Publish Hollywood prerelease
+    needs: [linux, win32]
+    if: github.repository == 'neuromancer/scummvm' && github.ref == 'refs/heads/dev-hollywood-builds'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download both build archives
+        uses: actions/download-artifact@v8
+        with:
+          pattern: scummvm-hollywood-*
+          merge-multiple: true
+          path: release-assets
+      - name: Publish prerelease downloads
+        working-directory: release-assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test -s scummvm-hollywood-win32.zip
+          test -s scummvm-hollywood-linux-x86_64.tar.gz
+          unzip -tq scummvm-hollywood-win32.zip
+          tar -tzf scummvm-hollywood-linux-x86_64.tar.gz > /dev/null
+          sha256sum scummvm-hollywood-win32.zip scummvm-hollywood-linux-x86_64.tar.gz > SHA256SUMS
+
+          release_tag="hollywood-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          release_notes="Unofficial Hollywood-only ScummVM development build.
+
+          - Windows: 32-bit x86; no extra library DLLs required.
+          - Linux: x86_64, built on Ubuntu 22.04; requires SDL2, zlib and libpng.
+          - Only the Hollywood engine and its detector are included. Game data is not included.
+
+          Source: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/tree/${GITHUB_SHA}
+          Build: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+
+          These prerelease downloads do not have the 30-day CI artifact expiry."
+          gh release create "$release_tag" \
+            scummvm-hollywood-win32.zip scummvm-hollywood-linux-x86_64.tar.gz SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --prerelease --latest=false \
+            --title "Hollywood development build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} (${GITHUB_SHA:0:8})" \
+            --notes "$release_notes"
+          printf 'Prerelease downloads: %s/%s/releases/tag/%s\n' \
+            "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$release_tag" >> "$GITHUB_STEP_SUMMARY"

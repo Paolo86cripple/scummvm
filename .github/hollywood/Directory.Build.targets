@@ -1,0 +1,10 @@
+<Project>
+  <!-- Match x86-windows-static so the executable needs no VC runtime DLLs. -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <!-- SDL2 headers live in a subdirectory of vcpkg's include path. -->
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)vcpkg_installed\$(VcpkgTriplet)\include\SDL2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>
