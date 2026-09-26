@@ -48,6 +48,8 @@ class Stream;
 } // namespace Shared
 } // namespace AGS
 
+using namespace AGS; // FIXME later
+
 struct CharacterInfo;
 struct ccScript;
 
@@ -57,7 +59,7 @@ struct GameSetupStructBase {
 	static const int  MAX_OPTIONS = 100;
 	static const int  NUM_INTS_RESERVED = 16;
 
-	AGS::Shared::String    gamename;
+	Shared::String    gamename;
 	int32_t           options[MAX_OPTIONS];
 	uint8_t           paluses[256];
 	RGB               defpal[256];
@@ -80,7 +82,7 @@ struct GameSetupStructBase {
 	int               default_lipsync_frame; // used for unknown chars
 	int               invhotdotsprite;
 	int32_t           reserved[NUM_INTS_RESERVED];
-	AGS::Shared::String			  messages[MAXGLOBALMES];
+	String			  messages[MAXGLOBALMES];
 	std::unique_ptr<WordsDictionary> dict;
 	std::vector<CharacterInfo> chars;
 	std::vector<CharacterInfo2> chars2; // extended character fields
@@ -110,8 +112,8 @@ struct GameSetupStructBase {
 		}
 	};
 
-	void ReadFromFile(AGS::Shared::Stream *in, GameDataVersion game_ver, SerializeInfo &info);
-	void WriteToFile(AGS::Shared::Stream *out, const SerializeInfo &info) const;
+	void ReadFromFile(Shared::Stream *in, GameDataVersion game_ver, SerializeInfo &info);
+	void WriteToFile(Shared::Stream *out, const SerializeInfo &info) const;
 
 	//
 	// ** On game resolution.
@@ -243,19 +245,7 @@ struct GameSetupStructBase {
 			OPT_STRICTSCRIPTING, OPT_LEFTTORIGHTEVAL, OPT_COMPRESSSPRITES, OPT_STRICTSTRINGS,
 			OPT_NATIVECOORDINATES, OPT_SAFEFILEPATHS, OPT_DIALOGOPTIONSAPI, OPT_BASESCRIPTAPI,
 			OPT_SCRIPTCOMPATLEV, OPT_RELATIVEASSETRES, OPT_GAMETEXTENCODING, OPT_KEYHANDLEAPI,
-			OPT_CUSTOMENGINETAG, OPT_VOICECLIPNAMERULE, OPT_SAVECOMPONENTSIGNORE
-		}};
-	}
-
-	// Returns a list of game options that are preserved when converting
-	// a game loaded from older format to the newer one
-	inline static Common::Array<int> GetPreservedOptions() {
-		return Common::Array<int> {{
-			OPT_DEBUGMODE, OPT_LETTERBOX, OPT_HIRES_FONTS, OPT_SPLITRESOURCES,
-			OPT_STRICTSCRIPTING, OPT_LEFTTORIGHTEVAL, OPT_COMPRESSSPRITES, OPT_STRICTSTRINGS,
-			OPT_NATIVECOORDINATES, OPT_SAFEFILEPATHS, OPT_DIALOGOPTIONSAPI, OPT_BASESCRIPTAPI,
-			OPT_SCRIPTCOMPATLEV, OPT_RELATIVEASSETRES, OPT_GAMETEXTENCODING, OPT_KEYHANDLEAPI,
-			OPT_CUSTOMENGINETAG, OPT_VOICECLIPNAMERULE, OPT_SAVECOMPONENTSIGNORE
+			OPT_CUSTOMENGINETAG
 		}};
 	}
 

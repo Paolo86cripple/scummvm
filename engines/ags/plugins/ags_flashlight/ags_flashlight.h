@@ -7,7 +7,7 @@
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -49,6 +49,7 @@ private:
 	int g_DarknessSize = 0;
 	int g_DarknessDiameter = 0;
 	int g_BrightnessSize = 0;
+	int g_ScaleFactor =  1;
 	int32 g_FlashlightX = 0;
 	int32 g_FlashlightY = 0;
 	int32 g_FlashlightDrawAtX = 0;

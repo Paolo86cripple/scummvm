@@ -28,8 +28,8 @@
 
 namespace AGS3 {
 
-using namespace AGS::Shared;
-using namespace AGS::Engine;
+using namespace Shared;
+using namespace Engine;
 
 void RemoveOverlay(int ovrid) {
 	if (!get_overlay(ovrid))

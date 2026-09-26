@@ -38,6 +38,7 @@ class Stream;
 } // namespace Shared
 } // namespace AGS
 
+using namespace AGS; // FIXME later
 
 struct Pointer_Hash {
 	uint operator()(void *v) const {
@@ -92,8 +93,8 @@ public:
 	void RunGarbageCollectionIfAppropriate();
 	int AddObject(void *address, IScriptObject *callback, ScriptValueType obj_type);
 	int AddUnserializedObject(void *address, IScriptObject *callback, ScriptValueType obj_type, int handle);
-	void WriteToDisk(AGS::Shared::Stream *out);
-	int ReadFromDisk(AGS::Shared::Stream *in, ICCObjectCollectionReader *reader);
+	void WriteToDisk(Shared::Stream *out);
+	int ReadFromDisk(Shared::Stream *in, ICCObjectCollectionReader *reader);
 	void reset();
 	ManagedObjectPool();
 

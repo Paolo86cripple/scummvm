@@ -29,7 +29,6 @@
 
 namespace AGS3 {
 
-using namespace AGS;
 using namespace AGS::Shared;
 
 ScreenOverlay::ScreenOverlay(ScreenOverlay &&over) {

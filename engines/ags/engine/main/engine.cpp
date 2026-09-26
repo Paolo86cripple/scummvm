@@ -78,8 +78,6 @@
 
 namespace AGS3 {
 
-using namespace AGS;
-
 using namespace AGS::Shared;
 using namespace AGS::Engine;
 
@@ -415,7 +413,7 @@ int check_write_access() {
 		put_backslash(android_base_directory);
 		tempPath.Format("%s""tmptest.tmp", android_base_directory);
 		temp_s = Shared::File::CreateFile(tempPath);
-		if (temp_s == nullptr) return 0;
+		if (temp_s == NULL) return 0;
 		else SetCustomSaveParent(android_base_directory);
 	}
 #else
@@ -1137,9 +1135,6 @@ int initialize_engine(const ConfigTree &startup_opts) {
 	set_our_eip(-179);
 
 	engine_adjust_for_rotation_settings();
-
-	// Set game speed from game options, or use default
-	set_game_speed((_GP(game).options[OPT_GAMEFPS] > 0) ? _GP(game).options[OPT_GAMEFPS] : 40);
 
 	// Attempt to initialize graphics mode
 	if (!engine_try_set_gfxmode_any(_GP(usetup).Screen))

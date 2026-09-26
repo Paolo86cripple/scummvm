@@ -46,6 +46,8 @@ namespace Shared {
 class Stream;
 }
 }
+using namespace AGS; // FIXME later
+
 // The CharacterInfo struct size is fixed because it's exposed to script
 // and plugin API, therefore new stuff has to go here
 struct CharacterExtras {
@@ -84,8 +86,8 @@ struct CharacterExtras {
 	void CheckViewFrame(CharacterInfo *chi);
 
 	// Read character extra data from saves.
-	void ReadFromSavegame(AGS::Shared::Stream *in, CharacterSvgVersion save_ver);
-	void WriteToSavegame(AGS::Shared::Stream *out) const;
+	void ReadFromSavegame(Shared::Stream *in, CharacterSvgVersion save_ver);
+	void WriteToSavegame(Shared::Stream *out) const;
 };
 
 } // namespace AGS3

@@ -60,6 +60,7 @@ class Bitmap;
 } // namespace AGS3
 } // namespace AGS
 
+using namespace AGS; // FIXME later
 typedef AGS::Shared::HError HAGSError;
 
 struct SpriteInfo;

@@ -34,8 +34,8 @@ struct Interaction;
 
 namespace Engine {
 
-using AGS::Shared::Stream;
-using AGS::Shared::Interaction;
+using Shared::Stream;
+using Shared::Interaction;
 
 struct PreservedParams;
 struct RestoredData;

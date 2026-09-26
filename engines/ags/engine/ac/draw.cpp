@@ -190,7 +190,7 @@ Bitmap *AdjustBitmapForUseWithDisplayMode(Bitmap *bitmap, bool has_alpha) {
 
 	// Finally, if we did not create a new copy already, - convert to driver compatible format
 	if (new_bitmap == bitmap)
-		new_bitmap = AGS::Engine::GfxUtil::ConvertBitmap(bitmap, _G(gfxDriver)->GetCompatibleBitmapFormat(bitmap->GetColorDepth()));
+		new_bitmap = GfxUtil::ConvertBitmap(bitmap, _G(gfxDriver)->GetCompatibleBitmapFormat(bitmap->GetColorDepth()));
 
 	if (must_switch_palette)
 		unselect_palette();
@@ -204,7 +204,7 @@ Bitmap *CreateCompatBitmap(int width, int height, int col_depth) {
 }
 
 Bitmap *ReplaceBitmapWithSupportedFormat(Bitmap *bitmap) {
-	return AGS::Engine::GfxUtil::ConvertBitmap(bitmap, _G(gfxDriver)->GetCompatibleBitmapFormat(bitmap->GetColorDepth()));
+	return GfxUtil::ConvertBitmap(bitmap, _G(gfxDriver)->GetCompatibleBitmapFormat(bitmap->GetColorDepth()));
 }
 
 Bitmap *PrepareSpriteForUse(Bitmap *bitmap, bool has_alpha) {
@@ -620,10 +620,8 @@ void on_roomcamera_changed(Camera *cam) {
 	invalidate_screen();
 }
 
-static const int AGS_OBJCACHE_INVALID_COORD = -9999;
-
 void mark_object_changed(int objid) {
-	_G(objcache)[objid].y = AGS_OBJCACHE_INVALID_COORD;
+	_G(objcache)[objid].y = -9999;
 }
 
 void reset_drawobj_for_overlay(int objnum) {
@@ -790,14 +788,14 @@ void draw_sprite_support_alpha(Bitmap *ds, bool ds_has_alpha, int xpos, int ypos
 		return;
 
 	if (_GP(game).options[OPT_SPRITEALPHA] == kSpriteAlphaRender_Proper) {
-		AGS::Engine::GfxUtil::DrawSpriteBlend(ds, Point(xpos, ypos), image, blend_mode, ds_has_alpha, src_has_alpha, alpha);
+		GfxUtil::DrawSpriteBlend(ds, Point(xpos, ypos), image, blend_mode, ds_has_alpha, src_has_alpha, alpha);
 	}
 	// Backwards-compatible drawing
 	else if (src_has_alpha && alpha == 0xFF) {
 		set_alpha_blender();
 		ds->TransBlendBlt(image, xpos, ypos);
 	} else {
-		AGS::Engine::GfxUtil::DrawSpriteWithTransparency(ds, image, xpos, ypos, alpha);
+		GfxUtil::DrawSpriteWithTransparency(ds, image, xpos, ypos, alpha);
 	}
 }
 
@@ -807,7 +805,7 @@ void draw_sprite_slot_support_alpha(Bitmap *ds, bool ds_has_alpha, int xpos, int
 	                          blend_mode, alpha);
 }
 
-AGS::Engine::IDriverDependantBitmap* recycle_ddb_sprite(AGS::Engine::IDriverDependantBitmap *ddb, uint32_t sprite_id, AGS::Shared::Bitmap *source, bool has_alpha, bool opaque) {
+Engine::IDriverDependantBitmap* recycle_ddb_sprite(Engine::IDriverDependantBitmap *ddb, uint32_t sprite_id, Shared::Bitmap *source, bool has_alpha, bool opaque) {
 	// no ddb, - get or create shared object
 	if (!ddb)
 		return _G(gfxDriver)->GetSharedDDB(sprite_id, source, has_alpha, opaque);
@@ -937,7 +935,7 @@ void draw_gui_sprite(Bitmap *ds, bool use_alpha, int x, int y, Bitmap *sprite, b
 
 	const bool ds_has_alpha = (ds->GetColorDepth() == 32);
 	if (use_alpha && _GP(game).options[OPT_NEWGUIALPHA] == kGuiAlphaRender_Proper) {
-		AGS::Engine::GfxUtil::DrawSpriteBlend(ds, Point(x, y), sprite, blend_mode, ds_has_alpha, src_has_alpha, alpha);
+		GfxUtil::DrawSpriteBlend(ds, Point(x, y), sprite, blend_mode, ds_has_alpha, src_has_alpha, alpha);
 	}
 	// Backwards-compatible drawing
 	else if (use_alpha && ds_has_alpha && (_GP(game).options[OPT_NEWGUIALPHA] == kGuiAlphaRender_AdditiveAlpha) && (alpha == 0xFF)) {
@@ -947,7 +945,7 @@ void draw_gui_sprite(Bitmap *ds, bool use_alpha, int x, int y, Bitmap *sprite, b
 			set_opaque_alpha_blender();
 		ds->TransBlendBlt(sprite, x, y);
 	} else {
-		AGS::Engine::GfxUtil::DrawSpriteWithTransparency(ds, sprite, x, y, alpha);
+		GfxUtil::DrawSpriteWithTransparency(ds, sprite, x, y, alpha);
 	}
 }
 
@@ -975,7 +973,7 @@ Bitmap *recycle_bitmap(Bitmap *bimp, int coldep, int wid, int hit, bool make_tra
 	return bimp;
 }
 
-void recycle_bitmap(std::unique_ptr<AGS::Shared::Bitmap> &bimp, int coldep, int wid, int hit, bool make_transparent) {
+void recycle_bitmap(std::unique_ptr<Shared::Bitmap> &bimp, int coldep, int wid, int hit, bool make_transparent) {
 	bimp.reset(recycle_bitmap(bimp.release(), coldep, wid, hit, make_transparent));
 }
 
@@ -1136,7 +1134,7 @@ static void apply_tint_or_light(ObjTexture &actsp, int light_level,
 // * if no transformation is necessary - simply returns src;
 // Used for software render mode only.
 static Bitmap *transform_sprite(Bitmap *src, bool src_has_alpha, std::unique_ptr<Bitmap> &dst,
-								const Size dst_sz, GraphicFlip flip = AGS::Shared::kFlip_None) {
+								const Size dst_sz, GraphicFlip flip = Shared::kFlip_None) {
 	if ((src->GetSize() == dst_sz) && (flip == kFlip_None))
 		return src; // No transform: return source image
 
@@ -1557,7 +1555,7 @@ Bitmap *get_cached_object_image(int objid) {
 	return _GP(actsps)[objid].Bmp.get();
 }
 
-void add_walkbehind_image(size_t index, AGS::Shared::Bitmap *bmp, int x, int y) {
+void add_walkbehind_image(size_t index, Shared::Bitmap *bmp, int x, int y) {
 	if (_GP(walkbehindobj).size() <= index)
 		_GP(walkbehindobj).resize(index + 1);
 	_GP(walkbehindobj)[index].Bmp.reset(); // don't store bitmap if added this way
@@ -2260,7 +2258,7 @@ void render_graphics(IDriverDependantBitmap *extraBitmap, int extraX, int extraY
 	construct_game_screen_overlay(true);
 	render_to_screen();
 
-	if (!AGS_SHOULD_QUIT && !_GP(play).screen_is_faded_out) {
+	if (!SHOULD_QUIT && !_GP(play).screen_is_faded_out) {
 		// always update the palette, regardless of whether the plugin
 		// vetos the screen update
 		if (_G(bg_just_changed)) {

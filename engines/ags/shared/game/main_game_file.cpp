@@ -779,54 +779,6 @@ HError GameDataExtReader::ReadBlock(int /*block_id*/, const String &ext_id,
 			clip.scriptName = StrUtil::ReadString(_in);
 			clip.fileName = StrUtil::ReadString(_in);
 		}
-	} else if (ext_id.CompareNoCase("v362_interevents") == 0) {
-		// Characters' InteractionEvents with ScriptModule
-		_in->ReadInt32();
-		for (size_t i = 0; i < (size_t)_ents.Game.numcharacters; ++i) {
-			_ents.Game.charScripts[i].reset(InteractionEvents::CreateFromStream_v362(_in));
-		}
-		// Inventory items' InteractionEvents with ScriptModule
-		_in->ReadInt32();
-		for (size_t i = 0; i < (size_t)_ents.Game.numinvitems; ++i) {
-			_ents.Game.invScripts[i].reset(InteractionEvents::CreateFromStream_v362(_in));
-		}
-		// GUIs' ScriptModule names (skip for now, GUIs are stored differently in ScummVM)
-		_in->ReadInt32();
-		for (size_t i = 0; i < (size_t)_ents.Game.numgui; ++i) {
-			StrUtil::ReadString(_in); // Skip GUI ScriptModule name
-		}
-	} else if (ext_id.CompareNoCase("v362_interevent2") == 0) {
-		// Explicit script module names and interaction events
-		// Format matching upstream v3.6.2.21: script names first, then interaction modules
-		StrUtil::ReadString(_in); // Skip global script name
-		StrUtil::ReadString(_in); // Skip dialog script name
-		size_t module_count = _in->ReadInt32();
-		for (size_t i = 0; i < module_count; ++i) {
-			StrUtil::ReadString(_in); // Skip script module names
-		}
-		// Then read interaction events with ScriptModule (same format as v362_interevents)
-		_in->ReadInt32();
-		for (size_t i = 0; i < (size_t)_ents.Game.numcharacters; ++i) {
-			_ents.Game.charScripts[i].reset(InteractionEvents::CreateFromStream_v362(_in));
-		}
-		_in->ReadInt32();
-		for (size_t i = 0; i < (size_t)_ents.Game.numinvitems; ++i) {
-			_ents.Game.invScripts[i].reset(InteractionEvents::CreateFromStream_v362(_in));
-		}
-		_in->ReadInt32();
-		for (size_t i = 0; i < (size_t)_ents.Game.numgui; ++i) {
-			StrUtil::ReadString(_in); // Skip GUI ScriptModule name
-		}
-	} else if (ext_id.CompareNoCase("v362_guictrls") == 0) {
-		// GUI button text padding (3.6.2+)
-		// Read and discard for now: embedded GUIs don't store TextPadding yet
-		size_t num_guibut = _in->ReadInt32();
-		for (size_t i = 0; i < num_guibut; ++i) {
-			_in->ReadInt32(); // TextPaddingHor
-			_in->ReadInt32(); // TextPaddingVer
-			_in->ReadInt32(); // reserved
-			_in->ReadInt32(); // reserved
-		}
 	} else {
 		return new MainGameFileError(kMGFErr_ExtUnknown, String::FromFormat("Type: %s", ext_id.GetCStr()));
 	}

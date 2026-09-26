@@ -45,8 +45,6 @@ using namespace AGS::Engine;
 #undef MAXSAVEGAMES
 #define MAXSAVEGAMES 20
 
-static const int AGS_TEXTBOX_EMPTY = -9999;
-
 char *get_gui_dialog_buffer() {
 	return _G(buffer2);
 }
@@ -342,7 +340,7 @@ int enternumberwindow(char *prompttext) {
 	char ourbuf[200];
 	enterstringwindow(prompttext, ourbuf, sizeof(ourbuf));
 	if (ourbuf[0] == 0)
-		return AGS_TEXTBOX_EMPTY;
+		return -9999;
 	return atoi(ourbuf);
 }
 
@@ -434,7 +432,7 @@ int myscimessagebox(const char *lpprompt, char *btn1, char *btn2) {
 	_GP(smes).code = 0;
 
 	do {
-		if (AGS_SHOULD_QUIT)
+		if (SHOULD_QUIT)
 			return 1;
 
 		CSCIWaitMessage(&_GP(smes));

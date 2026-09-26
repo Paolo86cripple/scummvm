@@ -24,8 +24,6 @@
 
 namespace AGS3 {
 
-using AGS::Shared::Stream;
-
 int ScriptDictBase::Dispose(void *address, bool force) {
 	Clear();
 	delete this;

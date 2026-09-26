@@ -29,7 +29,7 @@
 
 namespace AGS3 {
 
-using namespace AGS::Shared;
+using namespace Shared;
 
 MyLabel::MyLabel(int xx, int yy, int wii, const char *tee) {
 	snprintf(text, sizeof(text), "%s", tee);

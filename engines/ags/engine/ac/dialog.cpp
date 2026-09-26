@@ -71,7 +71,6 @@
 namespace AGS3 {
 
 using namespace AGS::Shared;
-using namespace AGS::Engine;
 
 void Dialog_Start(ScriptDialog *sd) {
 	RunDialog(sd->id);
@@ -87,7 +86,7 @@ int Dialog_DisplayOptions(ScriptDialog *sd, int sayChosenOption) {
 		quit("!Dialog.DisplayOptions: invalid parameter passed");
 
 	int chose = show_dialog_options(sd->id, sayChosenOption, (_GP(game).options[OPT_RUNGAMEDLGOPTS] != 0));
-	if (AGS_SHOULD_QUIT)
+	if (SHOULD_QUIT)
 		return -1;
 
 	if (chose != CHOSE_TEXTPARSER) {
@@ -381,7 +380,7 @@ void draw_gui_for_dialog_options(Bitmap *ds, GUIMain *guib, int dlgxp, int dlgyp
 		ds->FillRect(Rect(dlgxp, dlgyp, dlgxp + guib->Width, dlgyp + guib->Height), draw_color);
 	}
 	if (guib->BgImage > 0)
-		AGS::Engine::GfxUtil::DrawSpriteWithTransparency(ds, _GP(spriteset)[guib->BgImage], dlgxp, dlgyp);
+		GfxUtil::DrawSpriteWithTransparency(ds, _GP(spriteset)[guib->BgImage], dlgxp, dlgyp);
 }
 
 bool get_custom_dialog_options_dimensions(int dlgnum) {
@@ -605,7 +604,7 @@ void DialogOptions::Show() {
 	mouseison = -10;
 
 	Redraw();
-	while (Run() && !AGS_SHOULD_QUIT) {}
+	while (Run() && !SHOULD_QUIT) {}
 
 	// Close custom dialog options
 	if (usingCustomRendering) {
@@ -694,7 +693,7 @@ void DialogOptions::Redraw() {
 		dirtyheight = text_window_ds->GetHeight();
 		dialog_abs_x = txoffs + xspos;
 
-		AGS::Engine::GfxUtil::DrawSpriteWithTransparency(ds, text_window_ds, xspos, yspos);
+		GfxUtil::DrawSpriteWithTransparency(ds, text_window_ds, xspos, yspos);
 		// TODO: here we rely on draw_text_window always assigning new bitmap to text_window_ds;
 		// should make this more explicit
 		delete text_window_ds;

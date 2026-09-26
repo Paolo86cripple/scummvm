@@ -23,7 +23,6 @@
 // Game update procedure
 //
 
-#include <cmath>
 #include "ags/shared/ac/common.h"
 #include "ags/engine/ac/character.h"
 #include "ags/engine/ac/character_extras.h"
@@ -55,7 +54,6 @@ namespace AGS3 {
 using namespace AGS::Shared;
 using namespace AGS::Engine;
 
-static const int AGS_FACETALK_WAIT_FOREVER = 999999;
 
 // Optionally fixes target position, when one axis is left to move along.
 // This is done only for backwards compatibility now.
@@ -140,92 +138,74 @@ static bool movelist_handle_donemove(const uint8_t testflag, const fixed xpermov
 	return (doneflag & testflag) != 0;
 }
 
-MoveResult do_movelist_move(short &mslot, int &pos_x, int &pos_y, bool smooth_move) {
+int do_movelist_move(short &mslot, int &pos_x, int &pos_y) {
+	// TODO: find out why movelist 0 is not being used
 	assert(mslot >= 1);
 	if (mslot < 1)
-		return kMoveResult_Abort;
+		return 0;
 
+	int need_to_fix_sprite = 0; // TODO: find out what this value means and refactor
 	MoveList &cmls = _GP(mls)[mslot];
-	// Safety fix, in case onpart became invalid
-	if (isnan(cmls.onpart) || cmls.onpart < 0.f)
-		cmls.onpart = 0.f;
-
 	const fixed xpermove = cmls.xpermove[cmls.onstage];
 	const fixed ypermove = cmls.ypermove[cmls.onstage];
 	const fixed fin_move = cmls.fin_move;
 	const float main_onpart = (cmls.fin_from_part > 0.f) ? cmls.fin_from_part : cmls.onpart;
 	const float fin_onpart = cmls.onpart - main_onpart;
 	Point target = cmls.pos[cmls.onstage + 1];
+	int xps = pos_x, yps = pos_y;
 
 	// Old-style optional move target fixup
-	if (!smooth_move) {
-		if ((ypermove != 0) && (cmls.doneflag & kMoveListDone_X) != 0) {
+	if (_G(loaded_game_file_version) < kGameVersion_361) {
+		if ((ypermove != 0) && (cmls.doneflag & kMoveListDone_X) != 0) { // X-move has finished, handle the Y-move remainer
 			movelist_handle_targetfix(xpermove, ypermove, target.Y);
-		} else if ((xpermove != 0) && (cmls.doneflag & kMoveListDone_Y) != 0) {
+		} else if ((xpermove != 0) && (cmls.doneflag & kMoveListDone_Y) != 0) { // Y-move has finished, handle the X-move remainer
 			movelist_handle_targetfix(xpermove, ypermove, target.Y);
 		}
 	}
 
-	// Calculate next positions, as required, save them in max_* positions
-	int max_xps = pos_x, max_yps = pos_y;
+	// Calculate next positions, as required
 	if ((cmls.doneflag & kMoveListDone_X) == 0) {
-		max_xps = cmls.from.X + (int)(fixtof(xpermove) * main_onpart) +
-			(int)(fixtof(fin_move) * fin_onpart);
+		xps = cmls.from.X + (int)(fixtof(xpermove) * main_onpart) + (int)(fixtof(fin_move) * fin_onpart);
 	}
 	if ((cmls.doneflag & kMoveListDone_Y) == 0) {
-		max_yps = cmls.from.Y + (int)(fixtof(ypermove) * main_onpart) +
-			(int)(fixtof(fin_move) * fin_onpart);
+		yps = cmls.from.Y + (int)(fixtof(ypermove) * main_onpart) + (int)(fixtof(fin_move) * fin_onpart);
 	}
 
 	// Check if finished either horizontal or vertical movement;
 	// if any was finished just now, then also handle remainer fixup
-	int xps = max_xps, yps = max_yps;
 	bool done_now = movelist_handle_donemove(kMoveListDone_X, xpermove, target.X, cmls.doneflag, xps);
 	done_now |= movelist_handle_donemove(kMoveListDone_Y, ypermove, target.Y, cmls.doneflag, yps);
 	if (done_now)
 		movelist_handle_remainer(cmls);
 
 	// Handle end of move stage
-	MoveResult move_result = kMoveResult_Continue;
-	if ((cmls.doneflag & kMoveListDone_XY) != kMoveListDone_XY) {
-		// Make a step along the current vector and return
-		cmls.onpart += 1.f;
-	} else {
-		// End of stage (or end of path)
-		const int next_stage = cmls.onstage + 1;
-		if (next_stage < cmls.numstage) {
-			xps = cmls.pos[next_stage].X;
-			yps = cmls.pos[next_stage].Y;
+	if ((cmls.doneflag & kMoveListDone_XY) == kMoveListDone_XY) {
+		// this stage is done, go on to the next stage
+		cmls.from = cmls.pos[cmls.onstage + 1];
+		cmls.onstage++;
+		cmls.onpart = -1.f;
+		cmls.fin_from_part = 0.f;
+		cmls.fin_move = 0;
+		cmls.doneflag = 0;
+		if (cmls.onstage < cmls.numstage) {
+			xps = cmls.from.X;
+			yps = cmls.from.Y;
 		}
 
-		if (next_stage >= cmls.numstage - 1) {
-			// Last stage is just dest pos, so finish the move
+		if (cmls.onstage >= cmls.numstage - 1) { // last stage is just dest pos
 			cmls.numstage = 0;
 			mslot = 0;
-			move_result = kMoveResult_Done;
+			need_to_fix_sprite = 1; // TODO: find out what this means
 		} else {
-			// Switch to the next stage
-			cmls.onstage = next_stage;
-			cmls.from = cmls.pos[cmls.onstage];
-			cmls.onpart = 0.f;
-			cmls.fin_from_part = 0.f;
-			cmls.fin_move = 0;
-			cmls.doneflag = 0;
-
-			// Smooth out next stage transition by carrying over remaining % of the previous move
-			if (smooth_move) {
-				const float frac_complete_x = (max_xps != pos_x) ? static_cast<float>(xps - pos_x) / static_cast<float>(max_xps - pos_x) : 1.f;
-				const float frac_complete_y = (max_yps != pos_y) ? static_cast<float>(yps - pos_y) / static_cast<float>(max_yps - pos_y) : 1.f;
-				const float lost_frac = std::max(1.f - frac_complete_x, 1.f - frac_complete_y);
-				cmls.onpart += lost_frac;
-			}
-			move_result = kMoveResult_NextStage;
+			need_to_fix_sprite = 2; // TODO: find out what this means
 		}
 	}
 
+	// Make a step along the current vector and return
+	cmls.onpart += 1.f;
 	pos_x = xps;
 	pos_y = yps;
-	return move_result;
+	return need_to_fix_sprite;
 }
 
 void restore_movelists() {
@@ -432,8 +412,8 @@ void update_sierra_speech() {
 						_G(facetalkloop) = 0;
 					}
 					_G(facetalkframe) = 0;
-				if (!_G(facetalkrepeat))
-					_G(facetalkwait) = AGS_FACETALK_WAIT_FOREVER;
+					if (!_G(facetalkrepeat))
+						_G(facetalkwait) = 999999;
 				}
 				if ((_G(facetalkframe) != 0) || (_G(facetalkrepeat) == 1))
 					_G(facetalkwait) = _GP(views)[_G(facetalkview)].loops[_G(facetalkloop)].frames[_G(facetalkframe)].speed + GetCharacterSpeechAnimationDelay(_G(facetalkchar));

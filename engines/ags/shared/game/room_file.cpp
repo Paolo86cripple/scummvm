@@ -37,8 +37,6 @@
 
 namespace AGS3 {
 
-using namespace AGS::Shared;
-
 // default number of hotspots to read from the room file
 #define MIN_ROOM_HOTSPOTS  20
 #define LEGACY_HOTSPOT_NAME_LEN 30
@@ -187,13 +185,13 @@ HError ReadMainBlock(RoomStruct *room, Stream *in, RoomFileVersion data_ver) {
 
 	// Event script links
 	if (data_ver >= kRoomVersion_300a) {
-		room->EventHandlers.reset(InteractionEvents::CreateFromStream(in));
+		room->EventHandlers.reset(InteractionScripts::CreateFromStream(in));
 		for (size_t i = 0; i < room->HotspotCount; ++i)
-			room->Hotspots[i].EventHandlers.reset(InteractionEvents::CreateFromStream(in));
+			room->Hotspots[i].EventHandlers.reset(InteractionScripts::CreateFromStream(in));
 		for (auto &obj : room->Objects)
-			obj.EventHandlers.reset(InteractionEvents::CreateFromStream(in));
+			obj.EventHandlers.reset(InteractionScripts::CreateFromStream(in));
 		for (size_t i = 0; i < room->RegionCount; ++i)
-			room->Regions[i].EventHandlers.reset(InteractionEvents::CreateFromStream(in));
+			room->Regions[i].EventHandlers.reset(InteractionScripts::CreateFromStream(in));
 	}
 
 	if (data_ver >= kRoomVersion_200_alpha) {
@@ -628,8 +626,10 @@ HRoomFileError ExtractScriptText(String &script, Stream *in, RoomFileVersion dat
 	return HRoomFileError::None();
 }
 
-void WriteInteractionScripts(const InteractionEvents *interactions, Stream *out) {
-	interactions->Write_v361(out);
+void WriteInteractionScripts(const InteractionScripts *interactions, Stream *out) {
+	out->WriteInt32(interactions->ScriptFuncNames.size());
+	for (size_t i = 0; i < interactions->ScriptFuncNames.size(); ++i)
+		interactions->ScriptFuncNames[i].Write(out);
 }
 
 void WriteMainBlock(const RoomStruct *room, Stream *out) {
@@ -644,9 +644,9 @@ void WriteMainBlock(const RoomStruct *room, Stream *out) {
 		out->WriteInt16(room->Hotspots[i].WalkTo.Y);
 	}
 	for (size_t i = 0; i < room->HotspotCount; ++i)
-		AGS::Shared::StrUtil::WriteString(room->Hotspots[i].Name, out);
+		Shared::StrUtil::WriteString(room->Hotspots[i].Name, out);
 	for (size_t i = 0; i < room->HotspotCount; ++i)
-		AGS::Shared::StrUtil::WriteString(room->Hotspots[i].ScriptName, out);
+		Shared::StrUtil::WriteString(room->Hotspots[i].ScriptName, out);
 
 	out->WriteInt32(0); // legacy poly-point areas
 
@@ -732,13 +732,13 @@ void WriteCompSc3Block(const RoomStruct *room, Stream *out) {
 void WriteObjNamesBlock(const RoomStruct *room, Stream *out) {
 	out->WriteByte((uint8_t)room->Objects.size());
 	for (const auto &obj : room->Objects)
-		AGS::Shared::StrUtil::WriteString(obj.Name, out);
+		Shared::StrUtil::WriteString(obj.Name, out);
 }
 
 void WriteObjScNamesBlock(const RoomStruct *room, Stream *out) {
 	out->WriteByte((uint8_t)room->Objects.size());
 	for (const auto &obj : room->Objects)
-		AGS::Shared::StrUtil::WriteString(obj.ScriptName, out);
+		Shared::StrUtil::WriteString(obj.ScriptName, out);
 }
 
 void WriteAnimBgBlock(const RoomStruct *room, Stream *out) {

@@ -25,7 +25,6 @@
 #include "ags/plugins/ags_app_open_url/ags_app_open_url.h"
 #include "ags/plugins/ags_blend/ags_blend.h"
 #include "ags/plugins/ags_bm_font_renderer/ags_bm_font_renderer.h"
-#include "ags/plugins/ags_ccs/ags_ccs.h"
 #include "ags/plugins/ags_clipboard/ags_clipboard.h"
 #include "ags/plugins/ags_collision_detector/ags_collision_detector.h"
 #include "ags/plugins/ags_console_sys_plugin/ags_console_sys_plugin.h"
@@ -42,8 +41,6 @@
 #include "ags/plugins/ags_joy/ags_joy.h"
 #include "ags/plugins/ags_maya/ags_maya.h"
 #include "ags/plugins/ags_nickenstien_gfx/ags_nickenstien_gfx.h"
-#include "ags/plugins/ags_lua/ags_lua.h"
-#include "ags/plugins/ags_otherroom/ags_otherroom.h"
 #include "ags/plugins/ags_pal_render/ags_pal_render.h"
 #include "ags/plugins/ags_parallax/ags_parallax.h"
 #include "ags/plugins/ags_shell/ags_shell.h"
@@ -93,9 +90,6 @@ Plugins::PluginBase *pluginOpen(const char *filename) {
 	if (fname.equalsIgnoreCase("AGSBMFontRenderer"))
 		return new AGSBMFontRenderer::AGSBMFontRenderer();
 
-	if (fname.equalsIgnoreCase("ags_CCS"))
-		return new AGSCcs::AGSCcs();
-
 	if (fname.equalsIgnoreCase("AGSClipboard"))
 		return new AGSClipboard::AGSClipboard();
 
@@ -135,9 +129,6 @@ Plugins::PluginBase *pluginOpen(const char *filename) {
 	if (fname.equalsIgnoreCase("AGSJoy"))
 		return new AGSJoy::AGSJoy();
 
-	if (fname.equalsIgnoreCase("agslua"))
-		return new AGSLua::AGSLua();
-
 	if (fname.equalsIgnoreCase("AGS_Maya"))
 		return new AGSMaya::AGSMaya();
 
@@ -154,7 +145,7 @@ Plugins::PluginBase *pluginOpen(const char *filename) {
 	if (fname.equalsIgnoreCase("AGSSnowRain") || fname.equalsIgnoreCase("ags_snowrain"))
 		return new AGSSnowRain::AGSSnowRain();
 
-	if (fname.equalsIgnoreCase("AGSSock") || fname.equalsIgnoreCase("ags_sockets"))
+	if (fname.equalsIgnoreCase("AGSSock"))
 		return new AGSSock::AGSSock();
 
 	if (fname.equalsIgnoreCase("AGSSpriteFont") || fname.equalsIgnoreCase("agsplugin.spritefont")) {
@@ -169,9 +160,6 @@ Plugins::PluginBase *pluginOpen(const char *filename) {
 
 	if (fname.equalsIgnoreCase("ags_Nickenstien_GFX"))
 		return new AGSNickenstienGFX::AGSNickenstienGFX();
-
-	if (fname.equalsIgnoreCase("OtherRoom"))
-		return new AGSOtherRoom::AGSOtherRoom();
 
 	if (fname.equalsIgnoreCase("agsteam") && version == ::AGS::kWadjetEye)
 		return new AGSGalaxySteam::AGSWadjetEyeSteam();

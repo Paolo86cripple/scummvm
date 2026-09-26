@@ -38,6 +38,7 @@ class Stream;
 } // namespace Shared
 } // namespace AGS
 
+using namespace AGS; // FIXME later
 
 #pragma pack(push)
 #pragma pack(1)
@@ -64,8 +65,8 @@ public:
 	unsigned short szLevelName[RM_MAXLENGTH];
 	unsigned short szComments[RM_MAXLENGTH];
 
-	void ReadFromFile(AGS::Shared::Stream *in);
-	void WriteToFile(AGS::Shared::Stream *out);
+	void ReadFromFile(Shared::Stream *in);
+	void WriteToFile(Shared::Stream *out);
 
 	void setSaveName(const Common::String &saveName);
 	Common::String getSaveName() const;

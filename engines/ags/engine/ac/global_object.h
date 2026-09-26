@@ -29,6 +29,7 @@ namespace Shared {
 class Bitmap;
 }
 }
+using namespace AGS; // FIXME later
 
 // TODO: merge with other Rect declared in bitmap unit
 struct _Rect {
@@ -78,7 +79,7 @@ int  AreThingsOverlapping(int thing1, int thing2);
 int  GetObjectProperty(int hss, const char *property);
 void GetObjectPropertyText(int item, const char *property, char *bufer);
 
-AGS::Shared::Bitmap *GetObjectImage(int obj, bool *is_original = nullptr);
+Shared::Bitmap *GetObjectImage(int obj, bool *is_original = nullptr);
 
 } // namespace AGS3
 

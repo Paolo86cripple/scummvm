@@ -76,7 +76,6 @@
 namespace AGS3 {
 
 using namespace AGS::Shared;
-using namespace AGS::Engine;
 
 static bool ShouldStayInWaitMode();
 
@@ -320,28 +319,28 @@ bool run_service_key_controls(KeyInput &out_key) {
 		return false; // should skip this key event
 
 	// Use backward-compatible combined key for special controls
-	const eAGSKeyCode agscombokey = AGSKeyToScriptKey(ki.CompatKey);
+	eAGSKeyCode agskey = ki.CompatKey;
 	// LAlt or RAlt + Enter/Return
-	if ((cur_mod == Common::KBD_ALT) && agscombokey == eAGSKeyCodeReturn) {
+	if ((cur_mod == Common::KBD_ALT) && agskey == eAGSKeyCodeReturn) {
 		engine_try_switch_windowed_gfxmode();
 		return false;
 	}
 
 	// Alt+X, abort (but only once game is loaded)
-	if ((_G(displayed_room) >= 0) && (agscombokey == _GP(play).abort_key)) {
+	if ((_G(displayed_room) >= 0) && (agskey == _GP(play).abort_key)) {
 		Debug::Printf("Abort key pressed");
 		_G(check_dynamic_sprites_at_exit) = 0;
 		quit("!|");
 	}
 
-	if ((agscombokey == eAGSKeyCodeCtrlE) && (_G(display_fps) == kFPS_Forced)) {
+	if ((agskey == eAGSKeyCodeCtrlE) && (_G(display_fps) == kFPS_Forced)) {
 		// if --fps paramter is used, Ctrl+E will max out frame rate
 		setTimerFps(isTimerFpsMaxed() ? _G(frames_per_second) : 1000);
 		return false;
 	}
 
 	// FIXME: review this command! - practically inconvenient
-	if ((agscombokey == eAGSKeyCodeCtrlD) && (_GP(play).debug_mode > 0)) {
+	if ((agskey == eAGSKeyCodeCtrlD) && (_GP(play).debug_mode > 0)) {
 		// ctrl+D - show info
 		String buffer = String::FromFormat("In room %d %s[Player at %d, %d (view %d, loop %d, frame %d)%s%s%s",
 										   _G(displayed_room), (_G(noWalkBehindsAtAll) ? "(has no walk-behinds)" : ""),
@@ -383,7 +382,7 @@ bool run_service_key_controls(KeyInput &out_key) {
 		return false;
 	}
 
-	if (((agscombokey == eAGSKeyCodeCtrlV) && (cur_key_mods & Common::KBD_ALT) != 0)
+	if (((agskey == eAGSKeyCodeCtrlV) && (cur_key_mods & Common::KBD_ALT) != 0)
 			&& (_GP(play).wait_counter < 1) && (_GP(play).text_overlay_on == 0) && (_G(restrict_until).type == 0)) {
 		// make sure we can't interrupt a Wait()
 		// and desync the music to cutscene
@@ -415,38 +414,30 @@ static void check_keyboard_controls() {
 	if (!run_service_key_controls(ki)) {
 		return;
 	}
-
-	// AGS script key will depend on the current "key handling mode";
-	// in case of mod+key combinations it will be either individual key (new mode)
-	// or combo-key code (old mode).
-	const eAGSKeyCode agskey = AGSKeyToScriptKey(ki.Key);
-	// Use backward-compatible combined key for special controls,
-	// because game variables may store old-style key + mod codes
-	const eAGSKeyCode agscombokey = AGSKeyToScriptKey(ki.CompatKey);
-
-	// Suggest a key to the plugins
-	if (pl_run_plugin_hooks(AGSE_KEYPRESS, agskey)) {
-		debug_script_log("Keypress code %d claimed by plugin", agskey);
-		return;
-	}
-
-	// Cutscene skip
-	check_skip_cutscene_keypress(agscombokey);
+	// Use backward-compatible combined key for special controls
+	const eAGSKeyCode agskey = ki.CompatKey;
+	// Then, check cutscene skip
+	check_skip_cutscene_keypress(agskey);
 	if (_GP(play).fast_forward) {
 		return;
 	}
-	// Cancel if temporarily ignoring input (the cutscenes are still handled in this case?)
 	if (_GP(play).IsIgnoringInput()) {
 		return;
 	}
+	// Now check for in-game controls
+	if (pl_run_plugin_hooks(AGSE_KEYPRESS, agskey)) {
+		// plugin took the keypress
+		debug_script_log("Keypress code %d taken by plugin", agskey);
+		return;
+	}
 
-	// Skip speech if instructed by Speech.SkipStyle
+	// skip speech if desired by Speech.SkipStyle
 	if ((_GP(play).text_overlay_on > 0) && (_GP(play).speech_skip_style & SKIP_KEYPRESS) && !IsAGSServiceKey(ki.Key)) {
 		// only allow a key to remove the overlay if the icon bar isn't up
 		if (IsGamePaused() == 0) {
 			// check if it requires a specific keypress
 			if ((_GP(play).skip_speech_specific_key == 0) ||
-				(agscombokey == _GP(play).skip_speech_specific_key)) {
+				(agskey == _GP(play).skip_speech_specific_key)) {
 				remove_screen_overlay(_GP(play).text_overlay_on);
 				_GP(play).SetWaitKeySkip(ki);
 			}
@@ -455,14 +446,13 @@ static void check_keyboard_controls() {
 		return;
 	}
 
-	// Skip Wait state
 	if ((_GP(play).wait_counter != 0) && (_GP(play).key_skip_wait & SKIP_KEYPRESS) && !IsAGSServiceKey(ki.Key)) {
 		_GP(play).SetWaitKeySkip(ki);
 		return;
 	}
 
-	// Don't queue up another keypress if it can't be run instantly
 	if (_G(inside_script)) {
+		// Don't queue up another keypress if it can't be run instantly
 		debug_script_log("Keypress %d ignored (game blocked)", agskey);
 		return;
 	}
@@ -513,20 +503,20 @@ static void check_keyboard_controls() {
 	}
 
 	// Built-in key-presses
-	if ((_GP(usetup).key_save_game > 0) && (agscombokey == _GP(usetup).key_save_game)) {
+	if (agskey == _GP(usetup).key_save_game) {
 		do_save_game_dialog();
 		return;
-	} else if ((_GP(usetup).key_restore_game > 0) && (agscombokey == _GP(usetup).key_restore_game)) {
+	} else if (agskey == _GP(usetup).key_restore_game) {
 		do_restore_game_dialog();
 		return;
 	}
 
 	if (!keywasprocessed) {
-		// Pass the key event to the script.
+		const int sckey = AGSKeyToScriptKey(ki.Key);
 		const int sckeymod = ki.Mod;
 		if (old_keyhandle || (ki.UChar == 0)) {
-			debug_script_log("Running on_key_press keycode %d, mod %d", agskey, sckeymod);
-			setevent(EV_TEXTSCRIPT, kTS_KeyPress, agskey, sckeymod);
+			debug_script_log("Running on_key_press keycode %d, mod %d", sckey, sckeymod);
+			setevent(EV_TEXTSCRIPT, kTS_KeyPress, sckey, sckeymod);
 		}
 		if (!old_keyhandle && (ki.UChar > 0)) {
 			debug_script_log("Running on_text_input char %s (%d)", ki.Text, ki.UChar);

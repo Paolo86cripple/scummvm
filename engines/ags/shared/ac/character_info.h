@@ -38,6 +38,8 @@ class Stream;
 } // namespace Shared
 } // namespace AGS
 
+using namespace AGS; // FIXME later
+
 #define MAX_INV             301
 // Character flags
 #define CHF_MANUALSCALING   1
@@ -59,7 +61,6 @@ class Stream;
 #define CHF_MOVENOTWALK     0x10000   // engine only - do not do walk anim
 #define CHF_ANTIGLIDE       0x20000
 #define CHF_HASLIGHT        0x40000
-#define CHF_TURNWHENFACE    0x80000
 #define CHF_TINTLIGHTMASK   (CHF_NOLIGHTING | CHF_HASTINT | CHF_HASLIGHT)
 // Speechcol is no longer part of the flags as of v2.5
 #define OCHF_SPEECHCOL      0xff000000
@@ -75,14 +76,15 @@ class Stream;
 
 // Converts character flags (CHF_*) to matching RoomObject flags (OBJF_*)
 inline int CharFlagsToObjFlags(int chflags) {
-	return AGS::Shared::FlagToFlag(chflags, CHF_NOINTERACT, OBJF_NOINTERACT) |
-		   AGS::Shared::FlagToFlag(chflags, CHF_NOWALKBEHINDS, OBJF_NOWALKBEHINDS) |
-		   AGS::Shared::FlagToFlag(chflags, CHF_HASTINT, OBJF_HASTINT) |
-		   AGS::Shared::FlagToFlag(chflags, CHF_HASLIGHT, OBJF_HASLIGHT) |
+	using namespace AGS::Shared;
+	return FlagToFlag(chflags, CHF_NOINTERACT, OBJF_NOINTERACT) |
+		   FlagToFlag(chflags, CHF_NOWALKBEHINDS, OBJF_NOWALKBEHINDS) |
+		   FlagToFlag(chflags, CHF_HASTINT, OBJF_HASTINT) |
+		   FlagToFlag(chflags, CHF_HASLIGHT, OBJF_HASLIGHT) |
 		   // following flags are inverse
-		   AGS::Shared::FlagToNoFlag(chflags, CHF_NOLIGHTING, OBJF_USEREGIONTINTS) |
-		   AGS::Shared::FlagToNoFlag(chflags, CHF_MANUALSCALING, OBJF_USEROOMSCALING) |
-		   AGS::Shared::FlagToNoFlag(chflags, CHF_NOBLOCKING, OBJF_SOLID);
+		   FlagToNoFlag(chflags, CHF_NOLIGHTING, OBJF_USEREGIONTINTS) |
+		   FlagToNoFlag(chflags, CHF_MANUALSCALING, OBJF_USEROOMSCALING) |
+		   FlagToNoFlag(chflags, CHF_NOBLOCKING, OBJF_SOLID);
 }
 
 // Length of deprecated character name field, in bytes
@@ -94,7 +96,6 @@ enum CharacterSvgVersion {
 	kCharSvgVersion_36025 = 2,   // animation volume
 	kCharSvgVersion_36109 = 3,   // removed movelists, save externally
 	kCharSvgVersion_36115 = 4,   // no limit on character name's length
-	kCharSvgVersion_36205 = 3060205, // 32-bit "following" parameters
 };
 
 
@@ -204,11 +205,11 @@ struct CharacterInfo {
 	void update_character_idle(CharacterExtras *chex, int &doing_nothing);
 	void update_character_follower(int &char_index, std::vector<int> &followingAsSheep, int &doing_nothing);
 
-	void ReadFromFile(AGS::Shared::Stream *in, CharacterInfo2 &chinfo2, GameDataVersion data_ver);
-	void WriteToFile(AGS::Shared::Stream *out) const;
+	void ReadFromFile(Shared::Stream *in, CharacterInfo2 &chinfo2, GameDataVersion data_ver);
+	void WriteToFile(Shared::Stream *out) const;
 	// TODO: move to runtime-only class (?)
-	void ReadFromSavegame(AGS::Shared::Stream *in, CharacterInfo2 &chinfo2, CharacterSvgVersion save_ver);
-	void WriteToSavegame(AGS::Shared::Stream *out, const CharacterInfo2 &chinfo2) const;
+	void ReadFromSavegame(Shared::Stream *in, CharacterInfo2 &chinfo2, CharacterSvgVersion save_ver);
+	void WriteToSavegame(Shared::Stream *out, const CharacterInfo2 &chinfo2) const;
 
 private:
 	// Fixups loop and frame values, in case any of them are set to a value out of the valid range
@@ -216,8 +217,8 @@ private:
 
 	// Helper functions that read and write first data fields,
 	// common for both game file and save.
-	void ReadBaseFields(AGS::Shared::Stream *in);
-	void WriteBaseFields(AGS::Shared::Stream *out) const;
+	void ReadBaseFields(Shared::Stream *in);
+	void WriteBaseFields(Shared::Stream *out) const;
 };
 
 

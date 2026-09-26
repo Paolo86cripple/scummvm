@@ -181,11 +181,9 @@ void SeekMIDIPosition(int position) {
 	debug_script_log("Seek MIDI position to %d", position);
 }
 
-static const int AGS_MIDI_FAST_FORWARD_POS = 99999;
-
 int GetMIDIPosition() {
 	if (_GP(play).fast_forward)
-		return AGS_MIDI_FAST_FORWARD_POS;
+		return 99999;
 	if (_GP(play).silent_midi == 0 && _G(current_music_type) != MUS_MIDI)
 		return -1; // returns -1 on failure according to old manuals
 
@@ -286,12 +284,10 @@ void SeekMP3PosMillis(int posn) {
 		mus_ch->seek(posn);
 }
 
-static const int AGS_MP3_FAST_FORWARD_POS = 999999;
-
 int GetMP3PosMillis() {
 	// in case they have "while (GetMP3PosMillis() < 5000) "
 	if (_GP(play).fast_forward)
-		return AGS_MP3_FAST_FORWARD_POS;
+		return 999999;
 	if (_G(current_music_type) != MUS_MP3 && _G(current_music_type) != MUS_OGG)
 		return 0;  // returns 0 on failure according to old manuals
 
@@ -460,21 +456,19 @@ ScriptAudioChannel *PlayVoiceClip(CharacterInfo *ch, int sndid, bool as_speech) 
 }
 
 // Construct an asset name for the voice-over clip for the given character and cue id
-String get_cue_filename(int charid, int sndid, bool old_style = true) {
+String get_cue_filename(int charid, int sndid) {
 	String asset_path = get_voice_assetpath();
-	// Clip name generation rule:
-	// New-style: use full script name (past the 'c' prefix),
-	//            clip number is separated by a dot: "CHARNAME.X"
-	// Old-style: use only first 4 characters (past the 'c' prefix),
-	//            clip number is not separated: "CHARX"
-	const char *charname = (charid >= 0) ? _GP(game).chars2[charid].scrname_new.GetCStr()
-		: "narrator";
-	size_t from = (charname[0] == 'c') ? 1 : 0u;
-	size_t len = old_style ? 4 : SIZE_MAX;
-	String charname_fix(charname + from, len);
-	const char *fmt_str = old_style ? "%s%d" : "%s.%d";
-	String asset_filename = String::FromFormat(fmt_str, charname_fix.GetCStr(), sndid);
-	return Path::ConcatPaths(asset_path, asset_filename);
+	String script_name;
+	if (charid >= 0) {
+		// append the first 4 characters of the script name to the filename
+		if (_GP(game).chars2[charid].scrname_new.GetAt(0) == 'c')
+			script_name.SetString(_GP(game).chars2[charid].scrname_new.GetCStr() + 1, 4);
+		else
+			script_name.SetString(_GP(game).chars2[charid].scrname_new.GetCStr(), 4);
+	} else {
+		script_name = "NARR";
+	}
+	return String::FromFormat("%s%s%d", asset_path.GetCStr(), script_name.GetCStr(), sndid);
 }
 
 // Play voice-over clip on the common channel;
@@ -552,7 +546,7 @@ bool play_voice_speech(int charid, int sndid) {
 	if (!_GP(play).ShouldPlayVoiceSpeech())
 		return false;
 
-	String voice_file = get_cue_filename(charid, sndid, !_GP(game).options[OPT_VOICECLIPNAMERULE]);
+	String voice_file = get_cue_filename(charid, sndid);
 	if (!play_voice_clip_impl(voice_file, true, true))
 		return false;
 
@@ -587,7 +581,7 @@ bool play_voice_nonblocking(int charid, int sndid, bool as_speech) {
 	if (_GP(play).IsBlockingVoiceSpeech())
 		return false;
 
-	String voice_file = get_cue_filename(charid, sndid, !_GP(game).options[OPT_VOICECLIPNAMERULE]);
+	String voice_file = get_cue_filename(charid, sndid);
 	return play_voice_clip_impl(voice_file, as_speech, false);
 }
 

@@ -25,8 +25,6 @@
 
 namespace AGS3 {
 
-using AGS::Shared::Stream;
-
 int ScriptSetBase::Dispose(void * /*address*/, bool force) {
 	Clear();
 	delete this;

@@ -19,7 +19,7 @@
  *
  */
 
-// Necessario per compatibilità con l'API plugin AGS che usa strcpy
+// For dangerous AGS API
 #define FORBIDDEN_SYMBOL_EXCEPTION_strcpy
 
 #include "ags/lib/allegro.h"
@@ -42,12 +42,12 @@
 #include "ags/engine/ac/mouse.h"
 #include "ags/engine/ac/move_list.h"
 #include "ags/engine/ac/parser.h"
+#include "ags/engine/ac/path_helper.h"
 #include "ags/engine/ac/room_status.h"
 #include "ags/engine/ac/string.h"
 #include "ags/engine/ac/sys_events.h"
 #include "ags/shared/ac/sprite_cache.h"
 #include "ags/engine/ac/dynobj/script_string.h"
-#include "ags/engine/ac/dynobj/cc_dynamic_array.h"
 #include "ags/engine/ac/dynobj/dynobj_manager.h"
 #include "ags/shared/font/fonts.h"
 #include "ags/engine/debugging/debug_log.h"
@@ -68,7 +68,6 @@
 #include "ags/engine/script/script.h"
 #include "ags/engine/script/script_runtime.h"
 #include "ags/shared/util/file_stream.h"
-#include "ags/engine/ac/path_helper.h"
 #include "ags/engine/util/library.h"
 #include "ags/engine/util/library_scummvm.h"
 #include "ags/shared/util/memory.h"
@@ -89,7 +88,7 @@ namespace AGS3 {
 using namespace AGS::Shared;
 using namespace AGS::Engine;
 
-const int PLUGIN_API_VERSION = 30;
+const int PLUGIN_API_VERSION = 26;
 
 // On save/restore, the Engine will provide the plugin with a handle. Because we only ever save to one file at a time,
 // we can reuse the same handle.
@@ -97,88 +96,6 @@ const int PLUGIN_API_VERSION = 30;
 void PluginSimulateMouseClick(int pluginButtonID) {
 	_G(simulatedClick) = static_cast<eAGSMouseButton>(pluginButtonID);
 }
-
-// PluginStreamWrapper adapts an internal AGS::Shared::Stream to the
-// plugin-facing IAGSStream interface
-class PluginStreamWrapper : public ::AGS3::IAGSStream {
-public:
-	PluginStreamWrapper(AGS::Shared::Stream *stream, bool owning)
-		: _stream(stream), _owning(owning) {}
-	virtual ~PluginStreamWrapper() {}
-
-	int GetMode() const override {
-		int mode = 0;
-		if (_stream->CanRead()) mode |= AGSSTREAM_MODE_READ;
-		if (_stream->CanWrite()) mode |= AGSSTREAM_MODE_WRITE;
-		if (_stream->CanSeek()) mode |= AGSSTREAM_MODE_SEEK;
-		return mode;
-	}
-
-	const char *GetPath() const override {
-		return _stream->GetPath().GetCStr();
-	}
-
-	bool EOS() const override {
-		return _stream->EOS();
-	}
-
-	bool GetError() const override {
-		return _stream->GetError();
-	}
-
-	int64_t GetLength() const override {
-		return _stream->GetLength();
-	}
-
-	int64_t GetPosition() const override {
-		return _stream->GetPosition();
-	}
-
-	size_t Read(void *buffer, size_t len) override {
-		return _stream->Read(buffer, len);
-	}
-
-	int32_t ReadByte() override {
-		return _stream->ReadByte();
-	}
-
-	size_t Write(const void *buffer, size_t len) override {
-		return _stream->Write(buffer, len);
-	}
-
-	int32_t WriteByte(uint8_t b) override {
-		return _stream->WriteByte(b);
-	}
-
-	int64_t Seek(int64_t offset, int origin) override {
-		AGS::Shared::StreamSeek sOrigin;
-		switch (origin) {
-		case AGSSTREAM_SEEK_SET: sOrigin = AGS::Shared::kSeekBegin; break;
-		case AGSSTREAM_SEEK_CUR: sOrigin = AGS::Shared::kSeekCurrent; break;
-		case AGSSTREAM_SEEK_END: sOrigin = AGS::Shared::kSeekEnd; break;
-		default: return -1;
-		}
-		return _stream->Seek(offset, sOrigin);
-	}
-
-	bool Flush() override {
-		return _stream->Flush();
-	}
-
-	void Close() override {
-		_stream->Close();
-	}
-
-	void Dispose() override {
-		if (_owning)
-			delete _stream;
-		delete this;
-	}
-
-private:
-	AGS::Shared::Stream *_stream;
-	bool _owning;
-};
 
 void IAGSEngine::AbortGame(const char *reason) {
 	quit(reason);
@@ -445,7 +362,7 @@ void IAGSEngine::PollSystem() {
 
 AGSCharacter *IAGSEngine::GetCharacter(int32 charnum) {
 	if (charnum >= _GP(game).numcharacters)
-		quit("!AGS::AGSEngine::GetCharacter: invalid character request");
+		quit("!AGSEngine::GetCharacter: invalid character request");
 
 	return (AGSCharacter *)&_GP(game).chars[charnum];
 }
@@ -686,16 +603,16 @@ int IAGSEngine::CanRunScriptFunctionNow() {
 	return 1;
 }
 
-int IAGSEngine::CallGameScriptFunction(const char *name, int32 globalScript, int32 numArgs, intptr_t arg1, intptr_t arg2, intptr_t arg3) {
+int IAGSEngine::CallGameScriptFunction(const char *name, int32 globalScript, int32 numArgs, long arg1, long arg2, long arg3) {
 	if (_G(inside_script))
 		return -300;
 
 	ccInstance *toRun = GetScriptInstanceByType(globalScript ? kScInstGame : kScInstRoom);
 
 	RuntimeScriptValue params[]{
-		   RuntimeScriptValue().SetPluginArgument(static_cast<int32_t>(arg1)),
-		   RuntimeScriptValue().SetPluginArgument(static_cast<int32_t>(arg2)),
-		   RuntimeScriptValue().SetPluginArgument(static_cast<int32_t>(arg3)),
+		   RuntimeScriptValue().SetPluginArgument(arg1),
+		   RuntimeScriptValue().SetPluginArgument(arg2),
+		   RuntimeScriptValue().SetPluginArgument(arg3),
 	};
 	int toret = RunScriptFunction(toRun, name, numArgs, params);
 	return toret;
@@ -713,7 +630,7 @@ void IAGSEngine::SetSpriteAlphaBlended(int32 slot, int32 isAlphaBlended) {
 		_GP(game).SpriteInfos[slot].Flags |= SPF_ALPHACHANNEL;
 }
 
-void IAGSEngine::QueueGameScriptFunction(const char *name, int32 globalScript, int32 numArgs, intptr_t arg1, intptr_t arg2) {
+void IAGSEngine::QueueGameScriptFunction(const char *name, int32 globalScript, int32 numArgs, long arg1, long arg2) {
 	if (!_G(inside_script)) {
 		this->CallGameScriptFunction(name, globalScript, numArgs, arg1, arg2, 0);
 		return;
@@ -722,8 +639,8 @@ void IAGSEngine::QueueGameScriptFunction(const char *name, int32 globalScript, i
 	if (numArgs < 0 || numArgs > 2)
 		quit("IAGSEngine::QueueGameScriptFunction: invalid number of arguments");
 
-	RuntimeScriptValue params[]{ RuntimeScriptValue().SetPluginArgument(static_cast<int32_t>(arg1)),
-		RuntimeScriptValue().SetPluginArgument(static_cast<int32_t>(arg2)) };
+	RuntimeScriptValue params[]{ RuntimeScriptValue().SetPluginArgument(arg1),
+		RuntimeScriptValue().SetPluginArgument(arg2) };
 	_G(curscript)->run_another(name, globalScript ? kScInstGame : kScInstRoom, numArgs, params);
 }
 
@@ -822,21 +739,13 @@ IAGSFontRenderer *IAGSEngine::ReplaceFontRenderer(int fontNumber, IAGSFontRender
 	return old_render;
 }
 
-size_t IAGSEngine::ResolveFilePath(const char *script_path, char *buf, size_t buf_len) {
-	ResolvedPath rp;
-	ResolveScriptPath(script_path, true, rp);
-	String path = Path::MakeAbsolutePath(rp.FullPath);
-	if (!buf)
-		return path.GetLength() + 1;
-	size_t copy_len = path.GetLength() < buf_len - 1 ? path.GetLength() : buf_len - 1;
-	Common::strlcpy(buf, path.GetCStr(), buf_len);
-	return copy_len + 1;
+const char *IAGSEngine::ResolveFilePath(const char *script_path) {
+	return File_ResolvePath(script_path);
 }
 
 void IAGSEngine::GetRenderStageDesc(AGSRenderStageDesc *desc) {
 	if (desc->Version >= 25) {
-		RenderMatrixes rm;
-		_G(gfxDriver)->GetStageMatrixes(rm);
+		_G(gfxDriver)->GetStageMatrixes((RenderMatrixes &)desc->Matrixes);
 	}
 }
 
@@ -857,67 +766,6 @@ IAGSFontRenderer* IAGSEngine::ReplaceFontRenderer2(int fontNumber, IAGSFontRende
 void IAGSEngine::NotifyFontUpdated(int fontNumber) {
 	font_recalc_metrics(fontNumber);
 	GUI::MarkForFontUpdate(fontNumber);
-}
-
-::AGS3::IAGSStream *IAGSEngine::OpenFileStream(const char *script_path, int file_mode, int work_mode) {
-	FileOpenMode open_mode = static_cast<FileOpenMode>(file_mode - 1);
-	FileWorkMode work = (work_mode & AGSSTREAM_MODE_WRITE) ? kFile_Write : kFile_Read;
-
-	ResolvedPath rp;
-	if (!ResolveScriptPath(script_path, (work_mode & AGSSTREAM_MODE_WRITE) == 0, rp))
-		return nullptr;
-
-	FileStream *stream = new FileStream(rp.FullPath, open_mode, work);
-	if (!stream->IsValid()) {
-		delete stream;
-		return nullptr;
-	}
-	return new PluginStreamWrapper(stream, true);
-}
-
-::AGS3::IAGSStream *IAGSEngine::GetFileStreamByHandle(int32 fhandle) {
-	Stream *stream = get_valid_file_stream_from_handle(fhandle, "IAGSEngine::GetFileStreamByHandle");
-	if (!stream)
-		return nullptr;
-	return new PluginStreamWrapper(stream, false);
-}
-
-void IAGSEngine::Log(int level, const char *fmt, ...) {
-	String logbuf;
-	logbuf.Format("%s : ", _GP(plugins)[this->pluginId].filename.GetCStr());
-	va_list argptr;
-	va_start(argptr, fmt);
-	logbuf.AppendFmtv(fmt, argptr);
-	va_end(argptr);
-	AGS::Shared::Debug::Printf(static_cast<AGS::Shared::MessageType>(level), logbuf);
-}
-
-void *IAGSEngine::CreateDynamicArray(size_t elem_count, size_t elem_size, bool is_managed_type) {
-	if (elem_count > INT32_MAX || elem_size > INT32_MAX ||
-			(static_cast<uint64_t>(elem_count) * elem_size) > UINT32_MAX) {
-		debug_script_warn("IAGSEngine::CreateDynamicArray: requested array size exceeds the supported limit");
-		return nullptr;
-	}
-	if (is_managed_type && elem_size != sizeof(int32_t)) {
-		debug_script_warn("IAGSEngine::CreateDynamicArray: managed handles must have elem_size = 4, requested %zu instead", elem_size);
-		return nullptr;
-	}
-
-	auto obj_ref = CCDynamicArray::Create(static_cast<int>(elem_count), static_cast<int>(elem_size), is_managed_type);
-	return obj_ref.Obj;
-}
-
-size_t IAGSEngine::GetDynamicArrayLength(const void *arr) {
-	if (!arr)
-		return 0;
-	const auto &hdr = CCDynamicArray::GetHeader(arr);
-	return hdr.ElemCount & (~ARRAY_MANAGED_TYPE_FLAG);
-}
-
-size_t IAGSEngine::GetDynamicArraySize(const void *arr) {
-	if (!arr)
-		return 0;
-	return CCDynamicArray::GetHeader(arr).TotalSize;
 }
 
 // *********** General plugin implementation **********
@@ -998,7 +846,7 @@ int pl_run_plugin_hook_by_index(uint32_t pl_index, int event, int data) {
 	return 0;
 }
 
-int pl_run_plugin_hook_by_name(AGS::Shared::String &pl_name, int event, int data) {
+int pl_run_plugin_hook_by_name(Shared::String &pl_name, int event, int data) {
 	for (auto &plugin : _GP(plugins)) {
 		if ((plugin.wantHook & event) && plugin.filename.CompareNoCase(pl_name) == 0) {
 			return plugin._plugin->AGS_EngineOnEvent(event, data);
@@ -1013,12 +861,12 @@ void pl_run_plugin_init_gfx_hooks(const char *driverName, void *data) {
 	}
 }
 
-AGS::Engine::GameInitError pl_register_plugins(const std::vector<PluginInfo> &infos) {
+Engine::GameInitError pl_register_plugins(const std::vector<PluginInfo> &infos) {
 	_GP(plugins).clear();
 	_GP(plugins).reserve(MAXPLUGINS);
 
 	for (size_t inf_index = 0; inf_index < infos.size(); ++inf_index) {
-		const AGS::Shared::PluginInfo &info = infos[inf_index];
+		const Shared::PluginInfo &info = infos[inf_index];
 		String name = info.Name;
 		if (name.GetLast() == '!')
 			continue; // editor-only plugin, ignore it

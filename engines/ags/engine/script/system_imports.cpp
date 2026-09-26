@@ -22,12 +22,9 @@
 #include "ags/engine/script/system_imports.h"
 
 namespace AGS3 {
-using namespace AGS::Shared;
 
 uint32_t SystemImports::add(const String &name, const RuntimeScriptValue &value, ccInstance *anotherscr) {
-	// Only do exact match for add, not prefix/separator expansion
-	IndexMap::const_iterator it = btree.find(name);
-	uint32_t ixof = (it != btree.end()) ? it->_value : UINT32_MAX;
+	uint32_t ixof = get_index_of(name);
 	// Check if symbol already exists
 	if (ixof != UINT32_MAX) {
 		// Only allow override if not a script-exported function
@@ -85,61 +82,21 @@ uint32_t SystemImports::get_index_of(const String &name) {
 	if (it != btree.end())
 		return it->_value;
 
-	// Find import separator '^' or export separator '$'
-	size_t args_at = name.FindChar('^');
-	char args_separator = 0;
-	if (args_at != String::NoIndex) {
-		args_separator = '^';
-	} else {
-		args_at = name.FindChar('$');
-		if (args_at != String::NoIndex) {
-			args_separator = '$';
-		}
-	}
-
-	if (args_separator == 0) {
-		// No separator: try prefix search for matching exports
-		String name_only = name; // use full name as base
-		uint32_t name_only_match = UINT32_MAX;
-		IndexMap::const_iterator lb = btree.lower_bound(name_only);
-		for (; lb != btree.end(); ++lb) {
-			const String &try_sym = lb->_key;
-			if (try_sym.CompareLeft(name_only, name_only.GetLength()) != 0)
-				break;
-			if (try_sym.GetLength() == name_only.GetLength())
-				name_only_match = lb->_value;
-			else if (try_sym[name_only.GetLength()] == '$')
-				return lb->_value; // script export with matching base name found
-		}
-		return name_only_match;
-	}
-
-	String name_only = name.Left(args_at);
-
-	// Request is an import symbol (^)
-	if (args_separator == '^') {
-		// Search for entries matching base name
-		uint32_t name_only_match = UINT32_MAX;
-		IndexMap::const_iterator lb = btree.lower_bound(name_only);
-		for (; lb != btree.end(); ++lb) {
-			const String &try_sym = lb->_key;
-			if (try_sym.CompareLeft(name_only, name_only.GetLength()) != 0)
-				break;
-			if (try_sym.GetLength() == name_only.GetLength())
-				name_only_match = lb->_value;
-			else if (try_sym[name_only.GetLength()] == '$')
-				return lb->_value; // script export with matching base name found
-			else if (try_sym[name_only.GetLength()] == '^')
-				return lb->_value; // import/plugin symbol with matching base name found
-		}
-		return name_only_match;
-	}
-
-	// Request is an export symbol ($): try base name match without args
-	it = btree.find(name_only);
-	if (it != btree.end())
+	// CHECKME: what are "mangled names" and where do they come from?
+	String mangled_name = String::FromFormat("%s$", name.GetCStr());
+	// if it's a function with a mangled name, allow it
+	it = btree.lower_bound(mangled_name);
+	if (it != btree.end() && it->_key.CompareLeft(mangled_name) == 0)
 		return it->_value;
 
+	if (name.GetLength() > 3) {
+		size_t c = name.FindCharReverse('^');
+		if (c != String::NoIndex && (c == name.GetLength() - 2 || c == name.GetLength() - 3)) {
+			// Function with number of prametrs on the end
+			// attempt to find it without the param count
+			return get_index_of(name.Left(c));
+		}
+	}
 	return UINT32_MAX;
 }
 

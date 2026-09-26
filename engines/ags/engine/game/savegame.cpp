@@ -72,9 +72,8 @@
 
 namespace AGS3 {
 
-using namespace AGS;
-using namespace AGS::Shared;
-using namespace AGS::Engine;
+using namespace Shared;
+using namespace Engine;
 
 // function is currently implemented in savegame_v321.cpp
 HSaveError restore_save_data_v321(Stream *in, GameDataVersion data_ver, const PreservedParams &pp, RestoredData &r_data);

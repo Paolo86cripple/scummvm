@@ -33,6 +33,8 @@ class Stream;
 } // namespace Shared
 } // namespace AGS
 
+using namespace AGS; // FIXME later
+
 #define VFLG_FLIPSPRITE 1
 
 struct ViewFrame {
@@ -47,8 +49,8 @@ struct ViewFrame {
 
 	ViewFrame();
 
-	void ReadFromFile(AGS::Shared::Stream *in);
-	void WriteToFile(AGS::Shared::Stream *out);
+	void ReadFromFile(Shared::Stream *in);
+	void WriteToFile(Shared::Stream *out);
 };
 
 #define LOOPFLAG_RUNNEXTLOOP 1
@@ -65,10 +67,10 @@ struct ViewLoopNew {
 	void Initialize(int frameCount);
 	void Dispose();
 	bool RunNextLoop();
-	void WriteToFile_v321(AGS::Shared::Stream *out);
-	void ReadFromFile_v321(AGS::Shared::Stream *in);
-	void WriteFrames(AGS::Shared::Stream *out);
-	void ReadFrames(AGS::Shared::Stream *in);
+	void WriteToFile_v321(Shared::Stream *out);
+	void ReadFromFile_v321(Shared::Stream *in);
+	void WriteFrames(Shared::Stream *out);
+	void ReadFrames(Shared::Stream *in);
 };
 
 struct ViewStruct {
@@ -78,8 +80,8 @@ struct ViewStruct {
 	ViewStruct();
 	void Initialize(int loopCount);
 	void Dispose();
-	void WriteToFile(AGS::Shared::Stream *out);
-	void ReadFromFile(AGS::Shared::Stream *in);
+	void WriteToFile(Shared::Stream *out);
+	void ReadFromFile(Shared::Stream *in);
 };
 
 struct ViewStruct272 {
@@ -89,7 +91,7 @@ struct ViewStruct272 {
 	ViewFrame frames[16][20];
 
 	ViewStruct272();
-	void ReadFromFile(AGS::Shared::Stream *in);
+	void ReadFromFile(Shared::Stream *in);
 };
 
 extern void Convert272ViewsToNew(const std::vector<ViewStruct272> &oldv, std::vector<ViewStruct> &newv);

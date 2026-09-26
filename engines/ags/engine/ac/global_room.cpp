@@ -41,7 +41,7 @@
 
 namespace AGS3 {
 
-using namespace AGS::Shared;
+using namespace Shared;
 
 void SetAmbientTint(int red, int green, int blue, int opacity, int luminance) {
 	if ((red < 0) || (green < 0) || (blue < 0) ||

@@ -52,7 +52,6 @@
 #include "ags/globals.h"
 
 namespace AGS3 {
-using namespace AGS::Shared;
 
 static bool DoRunScriptFuncCantBlock(ccInstance *sci, NonBlockingScriptFunction *funcToRun, bool hasTheFunc);
 static char scfunctionname[MAX_FUNCTION_NAME_LEN + 1];
@@ -148,17 +147,17 @@ int run_interaction_event(const ObjectEvent &obj_evt, Interaction *nint, int evn
 // Returns 0 normally, or -1 to indicate that the NewInteraction has
 // become invalid and don't run another interaction on it
 // (eg. a room change occurred)
-int run_interaction_script(const ObjectEvent &obj_evt, InteractionEvents *nint, int evnt, int chkAny) {
+int run_interaction_script(const ObjectEvent &obj_evt, InteractionScripts *nint, int evnt, int chkAny) {
 	assert(nint);
 	if (!nint)
 		return 0;
 
-	if (evnt < 0 || static_cast<size_t>(evnt) >= nint->Events.size() || nint->Events[evnt].FunctionName.IsEmpty()) {
+	if (evnt < 0 || static_cast<size_t>(evnt) >= nint->ScriptFuncNames.size() || nint->ScriptFuncNames[evnt].IsEmpty()) {
 		// no response defined for this event
 		// If there is a response for "Any Click", then abort now so as to
 		// run that instead
 		if (chkAny < 0);
-		else if (!nint->Events[chkAny].FunctionName.IsEmpty())
+		else if (!nint->ScriptFuncNames[chkAny].IsEmpty())
 			return 0;
 
 		// Otherwise, run unhandled_event
@@ -181,17 +180,17 @@ int run_interaction_script(const ObjectEvent &obj_evt, InteractionEvents *nint, 
 
 	// Room events do not require additional params
 	if ((strstr(obj_evt.BlockName.GetCStr(), "room") != nullptr)) {
-		QueueScriptFunction(inst_type, nint->Events[evnt].FunctionName.GetCStr());
+		QueueScriptFunction(inst_type, nint->ScriptFuncNames[evnt].GetCStr());
 	}
 	// Regions only require 1 param - dynobj ref
 	else if ((strstr(obj_evt.BlockName.GetCStr(), "region") != nullptr)) {
-		QueueScriptFunction(inst_type, nint->Events[evnt].FunctionName.GetCStr(), 1, &obj_evt.DynObj);
+		QueueScriptFunction(inst_type, nint->ScriptFuncNames[evnt].GetCStr(), 1, &obj_evt.DynObj);
 	}
 	// Other types (characters, objects, invitems, hotspots) require
 	// 2 params - dynobj ref and the interaction mode (aka verb)
 	else {
 		RuntimeScriptValue params[]{obj_evt.DynObj, RuntimeScriptValue().SetInt32(obj_evt.Mode)};
-		QueueScriptFunction(inst_type, nint->Events[evnt].FunctionName.GetCStr(), 2, params);
+		QueueScriptFunction(inst_type, nint->ScriptFuncNames[evnt].GetCStr(), 2, params);
 	}
 
 	// if the room changed within the action
@@ -229,8 +228,6 @@ int create_global_script() {
 
 	// Resolve the script imports after all the scripts have been loaded
 	for (auto &inst : all_insts) {
-		const char *section = inst->instanceof->numSections > 0 ? inst->instanceof->sectionNames[0] : "<?>";
-		Debug::Printf(kDbgMsg_Info, "create_global_script: resolving imports for '%s'", section);
 		if (!inst->ResolveScriptImports(inst->instanceof.get()))
 			return kscript_create_error;
 		if (!inst->ResolveImportFixups(inst->instanceof.get()))

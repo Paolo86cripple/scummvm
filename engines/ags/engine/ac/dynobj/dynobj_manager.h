@@ -43,6 +43,7 @@ class Stream;
 } // namespace Shared
 } // namespace AGS
 
+using namespace AGS; // FIXME later
 
 // register a memory handle for the object and allow script
 // pointers to point to it
@@ -54,9 +55,9 @@ extern int   ccUnRegisterManagedObject(void *object);
 // remove all registered objects
 extern void  ccUnregisterAllObjects();
 // serialize all objects to disk
-extern void  ccSerializeAllObjects(AGS::Shared::Stream *out);
+extern void  ccSerializeAllObjects(Shared::Stream *out);
 // un-serialise all objects (will remove all currently registered ones)
-extern int   ccUnserializeAllObjects(AGS::Shared::Stream *in, ICCObjectCollectionReader *callback);
+extern int   ccUnserializeAllObjects(Shared::Stream *in, ICCObjectCollectionReader *callback);
 // dispose the object if RefCount==0
 extern void  ccAttemptDisposeObject(int32_t handle);
 // translate between object handles and memory addresses

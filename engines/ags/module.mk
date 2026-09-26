@@ -316,7 +316,6 @@ MODULE_OBJS = \
 	plugins/ags_app_open_url/ags_app_open_url.o \
 	plugins/ags_blend/ags_blend.o \
 	plugins/ags_bm_font_renderer/ags_bm_font_renderer.o \
-	plugins/ags_ccs/ags_ccs.o \
 	plugins/ags_clipboard/ags_clipboard.o \
 	plugins/ags_collision_detector/ags_collision_detector.o \
 	plugins/ags_console_sys_plugin/ags_console_sys_plugin.o \
@@ -334,10 +333,8 @@ MODULE_OBJS = \
 	plugins/ags_galaxy_steam/ags_wadjeteye_steam.o \
 	plugins/ags_galaxy_steam/ags_galaxy_steam.o \
 	plugins/ags_joy/ags_joy.o \
-	plugins/ags_lua/ags_lua.o \
 	plugins/ags_maya/ags_maya.o \
 	plugins/ags_nickenstien_gfx/ags_nickenstien_gfx.o \
-	plugins/ags_otherroom/ags_otherroom.o \
 	plugins/ags_pal_render/ags_pal_render.o \
 	plugins/ags_pal_render/raycast.o \
 	plugins/ags_parallax/ags_parallax.o \

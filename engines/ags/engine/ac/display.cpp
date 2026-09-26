@@ -58,8 +58,6 @@
 
 namespace AGS3 {
 
-using namespace AGS;
-
 using namespace AGS::Shared;
 using namespace AGS::Shared::BitmapHelper;
 
@@ -303,7 +301,7 @@ ScreenOverlay *display_main(int xx, int yy, int wii, const char *text, int disp_
 		int skip_setting = user_to_internal_skip_speech((SkipSpeechStyle)_GP(play).skip_display);
 		// Loop until skipped
 		while (true) {
-			if (AGS_SHOULD_QUIT)
+			if (SHOULD_QUIT)
 				return 0;
 
 			sys_evt_process_pending();

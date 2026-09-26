@@ -698,28 +698,7 @@ ScriptCamera *Game_GetAnyCamera(int index) {
 }
 
 void Game_SimulateKeyPress(int key) {
-	const bool old_key_mode = _GP(game).options[OPT_KEYHANDLEAPI] == 0;
-	eAGSKeyCode modkey = eAGSKeyCodeNone;
-	eAGSKeyMod mod = eAGSModNone;
-	// Support combo-keys, split them into key + mod and pass as separate events.
-	// If game is running in the old-key mode, then they will become re-combined again on receival.
-	if (key >= eAGSKeyCodeCtrlA && key <= eAGSKeyCodeCtrlZ) {
-		key = key - eAGSKeyCodeCtrlA + eAGSKeyCodeA;
-		modkey = eAGSKeyCodeLCtrl;
-		mod = eAGSModCtrl;
-	} else if (key >= eAGSKeyCodeAltA && key <= eAGSKeyCodeAltZ) {
-		key = AGS_EXT_KEY_TOALPHA(key);
-		modkey = eAGSKeyCodeLAlt;
-		mod = eAGSModAlt;
-	}
-
-	if (modkey > 0) {
-		ags_simulate_keydown(modkey);
-		ags_simulate_keypress(static_cast<eAGSKeyCode>(key), mod, old_key_mode);
-		ags_simulate_keyup(modkey);
-	} else {
-		ags_simulate_keypress(static_cast<eAGSKeyCode>(key), eAGSModNone, old_key_mode);
-	}
+	ags_simulate_keypress(static_cast<eAGSKeyCode>(key), (_GP(game).options[OPT_KEYHANDLEAPI] == 0));
 }
 
 int Game_BlockingWaitSkipped() {
@@ -745,7 +724,7 @@ void Game_PrecacheView(int view, int first_loop, int last_loop) {
 
 
 
-void serialize_bitmap(const AGS::Shared::Bitmap *thispic, Stream *out) {
+void serialize_bitmap(const Shared::Bitmap *thispic, Stream *out) {
 	if (thispic != nullptr) {
 		out->WriteInt32(thispic->GetWidth());
 		out->WriteInt32(thispic->GetHeight());
@@ -944,7 +923,7 @@ bool read_savedgame_description(const String &savedgame, String &description) {
 	return true;
 }
 
-std::unique_ptr<AGS::Shared::Bitmap> read_savedgame_screenshot(const String &savedgame) {
+std::unique_ptr<Shared::Bitmap> read_savedgame_screenshot(const String &savedgame) {
 	SavegameDescription desc;
 	HSaveError err = OpenSavegame(savedgame, desc, kSvgDesc_UserImage);
 	if (!err) {
@@ -1024,7 +1003,7 @@ HSaveError load_game(const String &path, int slotNumber, bool &data_overwritten)
 			return HSaveError::None();
 		}
 		// if it does not exist, continue loading savedgame in current game, and pray for the best
-		AGS::Shared::Debug::Printf(kDbgMsg_Warn, "WARNING: the saved game '%s' references game file '%s' (title: '%s'), but it cannot be found in the current directory. Trying to restore in the running game instead.",
+		Shared::Debug::Printf(kDbgMsg_Warn, "WARNING: the saved game '%s' references game file '%s' (title: '%s'), but it cannot be found in the current directory. Trying to restore in the running game instead.",
 		                      path.GetCStr(), desc.MainDataFilename.GetCStr(), desc.GameTitle.GetCStr());
 	}
 
@@ -1047,7 +1026,7 @@ bool try_restore_save(int slot) {
 	return try_restore_save(get_save_game_path(slot), slot);
 }
 
-bool try_restore_save(const AGS::Shared::String &path, int slot) {
+bool try_restore_save(const Shared::String &path, int slot) {
 	bool data_overwritten;
 	Debug::Printf(kDbgMsg_Info, "Restoring saved game '%s'", path.GetCStr());
 	HSaveError err = load_game(path, slot, data_overwritten);
@@ -1326,10 +1305,8 @@ const char *get_global_message(int msnum) {
 	return get_translation(_GP(game).messages[msnum - 500].GetCStr());
 }
 
-static const int AGS_MESSAGE_MAXLEN_DEFAULT = 9999;
-
 void get_message_text(int msnum, char *buffer, char giveErr) {
-	int maxlen = AGS_MESSAGE_MAXLEN_DEFAULT;
+	int maxlen = 9999;
 	if (!giveErr)
 		maxlen = MAX_MAXSTRLEN;
 

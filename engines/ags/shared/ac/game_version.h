@@ -126,16 +126,8 @@ Some adjustments to gui text alignment.
 In RTL mode all text is reversed, not only wrappable (labels etc).
 3.6.1.10:
 Disabled automatic SetRestartPoint.
-	3.6.1.14:
-	Extended game object names, resolving hard length limits.
-	3.6.2:
-	Object Interactions specify script module where functions are located.
-	OPT_SAVESCREENSHOTLAYER, CHF_TURNWHENFACE. Button's WrapText and padding.
-	Few minor behavior changes.
-	3.6.2.3:
-	Script module names are written in the game data.
-	3.6.2.12:
-	Incremented for safety fallback purposes, few very old text alignment mistakes fixed in the engine.
+3.6.1.14:
+Extended game object names, resolving hard length limits.
 */
 
 enum GameDataVersion {
@@ -175,10 +167,7 @@ enum GameDataVersion {
 	kGameVersion_361 = 3060100,
 	kGameVersion_361_10 = 3060110,
 	kGameVersion_361_14 = 3060114,
-	kGameVersion_362 = 3060200,
-	kGameVersion_362_03 = 3060203,
-	kGameVersion_362_12 = 3060212,
-	kGameVersion_Current = kGameVersion_362_12
+	kGameVersion_Current = kGameVersion_361_14
 };
 
 } // namespace AGS3

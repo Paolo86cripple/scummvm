@@ -29,7 +29,7 @@ namespace AGS3 {
 namespace AGS {
 namespace Engine {
 
-using namespace AGS::Shared;
+using namespace Shared;
 
 namespace GfxUtil {
 

@@ -46,8 +46,8 @@
 
 namespace AGS3 {
 
-using namespace AGS;
-using AGS::Shared::ConfigTree;
+using namespace AGS::Shared;
+using namespace AGS::Engine;
 
 AGSPlatformDriver *AGSPlatformDriver::instance = nullptr;
 

@@ -37,7 +37,6 @@
 
 namespace AGS3 {
 
-using namespace AGS;
 using namespace AGS::Shared;
 
 int ViewFrame_GetFlipped(ScriptViewFrame *svf) {

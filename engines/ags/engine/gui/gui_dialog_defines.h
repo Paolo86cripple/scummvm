@@ -100,6 +100,7 @@ namespace Shared {
 class Bitmap;
 }
 }
+using namespace AGS; // FIXME later
 
 //  =========  STRUCTS  ========
 #ifdef OBSOLETE

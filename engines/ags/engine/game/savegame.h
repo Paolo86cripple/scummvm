@@ -38,12 +38,12 @@ class Stream;
 
 namespace Engine {
 
-using AGS::Shared::Bitmap;
-using AGS::Shared::ErrorHandle;
-using AGS::Shared::TypedCodeError;
-using AGS::Shared::Stream;
-using AGS::Shared::String;
-using AGS::Shared::Version;
+using Shared::Bitmap;
+using Shared::ErrorHandle;
+using Shared::TypedCodeError;
+using Shared::Stream;
+using Shared::String;
+using Shared::Version;
 
 typedef std::shared_ptr<Stream> PStream;
 

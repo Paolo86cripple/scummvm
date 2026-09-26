@@ -44,10 +44,9 @@
 
 namespace AGS3 {
 
-using namespace AGS;
-using namespace AGS::Shared;
-
 extern void wouttext_outline(Shared::Bitmap *ds, int xxp, int yyp, int usingfont, color_t text_color, const char *texx);
+
+using namespace AGS::Shared;
 
 // For engine these are defined in ac.cpp
 extern void replace_macro_tokens(const char *, String &);

@@ -7,7 +7,7 @@
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * of the License, or(at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -23,32 +23,14 @@
 #define AGS_PLUGINS_AGS_FIRE_AGS_FIRE_H
 
 #include "ags/plugins/ags_plugin.h"
-#include "common/array.h"
 
 namespace AGS3 {
 namespace Plugins {
 namespace AGSFire {
 
-struct FireObject {
-	int objIdx;
-	int dynSlot;
-	int seedSlot;
-	int palSlot;
-	int width;
-	int height;
-	bool seeding;
-	int cooling;
-	Common::Array<uint8> heat;
-};
-
 class AGSFire : public PluginBase {
 	SCRIPT_HASH(AGSFire)
 private:
-	Common::Array<FireObject> _fires;
-
-	FireObject *FindObject(int objIdx);
-	void RemoveObject(int objIdx);
-
 	void FireAddObject(ScriptMethodParams &params);
 	void FirePreHeat(ScriptMethodParams &params);
 	void FireDisableSeeding(ScriptMethodParams &params);

@@ -32,7 +32,9 @@ class Stream;
 } // namespace Shared
 } // namespace AGS
 
-bool lzwcompress(AGS::Shared::Stream *lzw_in, AGS::Shared::Stream *out);
+using namespace AGS; // FIXME later
+
+bool lzwcompress(Shared::Stream *lzw_in, Shared::Stream *out);
 // Expands lzw-compressed data from src to dst.
 // the dst buffer should be large enough, or the uncompression will not be complete.
 bool lzwexpand(const uint8_t *src, size_t src_sz, uint8_t *dst, size_t dst_sz);

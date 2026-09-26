@@ -115,7 +115,7 @@ void RestoreGameSlot(int slnum) {
 void DeleteSaveSlot(int slnum) {
 	String nametouse;
 	nametouse = get_save_game_path(slnum);
-	AGS::Shared::File::DeleteFile(nametouse);
+	Shared::File::DeleteFile(nametouse);
 }
 
 void PauseGame() {
@@ -275,7 +275,7 @@ int RunAGSGame(const String &newgame, unsigned int mode, int data) {
 	_GP(AssetMgr)->RemoveAllLibraries();
 
 	// TODO: refactor and share same code with the startup!
-	if (_GP(AssetMgr)->AddLibrary(_GP(ResPaths).GamePak.Path) != AGS::Shared::kAssetNoError)
+	if (_GP(AssetMgr)->AddLibrary(_GP(ResPaths).GamePak.Path) != Shared::kAssetNoError)
 		quitprintf("!RunAGSGame: unable to load new game file '%s'", _GP(ResPaths).GamePak.Path.GetCStr());
 	engine_assign_assetpaths();
 
@@ -378,7 +378,6 @@ void SetGameSpeed(int newspd) {
 	if (newspd > 1000) newspd = 1000;
 	if (newspd < 10) newspd = 10;
 	set_game_speed(newspd);
-	_GP(game).options[OPT_GAMEFPS] = newspd;
 	debug_script_log("Game speed set to %d", newspd);
 }
 
