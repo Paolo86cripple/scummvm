@@ -1,0 +1,32 @@
+name: Restore corrupted sync files from upstream
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore files corrupted by old sync-batch commits
+        run: |
+          git config user.name "Paolo86cripple"
+          git config user.email "Paolo86cripple@users.noreply.github.com"
+          git remote add upstream https://github.com/scummvm/scummvm.git
+          git fetch upstream master
+          GOOD=f4cf1ec5fa1d3b4a3c902b81ac3eddaf017c249c
+          BAD=3afbf112cd8dbcad54e4c5d8fe80da0bbec15d31
+          git diff --name-only "$GOOD..$BAD" | sort -u > /tmp/files.txt
+          wc -l /tmp/files.txt
+          while IFS= read -r f; do
+            git checkout upstream/master -- "$f" 2>/dev/null || echo "skip (not upstream): $f"
+          done < /tmp/files.txt
+          git add -A
+          if git diff --cached --quiet; then
+            echo "nothing to restore"
+          else
+            git commit -m "Restore files corrupted by old sync-batch commits from upstream master"
+            git push origin master
+          fi
