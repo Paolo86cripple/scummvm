@@ -58,8 +58,7 @@ public:
 	Common::Array<int8> _solveOrder;
 	Common::Array<byte> _solveRotations;
 	Common::Array<int8> _solveOrderAlt;
-	Common::Array<byte> _solveRotatio
-nsAlt;
+	Common::Array<byte> _solveRotationsAlt;
 	Common::Array<Common::Array<byte>> _doubles;
 	Common::Array<int16> _pieceGroups;
 	bool _useAltSolution = false;

@@ -61,8 +61,7 @@ public:
 	uint _maxNameLength = 0;
 	uint _maxPassLength = 0;
 
-	bool isViewportRelativ
-e() const override { return true; }
+	bool isViewportRelative() const override { return true; }
 
 protected:
 	Common::String getRecordTypeName() const override { return "PasswordPuzzle"; }

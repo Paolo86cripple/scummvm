@@ -50,8 +50,7 @@ public:
 	void execute() override;
 	void handleInput(NancyInput &input) override;
 
-	bool isViewportRelative() co
-nst override { return true; }
+	bool isViewportRelative() const override { return true; }
 
 protected:
 	Common::String getRecordTypeName() const override { return "HangmanPuzzle"; }
@@ -105,8 +104,7 @@ protected:
 	int16 _letterSoundVolume = 0;	// 0xd4
 
 	RandomSoundBlock _correctSound;	// 0x12c
-	RandomSoundBlock _wrongSo
-und;	// 0x182
+	RandomSoundBlock _wrongSound;	// 0x182
 	RandomSoundBlock _revealSound;	// 0x1d8, played when the word is revealed after losing
 
 	Common::String _targetSequence;	// 0x236, empty when unused

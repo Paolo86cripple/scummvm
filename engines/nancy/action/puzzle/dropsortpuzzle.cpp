@@ -56,7 +56,6 @@ void DropSortPuzzle::readData(Common::SeekableReadStream &stream) {
 	readRect(stream, _conveyorRect);			// 0x77
 	_totalItems = stream.readUint32LE();		// 0x87
 
-
 	// Belt path (left/right ends) and speed.
 	readRect(stream, _beltLeft);
 	readRect(stream, _beltRight);
@@ -111,8 +110,7 @@ void DropSortPuzzle::readData(Common::SeekableReadStream &stream) {
 	_loseFlag.label = stream.readSint16LE();
 	_loseFlag.flag = stream.readByte();
 
-	_loseSound.readData(strea
-m);
+	_loseSound.readData(stream);
 
 	// Count-prefixed 23-byte hotspot records; the first is the "give up / exit" hotspot.
 	readExitHotspot(stream);
@@ -174,8 +172,7 @@ int DropSortPuzzle::itemAtCursor(const Common::Point &mousePos) const {
 	uint32 now = g_nancy->getTotalPlayTime();
 	// Oldest (front-most) candy first, so overlapping sprites pick the one nearest the bins.
 	for (uint i = 0; i < _items.size(); ++i) {
-		float progress
- = (float)(now - _items[i].spawnTime) / (float)_travelDuration;
+		float progress = (float)(now - _items[i].spawnTime) / (float)_travelDuration;
 		Common::Rect dest = itemDestAt(beltPosition(progress), _items[i].type);
 		if (NancySceneState.getViewport().convertViewportToScreen(dest).contains(mousePos)) {
 			return (int)i;
@@ -245,8 +242,7 @@ void DropSortPuzzle::redraw() {
 
 	// The candies riding the belt, drawn on top of the belt.
 	for (uint i = 0; i < _items.size(); ++i) {
-		flo
-at progress = (float)(now - _items[i].spawnTime) / (float)_travelDuration;
+		float progress = (float)(now - _items[i].spawnTime) / (float)_travelDuration;
 		Common::Rect dest = itemDestAt(beltPosition(progress), _items[i].type);
 		_drawSurface.blitFrom(_image, _itemSrcRects[_items[i].type], Common::Point(dest.left, dest.top));
 	}
@@ -316,8 +312,7 @@ void DropSortPuzzle::execute() {
 				_conveyorMovie.playRange(0, _conveyorMovie.getFrameCount() - 1);
 			}
 			if (_hoseMovie.isVideoLoaded() && !_hoseMovie.isRangePlaying()) {
-				_hoseMovie.playRange(0, _hoseMovie.getFrameCo
-unt() - 1);
+				_hoseMovie.playRange(0, _hoseMovie.getFrameCount() - 1);
 			}
 			bool moviesUpdated = false;
 			if (_conveyorMovie.isVideoLoaded() && _conveyorMovie.update()) {
@@ -384,8 +379,7 @@ unt() - 1);
 		} else if (_solved) {
 			_solveScene.execute();
 		} else {
-			NancySceneState.setEventFlag(_
-loseFlag);
+			NancySceneState.setEventFlag(_loseFlag);
 			NancySceneState.changeScene(_loseScene);
 		}
 

@@ -61,8 +61,7 @@ void BBallPuzzle::init() {
 
 		NancySceneState.setEventFlag(_playerPositionFlags[_curPosition], g_nancy->_true);
 	} else {
-		// Last shot 
-did not enter the hoop, reset to initial position
+		// Last shot did not enter the hoop, reset to initial position
 		NancySceneState.setEventFlag(_playerPositionFlags[0], g_nancy->_true);
 
 		for (uint i = 1; i < _playerPositionFlags.size(); ++i) {
@@ -136,8 +135,7 @@ void BBallPuzzle::readData(Common::SeekableReadStream &stream) {
 	_winFlag = stream.readUint16LE();
 
 	_exitScene.readData(stream);
-	readR
-ect(stream, _exitHotspot);
+	readRect(stream, _exitHotspot);
 }
 
 void BBallPuzzle::execute() {
@@ -209,8 +207,7 @@ void BBallPuzzle::execute() {
 
 		g_nancy->_sound->stopSound(_plusSound);
 		g_nancy->_sound->stopSound(_minusSound);
-		g_nancy->_sound->stopSound(_s
-hootSound);
+		g_nancy->_sound->stopSound(_shootSound);
 
 		finishExecution();
 	}
@@ -281,8 +278,7 @@ void BBallPuzzle::handleInput(NancyInput &input) {
 
 		if (!_pressedButton && input.input & NancyInput::kLeftMouseButtonUp) {
 			_drawSurface.blitFrom(_image, _shootButtonSrc, _shootButtonDest);
-			g_nancy->_sound->playSou
-nd(_shootSound);
+			g_nancy->_sound->playSound(_shootSound);
 			_pressedButton = true;
 			_needsRedraw = true;
 			_state = kActionTrigger;

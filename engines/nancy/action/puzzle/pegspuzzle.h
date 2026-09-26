@@ -47,8 +47,7 @@ public:
 	void init() override;
 
 	void readData(Common::SeekableReadStream &stream) override;
-	void e
-xecute() override;
+	void execute() override;
 	void handleInput(NancyInput &input) override;
 
 	bool isViewportRelative() const override { return true; }
@@ -90,8 +89,7 @@ protected:
 	uint16 _numRows = 0;				// 0x56
 	uint16 _numCols = 0;				// 0x58
 	uint16 _pitchYBias = 0;				// 0x5a
-	uint16 _pitchXBias = 0;				
-// 0x5c
+	uint16 _pitchXBias = 0;				// 0x5c
 	uint16 _numBlocked = 0;				// 0x5e - count of blocked-corner positions
 
 	Common::Array<byte> _blockedPositions;

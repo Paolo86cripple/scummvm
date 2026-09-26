@@ -52,8 +52,7 @@ protected:
 
 	class Piece : public RenderObject {
 	public:
-		Piece(uint 
-z) : RenderObject(z) {}
+		Piece(uint z) : RenderObject(z) {}
 		virtual ~Piece() {}
 
 		Piece(Piece &&) = default;

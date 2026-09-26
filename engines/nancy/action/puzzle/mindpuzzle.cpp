@@ -48,8 +48,7 @@ void MindPuzzle::readData(Common::SeekableReadStream &stream) {
 	stream.skip(0x79 - 0x69);				// 0x69: unused rect
 	stream.skip(16);						// 0x79: tall right-edge rect (answer-reveal area), not a hotspot
 
-	stream.skip(0xd9 - 0x89);				// answer-re
-veal positions (unused)
+	stream.skip(0xd9 - 0x89);				// answer-reveal positions (unused)
 	readRect(stream, _feedbackSrcRects[0]);	// 0xd9, right-color-wrong-slot peg (plain pole)
 	readRect(stream, _feedbackSrcRects[1]);	// 0xe9, right-color-and-slot peg (flag pole)
 
@@ -112,8 +111,7 @@ void MindPuzzle::generateSecret() {
 
 void MindPuzzle::scoreRow(int row) {
 	// Standard Mastermind scoring with duplicate-aware white pegs.
-	Common::Array<int16> matched(
-_numColors, 0);
+	Common::Array<int16> matched(_numColors, 0);
 
 	// Black pegs: exact color + position.
 	for (uint s = 0; s < _codeLength; ++s) {
@@ -191,8 +189,7 @@ void MindPuzzle::holdBall(int color, NancyInput &input) {
 }
 
 void MindPuzzle::redraw() {
-	_drawSurface.clear(g_nancy->_graphics->
-getTransColor());
+	_drawSurface.clear(g_nancy->_graphics->getTransColor());
 
 	for (uint r = 0; r < _rows.size(); ++r) {
 		for (uint s = 0; s < _codeLength; ++s) {
@@ -277,8 +274,7 @@ void MindPuzzle::execute() {
 		}
 		break;
 	case kActionTrigger:
-		i
-f (_solved) {
+		if (_solved) {
 			// Win: play the applause cue, wait for it to finish, then move to the win scene.
 			if (!_outcomeStarted) {
 				_outcomeStarted = true;
@@ -341,8 +337,7 @@ void MindPuzzle::handleInput(NancyInput &input) {
 	// Pick up a ball from the bottom palette.
 	int color = paletteHit(mouseVP);
 	if (color != -1) {
-		g_nancy->_cursor->setCursorType(CursorMa
-nager::kDragHand);
+		g_nancy->_cursor->setCursorType(CursorManager::kDragHand);
 		if (input.input & NancyInput::kLeftMouseButtonUp) {
 			holdBall(color, input);
 		}

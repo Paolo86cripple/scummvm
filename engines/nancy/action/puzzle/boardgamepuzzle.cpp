@@ -45,8 +45,7 @@ void BoardGamePuzzle::readData(Common::SeekableReadStream &stream) {
 	readRect(stream, _movieRect);			// 0x244
 	readRect(stream, _boardRect);			// 0x254
 
-	_framesPerPosition = stream.readSint16LE();	//
- 0x264
+	_framesPerPosition = stream.readSint16LE();	// 0x264
 	_winTarget = stream.readSint16LE();			// 0x266
 	stream.skip(2);								// 0x268
 
@@ -113,8 +112,7 @@ void BoardGamePuzzle::redraw() {
 	_drawSurface.clear(g_nancy->_graphics->getTransColor());
 
 	// The board movie over the board region. Everything else (board frame, the
-	// reset button, and th
-e dark "used" cards) lives on the scene background and
+	// reset button, and the dark "used" cards) lives on the scene background and
 	// shows through the transparent surface. _image is a sprite sheet holding
 	// only the blue/white card variants + the pressed reset button.
 	_moviePlayer.drawFrame(_drawSurface, Common::Point(_boardRect.left, _boardRect.top));
@@ -176,8 +174,7 @@ void BoardGamePuzzle::resolveMove(int button) {
 	} else {
 		startFrame = framePosition(oldPos);
 		_position += m.amount;
-		endFrame = framePosition(_po
-sition);
+		endFrame = framePosition(_position);
 		if (_position == _winTarget) {
 			_solved = true;
 		}
@@ -251,8 +248,7 @@ void BoardGamePuzzle::execute() {
 	}
 }
 
-void Bo
-ardGamePuzzle::handleInput(NancyInput &input) {
+void BoardGamePuzzle::handleInput(NancyInput &input) {
 	if (_state != kRun || _boardState != kBoardWaiting) {
 		return;
 	}

@@ -52,8 +52,7 @@ void GridMapPuzzle::readData(Common::SeekableReadStream &stream) {
 	_mapSpacingX    = stream.readUint16LE();
 	_itemsOriginX   = stream.readUint16LE();
 	_itemsOriginY   = stream.readUint16LE();
-	_itemsSpacingY  = stream.r
-eadUint16LE();
+	_itemsSpacingY  = stream.readUint16LE();
 	_itemsSpacingX  = stream.readUint16LE();
 	_resultsOriginX  = stream.readUint16LE();
 	_resultsOriginY  = stream.readUint16LE();
@@ -113,8 +112,7 @@ eadUint16LE();
 	if (_mapRows > kMaxMapRows) _mapRows = kMaxMapRows;
 	if (_mapCols > kMaxMapCols) _mapCols = kMaxMapCols;
 	if (_itemsRows > kMaxItemsRows) _itemsRows = kMaxItemsRows;
-	if (_i
-temsCols > kMaxItemsCols) _itemsCols = kMaxItemsCols;
+	if (_itemsCols > kMaxItemsCols) _itemsCols = kMaxItemsCols;
 
 	_mapCellW     = _mapItemSrcRects[0].width();
 	_mapCellH     = _mapItemSrcRects[0].height();
@@ -167,8 +165,7 @@ void GridMapPuzzle::persistState() {
 	for (int i = 0; i < (int)_numItems; ++i) {
 		gmd->itemState.push_back(_items[i].inMap   ? 1 : 0);
 		gmd->itemState.push_back(_items[i].inItems ? 1 : 0);
-		gmd->itemState.push_back(_items[i].mapR
-ow);
+		gmd->itemState.push_back(_items[i].mapRow);
 		gmd->itemState.push_back(_items[i].mapCol);
 		gmd->itemState.push_back(_items[i].itemsRow);
 		gmd->itemState.push_back(_items[i].itemsCol);
@@ -252,8 +249,7 @@ void GridMapPuzzle::execute() {
 	}
 }
 
-C
-ommon::Rect GridMapPuzzle::mapCellRect(int row, int col) const {
+Common::Rect GridMapPuzzle::mapCellRect(int row, int col) const {
 	// Sprite destination. Stride uses the raw src-rect dimensions (right - left,
 	// before readRect's inclusive→exclusive +1). Blits read the rect's top-left.
 	int strideX = (int)_mapSpacingX + _mapCellW - 1;
@@ -307,8 +303,7 @@ bool GridMapPuzzle::hitTestMap(const Common::Point &p, int &outRow, int &outCol)
 
 bool GridMapPuzzle::hitTestItems(const Common::Point &p, int &outRow, int &outCol) const {
 	for (int r = 0; r < (int)_itemsRows; ++r) {
-		for (i
-nt c = 0; c < (int)_itemsCols; ++c) {
+		for (int c = 0; c < (int)_itemsCols; ++c) {
 			if (itemsCellHitRect(r, c).contains(p)) {
 				outRow = r;
 				outCol = c;
@@ -370,8 +365,7 @@ void GridMapPuzzle::handleInput(NancyInput &input) {
 				_subState = kExitToCancel;
 		} else {
 			g_nancy->_cursor->setCursorType(CursorManager::kNormal);
-	
-	}
+		}
 		return;
 	}
 
@@ -442,8 +436,7 @@ void GridMapPuzzle::handleInput(NancyInput &input) {
 
 void GridMapPuzzle::checkSolved() {
 	for (int s = 0; s < (int)_numSolutions; ++s) {
-		bool match =
- true;
+		bool match = true;
 		for (int i = 0; i < (int)_numItems && match; ++i) {
 			if (!_items[i].inMap) {
 				match = false;
@@ -505,8 +498,7 @@ void GridMapPuzzle::redraw() {
 	}
 
 	// Each item placed in the map contributes two letter halves to the results
-	// bar at the item's fixed slot. The letter
-s themselves are looked up from
+	// bar at the item's fixed slot. The letters themselves are looked up from
 	// the placement coordinates: column picks the left half, row the right.
 	// When the right items end up at the right cells the strip spells out
 	// the solution sentence.

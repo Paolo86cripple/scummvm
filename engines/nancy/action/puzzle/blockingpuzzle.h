@@ -49,8 +49,7 @@ public:
 	bool isViewportRelative() const override { return true; }
 
 protected:
-	Common::String getRecordTypeName() const override { re
-turn "BlockingPuzzle"; }
+	Common::String getRecordTypeName() const override { return "BlockingPuzzle"; }
 
 	// A movie playback descriptor: frame range plus a pauseChance% chance to pause a
 	// random [minPauseMs, maxPauseMs] between plays. This port only uses the name.
@@ -107,8 +106,7 @@ turn "BlockingPuzzle"; }
 	byte _field8 = 0;				// 0x153 - combat gate flag (gates block input in the original); unused here
 	byte _field9 = 0;				// 0x152 - combat gate flag; unused here
 	Common::Rect _controlRects[4];	// [0] = the attack-telegraph box sprite (cell-sized); [1-3] other UI
-	Common:
-:Point _point;			// 0x1b3 - unknown
+	Common::Point _point;			// 0x1b3 - unknown
 	int16 _field51 = 0;				// 0x51 - unknown
 	Common::Rect _movieSrc;			// source rect within the fight movie
 	Common::Rect _movieDest;		// on-screen destination for the fight movie
@@ -160,8 +158,7 @@ turn "BlockingPuzzle"; }
 	Common::Array<RuntimeCell> _cells;
 	int _activeMove = -1;		// index into _moves for the directional clip playing (-1 = milling)
 	int _playerBlockCell = 0;	// cell ID the player is guarding (0 = none)
-	bool _res
-olved = false;		// this attack's block already scored
+	bool _resolved = false;		// this attack's block already scored
 
 	// Impact screen-shake: decays to zero over its window.
 	uint32 _recoilStartMs = 0;	// 0 = no active shake

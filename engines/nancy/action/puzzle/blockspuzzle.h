@@ -46,8 +46,7 @@ public:
 
 	void init() override;
 
-	void readData(C
-ommon::SeekableReadStream &stream) override;
+	void readData(Common::SeekableReadStream &stream) override;
 	void execute() override;
 	void handleInput(NancyInput &input) override;
 
@@ -98,8 +97,7 @@ protected:
 	bool isSolved() const;
 	void pickUp(int16 cell, NancyInput &input);
 	void drop(int16 cell, NancyInput &input);
-	// Syncs the block riding the cursor with _carriedBlock 
-/ _carriedSrc
+	// Syncs the block riding the cursor with _carriedBlock / _carriedSrc
 	void updateCarried(NancyInput *input);
 	void startTurn();
 	void redraw();

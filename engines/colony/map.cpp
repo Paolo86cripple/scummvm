@@ -77,8 +77,7 @@ void ensureObjectLayout(Common::Array<Thing> &objects) {
 }
 
 void resetObjectLayout(Common::Array<Thing> &objects) {
-	objects.clear()
-;
+	objects.clear();
 	objects.resize(kMeNum);
 	for (int i = 0; i < kMeNum; i++)
 		clearThing(objects[i]);
@@ -145,8 +144,7 @@ void ColonyEngine::loadMap(int mnum) {
 						obj.where.ang = (uint8)(_mapData[i][j][4][2] + 32);
 						obj.where.look = obj.where.ang;
 						if ((int)_objects.size() >= kMaxObjectSlots) {
-							warning("loadMap: object table full on level %d, skipping stati
-c object type %d at (%d,%d)",
+							warning("loadMap: object table full on level %d, skipping static object type %d at (%d,%d)",
 								mnum, obj.type, i, j);
 							continue;
 						}
@@ -209,8 +207,7 @@ void ColonyEngine::resetObjectSlot(int slot, int type, int xloc, int yloc, uint8
 	obj.time = 10 + (_randomSource.getRandomNumber(0x3F) & 0x3F);
 	obj.grow = 0;
 
-	if (type <= kB
-aseObject) {
+	if (type <= kBaseObject) {
 		int basePower = 0;
 		if (type == kRobQueen) {
 			if (_level == 7)
@@ -276,8 +273,7 @@ bool ColonyEngine::createObject(int type, int xloc, int yloc, uint8 ang) {
 
 			Thing obj;
 			clearThing(obj);
-			_objec
-ts.push_back(obj);
+			_objects.push_back(obj);
 			slot = (int)_objects.size() - 1;
 		}
 	}
@@ -342,7 +338,6 @@ void ColonyEngine::saveWall(int x, int y, int direction) {
 	// Search for existing entry at this location
 	for (int i = 0; i < ld.size; i++) {
 		if (ld.location[i][0] == x && ld.location[i][1] == y && ld.location[i][2] == direction) {
-
 			for (int j = 0; j < 5; j++)
 				ld.data[i][j] = _mapData[x][y][direction][j];
 			return;
@@ -409,8 +404,7 @@ void ColonyEngine::newPatch(int type, const PassPatch &from, const PassPatch &to
 	// Search for existing patch where 'from' matches an existing 'to'
 	for (uint i = 0; i < _patches.size(); i++) {
 		if (from.level == _patches[i].to.level &&
-			from.xindex == _patche
-s[i].to.xindex &&
+			from.xindex == _patches[i].to.xindex &&
 			from.yindex == _patches[i].to.yindex) {
 			_patches[i].to.level = to.level;
 			_patches[i].to.xindex = to.xindex;
@@ -479,8 +473,7 @@ bool ColonyEngine::patchMapFrom(const PassPatch &from, uint8 *mapdata) {
 void ColonyEngine::initRobots() {
 	_allGrow = false;
 	if (_level == 1)
-		retur
-n;  // Level 1 has no robots
+		return;  // Level 1 has no robots
 
 	LevelData &ld = _levelData[_level - 1];
 	int maxrob;
@@ -556,8 +549,7 @@ n;  // Level 1 has no robots
 			case 1: type = kRobPyramid; break;
 			case 2: type = kRobUPyramid; break;
 			case 3: type = kRobEye; break;
-			case 4: type 
-= kRobDrone; break;
+			case 4: type = kRobDrone; break;
 			case 5: type = kRobSoldier; break;
 			default: type = kRobCube; break;
 			}

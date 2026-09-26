@@ -58,8 +58,7 @@ Common::Rect readRect(Common::SeekableReadStream *stream) {
 	const int top = stream->readSint32LE();
 	const int right = stream->readSint32LE();
 	const int bottom = stream->readSint32LE();
-	return Common::Rect(left, top, right, bot
-tom);
+	return Common::Rect(left, top, right, bottom);
 }
 
 void writeLocate(Common::WriteStream *stream, const Locate &loc) {
@@ -123,8 +122,7 @@ void writeThing(Common::WriteStream *stream, const Thing &thing) {
 
 Thing readThing(Common::SeekableReadStream *stream) {
 	Thing thing;
-	thing.type = stream
-->readSint32LE();
+	thing.type = stream->readSint32LE();
 	thing.visible = stream->readSint32LE();
 	thing.alive = stream->readSint32LE();
 	thing.clip = readRect(stream);
@@ -185,8 +183,7 @@ PatchEntry readPatchEntry(Common::SeekableReadStream *stream) {
 	entry.to.ang = stream->readByte();
 	entry.type = stream->readByte();
 	for (int i = 0; i < 5; i++)
-		ent
-ry.mapdata[i] = stream->readByte();
+		entry.mapdata[i] = stream->readByte();
 	return entry;
 }
 
@@ -245,8 +242,7 @@ bool validateGridReferences(const uint8 grid[32][32], uint32 objectCount, bool a
 			if (value == 0)
 				continue;
 			if (allowPlayerMarker && value == kMeNum)
-			
-	continue;
+				continue;
 			if (value > objectCount)
 				return false;
 		}
@@ -313,8 +309,7 @@ bool ColonyEngine::canLoadGameStateCurrently(Common::U32String *msg) {
 	const bool inFpsView = (_level >= 1 && _level <= 7) &&
 		(_gameMode == kModeColony || _gameMode == kModeBattle) &&
 		!_animationRunning;
-	if (!inFpsView &
-& msg)
+	if (!inFpsView && msg)
 		*msg = _("Loading is only available in first-person view.");
 	return inFpsView;
 }
@@ -385,8 +380,7 @@ Common::Error ColonyEngine::saveGameStream(Common::WriteStream *stream, bool isA
 		}
 	}
 	for (int y = 0; y < 32; y++) {
-		for (int
- x = 0; x < 32; x++) {
+		for (int x = 0; x < 32; x++) {
 			stream->writeByte(_robotArray[x][y]);
 			stream->writeByte(_foodArray[x][y]);
 			stream->writeByte(_dirXY[x][y]);
@@ -445,8 +439,7 @@ Common::Error ColonyEngine::loadGameStream(Common::SeekableReadStream *stream) {
 	const uint32 savedSeed = stream->readUint32LE();
 
 	if ((savedGameMode != kModeColony && savedGameMode != kModeBattle) || savedLevel < 1 || savedLevel > 7)
-		return makeCorruptSaveError(Common::String::format("invalid header values: mode=%d 
-level=%d robotNum=%d dynamicObjectBase=%d seed=%u",
+		return makeCorruptSaveError(Common::String::format("invalid header values: mode=%d level=%d robotNum=%d dynamicObjectBase=%d seed=%u",
 			savedGameMode, savedLevel, savedRobotNum, savedDynamicObjectBase, savedSeed).c_str());
 
 	_gameMode = savedGameMode;
@@ -507,8 +500,7 @@ level=%d robotNum=%d dynamicObjectBase=%d seed=%u",
 		}
 	}
 	for (int y = 0; y < 32; y++) {
-		for (int x = 0; x 
-< 32; x++) {
+		for (int x = 0; x < 32; x++) {
 			_robotArray[x][y] = stream->readByte();
 			_foodArray[x][y] = stream->readByte();
 			_dirXY[x][y] = stream->readByte();
@@ -560,8 +552,7 @@ level=%d robotNum=%d dynamicObjectBase=%d seed=%u",
 	if (_fl < 0 || _fl > 2 || _orbit < 0 || _orbit > 1)
 		return makeCorruptSaveError(Common::String::format("status out of range: fl=%d orbit=%d", _fl, _orbit).c_str());
 	for (uint i = 0; i < ARRAYSIZE(_levelData); i++) {
-		if (_leve
-lData[i].size > 10)
+		if (_levelData[i].size > 10)
 			return makeCorruptSaveError(Common::String::format("levelData[%u].size out of range: %u", i, _levelData[i].size).c_str());
 	}
 	if (_dynamicObjectBase < 0 || _dynamicObjectBase > (int)_objects.size())
@@ -607,8 +598,7 @@ lData[i].size > 10)
 	_battleMaxP = 0;
 	_suppressCollisionSound = false;
 	_moveForward = false;
-	_moveB
-ackward = false;
+	_moveBackward = false;
 	_strafeLeft = false;
 	_strafeRight = false;
 	_rotateLeft = false;

@@ -60,8 +60,7 @@ void TwoDialPuzzle::readData(Common::SeekableReadStream &stream) {
 	readRectArray(stream, _srcs[1], num2, 20);
 
 	if (g_nancy->getGameType() < kGameTypeNancy12) {
-		_correc
-tPositions[0] = stream.readUint16LE();
+		_correctPositions[0] = stream.readUint16LE();
 		_correctPositions[1] = stream.readUint16LE();
 	}
 
@@ -116,8 +115,7 @@ void TwoDialPuzzle::execute() {
 	case kBegin:
 		init();
 		g_nancy->_sound->loadSound(_rotateSounds[0]);
-		g
-_nancy->_sound->loadSound(_rotateSounds[1]);
+		g_nancy->_sound->loadSound(_rotateSounds[1]);
 		_currentPositions[0] = _startPositions[0];
 		_currentPositions[1] = _startPositions[1];
 
@@ -187,8 +185,7 @@ void TwoDialPuzzle::runNancy12() {
 	case kCheckSolutions: {
 		// A combo solves only while one of its solutions is active: the dial
 		// positions match and that solution's condition flag is currently set
-		int16 matche
-d = -1;
+		int16 matched = -1;
 		for (uint i = 0; i < _solutions.size(); ++i) {
 			const DialSolution &sol = _solutions[i];
 			if (sol.sceneID != kNoScene &&
@@ -257,8 +254,7 @@ void TwoDialPuzzle::handleInput(NancyInput &input) {
 			g_nancy->_cursor->setCursorType(_isClockwise[i] ? CursorManager::kRotateCW : CursorManager::kRotateCCW);
 
 			if (canClick && input.input & NancyInput::kLeftMouseButtonUp) {
-				_currentPosition
-s[i] += _isClockwise[i] ? -1 : 1;
+				_currentPositions[i] += _isClockwise[i] ? -1 : 1;
 
 				if (_currentPositions[i] < 0) {
 					_currentPositions[i] = _srcs[i].size() - 1;

@@ -59,8 +59,7 @@ protected:
 	Common::Array<Common::Rect> _buttonSrcs;
 	Common::Array<Common::Rect> _buttonDests;
 	Common::Array<Common::Rect> _hotspots;
-	Common::Array<Common::Rect> 
-_lightSrcs;
+	Common::Array<Common::Rect> _lightSrcs;
 	Common::Array<Common::Rect> _lightDests;
 
 	SoundDescription _buttonSound;

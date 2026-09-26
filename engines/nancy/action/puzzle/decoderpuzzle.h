@@ -50,8 +50,7 @@ public:
 	void init() override;
 	void onPause(bool paused) override;
 
-	void readData(Common
-::SeekableReadStream &stream) override;
+	void readData(Common::SeekableReadStream &stream) override;
 	void execute() override;
 	void handleInput(NancyInput &input) override;
 

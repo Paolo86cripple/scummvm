@@ -61,8 +61,7 @@ void HamRadioPuzzle::updateGraphics() {
 			if (curTime > _nextDigitFrameTimes[i]) {
 				uint targetFrame = (_curDigits[i] == 0 ? (10 - 1) * 3 : (_curDigits[i] - 1) * 3);
 
-	
-			if (_displayedDigitFrames[i] == targetFrame) {
+				if (_displayedDigitFrames[i] == targetFrame) {
 					continue;
 				}
 
@@ -132,8 +131,7 @@ void HamRadioPuzzle::setFrequency(const Common::Array<uint16> &freq) {
 		// Check start frequency
 		_startFreq.sound.loadAndPlay();
 		NancySceneState.setEventFlag(_startFreq.flag);
-	} else 
-if (freq == _correctFreq.frequency) {
+	} else if (freq == _correctFreq.frequency) {
 		// Check correct transmission frequency
 		_correctFreq.sound.loadAndPlay();
 		NancySceneState.setEventFlag(_correctFreq.flag);
@@ -197,8 +195,7 @@ void HamRadioPuzzle::readData(Common::SeekableReadStream &stream) {
 	readFilename(stream, _password); // not a filename
 	_passwordFlag.label = stream.readUint16LE();
 	_passwordFlag.flag = stream.readByte();
-	readFilename(stream,
- _codeWord); // not a filename
+	readFilename(stream, _codeWord); // not a filename
 
 	stream.skip(2);
 
@@ -270,8 +267,7 @@ void HamRadioPuzzle::execute() {
 				setFrequency(_curDigits);
 				break;
 			case kDot:
-				isDot = 
-true;
+				isDot = true;
 				// fall through
 			case kDash:
 				_curMorseString += isDot ? '.' : '-'; // Original engine uses the captions inside the dot and dash sounds
@@ -339,8 +335,7 @@ true;
 				}
 
 				if (_isOnCorrectFrequency) {
-					// Whe
-n transmitting on right frequency, check password/code word
+					// When transmitting on right frequency, check password/code word
 					if (!_solvedPassword) {
 						// Password not solved, check against it
 						if (_curCharString == _password) {
@@ -425,8 +420,7 @@ void HamRadioPuzzle::handleInput(NancyInput &input) {
 	}
 
 	// Handle other buttons
-	for (ui
-nt i = 0; i < _buttonDests.size(); ++i) {
+	for (uint i = 0; i < _buttonDests.size(); ++i) {
 		if (NancySceneState.getViewport().convertViewportToScreen(_buttonDests[i]).contains(input.mousePos)) {
 			if (i >= 10 || _pressedButton == kNone) {
 				g_nancy->_cursor->setCursorType(CursorManager::kHotspot);

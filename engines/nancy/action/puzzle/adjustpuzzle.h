@@ -51,8 +51,7 @@ protected:
 	Common::String getRecordTypeName() const override { return "AdjustPuzzle"; }
 
 	// One adjustable element. rects[1]/rects[3] are the decrement/increment
-	// hot
-spots; subRects are the per-state display frames (blitted at boundRect).
+	// hotspots; subRects are the per-state display frames (blitted at boundRect).
 	struct Piece {
 		Common::Rect rects[4];
 		Common::Array<Common::Rect> subRects;
@@ -118,5 +117,4 @@ spots; subRects are the per-state display frames (blitted at boundRect).
 } // End of namespace Action
 } // End of namespace Nancy
 
-#endif // NANCY_ACTION_ADJUSTP
-UZZLE_H
+#endif // NANCY_ACTION_ADJUSTPUZZLE_H

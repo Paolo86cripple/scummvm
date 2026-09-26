@@ -54,8 +54,7 @@ protected:
 	Common::String getRecordTypeName() const override { return "WordFindPuzzle"; }
 
 	struct Word {
-		Common::Path gridImag
-eName;		// +0x55 - the letter grid for this word
+		Common::Path gridImageName;		// +0x55 - the letter grid for this word
 		Common::Path overlayImageName;	// +0x76 - overlay drawn on top
 		Common::Path animName;			// +0x97 - the "found" animation (a movie)
 		Common::Array<Common::Point> answerCoords;	// +0xb8 - the correct letter path (grid cells)

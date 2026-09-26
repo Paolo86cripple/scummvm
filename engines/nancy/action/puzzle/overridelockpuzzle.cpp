@@ -62,8 +62,7 @@ void OverrideLockPuzzle::readData(Common::SeekableReadStream &stream) {
 	_solveScene.readData(stream);
 	_solveSound.readNormal(stream);
 
-	_exitScene.readData(stre
-am);
+	_exitScene.readData(stream);
 	readRect(stream, _exitHotspot);
 }
 
@@ -139,8 +138,7 @@ void OverrideLockPuzzle::execute() {
 	case kActionTrigger:
 		switch (_solveState) {
 		case kNotSolved:
-			_exitScene.execut
-e();
+			_exitScene.execute();
 			break;
 		case kSolved:
 			if (isSolveSoundPlaying()) {
@@ -218,7 +216,6 @@ void OverrideLockPuzzle::drawLights() {
 			_drawSurface.blitFrom(_image, _lightSrcs[i], _lightDests[i]);
 		} else {
 			_drawSurface.blitFrom(_image, _lightSrcs[_lightsOrder[i]], _lightDests[_lightsOrder[i]]);
-
 		}
 	}
 

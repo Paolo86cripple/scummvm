@@ -62,8 +62,7 @@ MODULE_OBJS = \
   action/puzzle/pachinkopuzzle.o \
   action/puzzle/paintpuzzle.o \
   action/puzzle/passwordpuzzle.o \
-  ac
-tion/puzzle/peepholepuzzle.o \
+  action/puzzle/peepholepuzzle.o \
   action/puzzle/pegspuzzle.o \
   action/puzzle/quizpuzzle.o \
   action/puzzle/raycastpuzzle.o \
@@ -149,5 +148,4 @@ endif
 include $(srcdir)/rules.mk
 
 # Detection objects
-DETECT_OBJS += $(MO
-DULE)/detection.o
+DETECT_OBJS += $(MODULE)/detection.o

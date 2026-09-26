@@ -63,7 +63,6 @@ protected:
 	Common::String getRecordTypeName() const override { return "SliderPuzzle"; }
 
 	void drawTile(int tileID, uint posX, uint posY);
-
 	void undrawTile(uint posX, uint posY);
 };
 

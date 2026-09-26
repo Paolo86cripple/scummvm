@@ -58,8 +58,7 @@ void LetterGridPuzzle::readData(Common::SeekableReadStream &stream) {
 	_spacingY = stream.readSint16LE();
 	_spacingX = stream.readSint16LE();
 
-	
-int16 numColumns = stream.readSint16LE();
+	int16 numColumns = stream.readSint16LE();
 	for (int16 i = 0; i < numColumns; ++i) {
 		Column column;
 		readRect(stream, column.letterSrc);
@@ -121,8 +120,7 @@ void LetterGridPuzzle::init() {
 	GridMapPuzzleData *data = (GridMapPuzzleData *)NancySceneState.getPuzzleData(GridMapPuzzleData::getTag());
 	assert(data);
 	if (data->itemState.size() != kMaxRows) {
-		data->itemSt
-ate.resize(kMaxRows);
+		data->itemState.resize(kMaxRows);
 		for (uint i = 0; i < kMaxRows; ++i) {
 			data->itemState[i] = -1;
 		}
@@ -201,8 +199,7 @@ void LetterGridPuzzle::checkSolved() {
 			continue;
 		}
 
-		int16 marked = _mark
-edColumn[row];
+		int16 marked = _markedColumn[row];
 		if (marked == -1 ? target != kNoColumn : marked != target) {
 			return;
 		}
@@ -286,8 +283,7 @@ void LetterGridPuzzle::handleInput(NancyInput &input) {
 	}
 
 	Common::Rect vpScreen = NancySceneState.getViewport().getScreenPosition();
-	Common::P
-oint mouseVP = input.mousePos - Common::Point(vpScreen.left, vpScreen.top);
+	Common::Point mouseVP = input.mousePos - Common::Point(vpScreen.left, vpScreen.top);
 
 	uint column = 0, row = 0;
 	if (!cellAt(mouseVP, column, row)) {

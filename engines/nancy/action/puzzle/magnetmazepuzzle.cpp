@@ -55,7 +55,6 @@ void MagnetMazePuzzle::readData(Common::SeekableReadStream &stream) {
 	for (int i = 0; i < kNumMagnets; ++i)
 		readRect(stream, _magnetHomeRects[i]);
 	for (int i = 0; i < kNumMagnets; ++i)
-
 		readRect(stream, _magnetTargetRects[i]);
 
 	// CUIButton block at AR+0x1c7 (239 bytes). Internal layout: 15-byte
@@ -118,7 +117,6 @@ void MagnetMazePuzzle::init() {
 	_boardImage.setTransparentColor(_drawSurface.getTransparentColor());
 
 	g_nancy->_resource->loadImage(_mazeImageName, _mazeImage);
-
 
 	MagnetMazePuzzleData *mmd = (MagnetMazePuzzleData *)NancySceneState.getPuzzleData(MagnetMazePuzzleData::getTag());
 	bool restored = false;
@@ -200,8 +198,7 @@ void MagnetMazePuzzle::execute() {
 }
 
 bool MagnetMazePuzzle::collidesAt(const Common::Rect &r) const {
-	if (_mazeImage.empty() || _mazeImage.w == 0 || _mazeImage.h ==
- 0)
+	if (_mazeImage.empty() || _mazeImage.w == 0 || _mazeImage.h == 0)
 		return false;
 
 	const int mazeW = _mazeImage.w;
@@ -264,8 +261,7 @@ void MagnetMazePuzzle::stepMagnetToward(Common::Rect &cur, const Common::Rect &t
 		if (sy != 0) {
 			Common::Rect cand(cur.left, cur.top + sy, cur.right, cur.bottom + sy);
 			if (!collidesAt(cand)) {
-				cur = c
-and;
+				cur = cand;
 				dy -= sy;
 				continue;
 			}
@@ -331,8 +327,7 @@ void MagnetMazePuzzle::handleInput(NancyInput &input) {
 				continue;
 			g_nancy->_cursor->setCursorType(CursorManager::kHotspot);
 			if (input.input & NancyInput::kLeftMouseButtonUp) {
-				
-if (_requiredItem != -1 && NancySceneState.getHeldItem() != _requiredItem) {
+				if (_requiredItem != -1 && NancySceneState.getHeldItem() != _requiredItem) {
 					if (!_cantPlayed[i]) {
 						NancySceneState.playItemCantSound(_requiredItem);
 						_cantPlayed[i] = true;
@@ -404,8 +399,7 @@ void MagnetMazePuzzle::redraw() {
 		const Common::Rect &dst = _magnetPos[i];
 		if (src.isEmpty() || dst.isEmpty())
 			continue;
-		_drawSurface.blitFrom(_boardImage, src, Common::Poin
-t(dst.left, dst.top));
+		_drawSurface.blitFrom(_boardImage, src, Common::Point(dst.left, dst.top));
 	}
 
 	if (!_hideOverlays) {

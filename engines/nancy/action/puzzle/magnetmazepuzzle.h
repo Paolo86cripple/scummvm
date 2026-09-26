@@ -49,8 +49,7 @@ public:
 	bool isViewportRelative() const override { return true; }
 
 protected:
-	Common::String getRecordTypeName() const override { return "MagnetMazePuzzle";
- }
+	Common::String getRecordTypeName() const override { return "MagnetMazePuzzle"; }
 
 	static const int kNumMagnets  = 4;
 	static const int kNumOverlays = 6;

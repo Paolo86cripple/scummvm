@@ -53,8 +53,7 @@ protected:
 
 	static const int kMaxTypes    = 36; // 3 tabs x 12 pairs each
 	static const int kCardsPerTab = 24; // hardcoded in original
-	static const int kNumTabs     = 3;  // hardcoded in origina
-l
+	static const int kNumTabs     = 3;  // hardcoded in original
 
 	Common::Rect _faceSrcRects[kMaxTypes];   // [type] -> face src rect on image
 	Common::Rect _tabSrcRects[kNumTabs];     // [tab]  -> tab indicator src rect (drawn for active tab)
@@ -95,8 +94,7 @@ l
 	bool _typeUsed[kMaxTypes];  // faces already handed out while filling _cards
 
 	int    _currentTab      = 0;
-	int    _firstFlip       = -1;   // absolute card index of first face-up unm
-atched card
+	int    _firstFlip       = -1;   // absolute card index of first face-up unmatched card
 	int    _secondFlip      = -1;   // absolute card index of second (timer pending)
 	bool   _flipTimerActive = false;
 	uint32 _flipTimerEnd    = 0;

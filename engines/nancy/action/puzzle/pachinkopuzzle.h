@@ -48,8 +48,7 @@ public:
 	void execute() override;
 	void handleInput(NancyInput &input) override;
 
-	bool isViewportRelative() const overr
-ide { return true; }
+	bool isViewportRelative() const override { return true; }
 
 protected:
 	Common::String getRecordTypeName() const override { return "PachinkoPuzzle"; }
@@ -98,8 +97,7 @@ protected:
 		uint32 litUntil = 0;			// keep it lit until this time
 	};
 
-	void readMachine(Common::
-SeekableReadStream &stream, Machine &m);
+	void readMachine(Common::SeekableReadStream &stream, Machine &m);
 	void loadMachineImage(Machine &m);
 	void buildHoles();
 	Common::Point climberAnchor(const Machine &m) const;
@@ -150,8 +148,7 @@ SeekableReadStream &stream, Machine &m);
 	Common::Array<Ball> _balls;
 	bool _spawnPending = false;				// a launcher click awaiting a spawn
 	uint32 _spawnClickTime = 0;
-	Machine *_activeMachin
-e = nullptr;		// the climber that reached the pot
+	Machine *_activeMachine = nullptr;		// the climber that reached the pot
 	bool _exitRequested = false;
 	uint32 _lastUpdate = 0;
 	uint32 _resultTime = 0;

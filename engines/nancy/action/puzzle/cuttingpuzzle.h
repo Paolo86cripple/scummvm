@@ -52,8 +52,7 @@ public:
 	void execute() override;
 	void handleInput(NancyInput &input) override;
 
-	bool i
-sViewportRelative() const override { return true; }
+	bool isViewportRelative() const override { return true; }
 
 protected:
 	enum SubState {
@@ -92,8 +91,7 @@ protected:
 	Common::Rect _switchOnSrc;                   // data+0x248  switch sprite when lathe is on
 	Common::Array<Common::Rect> _grooveTypeSrc;  // data+0x258  6 rects for groove visual types 0..5
 	Common::Array<Common::Rect> _bladeSrc;       // data+0x2b8  4 rects for blade at lever depths 0..3
-	Common::Rect _baseSrc;                       // data+0x2f8  base/knob
- sprite (opaque)
+	Common::Rect _baseSrc;                       // data+0x2f8  base/knob sprite (opaque)
 
 	uint16 _numAnimFrames = 0;                   // data+0x308
 	Common::Array<Common::Rect> _animSrc;        // data+0x30a  12 animation frame rects

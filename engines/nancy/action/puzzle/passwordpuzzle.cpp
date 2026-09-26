@@ -60,8 +60,7 @@ void PasswordPuzzle::readData(Common::SeekableReadStream &stream) {
 	char buf[33];
 	uint fieldSize = s.getVersion() <= kGameTypeNancy5 ? 20 : 33; // nancy6 changed the size of text fields to 33
 
-	s.syncAsUint16L
-E(numNames, kGameTypeNancy4);
+	s.syncAsUint16LE(numNames, kGameTypeNancy4);
 	_names.resize(numNames);
 	for (uint i = 0; i < numNames; ++i) {
 		stream.read(buf, fieldSize);
@@ -124,8 +123,7 @@ void PasswordPuzzle::execute() {
 					// (e.g. answer "Xoc" is matched by typing "Lady Xoc").
 					Common::String inputLower = activeField;
 					inputLower.toLowercase();
-					for (uint i = 0; i < correctAnswers.size(); ++
-i) {
+					for (uint i = 0; i < correctAnswers.size(); ++i) {
 						Common::String answerLower = correctAnswers[i];
 						answerLower.toLowercase();
 						if (inputLower.contains(answerLower)) {
@@ -216,8 +214,7 @@ void PasswordPuzzle::handleInput(NancyInput &input) {
 
 	for (uint i = 0; i < input.otherKbdInput.size(); ++i) {
 		Common::KeyState &key = input.otherKbdInput[i];
-		Common::String &activeField = _passwordFieldIsActive ? _playerPasswordInput : _pla
-yerNameInput;
+		Common::String &activeField = _passwordFieldIsActive ? _playerPasswordInput : _playerNameInput;
 		uint maxStringLength = _maxStringLength;
 		if (g_nancy->getGameType() >= kGameTypeNancy8)
 			maxStringLength = _passwordFieldIsActive ? _maxPassLength : _maxNameLength;

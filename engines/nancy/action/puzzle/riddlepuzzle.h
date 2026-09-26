@@ -64,8 +64,7 @@ protected:
 	uint16 _textboxTextFontID = 0;
 	Time _cursorBlinkTime;
 	SoundDescription _typeSound;
-	SoundD
-escription _eraseSound;
+	SoundDescription _eraseSound;
 	SoundDescription _enterSound;
 	SoundDescription _exitSound;
 	Common::Array<Riddle> _riddles;

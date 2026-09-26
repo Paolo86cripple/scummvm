@@ -52,8 +52,7 @@ void SewingMachinePuzzle::readData(Common::SeekableReadStream &stream) {
 	_directionVector.x = stream.readSint32LE();	// blob 0x41
 	_directionVector.y = stream.readSint32LE();	// blob 0x45
 	_extentVector.x = stream.readSint32LE();	// blob 0x49
-	_ext
-entVector.y = stream.readSint32LE();	// blob 0x4d
+	_extentVector.y = stream.readSint32LE();	// blob 0x4d
 	for (int i = 0; i < 3; ++i) {
 		_params[i] = stream.readSint16LE();		// blob 0x51 / 0x53 / 0x55
 	}
@@ -117,8 +116,7 @@ void SewingMachinePuzzle::drawCloth() {
 
 void SewingMachinePuzzle::feedCloth(const Common::Point &delta) {
 	// Dragging moves the cloth: vertical feeds it, horizontal steers it.
-	Common::Point newO
-ffset(CLIP<int>(_offset.x + delta.x, _minOffsetX, _maxOffsetX),
+	Common::Point newOffset(CLIP<int>(_offset.x + delta.x, _minOffsetX, _maxOffsetX),
 		CLIP<int>(_offset.y + delta.y, _minOffsetY, _maxOffsetY));
 
 	int moved = ABS(newOffset.x - _offset.x) + ABS(newOffset.y - _offset.y);
@@ -178,7 +176,6 @@ void SewingMachinePuzzle::checkSeam() {
 	int my = (int)((needle.y - _maskOrigin.y) * _maskScaleY);
 
 	// The needle strays off the seam when, while inside the collision region, it lands
-
 	// on the mask's background instead of the marked corridor.
 	bool off = mx >= 0 && my >= 0 && mx < _seamMask.w && my < _seamMask.h &&
 		_seamMask.getPixel(mx, my) == _offSeamColor;
@@ -232,8 +229,7 @@ void SewingMachinePuzzle::init() {
 	if (region.width() <= 0 || region.height() <= 0) {
 		return;
 	}
-	_maskOrigin = Common::Point(reg
-ion.left, region.top);
+	_maskOrigin = Common::Point(region.left, region.top);
 	_maskScaleX = (double)_seamMask.w / region.width();
 	_maskScaleY = (double)_seamMask.h / region.height();
 
@@ -293,8 +289,7 @@ void SewingMachinePuzzle::execute() {
 		}
 
 		if (sceneZone && sceneZone->specialEffectId >= 1000) {
-			if (sceneZone->hasS
-pecialEffect) {
+			if (sceneZone->hasSpecialEffect) {
 				NancySceneState.specialEffect(sceneZone->seType, sceneZone->seTotalTime, sceneZone->seFadeToBlackTime, sceneZone->seRect);
 			}
 			SceneChangeDescription scene;

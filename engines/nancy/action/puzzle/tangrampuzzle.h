@@ -60,8 +60,7 @@ protected:
 
 		Graphics::ManagedSurface _srcImage;
 		Graphics::ManagedSurface _highlightedSrcImage;
-		by
-te *_mask;
+		byte *_mask;
 		byte _id;
 		byte _rotation;
 		bool _isHighlighted;

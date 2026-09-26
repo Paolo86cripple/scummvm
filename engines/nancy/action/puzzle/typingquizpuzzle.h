@@ -49,8 +49,7 @@ public:
 
 	bool isViewportRelative() const override { return true; }
 
-prot
-ected:
+protected:
 	Common::String getRecordTypeName() const override { return "TypingQuizPuzzle"; }
 
 private:
@@ -101,8 +100,7 @@ private:
 	Common::Rect _timerDigitRects[kNumDigits];     // 0x355
 	Common::Point _scoreDest;                      // 0x405 viewport-relative
 	Common::Point _timerDest;                      // 0x40d viewport-relative
-	Common::R
-ect _passedMsgSrcRect;                // 0x41d result message sprite
+	Common::Rect _passedMsgSrcRect;                // 0x41d result message sprite
 	uint32 _passedMsgDuration = 0;                 // 0x42d ms
 
 	bool _caseSensitive = false;                   // 0x431 (0 = case-insensitive)
@@ -143,8 +141,7 @@ ect _passedMsgSrcRect;                // 0x41d result message sprite
 
 	uint32 _startTime = 0;
 	int _pops = 0;          // number of balloons popped
-	int _score = 0;         // displayed typing rate (chara
-cters per minute)
+	int _score = 0;         // displayed typing rate (characters per minute)
 	uint16 _effectiveTarget = 0;
 	bool _reachedTarget = false;
 	bool _reachedThreshold = false;

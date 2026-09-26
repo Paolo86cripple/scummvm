@@ -51,8 +51,7 @@ void SoundMatchPuzzle::readData(Common::SeekableReadStream &stream) {
 
 	// 0x119: per-button entries (kNumButtons x 0x15c bytes each)
 	// NOTE: The original tangled the sound button and whale button
-	// dat
-a together, but we read them into separate structures for clarity.
+	// data together, but we read them into separate structures for clarity.
 	for (int i = 0; i < kNumButtons; ++i) {
 		SoundButtonEntry &soundButton = _soundButtons[i];
 		WhaleButtonEntry &whaleButton = _whaleButtons[i];
@@ -121,8 +120,7 @@ void SoundMatchPuzzle::execute() {
 			break;
 
 		case kSoundPlaying:
-			// Per-button (whale call) sound 
-is playing. If it stops naturally
+			// Per-button (whale call) sound is playing. If it stops naturally
 			// before the player picks a whale, deselect and return to idle.
 			if (!g_nancy->_sound->isSoundPlaying(_soundButtons[_selectedSoundButton].sound)) {
 				g_nancy->_sound->stopSound(_soundButtons[_selectedSoundButton].sound);
@@ -189,7 +187,6 @@ void SoundMatchPuzzle::handleInput(NancyInput &input) {
 	Common::Rect vpScreen = NancySceneState.getViewport().getScreenPosition();
 	Common::Point mouseVP = input.mousePos - Common::Point(vpScreen.left, vpScreen.top);
 
-
 	// Numbered button clicks — accepted only when idle. While a sound
 	// is playing, these buttons are disabled
 	if (_solveSubState == kIdle) {
@@ -247,8 +244,7 @@ void SoundMatchPuzzle::handleInput(NancyInput &input) {
 					_soundButtons[_selectedSoundButton].matched = true;
 					_whaleButtons[whaleButton].matched = true;
 					++_matchedPairs;
-					if (_feedbackSoundRight.name != "N
-O SOUND")
+					if (_feedbackSoundRight.name != "NO SOUND")
 						g_nancy->_sound->playSound(_feedbackSoundRight);
 				} else {
 					// Wrong whale. If the chunk's "reset on wrong"

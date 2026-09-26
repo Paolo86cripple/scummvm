@@ -53,8 +53,7 @@ void StepObjectsPuzzle::readData(Common::SeekableReadStream &stream) {
 	_solveScene._flag.flag = stream.readByte();
 	_numSteps = stream.readUint16LE();
 
-	_solut
-ion.resize(_numSteps);
+	_solution.resize(_numSteps);
 	for (uint i = 0; i < _numSteps; ++i) {
 		_solution[i].objectID = stream.readByte();
 		_solution[i].row = stream.readSint16LE();
@@ -117,8 +116,7 @@ bool StepObjectsPuzzle::isHovered(const Common::Rect &viewportRect, const Common
 		NancySceneState.getViewport().convertViewportToScreen(viewportRect).contains(mousePos);
 }
 
-bool StepOb
-jectsPuzzle::cellAtCursor(const StepObject &object, const Common::Point &mousePos, int &outRow, int &outCol) const {
+bool StepObjectsPuzzle::cellAtCursor(const StepObject &object, const Common::Point &mousePos, int &outRow, int &outCol) const {
 	for (int row = 0; row < _numRows; ++row) {
 		for (int col = 0; col < _numCols; ++col) {
 			if (isHovered(getCellRect(object, row, col), mousePos)) {
@@ -195,8 +193,7 @@ void StepObjectsPuzzle::pickUp(uint objectID) {
 
 	_carriedID = objectID;
 
-	// The sprite starts out on the cell it was picked up from, un
-til the cursor moves it
+	// The sprite starts out on the cell it was picked up from, until the cursor moves it
 	_carriedObject._drawSurface.create(object.srcRect.width(), object.srcRect.height(),
 		g_nancy->_graphics->getTransparentPixelFormat());
 	_carriedObject._drawSurface.clear(0);
@@ -265,8 +262,7 @@ void StepObjectsPuzzle::drawSprite(Graphics::ManagedSurface &dest, const Common:
 
 	for (int y = 0; y < srcRect.height(); ++y) {
 		int destY = destPos.y + y;
-		if (destY < 0 
-|| destY >= dest.h) {
+		if (destY < 0 || destY >= dest.h) {
 			continue;
 		}
 
@@ -343,8 +339,7 @@ void StepObjectsPuzzle::execute() {
 
 			break;
 		case kStepping:
-			if (g_nancy->getTotalPlayTime() >= _stepSoundEnd
-) {
+			if (g_nancy->getTotalPlayTime() >= _stepSoundEnd) {
 				if (_lastStepWasDrop) {
 					playSoundBlock(_sounds[_lastStepCorrect ? kSoundCorrectStep : kSoundWrongStep]);
 				}

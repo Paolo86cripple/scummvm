@@ -53,8 +53,7 @@ protected:
 	static const uint kNumMoves = 12;
 
 	// One turn's scripted move: advance by _amount; landing on _jumpFrom warps
-	// to _jumpTo playing movie frames [_jumpFrameStart, _jumpFrameE
-nd].
+	// to _jumpTo playing movie frames [_jumpFrameStart, _jumpFrameEnd].
 	struct MoveRecord {
 		int16 amount = 0;
 		int16 jumpFrom = 0;
@@ -99,8 +98,7 @@ nd].
 	int16 _position = 0;				// current track position (0.._winTarget)
 	Common::Array<bool> _buttonUsed;	// a move button may be pressed once
 	int16 _activeCard = -1;				// card currently being played (white sprite)
-	bool _resetPressed = false;			/
-/ reset button showing its pressed sprite
+	bool _resetPressed = false;			// reset button showing its pressed sprite
 	uint32 _resetPressedTime = 0;
 	BoardState _boardState = kBoardWaiting;
 	bool _solved = false;				// reached the target exactly

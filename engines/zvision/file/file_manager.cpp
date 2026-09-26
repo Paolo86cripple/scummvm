@@ -54,8 +54,7 @@ Common::File *FileManager::open(const Common::Path &filePath, bool allowSrc) {
 			debugC(5, kDebugFile,"File %s opened", fileName.c_str());
 	}
 
-	if (allowSrc
-) {
+	if (allowSrc) {
 		Common::File *altFile = new Common::File();
 		Common::String altName = fileName;
 		altName.setChar('s', altName.size() - 3);
@@ -128,8 +127,7 @@ bool FileManager::exists(Common::Path filePath, bool allowSrc) {
 	return false;
 }
 
-Common::Path FileManager::srcPath(Common::Path fil
-ePath) {
+Common::Path FileManager::srcPath(Common::Path filePath) {
 		Common::String name = filePath.baseName();
 		name.setChar('s', name.size() - 3);
 		name.setChar('r', name.size() - 2);
@@ -189,8 +187,7 @@ bool FileManager::loadZix(const Common::Path &zixPath, const Common::FSNode &gam
 
 			if (line.size() && line[0] == '.')
 				line.deleteChar(0);
-			if
- (line.size() && line[0] == '/')
+			if (line.size() && line[0] == '/')
 				line.deleteChar(0);
 			if (line.size() && line.hasSuffix("/"))
 				line.deleteLastChar();
@@ -247,8 +244,7 @@ bool FileManager::loadZix(const Common::Path &zixPath, const Common::FSNode &gam
 				if (!exclude) {
 					Common::Path path(name);
 					// No need to add file, just verify that it exists
-					if (al
-lowSrc) {
+					if (allowSrc) {
 						Common::Path altPath = srcPath(path);
 						if (!SearchMan.hasFile(path) && !SearchMan.hasFile(altPath))
 							warning("Missing files %s and/or %s", path.toString().c_str(), altPath.toString().c_str());

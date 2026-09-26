@@ -66,8 +66,7 @@ public:
 	bool isViewportRelative() const override { return true; }
 
 protected:
-	Common::String getRecordTypeName() const override { return _phoneType 
-== kNewPhone ? "NewPhone" : "Telephone"; }
+	Common::String getRecordTypeName() const override { return _phoneType == kNewPhone ? "NewPhone" : "Telephone"; }
 
 	Common::Array<Common::Rect> _srcRects;
 	Common::Array<Common::Rect> _destRects;

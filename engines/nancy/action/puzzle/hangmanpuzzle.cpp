@@ -55,8 +55,7 @@ void HangmanPuzzle::readData(Common::SeekableReadStream &stream) {
 
 	int16 numSlots = stream.readSint16LE();
 	readRectArray(stream, _letterSlotRects, numSlots);		// 0xae
-	int16 numGuessed = stream.readSint
-16LE();
+	int16 numGuessed = stream.readSint16LE();
 	readRectArray(stream, _guessedRowRects, numGuessed);	// 0xbe
 
 	int16 numLetters = stream.readSint16LE();
@@ -124,8 +123,7 @@ void HangmanPuzzle::pickWord() {
 			data->usedWords.clear();
 		}
 		for (uint i = 0; i < _words.size(); ++i) {
-			available.p
-ush_back(i);
+			available.push_back(i);
 		}
 	}
 
@@ -198,8 +196,7 @@ void HangmanPuzzle::redraw() {
 
 	// A guessed ("used") tile stamps its used-mark sprite (2nd tile rect, from
 	// the puzzle sheet) onto the tile's alphabet position (1st tile rect).
-	for (const 
-LetterTile &tile : _letters) {
+	for (const LetterTile &tile : _letters) {
 		if (tile.used) {
 			_drawSurface.blitFrom(_puzzleImage, tile.hoverRect, Common::Point(tile.idleRect.left, tile.idleRect.top));
 		}
@@ -267,8 +264,7 @@ void HangmanPuzzle::commitGuess(uint tileIndex) {
 }
 
 void HangmanPuzzle::updateFeedback() {
-	if (_pend
-ingFeedback && g_system->getMillis() >= _feedbackTime) {
+	if (_pendingFeedback && g_system->getMillis() >= _feedbackTime) {
 		playSoundBlock(*_pendingFeedback);
 		_pendingFeedback = nullptr;
 	} else if (!_targetSequence.empty() && _guessed.size() == _targetSequence.size()) {
@@ -353,8 +349,7 @@ void HangmanPuzzle::execute() {
 		checkOutcome();
 		break;
 	case kActionTrigger:
-		if (_lost && g_system->getMillis() < _revealE
-ndTime) {
+		if (_lost && g_system->getMillis() < _revealEndTime) {
 			break;
 		}
 

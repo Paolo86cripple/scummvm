@@ -58,8 +58,7 @@ public:
 		bool isEmpty = false;
 	};
 
-protected
-:
+protected:
 	Common::String getRecordTypeName() const override { return "SortPuzzle"; }
 
 	static const int kMaxSourceRows = 8;
@@ -128,7 +127,6 @@ protected
 	SubState _subState = kPlaying;
 
 	Cell _current[kMaxRows][kMaxCols];
-
 	Cell _solved[kMaxRows][kMaxCols];
 
 	Cell _held;

@@ -45,8 +45,7 @@ class Overlay : public RenderActionRecord {
 public:
 	enum AnimationType { kStaticAnimation, kInterruptibleAnimation };
 
-	Overlay(AnimationType animationType) : RenderActionRec
-ord(7), _animationType(animationType), _usesAutotext(false) {}
+	Overlay(AnimationType animationType) : RenderActionRecord(7), _animationType(animationType), _usesAutotext(false) {}
 	virtual ~Overlay() { _fullSurface.free(); }
 
 	void init() override;
@@ -107,8 +106,7 @@ public:
 
 	void readData(Common::SeekableReadStream &stream) override;
 
-prote
-cted:
+protected:
 	Common::String getRecordTypeName() const override { return "OverlayStaticTerse"; }
 };
 
@@ -164,8 +162,7 @@ public:
 	virtual ~TextLineOverlay() {}
 
 	void init() override;
-	void readData(Common::SeekableReadStream &strea
-m) override;
+	void readData(Common::SeekableReadStream &stream) override;
 	void execute() override;
 
 	bool isViewportRelative() const override { return true; }
@@ -225,8 +222,7 @@ protected:
 	Common::Path _imageName;
 	uint16 _transparency = kPlayOverlayPlain;
 	uint16 _hoverCursor = 0;
-	Co
-mmon::Rect _hotspotRect;
+	Common::Rect _hotspotRect;
 	Common::Rect _srcRect;
 	Common::Rect _destRect;
 	// Set every time the mouse enters the hotspot

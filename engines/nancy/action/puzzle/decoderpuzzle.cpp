@@ -50,8 +50,7 @@ static const byte kAcceptedSymbols[] = {
 // Accented characters accepted alongside them
 static const byte kAcceptedHighKeys[] = {
 	0x80, 0x9c, 0xa1, 0xbf, 0xc0, 0xc4, 0xc7, 0xc9, 0xd1, 0xd6, 0xdc, 0xdf,
-	0xe0, 0xe1, 0xe2, 0xe4, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xed, 0xee
-, 0xef,
+	0xe0, 0xe1, 0xe2, 0xe4, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xed, 0xee, 0xef,
 	0xf1, 0xf3, 0xf4, 0xf6, 0xf9, 0xfa, 0xfb, 0xfc
 };
 
@@ -115,8 +114,7 @@ void DecoderPuzzle::readData(Common::SeekableReadStream &stream) {
 		sub.output = readFixedString(stream, kSubstitutionSize);
 	}
 
-	_typeSound.readData(stream);	
-	// 0x6f
+	_typeSound.readData(stream);		// 0x6f
 	_decodeSound.readData(stream);		// 0xc5
 
 	readFilename(stream, _resetMovieName);	// 0x11b
@@ -188,8 +186,7 @@ bool DecoderPuzzle::decodePending(bool &noMatch) {
 
 	for (uint i = 0; i < _substitutions.size(); ++i) {
 		if (_substitutions[i].keys == _pending) {
-			_output += _subst
-itutions[i].output;
+			_output += _substitutions[i].output;
 			_pending.clear();
 			return true;
 		}
@@ -281,8 +278,7 @@ void DecoderPuzzle::execute() {
 				_resetting = false;
 				redraw();
 			}
-		} els
-e if (_hasPendingKey) {
+		} else if (_hasPendingKey) {
 			_hasPendingKey = false;
 
 			bool reset = (int)_output.size() > _maxLength || _pendingKey == kEnterKey;

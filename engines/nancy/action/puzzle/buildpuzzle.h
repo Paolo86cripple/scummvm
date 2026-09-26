@@ -54,8 +54,7 @@ protected:
 
 	static const uint kNumDigits = 10;
 
-	// One entry of a zone's required contents
-.
+	// One entry of a zone's required contents.
 	struct Ingredient {
 		int16 pieceID = 0;
 		byte quantity = 0;
@@ -114,8 +113,7 @@ protected:
 		Common::Rect placedDestRect;	// exact spot in a zone; overrides the zone's fill mode
 		byte kind = 0;
 		Common::String imageName;	// only when kind == 3
-		int1
-6 zoneID = -1;			// the only zone this piece may go in, -1 = any
+		int16 zoneID = -1;			// the only zone this piece may go in, -1 = any
 		int16 itemID = 0;			// index into the shared item state, 255 = none
 		Common::Array<int16> holds;	// the scoops this piece can be taken with, empty = by hand
 		int16 fillVariant = 0;		// which of a scoop's two full images to show
@@ -167,8 +165,7 @@ protected:
 	Common::Rect _submitSrcRect;
 	Common::Rect _submitHotspot;
 	SoundDescription _submitSound;
-	Common::Rect _startOverSrcR
-ect;
+	Common::Rect _startOverSrcRect;
 	Common::Rect _startOverHotspot;
 	SoundDescription _startOverSound;
 
@@ -231,8 +228,7 @@ ect;
 
 	void setPieceCursor(bool isHeld);
 	// Draw the carried art at the cursor, or hide it when nothing is carried
-	vo
-id updateCursorItem(const Common::Point &mouseVP);
+	void updateCursorItem(const Common::Point &mouseVP);
 	// The scoop a piece is dropped with, 1 when it is carried by hand
 	byte carriedAmount() const;
 	// Writing an event flag re-triggers whatever reacts to it, so both of the
@@ -273,8 +269,7 @@ id updateCursorItem(const Common::Point &mouseVP);
 	// The tea puzzle has four: backing away, plus the teapot, the recipe book
 	// and the sink.
 	Common::Array<ExitHotspot> _exitHotspots;
-	int16 _t
-akenExit = -1;
+	int16 _takenExit = -1;
 };
 
 } // End of namespace Action

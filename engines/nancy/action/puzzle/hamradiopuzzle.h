@@ -60,8 +60,7 @@ protected:
 	};
 
 	struct Frequency {
-		Common::Arra
-y<uint16> frequency;
+		Common::Array<uint16> frequency;
 		CCSound sound;
 		FlagDescription flag;
 

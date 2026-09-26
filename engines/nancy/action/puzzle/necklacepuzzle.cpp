@@ -57,8 +57,7 @@ void NecklacePuzzle::readData(Common::SeekableReadStream &stream) {
 	_countFontID = stream.readUint16LE();
 	_unknownA0 = stream.readUint16LE();
 	_countTextExtraY = stream.readUint16LE();
-	
-_countTextX = stream.readSint32LE();
+	_countTextX = stream.readSint32LE();
 	_countTextY = stream.readSint32LE();
 
 	uint16 numTypes = stream.readUint16LE();
@@ -130,8 +129,7 @@ _countTextX = stream.readSint32LE();
 
 	_pickUpSound.readData(stream);
 	_putDownSound.readData(stream);
-	_unknownSound.readData(st
-ream);
+	_unknownSound.readData(stream);
 
 	_solveScene._sceneChange.sceneID = stream.readUint16LE();
 	_solveScene._sceneChange.frameID = stream.readUint16LE();
@@ -207,8 +205,7 @@ int NecklacePuzzle::stackTopBelow(const Strand &strand) const {
 
 int16 NecklacePuzzle::beadCount(const Bead &bead) const {
 	if (bead.tableIndex == kNoTableIndex) {
-		ret
-urn 0;
+		return 0;
 	}
 
 	TableData *table = (TableData *)NancySceneState.getPuzzleData(TableData::getTag());
@@ -284,8 +281,7 @@ NecklacePuzzle::Hover NecklacePuzzle::hitTest(const Common::Point &mousePos) con
 		if (_beads[i].boxDest.contains(mousePos) && beadCount(_beads[i]) > 0) {
 			hover.bead = (int)i;
 			return hover;
-	
-	}
+		}
 	}
 
 	return hover;
@@ -345,8 +341,7 @@ void NecklacePuzzle::dropBeadOn(int strandIndex) {
 	const int fullDrop = strand.strandRect.height();
 	uint32 duration = 0;
 	if (fullDrop > 0) {
-		duration = (uint32)(strand.dropSeconds * (float)(restOn - strand.strandRect.top) * 1
-000.0f / (float)fullDrop);
+		duration = (uint32)(strand.dropSeconds * (float)(restOn - strand.strandRect.top) * 1000.0f / (float)fullDrop);
 	}
 
 	strand.placed.push_back(placed);
@@ -424,8 +419,7 @@ void NecklacePuzzle::execute() {
 			int y = _fallingEndY;
 			if (elapsed < _fallDuration) {
 				y = _fallingStartY + (int)((int64)(_fallingEndY - _fallingStartY) * elapsed / _fallDuration);
-			
-}
+			}
 
 			if (y != falling.rect.top) {
 				falling.rect.moveTo(falling.rect.left, y);
@@ -503,8 +497,7 @@ void NecklacePuzzle::handleInput(NancyInput &input) {
 				holdBead(displaced, &input);
 			}
 		} else {
-			// Take the top shell back off the strand
-.
+			// Take the top shell back off the strand.
 			int16 bead = strand.placed.back().bead;
 			strand.placed.pop_back();
 			holdBead(bead, &input);
@@ -588,8 +581,7 @@ void NecklacePuzzle::redraw() {
 	_needsRedraw = true;
 }
 
-// How man
-y of this shell are still in the box, drawn next to its box slot.
+// How many of this shell are still in the box, drawn next to its box slot.
 void NecklacePuzzle::drawBeadCount(const Bead &bead) {
 	if (bead.tableIndex == kNoTableIndex) {
 		return;

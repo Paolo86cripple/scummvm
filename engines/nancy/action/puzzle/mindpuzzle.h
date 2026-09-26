@@ -50,8 +50,7 @@ public:
 	static const uint kApplauseSound = 4;	// index into _sounds: the win cue
 	static const uint kMaxRows = 10;
 	static const uint kMaxColors = 10;	// fixed palette array size in the data
-	static const uint kSlotsPerRow = 5;	// physical slots per row 
-record (code length <= this)
+	static const uint kSlotsPerRow = 5;	// physical slots per row record (code length <= this)
 
 	enum Feedback { kFeedbackNone = -1, kFeedbackWhite = 0, kFeedbackBlack = 1 };
 

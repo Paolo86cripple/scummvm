@@ -57,8 +57,7 @@ void BlockingPuzzle::readData(Common::SeekableReadStream &stream) {
 	_playerHealthIndex = stream.readSint16LE();
 	_field4 = stream.readSint16LE();
 	_field6 = stream.readSint16LE();
-	_field8 = 
-stream.readByte();
+	_field8 = stream.readByte();
 	_field9 = stream.readByte();
 	readFilename(stream, _imageName);
 	for (uint i = 0; i < 4; ++i) {
@@ -123,8 +122,7 @@ stream.readByte();
 
 void BlockingPuzzle::init() {
 	Common::Rect vpBounds = NancySceneState.getViewport().getBounds();
-	_drawSurface.create(vpBounds.width(), vpBoun
-ds.height(),
+	_drawSurface.create(vpBounds.width(), vpBounds.height(),
 		g_nancy->_graphics->getInputPixelFormat());
 	_drawSurface.clear(g_nancy->_graphics->getTransColor());
 	setTransparent(true);
@@ -186,8 +184,7 @@ int BlockingPuzzle::findMoveByMovie(const Common::Path &name) const {
 	return -1;
 }
 
-const BlockingPuzzle::RuntimeCell *BlockingPuzzle::cellByID(int id) 
-const {
+const BlockingPuzzle::RuntimeCell *BlockingPuzzle::cellByID(int id) const {
 	for (uint i = 0; i < _cells.size(); ++i) {
 		if (_cells[i].id == id) {
 			return &_cells[i];
@@ -264,7 +261,6 @@ int BlockingPuzzle::resolveBlock(int attackCell, int blockCell, Common::Point &r
 
 	const RuntimeCell *attack = nullptr;
 	const RuntimeCell *block = nullptr;
-
 	for (uint i = 0; i < _cells.size(); ++i) {
 		if (_cells[i].id == attackCell) {
 			attack = &_cells[i];
@@ -338,8 +334,7 @@ void BlockingPuzzle::drawTelegraph(const Common::Rect &srcRect, const Common::Po
 		if (destY < 0 || destY >= _drawSurface.h) {
 			continue;
 		}
-		for (int x = 0
-; x < srcRect.width(); ++x) {
+		for (int x = 0; x < srcRect.width(); ++x) {
 			int destX = destPos.x + x;
 			if (destX < 0 || destX >= _drawSurface.w) {
 				continue;
@@ -401,8 +396,7 @@ void BlockingPuzzle::execute() {
 		registerGraphics();
 		_state = kRun;
 		// fall through
-	ca
-se kRun: {
+	case kRun: {
 		updateRecoil();
 
 		if (!_moviePlayer.isVideoLoaded()) {

@@ -55,8 +55,7 @@ public:
 };
 
 SoundEqualizerPuzzle::~SoundEqualizerPuzzle() {
-	for (a
-uto *scrollbar : _sliders) {
+	for (auto *scrollbar : _sliders) {
 		delete scrollbar;
 	}
 }
@@ -130,8 +129,7 @@ void SoundEqualizerPuzzle::readData(Common::SeekableReadStream &stream) {
 	for (uint i = 0; i < 3; ++i) {
 		// Only read the data for the current difficulty and skip over the rest
 		if (i == difficulty) {
-			for (uint j = 0; j < 
-6; ++j) {
+			for (uint j = 0; j < 6; ++j) {
 				_sliderInitialPositions[j] = stream.readUint16LE();
 			}
 		} else {
@@ -220,7 +218,6 @@ void SoundEqualizerPuzzle::execute() {
 
 		NancySceneState.changeScene(_exitScene._sceneChange);
 		finishExecution();
-
 	}
 }
 
@@ -281,8 +278,7 @@ void SoundEqualizerPuzzle::updateSlider(uint sliderID) {
 				// we only need the volume to be correct.
 				NancySceneState.setEventFlag(_solveScene._flag);
 			} else {
-				g_nancy->_sound->setVolume(_sounds[sliderID - 3], _minVolume
-[sliderID - 3]);
+				g_nancy->_sound->setVolume(_sounds[sliderID - 3], _minVolume[sliderID - 3]);
 			}
 		}
 	}

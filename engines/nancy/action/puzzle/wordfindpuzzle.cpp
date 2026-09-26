@@ -51,8 +51,7 @@ void WordFindPuzzle::readData(Common::SeekableReadStream &stream) {
 	uint16 numWords = stream.readUint16LE();	// 0x50
 
 	_words.resize(numWords);
-	for (u
-int i = 0; i < numWords; ++i) {
+	for (uint i = 0; i < numWords; ++i) {
 		Word &w = _words[i];
 		readFilename(stream, w.gridImageName);
 		readFilename(stream, w.overlayImageName);
@@ -111,8 +110,7 @@ bool WordFindPuzzle::isAdjacent(const Common::Point &a, const Common::Point &b) 
 
 int WordFindPuzzle::letterAtCursor(const Common::Point &mousePos) const {
 	if ((uint)_currentWord >= _words.size()) {
-		retu
-rn -1;
+		return -1;
 	}
 
 	const Common::Array<Common::Rect> &rects = _words[_currentWord].letterRects;
@@ -200,8 +198,7 @@ void WordFindPuzzle::init() {
 void WordFindPuzzle::redraw() {
 	_drawSurface.clear(g_nancy->_graphics->getTransColor());
 
-	if (!_allFound && (uint)_currentWord < _words.size() 
-&& !_gridImage.empty()) {
+	if (!_allFound && (uint)_currentWord < _words.size() && !_gridImage.empty()) {
 		_drawSurface.blitFrom(_gridImage, Common::Point(0, 0));
 
 		// Show the overlay art at each selected letter (the overlay image lines up with the
@@ -274,8 +271,7 @@ void WordFindPuzzle::execute() {
 		// word's event flag is set and the puzzle advances.
 		if (_playingMovie) {
 			if (_movie.update()) {
-				_movie.drawFrame(_drawSurface, Common::Point
-(0, 0));
+				_movie.drawFrame(_drawSurface, Common::Point(0, 0));
 				_needsRedraw = true;
 			}
 
@@ -348,8 +344,7 @@ void WordFindPuzzle::handleInput(NancyInput &input) {
 				// selected letter (a winding word can touch two of them).
 				int neighbors = 0;
 				for (uint i = 0; i < _selected.size(); ++i) {
-					if (_selected[i] && isAdja
-cent(c, gridCoord(w.letterRects[i]))) {
+					if (_selected[i] && isAdjacent(c, gridCoord(w.letterRects[i]))) {
 						++neighbors;
 					}
 				}

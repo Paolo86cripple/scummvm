@@ -46,8 +46,7 @@ namespace Action {
 // then decelerates linearly by _decel each step. But the actual per-step movement
 // is that speed times kMoveScale (the original scales the displacement by
 // _DAT_005350a0/_DAT_005352d0 = 1/50), so travel distance = kMoveScale * speed^2 /
-// (2*_decel) - quadratic in drag, but 50x gentler than the raw speed
-. A full-course
+// (2*_decel) - quadratic in drag, but 50x gentler than the raw speed. A full-course
 // shot is thus a comfortable ~170px drag. The physics advance in fixed 30Hz steps.
 static const double kPowerScale = 0.005;
 static const double kMoveScale = 1.0 / 50.0;	// displacement = speed * kMoveScale per step
@@ -87,8 +86,7 @@ void MinigolfPuzzle::readData(Common::SeekableReadStream &stream) {
 
 	// Two random-sound blocks: the putt and the wall-bounce cues.
 	_puttSound.readData(stream);
-	_wallSound.readData(strea
-m);
+	_wallSound.readData(stream);
 
 	// The hole/sink/overlay zones.
 	readActionZoneArray(stream, _zones);
@@ -138,8 +136,7 @@ void MinigolfPuzzle::init() {
 		if (z.type == kZoneOverlay && !z.overlayName.empty() &&
 				!z.overlaySrcRects.empty() && !z.overlayDestRect.isEmpty()) {
 			g_nancy->_resource->loadImage(Common::Path(z.overlayName), _overlayImage);
-			_overlayImage.setTransp
-arentColor(_drawSurface.getTransparentColor());
+			_overlayImage.setTransparentColor(_drawSurface.getTransparentColor());
 			_overlaySrc = z.overlaySrcRects[0];
 			_overlayDest = z.overlayDestRect;
 			break;
@@ -194,8 +191,7 @@ Common::Point MinigolfPuzzle::projectToScreen(double mx, double my) const {
 	return Common::Point((int16)(sx + 0.5), (int16)(sy + 0.5));
 }
 
-void MinigolfPuzzl
-e::unprojectToMask(int sx, int sy, double &mx, double &my) const {
+void MinigolfPuzzle::unprojectToMask(int sx, int sy, double &mx, double &my) const {
 	double dx = (sx - _vpCenterX) / kIsoCos;
 	double dy = (sy - _vpCenterY) / (kIsoCos * kIsoYScale);
 	// Inverse of the (px-py, px+py) rotation.
@@ -257,8 +253,7 @@ void MinigolfPuzzle::drawAimPreview() {
 		if (idx > 0) {
 			--idx;
 		}
-		Common::Point gc = projectToScreen(path[idx].x
-, path[idx].y);
+		Common::Point gc = projectToScreen(path[idx].x, path[idx].y);
 		Common::Point gp(gc.x - ghostSrc.width() / 2, gc.y - ghostSrc.height() / 2);
 		drawGhostBall(ghostSrc, gp);
 	}
@@ -318,8 +313,7 @@ void MinigolfPuzzle::redraw() {
 }
 
 void MinigolfPuzzle::aimToVelocity(double aimX, double aimY, double &vx, double &vy) const {
-	// Struck speed is proportional to the drag length (clam
-ped to maxSpeed), aimed
+	// Struck speed is proportional to the drag length (clamped to maxSpeed), aimed
 	// along the drag vector: speed = drag * kPowerScale * maxSpeed.
 	double len = sqrt(aimX * aimX + aimY * aimY);
 	if (len < 1.0) {
@@ -380,8 +374,7 @@ void MinigolfPuzzle::writeStrokeCount() {
 	}
 }
 
-bool MinigolfPuzzle::stepBall(double &x, d
-ouble &y, double &vx, double &vy, bool playSounds) {
+bool MinigolfPuzzle::stepBall(double &x, double &y, double &vx, double &vy, bool playSounds) {
 	// One fixed physics step. The actual displacement is the ball's speed scaled by
 	// kMoveScale (vx/vy carry the raw speed, which the friction below decays).
 	double dispX = vx * kMoveScale;
@@ -444,8 +437,7 @@ ouble &y, double &vx, double &vy, bool playSounds) {
 			if (z.type != kZoneTeleport || z.exitRect.isEmpty() ||
 					!z.rect.contains(Common::Point((int16)(nx + 0.5), (int16)(ny + 0.5)))) {
 				continue;
-			
-}
+			}
 
 			if (playSounds) {
 				// Real ball: enter the pipe. updateBall plays the warp sound, holds
@@ -527,8 +519,7 @@ void MinigolfPuzzle::updateBall() {
 		return;
 	}
 	if (elapsed > 0.25) {
-		elapsed = 0.25;	// don't try to catch up 
-huge gaps (e.g. after a pause)
+		elapsed = 0.25;	// don't try to catch up huge gaps (e.g. after a pause)
 	}
 
 	// Advance the physics in fixed 30Hz steps so travel distance is frame-rate
@@ -590,8 +581,7 @@ huge gaps (e.g. after a pause)
 			_ballFrame = (_ballFrame + 1) % _ballFrames.size();
 		}
 
-		// Potting the ball wins. Resolve the ta
-rget scene / flag / fade from the cup
+		// Potting the ball wins. Resolve the target scene / flag / fade from the cup
 		// the ball actually dropped into (a hole can have several with different
 		// outcomes, e.g. hole 4a's middle cup plays a cutscene).
 		if (reachedHole && _sunkZone >= 0 && _sunkZone < (int)_zones.size()) {
@@ -652,8 +642,7 @@ void MinigolfPuzzle::execute() {
 		// the new scene).
 		if (_solved && _solveScene._sceneChange.sceneID >= 1000 && _solveScene._sceneChange.sceneID != kNoScene) {
 			if (_winHasFade) {
-				NancySceneS
-tate.specialEffect(_winFadeType, _winFadeTotalTime, _winFadeToBlackTime, _winFadeRect);
+				NancySceneState.specialEffect(_winFadeType, _winFadeTotalTime, _winFadeToBlackTime, _winFadeRect);
 			}
 			NancySceneState.changeScene(_solveScene._sceneChange);
 		}
@@ -708,7 +697,6 @@ void MinigolfPuzzle::handleInput(NancyInput &input) {
 	// kAiming: the golf-club cursor aims (angle) and its distance from the ball
 	// sets the power; a click strikes the ball. The club is CURS cursor type 34.
 	g_nancy->_cursor->setCursorType((CursorManager::CursorType)34, true);
-
 	_aimCursor = cursor;
 	redraw();
 	if (input.input & NancyInput::kLeftMouseButtonUp) {

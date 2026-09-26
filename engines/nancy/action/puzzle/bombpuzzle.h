@@ -62,8 +62,7 @@ protected:
 
 	Time _timerTotalTime;
 	Time _timerBlinkTime;
-	Time _
-nextBlinkTime;
+	Time _nextBlinkTime;
 	bool _isBlinking = false;
 	uint _lastDrawnTime = 0;
 

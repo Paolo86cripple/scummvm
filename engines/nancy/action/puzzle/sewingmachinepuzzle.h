@@ -50,8 +50,7 @@ public:
 	bool isViewportRelative() const override { return true; }
 
 protected:
-	Common::String getRecordTypeName(
-) const override { return "SewingMachinePuzzle"; }
+	Common::String getRecordTypeName() const override { return "SewingMachinePuzzle"; }
 
 	// Sorts the ActionZone array into its gameplay roles.
 	void classifyZones();
@@ -99,8 +98,7 @@ protected:
 	Common::Point _lastDragPos;
 	bool _solved = false;
 
-	// S
-titches sewn so far, in cloth-image space, drawn as a dark dashed thread.
+	// Stitches sewn so far, in cloth-image space, drawn as a dark dashed thread.
 	Common::Array<Common::Point> _stitches;
 
 	// The seam mask covers only the cloth's seam region (the collision zone's rect),

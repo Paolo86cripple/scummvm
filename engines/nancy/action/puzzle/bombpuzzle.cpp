@@ -60,8 +60,7 @@ void BombPuzzle::readData(Common::SeekableReadStream &stream) {
 	readRect(stream, _displayBounds);
 
 	_solveOrder.resize(4);
-	for 
-(uint i = 0; i < 4; ++i) {
+	for (uint i = 0; i < 4; ++i) {
 		_solveOrder[i] = stream.readByte();
 	}
 
@@ -154,8 +153,7 @@ void BombPuzzle::updateGraphics() {
 	// Draw 10s of minutes
 	t = _digitDests[0];
 	t.translate(-_screenPosition.left, -_screenPosition.top);
-	_drawSurface.blitFrom(_image, _
-digitSrcs[timeRemaining.getMinutes() / 10], t);
+	_drawSurface.blitFrom(_image, _digitSrcs[timeRemaining.getMinutes() / 10], t);
 
 	// Draw 1s of minutes
 	t = _digitDests[1];
@@ -245,8 +243,7 @@ void BombPuzzle::execute() {
 }
 
 void BombPuzzle::handleInput(NancyInput &input) {
-	for (uint i = 0 ; i < _wireDests.si
-ze(); ++i) {
+	for (uint i = 0 ; i < _wireDests.size(); ++i) {
 		if (NancySceneState.getViewport().convertViewportToScreen(_wireDests[i]).contains(input.mousePos)) {
 			for (byte j : _playerOrder) {
 				if (i == j) {

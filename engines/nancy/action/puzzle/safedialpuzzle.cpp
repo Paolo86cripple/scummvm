@@ -58,8 +58,7 @@ void SafeDialPuzzle::updateGraphics() {
 	}
 
 	if (_animState == kReset && _nextAnim < g_nancy->getTotalPlayTime()) {
-		if (!_r
-esetImageName.empty()) {
+		if (!_resetImageName.empty()) {
 			_animState = kResetAnim;
 		} else {
 			_animState = kNone;
@@ -124,8 +123,7 @@ void SafeDialPuzzle::readData(Common::SeekableReadStream &stream) {
 
 	_resetTurns = stream.readUint16LE();
 
-	uint16 solveSize = s
-tream.readUint16LE();
+	uint16 solveSize = stream.readUint16LE();
 	_correctSequence.resize(solveSize);
 	for (uint i = 0; i < solveSize; ++i) {
 		_correctSequence[i] = stream.readUint16LE();
@@ -205,8 +203,7 @@ void SafeDialPuzzle::execute() {
 			_exitScene.execute();
 		}
 
-		g_nancy->_sound->stopSound(_solve
-Sound);
+		g_nancy->_sound->stopSound(_solveSound);
 		g_nancy->_sound->stopSound(_spinSound);
 		g_nancy->_sound->stopSound(_selectSound);
 		g_nancy->_sound->stopSound(_resetSound);
@@ -267,8 +264,7 @@ void SafeDialPuzzle::handleInput(NancyInput &input) {
 	if (NancySceneState.getViewport().convertViewportToScreen(_arrowDest).contains(input.mousePos)) {
 		g_nancy->_cursor->setCursorType(buttonCursor);
 
-		if (!g_na
-ncy->_sound->isSoundPlaying(_selectSound) && input.input & NancyInput::kLeftMouseButtonUp) {
+		if (!g_nancy->_sound->isSoundPlaying(_selectSound) && input.input & NancyInput::kLeftMouseButtonUp) {
 			g_nancy->_sound->playSound(_selectSound);
 			pushSequence(_current);
 			_drawSurface.blitFrom(_image1, _arrowSrc, _arrowDest);
@@ -329,8 +325,7 @@ void SafeDialPuzzle::drawDialFrame(uint frame) {
 	}
 
 	if (frame >= _dialSrcs.size() / 2 && !_imageName2.empty()) {
-		_drawSurface.blitFrom(_image2, _dialSrcs[frame], _dial
-Dest);
+		_drawSurface.blitFrom(_image2, _dialSrcs[frame], _dialDest);
 	} else {
 		_drawSurface.blitFrom(_image1, _dialSrcs[frame], _dialDest);
 	}

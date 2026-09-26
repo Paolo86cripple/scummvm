@@ -51,8 +51,7 @@ void AngleTossPuzzle::readData(Common::SeekableReadStream &stream) {
 	// data+0x21..0x2c: 6 × uint16.
 	// _initialPower/_initialAngle: starting player position (copied to object+0x24/0x26 in original).
 	// _numPowers/_numAngles: UI control bounds.
-	// _targetPower/_targetAngle
-: the correct answer for this round.
+	// _targetPower/_targetAngle: the correct answer for this round.
 	_initialPower = stream.readUint16LE();
 	_initialAngle = stream.readUint16LE();
 	_numPowers    = stream.readUint16LE();
@@ -105,8 +104,7 @@ void AngleTossPuzzle::execute() {
 		registerGraphics();
 		NancySceneState.setNoHeldItem();
 
-		g_nancy->_sound->loadSound(
-_powerSound);
+		g_nancy->_sound->loadSound(_powerSound);
 		g_nancy->_sound->loadSound(_squeakSound);
 		g_nancy->_sound->loadSound(_chainSound);
 
@@ -166,8 +164,7 @@ void AngleTossPuzzle::handleInput(NancyInput &input) {
 	}
 
 	// All rects are in viewport-local coordinates.
-	Common::Point localMousePos = input.mouse
-Pos;
+	Common::Point localMousePos = input.mousePos;
 	Common::Rect vpPos = NancySceneState.getViewport().getScreenPosition();
 	localMousePos -= Common::Point(vpPos.left, vpPos.top);
 
@@ -224,8 +221,7 @@ Pos;
 		}
 	}
 
-	// LAUNCH button — hotspot 
-is rect 0 (_throwHotspot), sprite is drawn at rect 1 (_throwDisplay)
+	// LAUNCH button — hotspot is rect 0 (_throwHotspot), sprite is drawn at rect 1 (_throwDisplay)
 	if (_throwHotspot.contains(localMousePos)) {
 		g_nancy->_cursor->setCursorType(CursorManager::kHotspot);
 

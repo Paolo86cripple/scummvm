@@ -58,8 +58,7 @@ protected:
 	uint16 _correctPositions[2] = { 0, 0 };
 
 	// Nancy 12+ replaced the single correctPositions pair with a list of
-	// event-flag-gated solutions: a combo only solves while 
-its condition flag
+	// event-flag-gated solutions: a combo only solves while its condition flag
 	// matches, and it changes to its own target scene.
 	struct DialSolution {
 		uint16 positions[2] = { 0, 0 };

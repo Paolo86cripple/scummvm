@@ -59,8 +59,7 @@ protected:
 
 	Common::Rect _beadSrcRects[kMaxBeadTypes];
 
-	Common::Rect _threa
-dSrc;
+	Common::Rect _threadSrc;
 	Common::Rect _threadDest;
 
 	Common::Rect _removeHotspot;

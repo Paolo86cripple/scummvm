@@ -59,8 +59,7 @@ protected:
 	Common::Array<Common::Array<Common::Array<Common::Rect>>> _destRects; // [ringID][poleID][position]
 
 	SoundDescription _takeSound;
-	SoundD
-escription _dropSound;
+	SoundDescription _dropSound;
 
 	Misc::MouseFollowObject _heldRing;
 	int8 _heldRingID = -1;

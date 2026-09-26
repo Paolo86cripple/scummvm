@@ -61,8 +61,7 @@ protected:
 		Common::Rect startRect;
 		uint16 correctRotation = 0;
 		uint16 layer = 0;
-		bool pla
-ced = false;
+		bool placed = false;
 
 		int curRotation = 0;
 	};

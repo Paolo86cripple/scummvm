@@ -59,8 +59,7 @@ protected:
 
 	void addTextLine(const Common::String &text);
 	void addImage(uint16 lineID, const Common::Rect &src);
-	void setImageName(const Comm
-on::Path &name);
+	void setImageName(const Common::Path &name);
 
 	void drawAllText(const Common::Rect &textBounds, uint leftOffsetNonNewline, uint fontID, uint highlightFontID);
 	virtual void clear();

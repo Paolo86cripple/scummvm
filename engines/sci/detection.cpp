@@ -47,8 +47,7 @@ static const DebugChannelDef debugFlagList[] = {
 	{Sci::kDebugLevelBaseSetter, "Base", "Base Setter debugging"},
 	{Sci::kDebugLevelParser, "Parser", "Parser debugging"},
 	{Sci::kDebugLevelSaid, "Said", "Said specs debugging"},
-	{Sci::k
-DebugLevelFile, "File", "File I/O debugging"},
+	{Sci::kDebugLevelFile, "File", "File I/O debugging"},
 	{Sci::kDebugLevelTime, "Time", "Time debugging"},
 	{Sci::kDebugLevelRoom, "Room", "Room number debugging"},
 	{Sci::kDebugLevelAvoidPath, "Pathfinding", "Pathfinding debugging"},
@@ -83,8 +82,7 @@ static const PlainGameDescriptor s_sciGameTitles[] = {
 	{"kq4sci",          "King's Quest IV: The Perils of Rosella"},	// Note: There was also an AGI version of this
 	{"laurabow",        "Laura Bow I: The Colonel's Bequest"},
 	{"lsl2",            "Leisure Suit Larry 2: Goes Looking for Love (in Several Wrong Places)"},
-	{"lsl3",            "Leisure Suit Larry 3: Passionate Patti 
-in Pursuit of the Pulsating Pectorals"},
+	{"lsl3",            "Leisure Suit Larry 3: Passionate Patti in Pursuit of the Pulsating Pectorals"},
 	{"mothergoose",     "Mixed-Up Mother Goose"},
 	{"pq2",             "Police Quest II: The Vengeance"},
 	{"qfg1",            "Hero's Quest: So You Want to Be a Hero"},	// Note: There was also a SCI11 VGA remake of this (further down) called Quest for Glory I: So You Want to Be a Hero
@@ -109,8 +107,7 @@ in Pursuit of the Pulsating Pectorals"},
 	{"lsl1sci",         "Leisure Suit Larry in the Land of the Lounge Lizards"},	// Note: There was also an AGI version of this
 	{"lsl5",            "Leisure Suit Larry 5: Passionate Patti Does a Little Undercover Work"},
 	{"mothergoose256",  "Mixed-Up Mother Goose"},
-	{"msastrochicken",  "Ms. Astro 
-Chicken"},
+	{"msastrochicken",  "Ms. Astro Chicken"},
 	{"pq1sci",          "Police Quest: In Pursuit of the Death Angel"},	// Note: There was also an AGI version of this
 	{"pq3",             "Police Quest III: The Kindred"},
 	{"sq1sci",          "Space Quest I: Roger Wilco in the Sarien Encounter"},	// Note: There was also an AGI version of this called Space Quest: Chapter I - The Sarien Encounter
@@ -137,8 +134,7 @@ Chicken"},
 	{"gk1",             "Gabriel Knight: Sins of the Fathers"},
 	{"pq4",             "Police Quest IV: Open Season"}, // floppy is SCI2, CD SCI2.1
 	{"qfg4",            "Quest for Glory IV: Shadows of Darkness"},	// floppy is SCI2, CD SCI2.1
-	// === SCI2.1 games =====================
-===================================
+	// === SCI2.1 games ========================================================
 	{"hoyle5",          "Hoyle Classic Games"},
 	{"hoyle5bridge",    "Hoyle Bridge"},
 	{"hoyle5children",  "Hoyle Children's Collection"},
@@ -191,8 +187,7 @@ public:
 		_directoryGlobs = directoryGlobs;
 		// Use SCI fallback detection results instead of the partial matches found by
 		// advanced detector. SCI fallback detection is excellent because games have
-		// predictable file names and contain a unique gam
-e string.
+		// predictable file names and contain a unique game string.
 		// Advanced detector's partial matches aren't very useful in SCI because of
 		// those similar file names; most games are partial matches of each other.
 		_flags = kADFlagMatchFullPaths | kADFlagPreferFallbackDetection;
@@ -247,8 +242,7 @@ DetectedGames SciMetaEngineDetection::detectGames(const Common::FSList &fslist, 
 
 		// Restore the language info to the options string.
 		for (const Common::Language &lang : langList)
-			game.appendGUIOptions(getGam
-eGUIOptionsDescriptionLanguage(lang));
+			game.appendGUIOptions(getGameGUIOptionsDescriptionLanguage(lang));
 	}
 
 	return games;
@@ -299,8 +293,7 @@ ADDetectedGame SciMetaEngineDetection::fallbackDetect(const FileMap &allFiles, c
 		}
 
 		// add message and audio volumes.
-		// sometimes we need these to differentiate between loc
-alized versions.
+		// sometimes we need these to differentiate between localized versions.
 		addFileToDetectedGame("resource.aud", allFiles, md5Prop, game);
 		addFileToDetectedGame("resource.msg", allFiles, md5Prop, game);
 	} else if (allFiles.contains("resmap.000") || allFiles.contains("resmap.001")) {

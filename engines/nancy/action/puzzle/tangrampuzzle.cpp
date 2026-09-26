@@ -57,8 +57,7 @@ void TangramPuzzle::init() {
 	curTile->moveTo(_maskImage.getBounds());
 	curTile->setTransparent(true);
 	curTile->setVisible(true);
-	drawToBuffer(*curT
-ile);
+	drawToBuffer(*curTile);
 	curTile->setZOrder(_z + 1);
 
 	// Then, add the actual tiles
@@ -130,8 +129,7 @@ void TangramPuzzle::readData(Common::SeekableReadStream &stream) {
 
 	_pickUpSound.readNormal(stream);
 	_putDownSound.readNormal(stream);
-	_rotateSo
-und.readNormal(stream);
+	_rotateSound.readNormal(stream);
 
 	_solveScene.readData(stream);
 	_solveSound.readNormal(stream);
@@ -219,8 +217,7 @@ void TangramPuzzle::handleInput(NancyInput &input) {
 			g_nancy->_cursor->setCursorType(CursorManager::kHotspot);
 
 			if (input.input & NancyInput::kLeftMouseButtonUp) {
-				pickUpTile(idUnderMou
-se);
+				pickUpTile(idUnderMouse);
 				g_nancy->_sound->playSound(_pickUpSound);
 			} else if (input.input & NancyInput::kRightMouseButtonUp) {
 				rotateTile(idUnderMouse);
@@ -299,7 +296,6 @@ void TangramPuzzle::pickUpTile(uint id) {
 	moveToTop(id);
 	_pickedUpTile = id;
 	redrawBuffer(tileToPickUp.getScreenPositionRaw());
-
 	tileToPickUp.pickUp();
 
 	// Make sure we don't have a frame with the correct zOrder, but wrong position
@@ -380,8 +376,7 @@ void TangramPuzzle::redrawBuffer(const Common::Rect &rect) {
 		for (uint i = 0; i < _tiles.size() - 1; ++i) {
 			Tile &tile = _tiles[i];
 			if (tile.getZOrder() == z) {
-				if (t
-ile.getScreenPositionRaw().intersects(rect)) {
+				if (tile.getScreenPositionRaw().intersects(rect)) {
 					drawToBuffer(tile, tile.getScreenPositionRaw().findIntersectingRect(rect));
 				}
 

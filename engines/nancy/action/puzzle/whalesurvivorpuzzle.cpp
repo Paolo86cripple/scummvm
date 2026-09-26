@@ -48,8 +48,7 @@ void WhaleSurvivorPuzzle::readData(Common::SeekableReadStream &stream) {
 
 	// Fish entity types: main src rects (6 × 16 bytes)
 	for (int i = 0; i < kNumEntityTypes; ++i)
-		readRect(stream, _fishTypes[i].mainS
-rc); // 0x0b4
+		readRect(stream, _fishTypes[i].mainSrc); // 0x0b4
 
 	// Fish entity types: sub-sprite data (6 × 4 sub-sprites × 20 bytes each)
 	for (int i = 0; i < kNumEntityTypes; ++i) {
@@ -100,8 +99,7 @@ rc); // 0x0b4
 	_maxY      = stream.readSint32LE(); // 0x788
 	_spawnYMin = stream.readSint32LE(); // 0x78c
 	_spawnYMax = stream.readSint32LE(); // 0x790
-	stream.skip(4);    
-                 // 0x794 (unknown)
+	stream.skip(4);                     // 0x794 (unknown)
 	stream.skip(4);                     // 0x798 (unknown)
 	_scoreX    = stream.readSint32LE(); // 0x79c
 	_scoreY    = stream.readSint32LE(); // 0x7a0
@@ -148,8 +146,7 @@ rc); // 0x0b4
 
 	// Fish movement parameters
 	_fishAnimFPS    = stream.readUint32LE(); // 0x8cc
-	_fishSpeedRange = 
-stream.readFloatLE();  // 0x8d0
+	_fishSpeedRange = stream.readFloatLE();  // 0x8d0
 	_fishSpeedBase  = stream.readFloatLE();  // 0x8d4
 
 	// Hazard movement parameters
@@ -198,8 +195,7 @@ void WhaleSurvivorPuzzle::init() {
 	                    g_nancy->_graphics->getInputPixelFormat());
 	_drawSurface.clear(g_nancy->_graphics->getTransColor());
 	setTransparent(true);
-	setVisible(tr
-ue);
+	setVisible(true);
 	moveTo(vpBounds);
 
 	g_nancy->_resource->loadImage(_imageNameMain,     _imageMain);
@@ -270,8 +266,7 @@ void WhaleSurvivorPuzzle::initRound() {
 	} else {
 		// Hard mode: random X start
 		int range = MAX(1, _playfieldRect.width() - _porpWidth);
-		_po
-rpX = (float)(_playfieldRect.left + (int)rnd.getRandomNumber(range - 1));
+		_porpX = (float)(_playfieldRect.left + (int)rnd.getRandomNumber(range - 1));
 	}
 	_porpY    = (float)_surfaceY;
 	_porpLeft = (int)_porpX;
@@ -336,8 +331,7 @@ rpX = (float)(_playfieldRect.left + (int)rnd.getRandomNumber(range - 1));
 
 		e.floatX = (float)e.x;
 
-		int baseRange = MAX(1, (int)_hazardSpeedBase
-);
+		int baseRange = MAX(1, (int)_hazardSpeedBase);
 		float speed = _hazardSpeedRange + (float)rnd.getRandomNumber(baseRange - 1)
 		              + (float)rnd.getRandomNumber(9) / 10.0f;
 		e.speedX = (_hazardAnimFPS > 0) ? speed / (float)_hazardAnimFPS : 0.05f;
@@ -403,8 +397,7 @@ void WhaleSurvivorPuzzle::execute() {
 		// fall through
 
 	case kRun: {
-		uint32 nowMs = g_nancy->getTotalPla
-yTime();
+		uint32 nowMs = g_nancy->getTotalPlayTime();
 
 		switch (_gameState) {
 		case kStartScreen:
@@ -491,8 +484,7 @@ void WhaleSurvivorPuzzle::handleInput(NancyInput &input) {
 	// Convert screen-space mouse position to viewport-relative coordinates
 	Common::Point localMousePos = input.mousePos;
 	Common::Rect vpPos = NancySceneState.getViewport().getScreenPosition();
-	localMousePos -= Co
-mmon::Point(vpPos.left, vpPos.top);
+	localMousePos -= Common::Point(vpPos.left, vpPos.top);
 
 	bool overStart = (_gameState == kStartScreen || _gameState == kHitAnimation) &&
 	                 _startButtonDestRect.contains(localMousePos);
@@ -538,8 +530,7 @@ mmon::Point(vpPos.left, vpPos.top);
 		_needsRedraw = true;
 	} else if (_gameState == kHitAnimation && _startButtonDestRect.contains(localMousePos)) {
 		// Player chose to try again (full entity reset, keeps score & lives)
-		_gameState   = kTryAgai
-n;
+		_gameState   = kTryAgain;
 		_needsRedraw = true;
 	}
 }
@@ -602,8 +593,7 @@ void WhaleSurvivorPuzzle::updateGame(uint32 nowMs) {
 				bool wasBelow = _oxygenDepleting;
 				_porpY            = (float)_surfaceY;
 				_oxygenDepleting  = false;
-		
-		_oxygenStage      = 0;
+				_oxygenStage      = 0;
 				_oxygenNextTickMs = 0;
 				if (wasBelow) {
 					Common::RandomSource &rnd = *g_nancy->_randomSource;
@@ -671,8 +661,7 @@ void WhaleSurvivorPuzzle::updateGame(uint32 nowMs) {
 		if (newLeft != _porpLeft || newTop != _porpTop) {
 			_porpLeft    = newLeft;
 			_porpTop     = newTop;
-			_n
-eedsRedraw = true;
+			_needsRedraw = true;
 		}
 	}
 
@@ -758,7 +747,6 @@ void WhaleSurvivorPuzzle::checkCollisions() {
 		}
 
 		if (!hit)
-
 			continue;
 
 		e.removed = true;
@@ -838,8 +826,7 @@ void WhaleSurvivorPuzzle::loseLife() {
 
 void WhaleSurvivorPuzzle::redraw() {
 	_needsRedraw = true;
-	_dra
-wSurface.clear(g_nancy->_graphics->getTransColor());
+	_drawSurface.clear(g_nancy->_graphics->getTransColor());
 
 	// ---- State-specific overlay ----
 	switch (_gameState) {
@@ -885,8 +872,7 @@ wSurface.clear(g_nancy->_graphics->getTransColor());
 
 	// Draw oxygen bar (left side): stage 0 = full oxygen (no bar shown); stages 1-8 show depletion
 	if (_oxygenStage > 0 && _oxygenStage <= kOxygenStages) {
-		_drawSurface.blitFrom(_im
-ageMain, _oxygenSrcRects[_oxygenStage - 1],
+		_drawSurface.blitFrom(_imageMain, _oxygenSrcRects[_oxygenStage - 1],
 		                      Common::Point(_oxygenBarX, _oxygenBarY));
 	}
 
@@ -940,8 +926,7 @@ ageMain, _oxygenSrcRects[_oxygenStage - 1],
 				drawSrc.left += (_playfieldRect.left - screenX);
 				screenX = _playfieldRect.left;
 			}
-			// Clip
- right edge to playfield boundary
+			// Clip right edge to playfield boundary
 			if (screenX + drawSrc.width() > _playfieldRect.right)
 				drawSrc.right = drawSrc.left + (_playfieldRect.right - screenX);
 
@@ -1001,8 +986,7 @@ ageMain, _oxygenSrcRects[_oxygenStage - 1],
 		displayScore /= 10;
 	}
 	// Digit sprite width (including gap) = 13 pixels
-	const int digit
-W = 13;
+	const int digitW = 13;
 	for (int d = 0; d < kDigits; ++d) {
 		int idx = digits[d]; // 0..9
 		_drawSurface.blitFrom(_imageMain, _scoreDigitSrcRects[idx],

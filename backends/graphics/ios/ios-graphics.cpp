@@ -58,8 +58,7 @@ void iOSGraphicsManager::deinitSurface() {
 	dynamic_cast<OSystem_iOS7 *>(g_system)->destroyOpenGLContext();
 }
 
-void iOSGraphicsManager::notifyResize(c
-onst int width, const int height) {
+void iOSGraphicsManager::notifyResize(const int width, const int height) {
 	handleResize(width, height);
 }
 
@@ -118,8 +117,7 @@ float iOSGraphicsManager::getHiDPIScreenFactor() const {
 }
 
 void iOSGraphicsManager::refreshScreen() {
-	dynamic_cast<OSystem_iOS7 *>(g_syst
-em)->refreshScreen();
+	dynamic_cast<OSystem_iOS7 *>(g_system)->refreshScreen();
 }
 
 bool iOSGraphicsManager::notifyMousePosition(Common::Point &mouse) {

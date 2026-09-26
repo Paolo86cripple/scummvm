@@ -50,8 +50,7 @@ void PeepholePuzzle::init() {
 
 	if (_buttonsImageName.empty()) {
 		// Empty image name for buttons, use other image as source
-		_bu
-ttonsImage.create(_innerImage, _innerImage.getBounds());
+		_buttonsImage.create(_innerImage, _innerImage.getBounds());
 	} else {
 		g_nancy->_resource->loadImage(_buttonsImageName, _buttonsImage);
 	}
@@ -124,8 +123,7 @@ void PeepholePuzzle::handleInput(NancyInput &input) {
 		if (_currentSrc.top < _innerBounds.top) {
 			_currentSrc.translate(0, _innerBounds.top - _currentSrc.top);
 		} else if (_currentSrc.bottom > _innerBounds.bottom) {
-			_currentSrc.translate(0, _innerBounds.bot
-tom - _currentSrc.bottom);
+			_currentSrc.translate(0, _innerBounds.bottom - _currentSrc.bottom);
 		}
 
 		input.eatMouseWheelInput();
@@ -177,8 +175,7 @@ tom - _currentSrc.bottom);
 						if (_pressedButton == -1) {
 							// Just pressed
 							_pressedButton = i;
-							_pressSt
-art = g_nancy->getTotalPlayTime();
+							_pressStart = g_nancy->getTotalPlayTime();
 						}
 					}
 				}
@@ -265,8 +262,7 @@ void PeepholePuzzle::checkButtons() {
 
 		if (!_buttonDests[i].isEmpty()) {
 			if (*srcCoord == *innerCoord) {
-				if (_disabledButt
-ons[i] == false) {
+				if (_disabledButtons[i] == false) {
 					_disabledButtons[i] = true;
 					if (!_buttonDisabledSrcs[i].isEmpty()) {
 						_drawSurface.blitFrom(_buttonsImage, _buttonDisabledSrcs[i], _buttonDests[i]);
@@ -334,8 +330,7 @@ void TextScroll::init() {
 void TextScroll::readData(Common::SeekableReadStream &stream) {
 	Autotext::readData(stream);
 
-	PeepholePuzzle::_transparency = Autotext::_transpare
-ncy;
+	PeepholePuzzle::_transparency = Autotext::_transparency;
 }
 
 void TextScroll::readExtraData(Common::SeekableReadStream &stream) {

@@ -47,8 +47,7 @@ public:
 
 	void readData(Common::SeekableReadStream &stream) override;
 	void execute() override;
-	void handleInput(NancyInput &input)
- override;
+	void handleInput(NancyInput &input) override;
 
 	bool isViewportRelative() const override { return true; }
 

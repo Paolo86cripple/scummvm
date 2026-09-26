@@ -43,8 +43,7 @@
 #include "engines/nancy/action/puzzle/blockspuzzle.h"
 #include "engines/nancy/action/puzzle/boardgamepuzzle.h"
 #include "engines/nancy/action/puzzle/buildpuzzle.h"
-#include 
-"engines/nancy/action/puzzle/bulpuzzle.h"
+#include "engines/nancy/action/puzzle/bulpuzzle.h"
 #include "engines/nancy/action/puzzle/bombpuzzle.h"
 #include "engines/nancy/action/puzzle/cardgamepuzzle.h"
 #include "engines/nancy/action/puzzle/collisionpuzzle.h"
@@ -80,8 +79,7 @@
 #include "engines/nancy/action/puzzle/passwordpuzzle.h"
 #include "engines/nancy/action/puzzle/peepholepuzzle.h"
 #include "engines/nancy/action/puzzle/pegspuzzle.h"
-#include "en
-gines/nancy/action/puzzle/quizpuzzle.h"
+#include "engines/nancy/action/puzzle/quizpuzzle.h"
 #include "engines/nancy/action/puzzle/raycastpuzzle.h"
 #include "engines/nancy/action/puzzle/riddlepuzzle.h"
 #include "engines/nancy/action/puzzle/rippedletterpuzzle.h"
@@ -127,7 +125,6 @@ ActionRecord *ActionManager::createActionRecord(uint16 type, Common::SeekableRea
 			return new Hot1FrSceneChange(CursorManager::kNormal, true, true);
 	case 12:
 		if (g_nancy->getGameType() <= kGameTypeNancy9)
-
 			return new SceneChange();
 		else
 			return new HotMultiframeSceneChange(CursorManager::kNormal, true);
@@ -179,8 +176,7 @@ ActionRecord *ActionManager::createActionRecord(uint16 type, Common::SeekableRea
 		if (g_nancy->getGameType() <= kGameTypeNancy9)
 			return new HotMultiframeMultiSceneCursorTypeSceneChange();
 		else
-			return new HotMultiframeSceneChange(CursorManager::kMoveUp)
-;		// Moved from 20
+			return new HotMultiframeSceneChange(CursorManager::kMoveUp);		// Moved from 20
 	case 25: {
 		if (g_nancy->getGameType() <= kGameTypeNancy9) {
 			// Weird case; instead of storing the cursor id, they instead chose to store
@@ -235,7 +231,6 @@ ActionRecord *ActionManager::createActionRecord(uint16 type, Common::SeekableRea
 	case 44:	// Nancy14
 		return new PlaySecondaryMovie(PlaySecondaryMovie::kMovieWithVolume);
 	case 46:	// Nancy11
-
 		return new PlayRandomMovieControl();
 	case 47:	// Nancy14
 		return new PlaySecondaryMovie(PlaySecondaryMovie::kInteractiveMovie);
@@ -302,8 +297,7 @@ ActionRecord *ActionManager::createActionRecord(uint16 type, Common::SeekableRea
 			return new Autotext();		// Moved from 61
 	case 68:
 		if (g_nancy->getGameType() <= kGameTypeNancy11)
-			return new TextScroll(TextScroll:
-:kTextScroll);
+			return new TextScroll(TextScroll::kTextScroll);
 		else
 			return new TextLineOverlay();
 	case 69:	// Nancy11
@@ -374,8 +368,7 @@ ActionRecord *ActionManager::createActionRecord(uint16 type, Common::SeekableRea
 		return new PopScene();
 	case 112:
 		return new WinGame();
-	case 1
-13:
+	case 113:
 		return new DifficultyLevel();
 	case 114:
 		return new RotatingLockPuzzle();
@@ -442,8 +435,7 @@ ActionRecord *ActionManager::createActionRecord(uint16 type, Common::SeekableRea
 	case 148:	// Nancy11
 		if (g_nancy->getGameType() <= kGameTypeNancy11)
 			return new MakeScreenFile();
-		else if (g_nancy->getGameType()
- <= kGameTypeNancy12)
+		else if (g_nancy->getGameType() <= kGameTypeNancy12)
 			return new SetVolume();			// Moved from 149
 		else
 			return new StopSound();			// Moved from 154
@@ -512,8 +504,7 @@ ActionRecord *ActionManager::createActionRecord(uint16 type, Common::SeekableRea
 		return new Set3DSoundListenerPosition();
 	// -- Nancy 13 new/relocated puzzles (types 169-176) --
 	case 169:
-		return new Ste
-pObjectsPuzzle();
+		return new StepObjectsPuzzle();
 	case 170:
 		if (g_nancy->getGameType() <= kGameTypeNancy12)
 			return new SetPlayerClock();	// Moved to 140 in Nancy12, unused slot in Nancy12
@@ -594,7 +585,6 @@ pObjectsPuzzle();
 	case 220:
 		return new TwoDialPuzzle();
 	case 221:
-
 		return new HamRadioPuzzle();
 	case 222:
 		return new AssemblyPuzzle();

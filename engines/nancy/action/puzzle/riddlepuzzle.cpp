@@ -57,8 +57,7 @@ void RiddlePuzzle::readData(Common::SeekableReadStream &stream) {
 	_textboxTextFontID = stream.readUint16LE();
 	_cursorBlinkTime = stream.readUint16LE();
 	readRect(stream, _screenPosition);
-	_typeSound.readNormal(s
-tream);
+	_typeSound.readNormal(stream);
 	_eraseSound.readNormal(stream);
 	_enterSound.readNormal(stream);
 	_solveScene.readData(stream);
@@ -138,8 +137,7 @@ void RiddlePuzzle::execute() {
 		}
 
 		g_nancy->_sound->loadSound(_riddles[_riddleID].sound);
-		g_nancy->_
-sound->playSound(_riddles[_riddleID].sound);
+		g_nancy->_sound->playSound(_riddles[_riddleID].sound);
 		showSubtitle(_riddles[_riddleID].text, false, _textboxTextFontID);
 		NancySceneState.setNoHeldItem();
 
@@ -219,8 +217,7 @@ sound->playSound(_riddles[_riddleID].sound);
 			break;
 		}
 
-		break
-;
+		break;
 	case kActionTrigger: {
 		SoundDescription *sound = nullptr;
 		SceneChangeWithFlag *sceneChange = nullptr;
@@ -300,8 +297,7 @@ void RiddlePuzzle::handleInput(NancyInput &input) {
 			}
 		} else if (key.keycode == Common::KEYCODE_RETURN || key.keycode == Common::KEYCODE_KP_ENTER) {
 			if (_playerInput.size() == 0 ||
-				(_playerInput.size() == 1 && _playerInput.las
-tChar() == '-')) {
+				(_playerInput.size() == 1 && _playerInput.lastChar() == '-')) {
 					continue;
 				}
 

@@ -58,8 +58,7 @@ void SliderPuzzle::readData(Common::SeekableReadStream &stream) {
 	}
 	stream.skip((6 - _height) * 6 * 16);
 
-	_destRects.resize(_hei
-ght);
+	_destRects.resize(_height);
 	for (uint y = 0; y < _height; ++y) {
 		readRectArray(stream, _destRects[y], _width, 6);
 	}
@@ -134,8 +133,7 @@ void SliderPuzzle::execute() {
 	case kRun:
 		switch (_solveState) {
 		case kNotSolved:
-			for (uint y = 0; y < _height; ++y) 
-{
+			for (uint y = 0; y < _height; ++y) {
 				for (uint x = 0; x < _width; ++x) {
 					if (_puzzleState->playerTileOrder[y][x] != _correctTileOrder[y][x]) {
 						return;
@@ -215,8 +213,7 @@ void SliderPuzzle::handleInput(NancyInput &input) {
 					shouldBreak = true;
 					break;
 				}
-			} else if ((int)y < _height - 1 && _puzzl
-eState->playerTileOrder[y + 1][x] < 0) {
+			} else if ((int)y < _height - 1 && _puzzleState->playerTileOrder[y + 1][x] < 0) {
 				if (NancySceneState.getViewport().convertViewportToScreen(_destRects[y][x]).contains(input.mousePos)) {
 					currentTileX = x;
 					currentTileY = y;
@@ -268,7 +265,6 @@ eState->playerTileOrder[y + 1][x] < 0) {
 				undrawTile(currentTileX, currentTileY);
 				_puzzleState->playerTileOrder[currentTileY][currentTileX + 1] = curTileID;
 				_puzzleState->playerTileOrder[currentTileY][currentTileX] = -10;
-
 				break;
 			}
 			}

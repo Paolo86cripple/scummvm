@@ -49,7 +49,6 @@ public:
 	void execute() override;
 	void handleInput(NancyInput &input) override;
 
-
 	bool isViewportRelative() const override { return true; }
 
 protected:
@@ -125,8 +124,7 @@ protected:
 	PuzzleType _puzzleType;
 };
 
-} // End of namespac
-e Action
+} // End of namespace Action
 } // End of namespace Nancy
 
 #endif // NANCY_ACTION_COLLISIONPUZZLE_H

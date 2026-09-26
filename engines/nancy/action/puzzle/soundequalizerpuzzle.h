@@ -68,8 +68,7 @@ public:
 	Common::Array<uint16> _minRate;
 	Common::Array<uint16> _maxRate;
 
-	uint16 _solveChannelID = 
-0;
+	uint16 _solveChannelID = 0;
 	uint16 _solveMinVolume = 0;
 	uint16 _solveMaxVolume = 0;
 	uint16 _solveMinRate = 0;

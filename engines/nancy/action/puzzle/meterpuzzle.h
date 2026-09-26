@@ -51,8 +51,7 @@ protected:
 
 	void redraw();
 	double sampleFraction() const;	// the tracked value, divided by its full-scale value
-	int computeFrame() const;		// the frame for the current 
-value
+	int computeFrame() const;		// the frame for the current value
 
 	// Mode 2 behaves the same as kTableValue
 	enum Mode {

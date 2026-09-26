@@ -56,8 +56,7 @@ protected:
 	Common::Rect _placedDest;
 
 	Common::Array<Common::Rect> _pieceSrcs; // Used only when not placed
-	Common::Array<Common::Rect> _pieceDests; // Used only wh
-en not placed
+	Common::Array<Common::Rect> _pieceDests; // Used only when not placed
 
 	// 4 arrays with 9 rects each; every rect corresponds to a specific permutation of placed pieces:
 	// - bottom piece only (start state)

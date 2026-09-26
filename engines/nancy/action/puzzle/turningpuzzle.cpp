@@ -61,8 +61,7 @@ void TurningPuzzle::init() {
 	registerGraphics();
 }
 
-// Ever
-y slot plays the same frames, but each starts wherever init() left it.
+// Every slot plays the same frames, but each starts wherever init() left it.
 void TurningPuzzle::drawOverlay(bool advanceFrames) {
 	for (uint i = 0; i < _overlayDestRects.size(); ++i) {
 		_drawSurface.blitFrom(_overlayImage, _overlaySrcRects[_overlayFrameIDs[i]], _overlayDestRects[i]);
@@ -125,8 +124,7 @@ void TurningPuzzle::updateGraphics() {
 		if (g_nancy->getTotalPlayTime() > _nextTurnTime) {
 			_nextTurnTime = g_nancy->getTotalPlayTime() + (_solveDelayBetweenTurns * 1000 / _numFramesPerTurn);
 
-			if (	(_turnFrameID ==
- 0 && _solveAnimFace == 0) ||
+			if (	(_turnFrameID == 0 && _solveAnimFace == 0) ||
 					(_turnFrameID == 1 && _solveAnimFace > 0 && (int)_solveAnimFace < _numFaces - 1)) {
 				g_nancy->_sound->playSound(_turnSound);
 			}
@@ -202,8 +200,7 @@ void TurningPuzzle::updateGraphics() {
 void TurningPuzzle::readDataNancy13(Common::SeekableReadStream &stream) {
 	// 47-byte header
 	readFilename(stream, _imageName);			// 0x00
-	_turnDe
-lay = stream.readUint16LE();			// 0x21
+	_turnDelay = stream.readUint16LE();			// 0x21
 	_hoverCursorType = stream.readUint16LE();	// 0x23
 	_hitInset = stream.readUint16LE();			// 0x25
 	_turnFlagLabel = stream.readSint16LE();		// 0x27
@@ -265,8 +262,7 @@ lay = stream.readUint16LE();			// 0x21
 
 	if (g_nancy->getGameType() >= kGameTypeNancy14) {
 		Common::String overlayName;
-		readFilename(stream, overlayNam
-e);
+		readFilename(stream, overlayName);
 
 		if (!overlayName.empty() && overlayName != "NO_FILE") {
 			_overlayImageName = Common::Path(overlayName);
@@ -342,8 +338,7 @@ void TurningPuzzle::readData(Common::SeekableReadStream &stream) {
 		return;
 	}
 
-	readFilename(stream, _imag
-eName);
+	readFilename(stream, _imageName);
 	uint numSpindles = stream.readUint16LE();
 	_numFaces = stream.readUint16LE();
 	_numFramesPerTurn = stream.readUint16LE();
@@ -420,8 +415,7 @@ void TurningPuzzle::execute() {
 	case kBegin :
 		init();
 		if (g_nancy->getGameType() < kGameTypeNancy13) {
-			// Nancy13 picks its t
-urn sound out of a random block on every turn instead.
+			// Nancy13 picks its turn sound out of a random block on every turn instead.
 			g_nancy->_sound->loadSound(_turnSound);
 		}
 		_currentOrder = _startPositions;
@@ -492,8 +486,7 @@ urn sound out of a random block on every turn instead.
 
 			// Nancy13 takes the solve scene and its event flag from the header. In every case
 			// the flag is only set here: setting it as soon as the puzzle is solved can
-			// invalidate this record's own dependencies, which stops it 
-from being executed
+			// invalidate this record's own dependencies, which stops it from being executed
 			// again before it ever reaches this point.
 			if (_timedOut) {
 				_timeoutScene.execute();
@@ -556,8 +549,7 @@ void TurningPuzzle::handleInput(NancyInput &input) {
 				_turnFrameID = 0;
 				_nextTurnTime = 0;
 			} else {
-				// A click is ignored 
-for as long as the previous turn's sound keeps playing.
+				// A click is ignored for as long as the previous turn's sound keeps playing.
 				if (g_nancy->_sound->isSoundPlaying(_turnSound)) {
 					break;
 				}
@@ -615,8 +607,7 @@ void TurningPuzzle::turnLogic(uint objectID) {
 
 	for (uint j = 0; j < _links[objectID].size(); ++j) {
 		uint linkedID = _links[objectID][j] - 1;
-		if (linkedID >= _curre
-ntOrder.size()) {
+		if (linkedID >= _currentOrder.size()) {
 			continue;
 		}
 

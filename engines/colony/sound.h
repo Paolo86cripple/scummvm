@@ -94,8 +94,7 @@ private:
 	Common::MacResManager *_appResMan = nullptr;
 	Audio::SoundHandle _handle;
 
-	void playPC
-Speaker(int soundID);
+	void playPCSpeaker(int soundID);
 	bool playMacSound(int soundID, bool loop);
 	bool playResource(int resID, bool loop, int sampleRate = 11127);
 };

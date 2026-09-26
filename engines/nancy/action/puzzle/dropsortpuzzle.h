@@ -47,8 +47,7 @@ public:
 	void init() override;
 
 	void readData(Common::SeekableReadStream &stream) override;
-	void
- execute() override;
+	void execute() override;
 	void handleInput(NancyInput &input) override;
 
 	bool isViewportRelative() const override { return true; }
@@ -96,8 +95,7 @@ protected:
 	Common::Rect _beltRight;			// belt right end (candies fall off here)
 	int32 _beltSpeed = 0;				// pixels per second
 	int32 _dispenseInterval = 0;		// ms between candy dispenses
-	uint16 _hoverCursorType = 0;		// raw Nancy13 cur
-sor over a candy
+	uint16 _hoverCursorType = 0;		// raw Nancy13 cursor over a candy
 	uint16 _dragCursorType = 0;			// raw Nancy13 cursor while carrying
 
 	Common::Array<Common::Rect> _itemSrcRects;	// candy sprites in the overlay image

@@ -59,8 +59,7 @@ protected:
 	Common::Rect _modeLightDest;
 
 	Common::Array<Common::Rect> _minutesSrc;
-	Common::Array<Common::Rect> 
-_hoursSrc;
+	Common::Array<Common::Rect> _hoursSrc;
 	Common::Rect _AMSrc;
 	Common::Rect _PMSrc;
 	Common::Rect _timeButtonSrc;

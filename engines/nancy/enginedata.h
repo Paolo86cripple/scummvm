@@ -61,8 +61,7 @@ struct BSUM : public EngineData {
 	int16 lateNightFlag = kEvNoEvent;
 
 	// Nancy14-15 end of day. Once the clock reaches endOfDayHour, endOfDayFlag
-	// is raised so the scripts can send the player to bed. Writing to the va
-lue
+	// is raised so the scripts can send the player to bed. Writing to the value
 	// at dayValueIndex puts the player to sleep: the next day starts at
 	// wakeUpHour, and the new day number gets copied into that value.
 	byte dayValueIndex = 0;
@@ -129,8 +128,7 @@ struct PCAL : public EngineData {
 	Common::Array<Common::String> calNames;
 };
 
-// C
-ontains definitions for all in-game items, as well as data for the
+// Contains definitions for all in-game items, as well as data for the
 // inventory box at the bottom right of the game screen.
 struct INV : public EngineData {
 	struct ItemDescription {
@@ -201,8 +199,7 @@ struct TBOX : public EngineData {
 	uint32 textBackground;
 	uint32 highlightTextBackground;
 
-	// Nancy 10+ ex
-tra layout variables.
+	// Nancy 10+ extra layout variables.
 	int32 maxScrollWidth = 0;
 	int32 firstLineY = 0; // added to the y-cursor when starting a new line
 	uint16 lineStartXCursor = 0; // left inset of the text within the text area
@@ -277,8 +274,7 @@ struct MENU : public EngineData {
 	Common::Path _imageName;
 	Common::Array<Common::Rect> _buttonDests;
 	Common::Array<Common::Rect> _buttonDownSrcs;
-	Common::Array<Common::Rect> _buttonHighlight
-Srcs;
+	Common::Array<Common::Rect> _buttonHighlightSrcs;
 	Common::Array<Common::Rect> _buttonDisabledSrcs;
 };
 
@@ -340,8 +336,7 @@ struct LOAD : public EngineData {
 	Common::Rect _cancelButtonHighlightSrc;
 	Common::Rect _cancelButtonDisabledSrc;
 
-	Common::Path _gameSav
-edPopup;
+	Common::Path _gameSavedPopup;
 	Common::String _emptySaveText;
 	Common::String _defaultSaveNamePrefix;
 	// Common::Rect _gameSavedBounds
@@ -413,8 +408,7 @@ struct CLOK : public EngineData {
 	Common::Array<Common::Rect> minutesHandDests;
 
 	Common::Rect staticImageSrc;
-	Common::Rect stati
-cImageDest;
+	Common::Rect staticImageDest;
 
 	uint32 timeToKeepOpen = 0;
 	uint16 frameTime = 0;
@@ -491,8 +485,7 @@ struct RCPR : public EngineData {
 
 	Common::Array<Common::Path> wallNames;
 	Common::Array<Common::Path> specialWallNames;
-	Common::Array<Common:
-:Path> ceilingNames;
+	Common::Array<Common::Path> ceilingNames;
 	Common::Array<Common::Path> floorNames;
 };
 
@@ -555,8 +548,7 @@ enum TaskButton {
 	kTaskButtonCellphone = 3,
 	// Nancy12, Nancy14 and Nancy15: a non-clickable coin purse (a wallet for
 	// the Hardy boys) that shows the played character's money on hover,
-	// inserted before HELP. HELP is therefore always the last taskbar
- button
+	// inserted before HELP. HELP is therefore always the last taskbar button
 	// (index 4 in games without the coin purse, index 5 in the others) and has
 	// no fixed constant.
 	kTaskButtonCoinPurse = 4
@@ -626,8 +618,7 @@ struct UICL : public EngineData {
 
 	struct ThreeRectWidget {
 		Common::Rect srcRectIdle;
-		Common::Rect srcRectPress
-ed;
+		Common::Rect srcRectPressed;
 		Common::Rect destRect;
 	};
 
@@ -691,8 +682,7 @@ ed;
 	SrcDestRectPair dialHilite;
 	Common::Rect screenOutSrcRect;
 	int32 statusTextX = 0;                    // text X-baseline
-	int32 statusTextY = 0;                    
-// text Y-baseline
+	int32 statusTextY = 0;                    // text Y-baseline
 	SrcDestRectPair welcomeScreen;
 	Common::String statusLabels[kNumStatusLabels]; // "No Signal", "No Access", "Old Email Only"
 	// Ribbon labels above the top-row buttons. In Nancy 13 the top row is
@@ -742,8 +732,7 @@ ed;
 	SrcDestRectPair browserHeading;
 
 	// One initial email entry and one initial web-search entry can be baked
-	//
- into the UICL chunk itself; the original seeds them at new-game init
+	// into the UICL chunk itself; the original seeds them at new-game init
 	// (its cellphone reset). An empty key means the game ships that list empty.
 	SearchLink initialEmail;
 	SearchLink initialSearch;
@@ -794,8 +783,7 @@ void readContact(Common::SeekableReadStream &stream, UICL::Contact &c);
 struct UICM : public EngineData {
 	UICM(Common::SeekableReadStream *chunkStream);
 
-	// A 
-photographable region. Taking a picture captures every subject in the
+	// A photographable region. Taking a picture captures every subject in the
 	// current scene lying wholly inside the viewfinder.
 	struct CameraSubject {
 		HotspotDescription hotspot;   // sceneID + region that can be photographed
@@ -836,8 +824,7 @@ struct UIIV : public EngineData {
 	Common::Array<Common::Rect> slotDestRects;      // 16 entries (screen coords)
 	Common::Rect slotsHotspot;                      // Nancy13+: clickable region of the item slots
 	// When nonzero, items added while the popup is open are appended to the end
-	// of the inventory order instead of being inserted at 
-the front (so the most
+	// of the inventory order instead of being inserted at the front (so the most
 	// recently dropped item ends up last). See Scene::addItemToInventory.
 	byte appendItemsWhileOpen = 0;
 	// When nonzero, picking up an item closes the popup so it can be used on the scene.
@@ -886,8 +873,7 @@ struct EVNT : public EngineData {
 struct UIRC : public EngineData {
 	struct ItemRecord {
 		uint16 startingValue = 0;
-		// Nancy 14 added an upper bound: a value 
-that goes above it is reset to 0
+		// Nancy 14 added an upper bound: a value that goes above it is reset to 0
 		uint16 maxValue = 0;
 		Common::Path overlayName;
 		Common::Rect rect;
@@ -948,8 +934,7 @@ struct PCUI : public EngineData {
 
 	PCUI(Common::SeekableReadStream *chunkStream);
 
-	b
-yte flag = 0;
+	byte flag = 0;
 	Common::Path uiName;					// Nancy 16+, e.g. "UI_Main"
 	Common::Array<Character> characters;	// indexed by the on-disk slot byte
 };
@@ -996,8 +981,7 @@ struct PUIH : public EngineData {
 // banks of interchangeable sound names, sharing a channel, loop count and volume.
 struct TSKL : public EngineData {
 	struct SoundBank {
-		Common::Array<Common
-::Path> soundNames;
+		Common::Array<Common::Path> soundNames;
 		uint16 channelID = 0;
 		uint32 numLoops = 0;
 		uint16 volume = 0;
@@ -1023,6 +1007,9 @@ struct PUIV : public EngineData {
 	Common::String name;		// e.g. "DEF_ND_CANT"
 	uint16 channelID = 0;		// shared playback channel (inferred)
 	uint32 unknown = 0;
-	u
+	uint16 volume = 0;			// shared volume (inferred)
+	Common::Array<SoundGroup> soundGroups;
+};
+} // End of namespace Nancy
 
-... [Content truncated]
+#endif // NANCY_ENGINEDATA_H

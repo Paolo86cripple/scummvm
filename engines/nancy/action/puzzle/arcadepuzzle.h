@@ -56,8 +56,7 @@ protected:
 
 	struct Brick {
 		Common::Rect srcRect;           // source in _image (brick type sprite)
-		Common::Rect vpRect;            // v
-iewport-relative position (for collision and rendering)
+		Common::Rect vpRect;            // viewport-relative position (for collision and rendering)
 		int type = -1;                  // -1=empty, 0-3=brick types
 		int neighborLeft  = -1;         // indices of live neighbors (-1=none)
 		int neighborUp    = -1;
@@ -109,8 +108,7 @@ iewport-relative position (for collision and rendering)
 	uint32 _levelCols[6] = {};
 	uint32 _levelRows[6] = {};
 
-	// 
-Per-level grid offsets within viewport (0x55): [xOff0, yOff0, ...]
+	// Per-level grid offsets within viewport (0x55): [xOff0, yOff0, ...]
 	int32 _levelXOff[6] = {};
 	int32 _levelYOff[6] = {};
 
@@ -152,8 +150,7 @@ Per-level grid offsets within viewport (0x55): [xOff0, yOff0, ...]
 
 	bool _randomBallStart = false; // random ball starting offset (0x301)
 	bool _wallBounceMode  = false; // true=ball bounces off bottom, false=dies (0x302)
-	bool _cumulativeScore = false; // true=score accumulate
-s across levels (0x303)
+	bool _cumulativeScore = false; // true=score accumulates across levels (0x303)
 
 	int32 _scoreStepSize  = 1;    // score-milestone interval used for the score-tick sound (0x305)
 	int32 _timeBonusMax   = 100;  // max time bonus (0x309)
@@ -205,8 +202,7 @@ s across levels (0x303)
 	uint32 _winFlags[6] = {};    // 0x270..0x284
 	int32 _levelScore[6] = {};   // 0x254..0x268 (accumulated score per level)
 	int32 _totalLevelScore = 0;  // 0x26c
-	int32 _score    
-= 0;         // 0xb4 (displayed score)
+	int32 _score    = 0;         // 0xb4 (displayed score)
 	int32 _prevScore = -1;       // 0x298 (to detect changes)
 
 	// Brick grid for current sublevel
@@ -252,8 +248,7 @@ s across levels (0x303)
 	float _ballDX = 0.0f, _ballDY = 1.0f; // velocity direction; 0xe8, 0xec
 	float _ballSpin = 0.0f; // 0xf0
 	int _ballLeft = 0, _ballTop = 0, _ballRight = 0, _ballBottom = 0;   // 0x118..0x124
-	int _ballPrevLeft =
- 0, _ballPrevTop = 0, _ballPrevRight = 0, _ballPrevBottom = 0; // 0x150..0x15c
+	int _ballPrevLeft = 0, _ballPrevTop = 0, _ballPrevRight = 0, _ballPrevBottom = 0; // 0x150..0x15c
 	int _ballCenterX = 0, _ballCenterY = 0; // 0x148, 0x14c
 	int _ballInitOffset = 0;  // offset from paddle left for initial position; 0x174
 	int _ballWidth = 0, _ballHeight = 0, _ballHalfW = 0, _ballHalfH = 0; // 0x164..0x170

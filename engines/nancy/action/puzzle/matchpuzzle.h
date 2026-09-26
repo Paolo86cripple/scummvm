@@ -57,8 +57,7 @@ protected:
 	// ---------- Inner types ----------
 
 	struct HighScore {
-		Common::
-String name;
+		Common::String name;
 		int32 score = 0;
 	};
 
@@ -113,8 +112,7 @@ String name;
 	bool  _execScript = false;
 	int16 _scriptID   = 0;
 
-	// Score-panel display font and label (data+0
-x23C..0x25E)
+	// Score-panel display font and label (data+0x23C..0x25E)
 	//uint16 _scorePanelFontID    = 0;     // data+0x23C
 	Common::String _displayLabelString;  // data+0x23E (33 bytes)
 
@@ -150,8 +148,7 @@ x23C..0x25E)
 	Common::Rect _timerValueRect;       // data+0x6A8 — where to draw timer
 	Common::Rect _flagNameRect;         // data+0x6B8 — where to draw matched flag name
 	Common::Rect _flagImageRect;        // data+0x6C8 — where to draw matched flag image
-	// data+0x6D8 (16 byt
-es): high-score display positions — skipped
+	// data+0x6D8 (16 bytes): high-score display positions — skipped
 
 	// High-score display positions (data+0x6D8, 4 × int32 packed as a rect):
 	//   left  = x-coord for the "final score" value
@@ -201,8 +198,7 @@ es): high-score display positions — skipped
 	Common::Array<Common::Rect> _highScoreRects;    // left/top = name pos, right/bottom = score pos
 
 	RandomSoundBlock _matchSound;     // repeats while a match is highlighted
-	RandomSoundBlock
- _selectSound;    // first click on a tile
+	RandomSoundBlock _selectSound;    // first click on a tile
 	RandomSoundBlock _swapSound;      // second click, and the shuffle button
 	RandomSoundBlock _winSound;
 	RandomSoundBlock _timeUpSound;
@@ -250,8 +246,7 @@ es): high-score display positions — skipped
 
 	// Match results from checkForMatch
 	int  _matchRowStart = 0, _matchRowEnd = 0;   // vertical run bounds (row indices)
-	int  _mat
-chColStart = 0, _matchColEnd = 0;   // horizontal run bounds (col indices)
+	int  _matchColStart = 0, _matchColEnd = 0;   // horizontal run bounds (col indices)
 	bool _hasVMatch = false;  // vertical   run >= 3
 	bool _hasHMatch = false;  // horizontal run >= 3
 	int16 _matchedFlagType = 0; // flag type of the matched run (for sound)

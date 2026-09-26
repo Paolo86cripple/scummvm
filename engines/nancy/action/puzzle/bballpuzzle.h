@@ -64,8 +64,7 @@ protected:
 	Common::Rect _plusButtonSrc;
 
 	Common::Array<Common::Rect> _playerSrcs;
-	Common::Array<Common::Rect> _
-powerSrcs;
+	Common::Array<Common::Rect> _powerSrcs;
 	Common::Array<Common::Rect> _anglesSrcs;
 
 	SoundDescription _shootSound;

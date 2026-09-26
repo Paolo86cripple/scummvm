@@ -57,8 +57,7 @@ void RotatingLockPuzzle::readData(Common::SeekableReadStream &stream) {
 	_srcRects.reserve(numSrcRects);
 	for (uint i = 0; i < numSrcRects; ++i) {
 		_srcRects.push_back(Common::Rect());
-		readRect(stream, _srcRects.ba
-ck());
+		readRect(stream, _srcRects.back());
 	}
 
 	_destRects.reserve(numDials);
@@ -131,8 +130,7 @@ ck());
 	_clickSound.readNormal(stream);
 
 	if (isNancy10) {
-		// Nancy 10 sp
-lits the old SceneChangeWithFlag (25 bytes with embedded
+		// Nancy 10 splits the old SceneChangeWithFlag (25 bytes with embedded
 		// flag) into a 20-byte SceneChangeDescription + 2-byte pause tail,
 		// with the event flag stored as a separate (label, value) pair.
 		_solveScene._sceneChange.readData(stream);
@@ -198,8 +196,7 @@ void RotatingLockPuzzle::execute() {
 				}
 			}
 
-			_solveSoundPlayTime = g_nancy->getTotalPlayTime() + _solveSoundDelay
- * 1000;
+			_solveSoundPlayTime = g_nancy->getTotalPlayTime() + _solveSoundDelay * 1000;
 			_solveState = kPlaySound;
 			// fall through
 		case kPlaySound:
@@ -273,8 +270,7 @@ void RotatingLockPuzzle::handleInput(NancyInput &input) {
 		if (NancySceneState.getViewport().convertViewportToScreen(_downHotspots[i]).contains(input.mousePos)) {
 			g_nancy->_cursor->setCursorType(_downCursorType, true, false);
 
-			if (input.input & Nan
-cyInput::kLeftMouseButtonUp) {
+			if (input.input & NancyInput::kLeftMouseButtonUp) {
 				g_nancy->_sound->loadSound(_clickSound, nullptr, true);
 				g_nancy->_sound->playSound(_clickSound);
 

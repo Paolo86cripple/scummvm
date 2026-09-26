@@ -59,8 +59,7 @@ void AdjustPuzzle::readData(Common::SeekableReadStream &stream) {
 
 	_testSound.readData(stream);			// 0xc5
 
-	readFilename(stream, _adjust
-Name);		// 0x11b
+	readFilename(stream, _adjustName);		// 0x11b
 	if (!_adjustName.empty()) {
 		_hasAdjustRect = true;
 		readRect(stream, _adjustRect);		// 0x11f
@@ -124,8 +123,7 @@ void AdjustPuzzle::init() {
 	}
 
 	for (uint i = 0; i < _pieces.size(); ++i) {
-		_pieces[i]
-.state = _pieces[i].initialState;
+		_pieces[i].state = _pieces[i].initialState;
 	}
 
 	_resultIndex = 0;
@@ -195,8 +193,7 @@ void AdjustPuzzle::redraw() {
 	if (_showResult && !_solved && _resultIndex >= 1 && (uint)(_resultIndex - 1) < _overlayImages.size()) {
 		// Result screen: the matched result overlay (a full-frame _TXT overlay).
 		const Graphics::ManagedSurface &overlay = _overlayImages[_resultIndex - 1];
-		_drawSurfac
-e.blitFrom(overlay, Common::Rect(overlay.w, overlay.h), Common::Point(0, 0));
+		_drawSurface.blitFrom(overlay, Common::Rect(overlay.w, overlay.h), Common::Point(0, 0));
 	} else {
 		// Levels run 1..5; level 1 is the default (from the scene background), and
 		// levels 2..5 show the sheet sprite subRects[level - 2] at the piece's
@@ -266,8 +263,7 @@ void AdjustPuzzle::handleInput(NancyInput &input) {
 
 void AdjustPuzzle::execute() {
 	switch (_state) {
-	case
- kBegin:
+	case kBegin:
 		init();
 		registerGraphics();
 		_state = kRun;

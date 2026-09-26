@@ -59,8 +59,7 @@ protected:
 	// File data
 
 	Common::Rect _dotSrcRects[kNumDots];
-	Common::Rect _dotHighlightSrcRects[kNum
-Dots];
+	Common::Rect _dotHighlightSrcRects[kNumDots];
 
 	byte _lineColorR  = 0;
 	byte _lineColorG  = 0;

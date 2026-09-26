@@ -48,7 +48,6 @@ public:
 
 	bool isViewportRelative() const override { return true; }
 
-
 protected:
 	Common::String getRecordTypeName() const override { return "OneBuildPuzzle"; }
 
@@ -103,8 +102,7 @@ protected:
 		bool hasCloseupSound = false;
 
 		// Runtime
-		Common::Rect gameRect;      // Current
- viewport-space rect
+		Common::Rect gameRect;      // Current viewport-space rect
 		int curRotation = 0;
 		bool placed = false;
 
@@ -151,8 +149,7 @@ protected:
 	Common::String _extraSoundName;
 
 	// Cursor type shown while hovering a piece (Nancy 10+), and the one shown
-	// while carrying it (Nancy 12+; the older games reuse the ho
-ver cursor).
+	// while carrying it (Nancy 12+; the older games reuse the hover cursor).
 	int16 _pieceCursorType = 0;
 	int16 _heldPieceCursorType = 0;
 
@@ -201,8 +198,7 @@ ver cursor).
 	Common::String _goodAlt2Filename;
 	Common::Array<Common::String> _goodTexts;    // 3 entries
 
-	S
-oundDescription _badPlacementSound;
+	SoundDescription _badPlacementSound;
 	Common::String _badAlt1Filename;
 	Common::String _badAlt2Filename;
 	Common::Array<Common::String> _badTexts;     // 3 entries
@@ -240,8 +236,7 @@ oundDescription _badPlacementSound;
 	int16 _animFrameCounter = 0;         // 0..framesPerStep-1, the X index within the current row.
 	int16 _animRowCounter = 0;           // 0..totalRows-1, how many cycles have completed.
 
-	RenderObject _counterDisplay;        // Digit sprites showing t
-he running count.
+	RenderObject _counterDisplay;        // Digit sprites showing the running count.
 
 	RenderObject _closeupDisplay;        // Nancy13 blown-up view of a single piece.
 	int16 _closeupPiece = -1;            // Piece whose close-up is showing, -1 if none.
@@ -288,8 +283,7 @@ he running count.
 	// Redraw the counter with the value the puzzle's count mode calls for
 	void updateCounter();
 	void rotatePiece(int pieceIdx);
-	void updateDragPosition(Common::Point
- mouseVP);
+	void updateDragPosition(Common::Point mouseVP);
 	// Update the render object for a piece (set _drawSurface and moveTo gameRect)
 	void updatePieceRender(int pieceIdx);
 	// Rotate a surface 90 degrees clockwise into dst (dst is allocated here)

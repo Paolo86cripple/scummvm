@@ -54,8 +54,7 @@ void BuildPuzzle::readData(Common::SeekableReadStream &stream) {
 	_trayImageMode = stream.readByte();
 	_saveState = stream.readByte();
 	_resumeFlag = stream.readSint16LE();
-	_requiredPlaced = stream.readUint16LE()
-;
+	_requiredPlaced = stream.readUint16LE();
 	_usePlacedGate = stream.readByte();
 	_stateItemID = stream.readUint16LE();
 	readRect(stream, _submitSrcRect);
@@ -117,8 +116,7 @@ void BuildPuzzle::readData(Common::SeekableReadStream &stream) {
 		readRect(stream, piece.srcRect);
 		readRect(stream, piece.destRect);
 		readRect(stream, piece.dragSrcRect);
-		readRect(stream, piece.
-placedSrcRect);
+		readRect(stream, piece.placedSrcRect);
 		readRect(stream, piece.closeupSrcRect);
 		readRect(stream, piece.closeupDestRect);
 		readRect(stream, piece.placedDestRect);
@@ -180,8 +178,7 @@ placedSrcRect);
 
 	// The count-prefixed 23-byte hotspot records shared by the later puzzles.
 	readExitHotspots(stream, _exitHotspots);
-	for (u
-int i = 0; i < _exitHotspots.size(); ++i) {
+	for (uint i = 0; i < _exitHotspots.size(); ++i) {
 		_exitHotspots[i].scene.continueSceneSound = kContinueSceneSound;
 	}
 }
@@ -238,8 +235,7 @@ void BuildPuzzle::init() {
 
 	// Every piece but a kind 1 is copied when it is dropped, so the array needs
 	// room for as many copies as the recipes can ask for. It is grown once, here,
-	// becaus
-e the pieces are render objects and must not move afterwards.
+	// because the pieces are render objects and must not move afterwards.
 	uint numSpare = 0;
 	for (uint i = 0; i < _zones.size(); ++i) {
 		for (uint j = 0; j < _zones[i].ingredients.size(); ++j) {
@@ -313,8 +309,7 @@ e the pieces are render objects and must not move afterwards.
 
 		setPlacedCount(0);
 		setFlagOnChange(_solvedFlag, false, _lastSolvedFlag);
-		setFlagOnChange(_wrongIngredientFl
-ag, false, _lastWrongFlag);
+		setFlagOnChange(_wrongIngredientFlag, false, _lastWrongFlag);
 	}
 
 	_isInitialized = true;
@@ -390,8 +385,7 @@ void BuildPuzzle::updatePieceRender(int16 pieceIdx) {
 	}
 
 	// Each of the three states has its own art, and only a piece resting at home
-	// is drawn from the image the puzzle selects; the other two always come fr
-om
+	// is drawn from the image the puzzle selects; the other two always come from
 	// the alt one.
 	// A carried piece lives on the cursor instead of on the board.
 	if (pieceIdx == _heldPiece) {
@@ -474,8 +468,7 @@ void BuildPuzzle::adjustZone(int16 zoneIdx, int16 pieceID, int8 delta) {
 		totalWrong += _zones[i].numWrong;
 	}
 
-	setFlagOnChange(
-_wrongIngredientFlag, totalWrong > 0, _lastWrongFlag);
+	setFlagOnChange(_wrongIngredientFlag, totalWrong > 0, _lastWrongFlag);
 }
 
 bool BuildPuzzle::checkSolved() const {
@@ -547,8 +540,7 @@ void BuildPuzzle::openCloseup(int16 pieceIdx) {
 }
 
 void BuildPuzzle::closeCloseup() {
-	if (_clos
-eupPiece == -1) {
+	if (_closeupPiece == -1) {
 		return;
 	}
 
@@ -620,8 +612,7 @@ void BuildPuzzle::placePiece(int16 pieceIdx, int16 zoneIdx, const Common::Point 
 	int width = piece.placedSrcRect.width();
 	int height = piece.placedSrcRect.height();
 
-	i
-f (!piece.placedDestRect.isEmpty()) {
+	if (!piece.placedDestRect.isEmpty()) {
 		// The piece names its own spot, whatever the zone would have done.
 		piece.liveRect = piece.placedDestRect;
 	} else {
@@ -691,8 +682,7 @@ void BuildPuzzle::setPlacedCount(int16 count) {
 	}
 }
 
-void BuildPuzzle::setItemValue(
-int16 itemID, int16 value) {
+void BuildPuzzle::setItemValue(int16 itemID, int16 value) {
 	if (itemID < 0 || itemID == 255) {
 		return;
 	}
@@ -766,8 +756,7 @@ void BuildPuzzle::resetPuzzle() {
 	}
 
 	for (uint i = 0; i < _holds.size(); ++i) {
-		_holds[i].setVisible(!_holds[i].srcRect.isEmpty())
-;
+		_holds[i].setVisible(!_holds[i].srcRect.isEmpty());
 	}
 
 	for (uint i = 0; i < _pieces.size(); ++i) {
@@ -842,8 +831,7 @@ void BuildPuzzle::updateCounter() {
 		x += src.width() + (int16)_counterSpacing;
 	}
 
-	_counter.moveTo(Common::Rect(_counterPos.x, _c
-ounterPos.y, _counterPos.x + width, _counterPos.y + height));
+	_counter.moveTo(Common::Rect(_counterPos.x, _counterPos.y, _counterPos.x + width, _counterPos.y + height));
 	_counter.setNeedsRedraw(true);
 }
 
@@ -915,8 +903,7 @@ void BuildPuzzle::restoreState(const BuildPuzzleData &data) {
 		}
 
 		Piece &piece = _pieces[pieceIdx];
-		piece.assignedZon
-e = data.pieces[i + 1];
+		piece.assignedZone = data.pieces[i + 1];
 		piece.locked = piece.assignedZone >= 0 && piece.assignedZone < (int16)_zones.size() &&
 						_zones[piece.assignedZone].marksPlaced != 0;
 		piece.liveRect = Common::Rect(data.pieces[i + 2], data.pieces[i + 3], data.pieces[i + 4], data.pieces[i + 5]);
@@ -992,8 +979,7 @@ void BuildPuzzle::handleInput(NancyInput &input) {
 		return;
 	}
 
-	Common::Point mouseVP(input.mousePos.x - viewData->screenPosition.le
-ft,
+	Common::Point mouseVP(input.mousePos.x - viewData->screenPosition.left,
 							input.mousePos.y - viewData->screenPosition.top);
 	bool clicked = (input.input & NancyInput::kLeftMouseButtonUp) != 0;
 
@@ -1076,8 +1062,7 @@ ft,
 			if (target != -1) {
 				placePiece(_heldPiece, target, mouseVP);
 
-				// The 
-scoop is emptied by the drop and goes back to its place.
+				// The scoop is emptied by the drop and goes back to its place.
 				if (_activeHold != -1) {
 					_holds[_activeHold].setVisible(true);
 					_activeHold = -1;
@@ -1161,8 +1146,7 @@ scoop is emptied by the drop and goes back to its place.
 	}
 
 	for (uint i = 0; i < _exitHotspots.size(); ++i) {
-		const
- ExitHotspot &exit = _exitHotspots[i];
+		const ExitHotspot &exit = _exitHotspots[i];
 		if (exit.hotspot.isEmpty() ||
 				!NancySceneState.getViewport().convertViewportToScreen(exit.hotspot).contains(input.mousePos)) {
 			continue;

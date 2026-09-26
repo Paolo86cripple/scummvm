@@ -57,8 +57,7 @@ protected:
 	Common::Path _imageName2;
 	Common::Path _resetImageName;
 
-	bool _enableWraparoun
-d = true;
+	bool _enableWraparound = true;
 
 	Common::Rect _dialDest;
 

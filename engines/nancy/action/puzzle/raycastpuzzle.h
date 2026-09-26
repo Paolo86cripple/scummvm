@@ -66,8 +66,7 @@ protected:
 	void checkSwitch();
 	void checkExit();
 
-	uint1
-6 _mapWidth = 0;
+	uint16 _mapWidth = 0;
 	uint16 _mapHeight = 0;
 	byte _wallHeight = 0;
 
@@ -124,8 +123,7 @@ protected:
 
 	Common::Array<byte> _lightSwitchIDs;
 	Common::Array<Common::Point> _lightSwitchPositions;
-	Comm
-on::Array<bool> _lightSwitchStates;
+	Common::Array<bool> _lightSwitchStates;
 	int _lightSwitchPlayerIsOn = -1;
 
 	const RCPR *_puzzleData = nullptr;

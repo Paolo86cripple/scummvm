@@ -59,8 +59,7 @@ protected:
 	Common::Array<Common::Rect> _buttonDests;
 
 	Common::Array<Common::Array<Common::Rect>> _spigotAnimSrcs;
-	Common::Array<Common
-::Array<Common::Rect>> _digitSrcs;
+	Common::Array<Common::Array<Common::Rect>> _digitSrcs;
 	Common::Array<Common::Rect> _buttonSrcs;
 	Common::Array<Common::Array<Common::Rect>> _letterSrcs;
 

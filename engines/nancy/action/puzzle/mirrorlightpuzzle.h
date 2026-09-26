@@ -54,8 +54,7 @@ protected:
 		Common::Rect destRect;	// where the mirror is drawn / clicked
 		double angle = 0.0;		// current angle (radians)
 		double minAngle = 0.0;	// rotation limits (min == max == fixed mirror)
-		
-double maxAngle = 0.0;
+		double maxAngle = 0.0;
 		double step = 0.0;		// signed turn per tick; flips when a turn would cross a limit
 
 		bool isRotatable() const { return minAngle != maxAngle; }

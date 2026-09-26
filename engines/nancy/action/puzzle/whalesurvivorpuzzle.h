@@ -53,8 +53,7 @@ protected:
 private:
 	// ---- Constants ----
 	static const int kNumEntityTypes  = 6;
-	static const int kNumSubSprites
-   = 4;   // sub-sprite entries per entity type
+	static const int kNumSubSprites   = 4;   // sub-sprite entries per entity type
 	static const int kMaxLives        = 3;
 	static const int kOxygenStages    = 8;
 	static const int kMaxEntities     = 32;
@@ -104,8 +103,7 @@ private:
 	Common::Rect _oxygenSrcRects[kOxygenStages];  // 0x684..0x703
 
 	// Bubble/breath animation: 8 frame source rects (one per breathFrame step)
-	Common::Rect _bubbleSrcRects[kOxygenS
-tages];  // 0x704..0x783
+	Common::Rect _bubbleSrcRects[kOxygenStages];  // 0x704..0x783
 
 	// Screen positions for UI buttons (viewport-relative)
 	Common::Rect _startButtonDestRect;	// 0x7ec
@@ -154,8 +152,7 @@ tages];  // 0x704..0x783
 	SoundDescription _eatSound;      // 0x926 - fish eaten
 	SoundDescription _hurtSound;     // 0x957 - hit by hazard
 	SoundDescription _breatheSound;  // 0x988 - surface/breathe
-	So
-undDescription _sound4;        // 0x9b9 - unused (silence)
+	SoundDescription _sound4;        // 0x9b9 - unused (silence)
 	SoundDescription _sound5;        // 0x9ea - unused (silence)
 
 	SceneChangeWithFlag _lossScene;  // 0xa1b
@@ -216,8 +213,7 @@ undDescription _sound4;        // 0x9b9 - unused (silence)
 	};
 	PorpoiseAnim _porpoiseAnim = kPorpoiseSwim;
 
-	uint32 _inputFlags          
-= 0;     // cached NancyInput::input flags from handleInput
+	uint32 _inputFlags          = 0;     // cached NancyInput::input flags from handleInput
 	uint32 _nextBubbleMs        = 0;     // next bubble animation tick
 	int    _breathFrame         = 0;     // current breath animation frame (0..7)
 	bool   _firstHitFrame       = false; // true on the first frame after taking a hit

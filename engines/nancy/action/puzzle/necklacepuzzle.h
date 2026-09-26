@@ -48,8 +48,7 @@ public:
 
 	void readData(Common::SeekableReadStream &stream) override;
 	void execute() override;
-	void
- handleInput(NancyInput &input) override;
+	void handleInput(NancyInput &input) override;
 
 	bool isViewportRelative() const override { return true; }
 
@@ -110,8 +109,7 @@ protected:
 	int stackTop(const Strand &strand) const;
 	int stackTopBelow(const Strand &strand) const;
 
-	Hover hitTes
-t(const Common::Point &mousePos) const;
+	Hover hitTest(const Common::Point &mousePos) const;
 
 	int16 beadCount(const Bead &bead) const;
 	void adjustBeadCount(const Bead &bead, int16 delta);

@@ -59,8 +59,7 @@ void SpigotPuzzle::updateGraphics() {
 			if (_nextAnimTime == 0) {
 				_nextAnimTime = curTime + 100;
 			} else {
-				_nextAnimTi
-me += 100;
+				_nextAnimTime += 100;
 			}
 		} else {
 			return;
@@ -123,8 +122,7 @@ me += 100;
 void SpigotPuzzle::readData(Common::SeekableReadStream &stream) {
 	readFilename(stream, _imageName);
 
-	_numSpigots = stream.re
-adUint16LE();
+	_numSpigots = stream.readUint16LE();
 	_numLetters = stream.readUint16LE();
 	_numInbetweens = stream.readUint16LE();
 
@@ -189,8 +187,7 @@ adUint16LE();
 
 	_solveScene.readData(stream);
 	_solveSoundDelay = stream.readUint16LE();
-	_solveSound.readNormal
-(stream);
+	_solveSound.readNormal(stream);
 
 	_exitScene.readData(stream);
 	readRect(stream, _exitHotspot);
@@ -277,8 +274,7 @@ void SpigotPuzzle::handleInput(NancyInput &input) {
 			}
 		}
 
-		if (_nu
-mPulls[i] && _buttonDests[i].contains(mousePos)) {
+		if (_numPulls[i] && _buttonDests[i].contains(mousePos)) {
 			g_nancy->_cursor->setCursorType(CursorManager::kHotspot);
 
 			if (input.input & NancyInput::kLeftMouseButtonUp) {

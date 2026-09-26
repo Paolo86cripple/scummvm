@@ -59,8 +59,7 @@ void Telephone::readData(Common::SeekableReadStream &stream) {
 	uint16 maxNumButtons = _phoneType == kNewPhone ? 20 : 12;
 
 	if (_phoneType == kNewPhone) {
-		_h
-asDisplay = stream.readByte();
+		_hasDisplay = stream.readByte();
 		_displayFont = stream.readUint16LE();
 		readFilename(stream, _displayAnimName);
 		_displayAnimFrameTime = stream.readUint32LE();
@@ -129,8 +128,7 @@ asDisplay = stream.readByte();
 		_longDistanceNumberLength = stream.readUint16LE();
 	}
 
-	uint numCalls = stream.readU
-int16LE();
+	uint numCalls = stream.readUint16LE();
 
 	_calls.resize(numCalls);
 	for (uint i = 0; i < numCalls; ++i) {
@@ -199,8 +197,7 @@ void Telephone::execute() {
 				// to place a call, so the whole number gets matched, with digits that were
 				// never entered counting as zeroes
 				bool matchWholeNumber = !_dialAutomatically;
-				uint numberLength = (_calledNu
-mber.size() && _calledNumber[0] == 1) ? _longDistanceNumberLength : _numberLength;
+				uint numberLength = (_calledNumber.size() && _calledNumber[0] == 1) ? _longDistanceNumberLength : _numberLength;
 				bool isNumberComplete = matchWholeNumber || _calledNumber.size() >= numberLength;
 
 				for (uint i = 0; i < _calls.size(); ++i) {
@@ -269,8 +266,7 @@ mber.size() && _calledNumber[0] == 1) ? _longDistanceNumberLength : _numberLengt
 		case kButtonPress:
 			if (!g_nancy->_sound->isSoundPlaying(_genericButtonSound)) {
 				g_nancy->_sound->stopSound(_genericButtonSound);
-				_dra
-wSurface.fillRect(_destRects[_buttonLastPushed], g_nancy->_graphics->getTransColor());
+				_drawSurface.fillRect(_destRects[_buttonLastPushed], g_nancy->_graphics->getTransColor());
 				_needsRedraw = true;
 
 				if (_isShowingDirectory) {
@@ -334,8 +330,7 @@ wSurface.fillRect(_destRects[_buttonLastPushed], g_nancy->_graphics->getTransCol
 
 			break;
 		case kPreCall:
-			if (!g_nancy->_sound->
-isSoundPlaying(_preCallSound)) {
+			if (!g_nancy->_sound->isSoundPlaying(_preCallSound)) {
 				g_nancy->_sound->stopSound(_preCallSound);
 
 				if (!_calls[_selected].text.empty()) {
@@ -415,8 +410,7 @@ isSoundPlaying(_preCallSound)) {
 void Telephone::handleInput(NancyInput &input) {
 	int buttonNr = -1;
 	// Cursor gets changed regardless of state
-	for (int i = 0; i < (int
-)_destRects.size(); ++i) {
+	for (int i = 0; i < (int)_destRects.size(); ++i) {
 		// Dial button is an exception
 		if (i == _dialButtonID && !_calledNumber.size() && !_isShowingDirectory) {
 			continue;
@@ -482,8 +476,7 @@ void Telephone::handleInput(NancyInput &input) {
 				_drawSurface.blitFrom(_image, _dialHighlightSrc, _destRects[_dialButtonID]);
 
 				if (_dirButtonID != -1) {
-					_drawSurface.fillRec
-t(_destRects[_dirButtonID], _drawSurface.getTransparentColor());
+					_drawSurface.fillRect(_destRects[_dirButtonID], _drawSurface.getTransparentColor());
 				}
 
 				_animIsStopped = true;
@@ -551,8 +544,7 @@ t(_destRects[_dirButtonID], _drawSurface.getTransparentColor());
 
 			if (directorySwitch) {
 				// Handle switch to directory mode
-				_isShowi
-ngDirectory = true;
+				_isShowingDirectory = true;
 				changeDirectoryEntry = true;
 				_calledNumber.clear();
 			}

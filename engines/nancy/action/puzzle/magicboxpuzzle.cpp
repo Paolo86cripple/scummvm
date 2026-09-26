@@ -57,8 +57,7 @@ void MagicBoxPuzzle::readData(Common::SeekableReadStream &stream) {
 
 	uint numCells = (uint)MAX<int32>(0, _numRows) * (uint)MAX<int32>(0, _numCols);
 	_cellValues.resize(numCells);
-	for (uint i = 0
-; i < numCells; ++i) {
+	for (uint i = 0; i < numCells; ++i) {
 		_cellValues[i] = stream.readSint32LE();
 	}
 
@@ -122,8 +121,7 @@ void MagicBoxPuzzle::init() {
 
 	if (_indicatorImageName != _tileImageName) {
 		g_nancy->_resource->loadImage(_indicatorImageName, _indicatorImage);
-		_indicatorImage.setTransp
-arentColor(_drawSurface.getTransparentColor());
+		_indicatorImage.setTransparentColor(_drawSurface.getTransparentColor());
 	}
 
 	// Slots are the blank cells, in the same order as their dest rects.
@@ -198,8 +196,7 @@ int32 MagicBoxPuzzle::colSum(int col) const {
 		sum += _cellValues[row * _numCols + col];
 	}
 	for (uint i = 0; i < _slotContents.size(); ++i) {
-		if (_slotContents[i] != -1 && _slotCel
-ls[i] % _numCols == col) {
+		if (_slotContents[i] != -1 && _slotCells[i] % _numCols == col) {
 			sum += _pieceValues[_slotContents[i]];
 		}
 	}
@@ -266,8 +263,7 @@ void MagicBoxPuzzle::redraw() {
 				(colSum(i - _numRows) == _colTargets[i - _numRows]);
 			if (lit) {
 				_drawSurface.blitFrom(image, _indicatorSrcs[0],
-					Common::Point(_indicatorDests[i].left, _indica
-torDests[i].top));
+					Common::Point(_indicatorDests[i].left, _indicatorDests[i].top));
 			}
 		}
 	}
@@ -368,8 +364,7 @@ void MagicBoxPuzzle::handleInput(NancyInput &input) {
 
 	if (hoverExitHotspot(input)) {
 		if (click) {
-			_exitRequested
- = true;
+			_exitRequested = true;
 		}
 	}
 }

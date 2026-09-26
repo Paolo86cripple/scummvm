@@ -53,8 +53,7 @@ protected:
 	static const int kMaxItems       = 20;
 	static const int kMaxSolutions   = 8;
 	static const int kMaxMapRows     = 20;
-	static const int kMaxMapCols     =
- 20;
+	static const int kMaxMapCols     = 20;
 	static const int kMaxItemsRows   = 20;
 	static const int kMaxItemsCols   = 20;
 	static const int kMaxResultRects = 20;
@@ -128,8 +127,7 @@ protected:
 	Misc::MouseFollowObject _heldObject;
 	bool     _isSolved = false;
 
-	Graphics::ManagedSurface _boa
-rdImage;
+	Graphics::ManagedSurface _boardImage;
 	Graphics::ManagedSurface _cursorImage; // item sprite atlas (right-side panel)
 
 	void initState();

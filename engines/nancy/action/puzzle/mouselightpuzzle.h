@@ -58,8 +58,7 @@ protected:
 	Common::Point _lastMousePos;
 };
 
-} // End
- of namespace Action
+} // End of namespace Action
 } // End of namespace Nancy
 
 #endif // NANCY_ACTION_MAZECHASEPUZZLE_H

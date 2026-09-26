@@ -61,8 +61,7 @@ protected:
 	// Order: up, down, left, right
 	Common::Array<Common::Rect> _buttonDests;
 	Common::Array<Common::Rect> _buttonSrcs;
-	Common::Array<Common::Rect> _buttonDisabled
-Srcs;
+	Common::Array<Common::Rect> _buttonDisabledSrcs;
 
 	byte _pixelsToScroll = 0;
 
