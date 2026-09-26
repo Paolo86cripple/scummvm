@@ -49,8 +49,7 @@ public:
 	bool isViewportRelative() const override { return true; }
 
 	// The painted picture stays on screen in the NO_ART_SCENE conversation
-	// that follows the
- puzzle
+	// that follows the puzzle
 	bool survivesSceneChange(bool nextSceneIsNoArt) const override { return nextSceneIsNoArt; }
 
 protected:
@@ -104,8 +103,7 @@ protected:
 	Common::Array<PaintColor> _colors;		// 0x78
 	Common::Array<PaintRegion> _regions;	// 0x94
 
-	bool _unorderedSolution = false;
-	// Region targets may be matched in any order
+	bool _unorderedSolution = false;	// Region targets may be matched in any order
 	bool _paintOnce = false;			// A painted region can't be repainted
 
 	RandomSoundBlock _sounds[2];	// 0xa4/0xfa

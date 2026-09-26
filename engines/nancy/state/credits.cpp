@@ -55,8 +55,7 @@ void CreditsTextRenderer::render(const Common::String &text, uint width, Graphic
 	_fullSurface.create(width, maxHeight, g_nancy->_graphics->getInputPixelFormat());
 	_fullSurface.clear(g_nancy->_graphics->getTransColor());
 
-	const Font *font = g_nancy
-->_graphics->getFont(fontID);
+	const Font *font = g_nancy->_graphics->getFont(fontID);
 	assert(font);
 	uint margin = (font->getFontHeight() + 1) / 2 + 1;
 
@@ -139,8 +138,7 @@ void Credits::run() {
 			return;
 		}
 
-		
-Common::Event ev;
+		Common::Event ev;
 		ev.type = Common::EVENT_RETURN_TO_LAUNCHER;
 		g_system->getEventManager()->pushEvent(ev);
 

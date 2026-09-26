@@ -59,8 +59,7 @@ protected:
 
 	uint16 _numCells = 0;
 	uint16 _numPieces = 0;
-	uint16 _nu
-mRolls = 0;
+	uint16 _numRolls = 0;
 
 	uint16 _playerStart = 0;
 	uint16 _enemyStart = 0;
@@ -124,8 +123,7 @@ mRolls = 0;
 	// Nancy 11: when true the opponent is computer-controlled and takes its own turns
 	bool _playAgainstComputer = false;
 	// Nancy 11: the computer passes strategically (based on piece positions) rather than randomly
-	bool _aiPassStrategy = fal
-se;
+	bool _aiPassStrategy = false;
 
 	int16 _playerPos = 0;
 	int16 _playerPieces = 0;

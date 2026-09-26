@@ -50,8 +50,7 @@ void QuizPuzzle::init() {
 	if (g_nancy->getGameType() == kGameTypeNancy9 && (sceneId == 6441 || sceneId == 6443))
 		screenClip.right += 20; // WORKAROUND for chess puzzle in Nancy 9: the rightmost answer box is partially off-screen
 	_screenPosition = screenClip;
-	_drawSurface.create(screenClip.width(),
- screenClip.height(), g_nancy->_graphics->getInputPixelFormat());
+	_drawSurface.create(screenClip.width(), screenClip.height(), g_nancy->_graphics->getInputPixelFormat());
 	_drawSurface.clear(g_nancy->_graphics->getTransColor());
 	setTransparent(true);
 
@@ -121,8 +120,7 @@ void QuizPuzzle::readDataNancy8(Common::SeekableReadStream &stream) {
 }
 
 // ---- Nancy 9 - Nancy 14 data format ----
-// Header (0x
-B2 bytes):
+// Header (0xB2 bytes):
 // 0x00  2   fontID
 // 0x02  2   blinkInterval
 // 0x04  1   cursor char
@@ -187,8 +185,7 @@ void QuizPuzzle::readDataNancy9(Common::SeekableReadStream &stream) {
 			answerBuf[19] = '\0';
 			if (answerBuf[0]) {
 				box.answers.push_back(answerBuf);
-				box.maxAnswerLength =
- MAX<uint16>(box.maxAnswerLength, box.answers.back().size());
+				box.maxAnswerLength = MAX<uint16>(box.maxAnswerLength, box.answers.back().size());
 			}
 		}
 
@@ -238,8 +235,7 @@ void QuizPuzzle::readDataNancy15(Common::SeekableReadStream &stream) {
 
 	byte flagA = stream.readByte();
 	byte flagB = stream.readByte();
-	_cycleSolvedBoxes = (stream.readByte() != 
-0);
+	_cycleSolvedBoxes = (stream.readByte() != 0);
 
 	_isDisplayOnly = (_cursorChar == 0);
 	if (_isDisplayOnly) {
@@ -302,8 +298,7 @@ void QuizPuzzle::readDataNancy15(Common::SeekableReadStream &stream) {
 		}
 
 		box.correctFlag = stream.readSint16LE();
-		box.nonEmptyFlag = stream.readSint16
-LE();
+		box.nonEmptyFlag = stream.readSint16LE();
 
 		box.correctSound.readData(stream);
 		box.wrongSound.readData(stream);
@@ -375,8 +370,7 @@ bool QuizPuzzle::playBoxSoundBlock(const RandomSoundBlock &block) {
 	return true;
 }
 
-void QuizPuzzle::showBoxSubtitle(const Common::String &perBoxText, const Common::String &perRecor
-dText) {
+void QuizPuzzle::showBoxSubtitle(const Common::String &perBoxText, const Common::String &perRecordText) {
 	// Nancy 15 moved the captions out of the boxes and into the record
 	showSubtitle(g_nancy->getGameType() >= kGameTypeNancy15 ? perRecordText : perBoxText);
 }
@@ -458,8 +452,7 @@ void QuizPuzzle::executeNancy8() {
 	}
 
 	case kWaitCorrect:
-		if (!g_nancy->_sound->isSoundPlaying(_corre
-ctSound)) {
+		if (!g_nancy->_sound->isSoundPlaying(_correctSound)) {
 			g_nancy->_sound->stopSound(_correctSound);
 			_solved = checkAllSolved();
 			_internalState = _solved ? kStartDone : kTyping;
@@ -535,8 +528,7 @@ void QuizPuzzle::executeNancy9() {
 
 		// A record whose solve scene is the one it already runs in never
 		// finishes: it only sets its flag, so its hotspots stay clickable.
-		if (_solved && _solveScene._sceneChange.sceneID != NancySceneState.getSceneInfo(
-).sceneID) {
+		if (_solved && _solveScene._sceneChange.sceneID != NancySceneState.getSceneInfo().sceneID) {
 			_internalState = kStartDone;
 		}
 	}
@@ -609,8 +601,7 @@ void QuizPuzzle::executeNancy9() {
 		}
 
 		// Cursor blink (only while still typing)
-		if (_internalState 
-== kTyping && !checkAllSolved()) {
+		if (_internalState == kTyping && !checkAllSolved()) {
 			Time now = g_nancy->getTotalPlayTime();
 			if (now >= _nextBlinkTime) {
 				_nextBlinkTime = now + _cursorBlinkInterval;
@@ -697,8 +688,7 @@ void QuizPuzzle::executeNancy9() {
 		}
 		break;
 
-	case kStartDon
-e: {
+	case kStartDone: {
 		if (isNancy15) {
 			_internalState = playBoxSoundBlock(_doneSoundBlock) ? kWaitDone : kFinish;
 		} else if (!hasSolveSound()) {
@@ -791,8 +781,7 @@ void QuizPuzzle::handleInput(NancyInput &input) {
 	const bool isNancy15 = g_nancy->getGameType() >= kGameTypeNancy15;
 	bool mouseOverHotspot = false;
 
-	// Nancy 9+: give-up hotspot. Clicking it cancels 
-the puzzle.
+	// Nancy 9+: give-up hotspot. Clicking it cancels the puzzle.
 	if (g_nancy->getGameType() != kGameTypeNancy8) {
 		if (hoverExitHotspot(input)) {
 			if (input.input & NancyInput::kLeftMouseButtonUp) {
@@ -854,8 +843,7 @@ the puzzle.
 		if (input.input & NancyInput::kLeftMouseButtonUp) {
 			if (i != _currentBox) {
 				Common::String &oldText = _boxes[_currentBox].typedText;
-				if (!oldText.empty() && oldText
-.lastChar() == cursorChar)
+				if (!oldText.empty() && oldText.lastChar() == cursorChar)
 					oldText.deleteLastChar();
 
 				if (isNancy15) {
@@ -922,8 +910,7 @@ void QuizPuzzle::drawText() {
 	const int extraWidth = g_nancy->getGameType() >= kGameTypeNancy15 ? 8 : 0;
 
 	for (uint i = 0; i < _boxes.size(); ++i) {
-		
-const Common::String &text = _boxes[i].typedText;
+		const Common::String &text = _boxes[i].typedText;
 		if (text.empty())
 			continue;
 
@@ -991,8 +978,7 @@ bool QuizPuzzle::checkAnswerForCurrentBox(bool silent) {
 	}
 
 	if (box.nonEmptyFlag != -1) {
-		NancySceneState.setEventF
-lag(box.nonEmptyFlag, box.typedText.empty() ? g_nancy->_false : g_nancy->_true);
+		NancySceneState.setEventFlag(box.nonEmptyFlag, box.typedText.empty() ? g_nancy->_false : g_nancy->_true);
 	}
 
 	return correct;
@@ -1063,8 +1049,7 @@ void QuizPuzzle::loadSavedAnswers() {
 		_currentBox = i;
 		checkAnswerForCurrentBox(true);
 	}
-	_currentBox =
- currentBox;
+	_currentBox = currentBox;
 }
 
 void QuizPuzzle::saveAnswer(uint boxIndex) {

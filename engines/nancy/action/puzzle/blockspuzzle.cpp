@@ -51,8 +51,7 @@ void BlocksPuzzle::readData(Common::SeekableReadStream &stream) {
 	readRect(stream, _turntableHotspot);	// 0x5a
 
 	// The scene change and flag applied once the board comes out solved. The frame is
-	// always 
-the scene's first, and its sound carries over.
+	// always the scene's first, and its sound carries over.
 	_solveScene._sceneChange.sceneID = stream.readUint16LE();	// 0x6a
 	_solveScene._sceneChange.continueSceneSound = kContinueSceneSound;
 	_solveScene._flag.label = stream.readSint16LE();		// 0x6c
@@ -112,8 +111,7 @@ void BlocksPuzzle::init() {
 	_carriedObject.registerGraphics();
 }
 
-Common::Rect BlocksPuzzle::blockSrc(int16 block,
- byte rotation, int16 frame) const {
+Common::Rect BlocksPuzzle::blockSrc(int16 block, byte rotation, int16 frame) const {
 	const Block &b = _blocks[block];
 	int16 left = b.atlasX + ((b.numTweenFrames + 1) * rotation + frame) * (b.gap + b.width);
 	return Common::Rect(left, b.atlasY, left + b.width, b.atlasY + b.height);
@@ -187,8 +185,7 @@ void BlocksPuzzle::drop(int16 cell, NancyInput &input) {
 
 	// Putting a block down where one already sits swaps them, so the displaced block ends
 	// up in hand and the board never loses a piece.
-	
-if (cell == kTurntableCell) {
+	if (cell == kTurntableCell) {
 		if (_turnBlock != kNoBlock) {
 			SWAP(_turnBlock, _carriedBlock);
 			SWAP(_turnRotation, _carriedRotation);
@@ -274,8 +271,7 @@ void BlocksPuzzle::execute() {
 
 			break;
 		case kStartSolved:
-			_solveSound = playSoundBloc
-k(_sounds[kSuccessSound]);
+			_solveSound = playSoundBlock(_sounds[kSuccessSound]);
 			_puzzleState = kWaitSolved;
 
 			if (!hasSolveSound()) {
@@ -361,8 +357,7 @@ void BlocksPuzzle::handleInput(NancyInput &input) {
 	const bool click = (input.input & NancyInput::kLeftMouseButtonUp) != 0;
 
 	// -- Carrying a block: it follows the cursor until it is put down. --
-	if (_carr
-iedBlock != kNoBlock) {
+	if (_carriedBlock != kNoBlock) {
 		// Boards with no turntable turn the block in hand instead.
 		if (!_hasTurntable && (input.input & NancyInput::kRightMouseButtonUp)) {
 			startTurn();

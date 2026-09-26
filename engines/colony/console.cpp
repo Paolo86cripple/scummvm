@@ -59,8 +59,7 @@ const char *robotTypeName(int type) {
 	case kRobDrone: return "Drone";
 	case kRobSoldier: return "Soldier";
 	case kRobSnoop: return "Snoop";
-	defau
-lt: return "Unknown";
+	default: return "Unknown";
 	}
 }
 
@@ -124,8 +123,7 @@ Debugger::Debugger(ColonyEngine *vm) : GUI::Debugger(), _vm(vm) {
 	registerCmd("core", WRAP_METHOD(Debugger, cmdCore));
 	registerCmd("battle", WRAP_METHOD(Debugger, cmdBattle));
 	registerCmd("colony", WRAP_METHOD(Debugger, cmdColony));
-	registerCmd("forklift", WRAP_METHOD(Debugg
-er, cmdForklift));
+	registerCmd("forklift", WRAP_METHOD(Debugger, cmdForklift));
 	registerCmd("spawn", WRAP_METHOD(Debugger, cmdSpawn));
 }
 
@@ -191,8 +189,7 @@ bool Debugger::cmdTeleporter(int argc, const char **argv) {
 
 	char *end = nullptr;
 	const long number = strtol(argv[1], &end, 10);
-	if (!argv[1][0] || *end != '\0' || number < 1 || number > 
-(long)ARRAYSIZE(kNumberedTeleporters)) {
+	if (!argv[1][0] || *end != '\0' || number < 1 || number > (long)ARRAYSIZE(kNumberedTeleporters)) {
 		debugPrintf("Invalid teleporter number '%s' (must be 1-4)\n", argv[1]);
 		return true;
 	}
@@ -248,8 +245,7 @@ bool Debugger::cmdTeleporter(int argc, const char **argv) {
 	}
 
 	if (!relocated && _vm->_patches.size() >= 100) {
-		debugPrintf("Cannot recall teleporter %ld: relocat
-ion table is full\n", number);
+		debugPrintf("Cannot recall teleporter %ld: relocation table is full\n", number);
 		return true;
 	}
 
@@ -322,8 +318,7 @@ bool Debugger::cmdTeleport(int argc, const char **argv) {
 		debugPrintf("Usage: teleport <level> [<x> <y>]\n");
 		debugPrintf("  level: floor number (1-8)\n");
 		debugPrintf("  x, y:  cell coordinates (0-31). If omitted, finds an entry point.\n");
-		ret
-urn true;
+		return true;
 	}
 
 	int level = atoi(argv[1]);
@@ -394,7 +389,6 @@ bool Debugger::cmdPos(int argc, const char **argv) {
 	debugPrintf("Cell:  (%d, %d)\n", _vm->_me.xindex, _vm->_me.yindex);
 	debugPrintf("Exact: (%d, %d)\n", _vm->_me.xloc, _vm->_me.yloc);
 	debugPrintf("Angle: %d  Look: %d\n", _vm->_me.ang, _vm->_me.look);
-
 	return true;
 }
 
@@ -450,8 +444,7 @@ bool Debugger::cmdWin(int argc, const char **argv) {
 	const char *const endingDescriptions[] = {
 		"planet destroyed, all 6 cryos recovered",
 		"planet destroyed, some cryos recovered",
-		"planet d
-estroyed, no cryos recovered",
+		"planet destroyed, no cryos recovered",
 		"planet spared, all 6 cryos recovered",
 		"planet spared, some cryos recovered",
 		"planet spared, no cryos recovered"
@@ -519,8 +512,7 @@ bool Debugger::cmdEradicate(int argc, const char **argv) {
 	for (int x = 0; x < 32; x++) {
 		for (int y = 0; y < 32; y++) {
 			if (isCreature(_vm->_robotArray[x][y]))
-			
-	_vm->_robotArray[x][y] = 0;
+				_vm->_robotArray[x][y] = 0;
 			if (isCreature(_vm->_foodArray[x][y]))
 				_vm->_foodArray[x][y] = 0;
 		}
@@ -593,8 +585,7 @@ bool Debugger::cmdGive(int argc, const char **argv) {
 	} else if (item == "armor") {
 		_vm->_armor = 3;
 		debugPrintf("Granted full armor (3)\n");
-	} else if (item =
-= "all") {
+	} else if (item == "all") {
 		_vm->_hasKeycard = true;
 		_vm->_weapons = 3;
 		_vm->_armor = 3;
@@ -659,8 +650,7 @@ bool Debugger::cmdCore(int argc, const char **argv) {
 	return true;
 }
 
-bool Debugger::cmdBattle(int ar
-gc, const char **argv) {
+bool Debugger::cmdBattle(int argc, const char **argv) {
 	auto prepareBattleDebugState = [&](int xloc, int yloc, int ang) {
 		_vm->battleInit();
 		_vm->battleSet();
@@ -729,8 +719,7 @@ bool Debugger::cmdColony(int argc, const char **argv) {
 
 	// Place player just outside the colony entrance (Enter is at 16000, 16000).
 	// Original BattleCommand entrance check: x in [Enter.xloc-2*BSIZE, Enter.xloc).
-	prepareBattleDebugState(16000 - 500, 16000, 96)
-;
+	prepareBattleDebugState(16000 - 500, 16000, 96);
 
 	debugPrintf("Entered battle mode outside the colony at (%d, %d) ang=%d\n",
 		_vm->_me.xloc, _vm->_me.yloc, _vm->_me.ang);
@@ -796,8 +785,7 @@ bool Debugger::cmdSpawn(int argc, const char **argv) {
 		{"feye",      kRobFEye},
 		{"fpyramid",  kRobFPyramid},
 		{"fcube",     kRobFCube},
-		{"fupyramid", kRobFUPy
-ramid},
+		{"fupyramid", kRobFUPyramid},
 		{"seye",      kRobSEye},
 		{"spyramid",  kRobSPyramid},
 		{"scube",     kRobSCube},
@@ -862,8 +850,7 @@ ramid},
 		return true;
 	}
 
-	debugPrintf("Spawned %s (type %d) at cell (%d
-,%d) facing player\n",
+	debugPrintf("Spawned %s (type %d) at cell (%d,%d) facing player\n",
 		robotTypeName(type), type, targetX, targetY);
 	return false;
 }

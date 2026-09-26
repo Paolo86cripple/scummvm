@@ -61,8 +61,7 @@ void MazeChasePuzzle::registerGraphics() {
 	for (uint i = 0; i < _pieces.size(); ++i) {
 		_pieces[i].registerGraphics();
 	}
-	PuzzleRecord::registerGra
-phics();
+	PuzzleRecord::registerGraphics();
 }
 
 void MazeChasePuzzle::updateGraphics() {
@@ -133,8 +132,7 @@ void MazeChasePuzzle::updateGraphics() {
 				_needsRedraw = true;
 			} else if (_currentAnimFrame >= _framesPerMove + 1) {
 				_currentAnimFrame = -1;
-		
-	}
+			}
 		}
 	}
 }
@@ -206,8 +204,7 @@ void MazeChasePuzzle::readData(Common::SeekableReadStream &stream) {
 	readRect(stream, _upButtonDest);
 	readRect(stream, _rightButtonDest);
 	readRect(stream, _downButtonDest);
-	readRec
-t(stream, _leftButtonDest);
+	readRect(stream, _leftButtonDest);
 	readRect(stream, _resetButtonDest);
 
 	_lineWidth = stream.readUint16LE();
@@ -290,8 +287,7 @@ void MazeChasePuzzle::execute() {
 		}
 
 		g_nancy->_sound->stopSound(_solveSound);
-		g_nancy->_sound->stopSound(_moveSou
-nd);
+		g_nancy->_sound->stopSound(_moveSound);
 		g_nancy->_sound->stopSound(_failSound);
 
 		finishExecution();
@@ -372,8 +368,7 @@ void MazeChasePuzzle::handleInput(NancyInput &input) {
 	}
 
 	buttonHotspot = _leftButtonDest;
-	buttonHotspot.grow(-10
-);
+	buttonHotspot.grow(-10);
 
 	if (NancySceneState.getViewport().convertViewportToScreen(buttonHotspot).contains(input.mousePos)) {
 		if (canMove(0, kWallLeft)) {
@@ -444,8 +439,7 @@ void MazeChasePuzzle::drawGrid() {
 			}
 
 			if (cell == kWallDown || cell == kWallUpDown) {
-				_drawSurface.blitFrom(_image, _horizontalWall
-Src, dest + Common::Point(0, cellRect.height() - 1));
+				_drawSurface.blitFrom(_image, _horizontalWallSrc, dest + Common::Point(0, cellRect.height() - 1));
 			}
 
 			if (cell == kWallLeft || cell == kWallLeftRight) {
@@ -520,8 +514,7 @@ bool MazeChasePuzzle::canMove(uint pieceID, WallType direction) {
 
 		if (pieceID != 0) {
 			for (uint i = 1; i < _pieces.size(); ++i) {
-				if (piece._gridPos + Common::Point(-1, 0) == _pieces[i]._
-gridPos) {
+				if (piece._gridPos + Common::Point(-1, 0) == _pieces[i]._gridPos) {
 					return false;
 				}
 			}
@@ -595,8 +588,7 @@ void MazeChasePuzzle::reset() {
 
 	Common::Rect fill = _upButtonDest;
 	fill.extend(_downButtonDest);
-	fill.extend(_leftBu
-ttonDest);
+	fill.extend(_leftButtonDest);
 	fill.extend(_rightButtonDest);
 	fill.extend(_resetButtonDest);
 	_drawSurface.fillRect(fill, _drawSurface.getTransparentColor());

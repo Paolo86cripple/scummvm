@@ -49,8 +49,7 @@ void CardGamePuzzle::readData(Common::SeekableReadStream &stream) {
 	_dealRounds     = stream.readUint16LE();  // 0x029
 
 	readRect(stream, _turnHighlightSrc[0]);   // 0x02b
-	re
-adRect(stream, _turnHighlightSrc[1]);
+	readRect(stream, _turnHighlightSrc[1]);
 	readRect(stream, _turnHighlightDest[0]);  // 0x04b
 	readRect(stream, _turnHighlightDest[1]);
 
@@ -92,8 +91,7 @@ adRect(stream, _turnHighlightSrc[1]);
 	_dealFrameCount[0] = stream.readUint16LE();    // 0xa9b
 	stream.skip(2);                                // 0xa9d
 	_dealFrameDelay[0] = stream.readUint32LE();    // 0xa9f
-	_dealFrames[0].resize(15);                
-     // 0xaa3
+	_dealFrames[0].resize(15);                     // 0xaa3
 	for (uint i = 0; i < _dealFrames[0].size(); ++i)
 		readRect(stream, _dealFrames[0][i]);
 	readRect(stream, _deliverDest[0]);             // 0xb93
@@ -127,8 +125,7 @@ adRect(stream, _turnHighlightSrc[1]);
 
 	_winSceneStartPlayer = stream.readUint16LE();        // 0x1304
 	_winSceneStartEnemy  = stream.readUint16LE();        // 0x1306
-	_solveScene._sceneChange.fr
-ameID          = stream.readUint16LE();  // 0x1308
+	_solveScene._sceneChange.frameID          = stream.readUint16LE();  // 0x1308
 	_solveScene._sceneChange.verticalOffset   = stream.readUint16LE();  // 0x130a
 	_solveScene._sceneChange.continueSceneSound = stream.readUint16LE();// 0x130c
 	stream.skip(0x131c - 0x130e);                        // listener vector + frame id
@@ -174,8 +171,7 @@ int CardGamePuzzle::dealOne(int player) {
 	return -1;
 }
 
-void CardGamePuzz
-le::drawBoard() {
+void CardGamePuzzle::drawBoard() {
 	_drawSurface.clear(_drawSurface.getTransparentColor());
 
 	// The visible tableau is side 1's grid; a present card is drawn face up, an empty cell shows
@@ -223,8 +219,7 @@ le::drawBoard() {
 
 	// Automaton variant: the mover's hand-delivery sprite for the current frame.
 	if (_handAnimActive && _handFrame < _dealFrames[_handAnimSide].size()) {
-		const Common::Rect &src = _dealFram
-es[_handAnimSide][_handFrame];
+		const Common::Rect &src = _dealFrames[_handAnimSide][_handFrame];
 		const Common::Rect &dest = _deliverDest[_handAnimSide];
 		_drawSurface.blitFrom(_image, src, Common::Point(dest.left, dest.top));
 	}
@@ -290,8 +285,7 @@ void CardGamePuzzle::resolveAsk() {
 
 		_goAgain = true; // the opponent had the rank: ask again
 	} else {
-		playV
-oice(_noMoveVoice[_mover]); // "go fish"
+		playVoice(_noMoveVoice[_mover]); // "go fish"
 		int drawnCol = dealOne(_mover);
 		_goAgain = (drawnCol != -1 && _switchTurnRule != 0 && drawnCol == _askedCol);
 		if (drawnCol == -1) {
@@ -366,8 +360,7 @@ int CardGamePuzzle::aiPickColumn() {
 	Common::Array<int> strong, any;
 	for (int col = 0; col < (int)_numCols; ++col) {
 		int count = _board[0].colCount[col];
-		if (count <= 0
- || count >= 3 || col == _lastAiColumn) {
+		if (count <= 0 || count >= 3 || col == _lastAiColumn) {
 			continue;
 		}
 
@@ -436,8 +429,7 @@ void CardGamePuzzle::updateGraphics() {
 	if (_animating && now >= _animNextStep) {
 		--_animStep;
 		_animNextStep = now + _moveAnimDelay;
-		if 
-(_animStep <= 0) {
+		if (_animStep <= 0) {
 			_animating = false;
 		}
 		changed = true;
@@ -521,8 +513,7 @@ void CardGamePuzzle::init() {
 	}
 	for (int row = 0; row < kMaxRows; ++row)
 		for (int col = 0; col < kMaxCols; ++col)
-			_availMap[
-row][col] = (row < _numRows && col < _numCols) ? 1 : 0;
+			_availMap[row][col] = (row < _numRows && col < _numCols) ? 1 : 0;
 
 	_deckRemaining = _numCols * _numRows;
 	_mover = _startPlayer;
@@ -593,8 +584,7 @@ void CardGamePuzzle::execute() {
 				flag.label = _winFlagPlayer;
 				flag.flag = g_nancy->_true;
 				NancySceneState.setEventFlag(flag);
-			} else if (tie && _winFlagEnemy != -1
-) {
+			} else if (tie && _winFlagEnemy != -1) {
 				FlagDescription flag;
 				flag.label = _winFlagEnemy;
 				flag.flag = g_nancy->_true;
@@ -667,8 +657,7 @@ void CardGamePuzzle::handleInput(NancyInput &input) {
 		return;
 	}
 
-	g_nancy->_cursor->setCursorType(
-CursorManager::kHotspot);
+	g_nancy->_cursor->setCursorType(CursorManager::kHotspot);
 
 	if (input.input & NancyInput::kLeftMouseButtonUp) {
 		beginAsk(1, col);

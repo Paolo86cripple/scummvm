@@ -53,7 +53,6 @@ void ScalePuzzle::readData(Common::SeekableReadStream &stream) {
 	_dragCursorType = stream.readUint16LE();	// 0x23
 
 	// Applied when the puzzle comes out solved. Several scenes use 9999 (no scene) and
-
 	// leave the transition to whatever watches the solve flag.
 	_solveScene._sceneChange.sceneID = stream.readUint16LE();	// 0x25
 	_solveScene._sceneChange.continueSceneSound = kContinueSceneSound;
@@ -101,7 +100,6 @@ void ScalePuzzle::readData(Common::SeekableReadStream &stream) {
 	_pickupSound.readData(stream);		// 0x170
 	_dropTraySound.readData(stream);	// 0x218
 	_dropPanSound.readData(stream);		// 0x1c4
-
 
 	// A count-prefixed array of fixed 23-byte hotspot records:
 	// {rect, u16 cursorType, u16 sceneID, u16 frameID, byte}. The sample carries one - the
@@ -171,8 +169,7 @@ ScalePuzzle::SlotGroup &ScalePuzzle::group(SlotRegion region) {
 }
 
 bool ScalePuzzle::slotAtCursor(const Common::Point &mousePos, bool wantEmpty, SlotRegion &outRegion, uint &outIndex) const {
-	static const 
-SlotRegion order[3] = { kSourceTray, kLeftPan, kRightPan };
+	static const SlotRegion order[3] = { kSourceTray, kLeftPan, kRightPan };
 	for (int g = 0; g < 3; ++g) {
 		const SlotGroup &grp = (order[g] == kLeftPan) ? _left : (order[g] == kRightPan) ? _right : _tray;
 		for (uint i = 0; i < grp.dests.size(); ++i) {
@@ -241,8 +238,7 @@ void ScalePuzzle::recomputeBalance() {
 	}
 
 	// Solved once every figure of the scene is lit.
-	_solved = !_targets
-.empty();
+	_solved = !_targets.empty();
 	for (uint i = 0; i < _targets.size(); ++i) {
 		if (!_targets[i].lit) {
 			_solved = false;
@@ -296,8 +292,7 @@ void ScalePuzzle::redraw() {
 			const Common::Rect &pos = _lightFrames[lightIdx];
 			_drawSurface.blitFrom(_image, _altSrc, Common::Point(pos.left, pos.top));
 		}
-		_drawSurface.blitFrom(
-_image, t.latchSrc, Common::Point(t.latchDst.left, t.latchDst.top));
+		_drawSurface.blitFrom(_image, t.latchSrc, Common::Point(t.latchDst.left, t.latchDst.top));
 	}
 
 	// The coin currently being carried, following the cursor.
@@ -367,7 +362,6 @@ void ScalePuzzle::handleInput(NancyInput &input) {
 			_carriedCoin = kNoCoin;
 			playSoundBlock(region == kSourceTray ? _dropTraySound : _dropPanSound);
 			recomputeBalance();
-
 			redraw();
 		}
 

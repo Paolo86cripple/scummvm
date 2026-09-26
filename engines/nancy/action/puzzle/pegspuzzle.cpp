@@ -48,8 +48,7 @@ void PegsPuzzle::readData(Common::SeekableReadStream &stream) {
 	// Win / lose scene changes, each {uint16 sceneID, uint16 frameID, byte}. A frameID of
 	// 0xffff means "no specific frame" (the target scene may be a video, so seeking to
 	// 65535 must be avoided) - keep the default frame 0.
-	_solveScen
-e._sceneChange.sceneID = stream.readUint16LE();	// 0x28
+	_solveScene._sceneChange.sceneID = stream.readUint16LE();	// 0x28
 	uint16 winFrame = stream.readUint16LE();	// 0x2a
 	_solveScene._sceneChange.frameID = (winFrame == 0xffff) ? 0 : winFrame;
 	stream.skip(1);								// 0x2c
@@ -104,7 +103,6 @@ void PegsPuzzle::init() {
 		if (validCell(col, row)) {
 			_board[cellIndex(col, row)] = kBlocked;
 		}
-
 	}
 	if (_startEmptyFlag == 0) {
 		int col = _numRows ? (_startEmptyPos % _numRows) : 0;
@@ -172,8 +170,7 @@ bool PegsPuzzle::isCarriedTarget(int col, int row) const {
 }
 
 bool PegsPuzzle::cellAtCursor(const Common::Point &mousePos, int &outCol, int &outRow) const {
-	fo
-r (int row = 0; row < _numRows; ++row) {
+	for (int row = 0; row < _numRows; ++row) {
 		for (int col = 0; col < _numCols; ++col) {
 			int idx = cellIndex(col, row);
 			if (_board[idx] != kBlocked &&
@@ -248,8 +245,7 @@ void PegsPuzzle::carryPeg(int col, int row, NancyInput &input) {
 }
 
 void PegsPuzzle::redraw() {
-	_drawSurface.clear(g_nancy->_grap
-hics->getTransColor());
+	_drawSurface.clear(g_nancy->_graphics->getTransColor());
 
 	const bool carrying = (_carriedCol >= 0);
 
@@ -333,8 +329,7 @@ void PegsPuzzle::handleInput(NancyInput &input) {
 		if (click) {
 			int col, row;
 			if (cellAtCursor(input.mousePos, col, row) && isCarriedTarget(col, row)) {
-				doJump(_carriedCol, _carrie
-dRow, col, row);
+				doJump(_carriedCol, _carriedRow, col, row);
 				playSoundBlock(_sounds[1]);
 			}
 

@@ -52,8 +52,7 @@ private:
 	// 30 slots of 27 bytes per save slot, so 30 is the engine's own maximum.
 	static const uint kMaxBoxes = 30;
 	// Nancy 15 rejects a keystroke once the typed text no longer fits a save
-	// slot's 27-byte text buffer, with roo
-m left for the cursor character.
+	// slot's 27-byte text buffer, with room left for the cursor character.
 	static const uint kMaxTypedLengthNancy15 = 24;
 	static const uint kMaxTypedLength = 16;
 	// From Nancy 9 to Nancy 14 a character is only accepted while the text
@@ -104,8 +103,7 @@ m left for the cursor character.
 	// Picks one name out of `block` at random and starts it, tracking it in
 	// _activeBoxSound so the state machine can wait for it. Returns false when
 	// the block is empty or names no sound.
-	bool playBoxSo
-undBlock(const RandomSoundBlock &block);
+	bool playBoxSoundBlock(const RandomSoundBlock &block);
 	void showBoxSubtitle(const Common::String &perBoxText, const Common::String &perRecordText);
 
 	uint32 getSaveKey();
@@ -152,8 +150,7 @@ undBlock(const RandomSoundBlock &block);
 	enum SolveState {
 		kTyping          = 0, // waiting for key input; cursor blinks
 		kCheckAnswer     = 1, // Enter pressed (or auto-check triggered); evaluate typed text
-		kStartCorrect    = 2, // an
-swer correct: play correct sound, advance box
+		kStartCorrect    = 2, // answer correct: play correct sound, advance box
 		kWaitCorrect     = 3, // waiting for correct sound to finish
 		kStartWrong      = 4, // answer wrong: clear text, play wrong sound
 		kWaitWrong       = 5, // waiting for wrong sound to finish

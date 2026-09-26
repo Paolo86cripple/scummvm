@@ -44,8 +44,7 @@ namespace Action {
 // figure of the current scene is lit.
 class ScalePuzzle : public PuzzleRecord {
 public:
-	ScalePuzzle() : PuzzleRecord
-(7) {}
+	ScalePuzzle() : PuzzleRecord(7) {}
 	virtual ~ScalePuzzle() {}
 
 	void init() override;
@@ -93,8 +92,7 @@ protected:
 	SlotGroup &group(SlotRegion region);
 	// The slot whose rect contains the cursor. When wantEmpty is set only empty slots match
 	// (used while carrying), otherwise only occupied slots match (used while picking up).
-	bool slotAtCursor(const Common::Point &mou
-sePos, bool wantEmpty, SlotRegion &outRegion, uint &outIndex) const;
+	bool slotAtCursor(const Common::Point &mousePos, bool wantEmpty, SlotRegion &outRegion, uint &outIndex) const;
 	void recomputeBalance();
 	// Draws the image region src centred inside slot (the original centres coins in their
 	// slots, FUN_004b6660 case 0).
@@ -133,8 +131,7 @@ sePos, bool wantEmpty, SlotRegion &outRegion, uint &outIndex) const;
 	Common::Point _dragPos;					// cursor position (viewport space) while carrying
 
 	bool _solved = false;
-	bo
-ol _solveTriggered = false;			// the solve flag/scene are applied only once
+	bool _solveTriggered = false;			// the solve flag/scene are applied only once
 	bool _exitRequested = false;
 
 };

@@ -49,8 +49,7 @@ void CuttingPuzzle::readData(Common::SeekableReadStream &stream) {
 	readRectArray(stream, _bladeDest, 8);   // +0x178..0x1f7
 	readRect(stream, _animFrameDest);       // +0x1f8
 
-	// So
-urce rects (from sprite sheet)
+	// Source rects (from sprite sheet)
 	readRect(stream, _noAnimSrc);                    // +0x208
 	readRectArray(stream, _leverSrc, 3);             // +0x218..0x247  depths 1..3
 	readRect(stream, _switchOnSrc);                  // +0x248
@@ -91,8 +90,7 @@ urce rects (from sprite sheet)
 
 void CuttingPuzzle::init() {
 	Common::Rect screenBounds = NancySceneState.getViewport().getBounds();
-	_drawSurface.create(
-screenBounds.width(), screenBounds.height(),
+	_drawSurface.create(screenBounds.width(), screenBounds.height(),
 	                    g_nancy->_graphics->getInputPixelFormat());
 	_drawSurface.clear(g_nancy->_graphics->getTransColor());
 	setTransparent(true);
@@ -151,8 +149,7 @@ void CuttingPuzzle::redrawSurface() {
 	} else {
 		// Lathe running: show the on-switch sprite and the current animation frame.
 		_drawSurface.blitFrom(_image1, _switchOnSrc, _switchDest);
-		if (_numAnimFrames
- > 0 && _animFrame < _animSrc.size())
+		if (_numAnimFrames > 0 && _animFrame < _animSrc.size())
 			_drawSurface.blitFrom(_image2, _animSrc[_animFrame], _animFrameDest);
 	}
 
@@ -214,8 +211,7 @@ void CuttingPuzzle::execute() {
 				}
 				if (allMatch) {
 					_solved = true;
-					_timerDeadline = g_system->getMillis() + (uint32)_solveSoundD
-elay * 1000;
+					_timerDeadline = g_system->getMillis() + (uint32)_solveSoundDelay * 1000;
 					_subState = kWaitTimer;
 					break;
 				}
@@ -278,7 +274,6 @@ elay * 1000;
 
 			// Set the frame-advance timer and move to kWaitTimer.
 			_timerDeadline = g_system->getMillis() + _frameDelayMs;
-
 			_subState = kWaitTimer;
 			break;
 
@@ -355,8 +350,7 @@ void CuttingPuzzle::handleInput(NancyInput &input) {
 	// Convert mouse position to viewport-local coordinates.
 	Common::Point localMouse = input.mousePos;
 	Common::Rect vpPos = NancySceneState.getViewport().getScreenPosition();
-	localMouse -= Common::Point
-(vpPos.left, vpPos.top);
+	localMouse -= Common::Point(vpPos.left, vpPos.top);
 
 	// Allow stopping the lathe by clicking on the on/off switch hotspot.
 
@@ -415,8 +409,7 @@ void CuttingPuzzle::handleInput(NancyInput &input) {
 		if (goLeft && _currentMarkerPos > 0) {
 			g_nancy->_cursor->setCursorType(CursorManager::kMoveLeft);
 			if (input.input & NancyInput::kLeftMouseButtonUp) {
-				--_currentMar
-kerPos;
+				--_currentMarkerPos;
 				g_nancy->_sound->playSound(_moveSound);
 				redrawSurface();
 			}

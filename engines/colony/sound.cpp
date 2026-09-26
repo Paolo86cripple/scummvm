@@ -59,8 +59,7 @@ const uint32 kRestDivider = 0;
 
 // Ambient DOS intro phrases from COLDAT.ASM.
 // These are sparse note patterns with long rests; exact VSP note decoding
-// is not available here, so we map them to stab
-le PC speaker dividers.
+// is not available here, so we map them to stable PC speaker dividers.
 const MelodyStep kStars1Phrase[] = {
 	{ 4831, 3 }, { kRestDivider, 3 }, { kRestDivider, 3 }, { kRestDivider, 3 },
 	{ 4063, 3 }, { kRestDivider, 3 }, { kRestDivider, 3 }, { kRestDivider, 3 },
@@ -113,7 +112,6 @@ void Sound::init() {
 
 	// Open Colony application binary (contains snd resources for
 	// EXPLODE, EAT, THEYSHOOT, MESHOOT, CHIME that aren't in Zounds)
-
 	_appResMan = new Common::MacResManager();
 	if (!_appResMan->open("Colony")) {
 		if (!_appResMan->open("(Color) Colony")) {
@@ -209,8 +207,7 @@ void Sound::playPCSpeaker(int soundID) {
 		queueTick(0x4444, 2);
 		queueTick(0x3333, 2);
 		queueTick(0x2222, 2);
-		qu
-eueTick(0x1111, 2);
+		queueTick(0x1111, 2);
 		queueTick(1536, 2); // 0600h
 		break;
 	case kExplode: // "Explode2"
@@ -303,8 +300,7 @@ eueTick(0x1111, 2);
 			queueTick(65531 - i * 20, 1);
 		}
 		queueTick(65535, 1);
-		for (int i = 0; i < kBeamMeRamp3Steps; ++i)
- {
+		for (int i = 0; i < kBeamMeRamp3Steps; ++i) {
 			queueTick(65535 - i * 20, 1);
 		}
 		break;
@@ -369,8 +365,7 @@ bool Sound::playMacSound(int soundID, bool loop) {
 	case kTunnel1: resID = 16403; break;
 	case kTunnel2: resID = 17354; break;
 	case kLift:
-	case
- kDrop: resID = 28521; break;
+	case kDrop: resID = 28521; break;
 	case kGlass: resID = 19944; break;
 	case kDoor: resID = 26867; break;
 	case kToilet: resID = 4955; break;
@@ -432,8 +427,7 @@ bool Sound::playResource(int resID, bool loop, int sampleRate) {
 	snd->read(data, dataSize);
 	delete snd;
 
-	Audio::RewindableAudioStream *raw
- = Audio::makeRawStream(data, dataSize, sampleRate, Audio::FLAG_UNSIGNED, DisposeAfterUse::YES);
+	Audio::RewindableAudioStream *raw = Audio::makeRawStream(data, dataSize, sampleRate, Audio::FLAG_UNSIGNED, DisposeAfterUse::YES);
 	Audio::AudioStream *stream = loop ? Audio::makeLoopingAudioStream(raw, 0) : raw;
 	_vm->_mixer->playStream(Audio::Mixer::kSFXSoundType, &_handle, stream);
 	return true;

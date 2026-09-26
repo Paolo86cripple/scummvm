@@ -56,8 +56,7 @@ void MatchPuzzle::readDataNancy14(Common::SeekableReadStream &stream) {
 	_rows = stream.readSint16LE();
 	_cols = stream.readSint16LE();
 
-	_startIna
-ctive = stream.readByte() != 0;
+	_startInactive = stream.readByte() != 0;
 	_inProgressFlag = stream.readSint16LE();
 	stream.skip(2);
 
@@ -122,7 +121,6 @@ ctive = stream.readByte() != 0;
 
 	_exitCursorType = stream.readUint16LE();
 	_exitCursorFromData = true;
-
 	_exitScene._sceneChange.sceneID = stream.readUint16LE();
 	_exitScene._sceneChange.frameID = stream.readUint16LE();
 
@@ -178,8 +176,7 @@ void MatchPuzzle::readData(Common::SeekableReadStream &stream) {
 	_showScoreDisplay = stream.readByte() != 0;
 	_timeLimitSecs  = stream.readSint16LE();          // data+0x63E
 	_scoreTarget    = stream.readSint32LE();          // data+0x640
-	_scorePerTile   = stream.readSi
-nt16LE();          // data+0x644
+	_scorePerTile   = stream.readSint16LE();          // data+0x644
 
 	readRect(stream, _matchedTileSrcRect);            // data+0x646..0x655 matched/highlight src rect
 
@@ -212,8 +209,7 @@ nt16LE();          // data+0x644
 	_solveScene.readData(stream);         // data+0x77D..0x795  win scene
 	stream.skip(2);                             // data+0x796..0x797 pre-result delay (unused)
 
-	_matchSuccessSound.readNormal(stream);      // da
-ta+0x798..0x7C8  win/time-up sound
+	_matchSuccessSound.readNormal(stream);      // data+0x798..0x7C8  win/time-up sound
 
 	_exitScene.readData(stream);          // data+0x7C9..0x7E1  quit/exit scene
 
@@ -275,8 +271,7 @@ void MatchPuzzle::init() {
 			_gameSubState = kHighScores;
 		}
 
-		NancySceneState.setEventF
-lag(_inProgressFlag, _startInactive ? g_nancy->_true : g_nancy->_false);
+		NancySceneState.setEventFlag(_inProgressFlag, _startInactive ? g_nancy->_true : g_nancy->_false);
 		redrawAllCells();
 		return;
 	}
@@ -348,8 +343,7 @@ void MatchPuzzle::execute() {
 		NancySceneState.setNoHeldItem();
 
 		if (_slotWinSound.name != "NO SOUND")
-			g_nancy->_sound->loa
-dSound(_slotWinSound);
+			g_nancy->_sound->loadSound(_slotWinSound);
 		if (_shuffleSound.name != "NO SOUND")
 			g_nancy->_sound->loadSound(_shuffleSound);
 		if (_cardPlaceSound.name != "NO SOUND")
@@ -416,8 +410,7 @@ dSound(_slotWinSound);
 			// Process piece 2 on the next frame after piece 1 is cleared
 			if (_hasPiece2) {
 				_hasPiece2 = false;
-				checkFo
-rMatch(_piece2Col, _piece2Row);
+				checkForMatch(_piece2Col, _piece2Row);
 				if (_hasVMatch || _hasHMatch) {
 					_hasSelection = false;
 					if (_execScript && (uint16)_matchedFlagType < _flagSoundNames.size()) {
@@ -479,8 +472,7 @@ rMatch(_piece2Col, _piece2Row);
 			// While the 800ms window is still open, the slot-win "boop"
 			// sound is *re-triggered* every time the previous play
 			// finishes. With a short sample, that fits roughly three plays
-			// inside the window — which
- is why a match makes three boops.
+			// inside the window — which is why a match makes three boops.
 			uint32 now = g_system->getMillis();
 			bool timerDone = (now >= _stateTimer);
 			bool soundDone = !isMatchSoundPlaying();
@@ -546,8 +538,7 @@ rMatch(_piece2Col, _piece2Row);
 				_score         = 0;
 				_scoreStr      = Common::String::format("%d", (int32)0);
 				_hasPiece1     = _hasPiece2 = false;
-				_hasSel
-ection  = false;
+				_hasSelection  = false;
 				_showFlagName  = false;
 				_prevTimerSecs = -1;
 				if (_timeLimitSecs > 0)
@@ -633,8 +624,7 @@ void MatchPuzzle::handleInput(NancyInput &input) {
 	Common::Point localMouse = input.mousePos;
 	localMouse -= Common::Point(vpPos.left, vpPos.top);
 
-	if (isE
-xitHotspotHovered(input)) {
+	if (isExitHotspotHovered(input)) {
 		if (g_nancy->getGameType() >= kGameTypeNancy14)
 			setExitCursor();
 		else
@@ -698,8 +688,7 @@ xitHotspotHovered(input)) {
 						_hasPiece2 = true;
 						_hasSelection = false;
 
-						if (_cardPlaceSound.name != "NO S
-OUND")
+						if (_cardPlaceSound.name != "NO SOUND")
 							g_nancy->_sound->playSound(_cardPlaceSound);
 						redrawAllCells();
 					}
@@ -771,8 +760,7 @@ void MatchPuzzle::handleInputNancy14(NancyInput &input, const Common::Point &loc
 	for (int col = 0; col < _cols; ++col) {
 		for (int row = 0; row < _rows; ++row) {
 			GridCell &cell = _grid[col][row];
-			if (!cell.visible
-)
+			if (!cell.visible)
 				continue;
 
 			// The clickable area is inset slightly from the tile
@@ -831,8 +819,7 @@ void MatchPuzzle::shuffleGrid(bool allCells, int targetCol, int targetRow) {
 				bool sameLeft  = (col > 0) && (chosen == _grid[col - 1][row].tileType);
 				bool sameBelow = checkAllNeighbors && (row < _rows - 1) && (chosen == _grid[col][row + 1].tileType);
 				bool sameRight = checkAllNeighbors && (col < _cols - 1) && (chosen == _grid[col + 1][row].tileType);
-				if (!sameAbove 
-&& !sameLeft && !sameBelow && !sameRight)
+				if (!sameAbove && !sameLeft && !sameBelow && !sameRight)
 					break;
 			}
 
@@ -900,8 +887,7 @@ void MatchPuzzle::checkForMatch(int col, int row) {
 			_timerDeadline += (uint32)_timeBonusFor3 * 1000;
 		else if (hLen == 3) {
 			_score         += _scoreBonusFor4;
-			_timerDeadline += (
-uint32)_timeBonusFor4 * 1000;
+			_timerDeadline += (uint32)_timeBonusFor4 * 1000;
 		} else if (hLen >= 4) {
 			_score         += _scoreBonusFor5;
 			_timerDeadline += (uint32)_timeBonusFor5 * 1000;
@@ -960,8 +946,7 @@ void MatchPuzzle::drawText(const Common::String &str, const Common::Point &pos) 
 
 	const Graphics::Font *font = g_nancy->_graphics->getFont(_fontID);
 	if (!font)
-		font = g_nancy->_graphics->getFont(0
-);
+		font = g_nancy->_graphics->getFont(0);
 
 	if (!font)
 		return;
@@ -1018,8 +1003,7 @@ void MatchPuzzle::drawScorePanel() {
 
 		if (_showScoreDisplay) {
 			const Graphics::Font *font = g_nancy->_graphics->getFont(_scriptID);
-			if (!font) font = g_n
-ancy->_graphics->getFont(0);
+			if (!font) font = g_nancy->_graphics->getFont(0);
 			if (font) {
 				const int fh = font->getFontHeight();
 				const int lineSpacing = fh + 12;
@@ -1039,6 +1023,94 @@ ancy->_graphics->getFont(0);
 				int hsY = scoreY + lineSpacing;
 				for (int i = 0; i < 5; ++i) {
 					Common::String hs = Common::String::format("%d", _highScores[i].score);
-					font->drawStri
+					font->drawString(&_drawSurface, hs, hsX, hsY, 80, 0);
+					hsY += lineSpacing;
+				}
+			}
+		}
+		return; // don't draw the normal gameplay overlay
+	}
 
-... [Content truncated]
+	// ---- Normal gameplay ----
+
+	// Draw the shuffle button sprite
+	if (!_shuffleButtonSrcRect.isEmpty() && !_shuffleButtonDestRect.isEmpty())
+		_drawSurface.blitFrom(_image, _shuffleButtonSrcRect,
+		                      Common::Point(_shuffleButtonDestRect.left, _shuffleButtonDestRect.top));
+
+	if (!_showScoreDisplay)
+		return;
+
+	// The score-panel font is determined by _scriptID, instead of _scorePanelFontID.
+	const Graphics::Font *font = g_nancy->_graphics->getFont(_scriptID);
+	if (!font)
+		font = g_nancy->_graphics->getFont(0);
+
+	// Helper: vertically centre font within rect (font may be taller than rect)
+	const int fh = font->getFontHeight();
+	auto textY = [&](const Common::Rect &r) {
+		return r.top + (r.height() - fh) / 2 - 1;
+	};
+
+	// Static label string (empty in practice — labels are baked into the background image)
+	if (!_displayLabelString.empty() && !_labelStringRect.isEmpty())
+		font->drawString(&_drawSurface, _displayLabelString,
+		                 _labelStringRect.left, textY(_labelStringRect),
+		                 _labelStringRect.width(), 0);
+
+	// Goal value (fixed for the lifetime of the puzzle)
+	if (!_goalValueRect.isEmpty())
+		font->drawString(&_drawSurface, _goalStr,
+		                 _goalValueRect.left, textY(_goalValueRect),
+		                 _goalValueRect.width(), 0);
+
+	// Current score value
+	if (!_scoreValueRect.isEmpty())
+		font->drawString(&_drawSurface, _scoreStr,
+		                 _scoreValueRect.left, textY(_scoreValueRect),
+		                 _scoreValueRect.width(), 0);
+
+	// Countdown timer
+	if (_timeLimitSecs > 0 && !_timerValueRect.isEmpty())
+		font->drawString(&_drawSurface, _timerStr,
+		                 _timerValueRect.left, textY(_timerValueRect),
+		                 _timerValueRect.width(), 0);
+
+	// Matched flag info — shown briefly after a match (gated by _execScript)
+	if (_execScript && _showFlagName) {
+		if (!_flagNameStr.empty() && !_flagNameRect.isEmpty())
+			font->drawString(&_drawSurface, _flagNameStr,
+			                 _flagNameRect.left, textY(_flagNameRect),
+			                 _flagNameRect.width(), 0);
+
+		int16 ft = _matchedFlagType;
+		if (ft >= 0 && ft < (int16)_tileSrcRects.size() && !_flagImageRect.isEmpty())
+			_drawSurface.blitFrom(_image, _tileSrcRects[ft],
+			                      Common::Point(_flagImageRect.left, _flagImageRect.top));
+	}
+}
+
+void MatchPuzzle::redrawAllCells() {
+	_drawSurface.clear(_drawSurface.getTransparentColor());
+
+	if (g_nancy->getGameType() >= kGameTypeNancy14) {
+		if (_showHighScores)
+			drawHighScoreScreen();
+		else
+			drawBoardNancy14();
+
+		return;
+	}
+
+	drawScorePanel();
+	// During state 6 the score-screen covers everything; skip cell drawing
+	if (_gameSubState != kScoreDisplay) {
+		for (int col = 0; col < _cols; ++col)
+			for (int row = 0; row < _rows; ++row)
+				drawCell(col, row);
+	}
+	_needsRedraw = true;
+}
+
+} // End of namespace Action
+} // End of namespace Nancy

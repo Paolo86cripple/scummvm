@@ -55,8 +55,7 @@ protected:
 	bool isSolved() const;
 
 	// An index of -1 sets the carried piece back down.
-	void c
-arryPiece(int piece, NancyInput &input);
+	void carryPiece(int piece, NancyInput &input);
 	Common::Rect tileSrc(int32 value) const;
 
 	void redraw();

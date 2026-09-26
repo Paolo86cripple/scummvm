@@ -59,8 +59,7 @@ void DotConnectPuzzle::readData(Common::SeekableReadStream &stream) {
 
 	_solveScene._sceneChange.readData(stream);
 	stream.skip(2);
-	_solveScene
-._flag.label = stream.readSint16LE();
+	_solveScene._flag.label = stream.readSint16LE();
 	_solveScene._flag.flag  = stream.readByte();
 	_solveSoundDelay = stream.readUint16LE();
 	_solveSound.readNormal(stream);
@@ -145,8 +144,7 @@ void DotConnectPuzzle::execute() {
 
 	case kActionTrigger:
 		g_nancy->_sound->stopSound(_clickSound);
-		g_nancy->
-_sound->stopSound(_firstLineHint);
+		g_nancy->_sound->stopSound(_firstLineHint);
 		g_nancy->_sound->stopSound(_startHint);
 		g_nancy->_sound->stopSound(_tooManyLinesSound);
 		g_nancy->_sound->stopSound(_allCoveredSound);
@@ -224,7 +222,6 @@ void DotConnectPuzzle::onDotClicked(int dot) {
 		} else {
 			const Edge &last = _drawn.back();
 			int16 other = (last.a == _currentTip) ? (int16)last.b : (int16)last.a;
-
 			_drawn.pop_back();
 			_currentTip = other;
 		}
@@ -300,8 +297,7 @@ void DotConnectPuzzle::checkWin() {
 		_allCoveredPlayed = true;
 		if (_allCoveredSound.name != "NO SOUND") {
 			g_nancy->_sound->loadSound(_allCoveredSound);
-			g_nanc
-y->_sound->playSound(_allCoveredSound);
+			g_nancy->_sound->playSound(_allCoveredSound);
 		}
 	}
 }

@@ -64,8 +64,7 @@ void DrivingPuzzle::readWaypoints(Common::SeekableReadStream &stream, Common::Ar
 	}
 }
 
-voi
-d DrivingPuzzle::readBlob(Common::SeekableReadStream &stream) {
+void DrivingPuzzle::readBlob(Common::SeekableReadStream &stream) {
 	// 130-byte PuzzleBase header blob: three 33-byte filenames followed by the car's
 	// physics parameters (two short padding gaps separate some of the tail fields).
 	readFilename(stream, _imageName);		// blob 0x00: visible town map
@@ -118,8 +117,7 @@ void DrivingPuzzle::readData(Common::SeekableReadStream &stream) {
 }
 
 void DrivingPuzzle::classifyZones(const Common::Array<ActionZone> &zones) {
-	// The car often starts already sitting inside a location's zone (its start positio
-n,
+	// The car often starts already sitting inside a location's zone (its start position,
 	// or a restored parking spot), so zones are edge-triggered: a zone only fires once the
 	// car has left it and driven back in. Seed each zone's "inside" state from where the
 	// car currently is (init() has already restored any saved position).
@@ -177,8 +175,7 @@ n,
 			_potholes.push_back(hole);
 			break;
 		}
-		case kZoneOverlay: {	// co
-smetic map decoration (buildings, cars, potholes, animations)
+		case kZoneOverlay: {	// cosmetic map decoration (buildings, cars, potholes, animations)
 			if (z.overlayName.empty() || z.overlaySrcRects.empty() || z.overlayDestRect.isEmpty()) {
 				break;
 			}
@@ -245,8 +242,7 @@ void DrivingPuzzle::armExit(const DestinationZone &dest) {
 void DrivingPuzzle::armExitScene(uint16 sceneID, int16 flag, byte flagValue) {
 	_exitScene._sceneChange = SceneChangeDescription();
 	_exitScene._sceneChange.sceneID = sceneID;
-	_exit
-Scene._flag.label = flag;
+	_exitScene._flag.label = flag;
 	_exitScene._flag.flag = flagValue ? g_nancy->_true : g_nancy->_false;
 	_exitHasFade = false;
 	_state = kActionTrigger;
@@ -301,8 +297,7 @@ void DrivingPuzzle::init() {
 	if (!_chaserPathA.empty()) {
 		_chaserX = _chaserPathA[0].x;
 		_chaserY = _chaserPathA[0].y;
-		_chaserHeading = _chaserP
-athA[0].heading;
+		_chaserHeading = _chaserPathA[0].heading;
 	}
 }
 
@@ -369,8 +364,7 @@ void DrivingPuzzle::drawOverlays(const Common::Point &cam, bool aboveCar) {
 
 		// Only draw the decoration while its event-flag condition holds (a car appears
 		// once its story flag is set, etc.).
-		if (ov.condFlag != -1 && !NancySceneState.getEventFlag(ov.condFlag, ov.condValue
-)) {
+		if (ov.condFlag != -1 && !NancySceneState.getEventFlag(ov.condFlag, ov.condValue)) {
 			continue;
 		}
 
@@ -441,8 +435,7 @@ bool DrivingPuzzle::isBlocked(const Common::Point &p) const {
 	return false;
 }
 
-void Drivi
-ngPuzzle::drawScene() {
+void DrivingPuzzle::drawScene() {
 	Common::Point cam = cameraOffset();
 	int camX = cam.x;
 	int camY = cam.y;
@@ -498,8 +491,7 @@ void DrivingPuzzle::updateChaser() {
 	const Waypoint &wp = path[_chaserWaypoint];
 	_chaserX = wp.x;
 	_chaserY = wp.y;
-	_chaserHea
-ding = wp.heading;
+	_chaserHeading = wp.heading;
 
 	// The closer the chaser is, the lower the player's speed cap (it bottoms out at a
 	// full stop once the chaser is right on top of the car).
@@ -549,7 +541,6 @@ ding = wp.heading;
 		}
 		break;
 	case kCaught:
-
 		// The chaser has completed its route (Jane crashes) - the win.
 		if (_chaserWaypoint + 1 >= path.size()) {
 			armExitScene(_chaseParams[kChasePathEndScene], -1, 0);
@@ -587,8 +578,7 @@ void DrivingPuzzle::updatePhysics(int throttle, double cursorDist) {
 
 	// Mud slows the car (it does not stop it): while sitting in a puddle its top speed is
 	// cut. Jane's car is a recorded playback that ignores the terrain, so the penalty is
-	// kept mild - enough to matter in the free-driving map without making the
- chase, where
+	// kept mild - enough to matter in the free-driving map without making the chase, where
 	// she never slows, unwinnable.
 	Common::Point cur((int)(_carX + 0.5), (int)(_carY + 0.5));
 	for (uint i = 0; i < _mudZones.size(); ++i) {
@@ -640,8 +630,7 @@ void DrivingPuzzle::updatePhysics(int throttle, double cursorDist) {
 	Common::Point next((int)(_carX + 0.5), (int)(_carY + 0.5));
 
 	// The gas tank empties by the distance the car actually travels this frame divided by
-	// the header's distance divisor. The DT_RESOURCE scene dependency reads the
- same
+	// the header's distance divisor. The DT_RESOURCE scene dependency reads the same
 	// resource to warn Nancy when it runs low.
 	if (_distanceDivisor > 0 && !_infiniteFuel) {
 		double moved = sqrt((_carX - preX) * (_carX - preX) + (_carY - preY) * (_carY - preY));
@@ -689,8 +678,7 @@ void DrivingPuzzle::updatePhysics(int throttle, double cursorDist) {
 	}
 
 	// A drive-in destination (the chase finish line) fires on entry; a parking
-	// destination (a location) is only noted here and entered 
-with space in handleInput.
+	// destination (a location) is only noted here and entered with space in handleInput.
 	_parkedDest = -1;
 	for (uint i = 0; i < _destinations.size(); ++i) {
 		DestinationZone &dest = _destinations[i];
@@ -749,8 +737,7 @@ void DrivingPuzzle::handleInput(NancyInput &input) {
 	// Ctrl+Shift+T repairs the spare tire (clears pothole wear and restores it to good).
 	for (uint i = 0; i < input.otherKbdInput.size(); ++i) {
 		const Common::KeyState &key = input.otherKbdInput[i];
-		if ((key.flags & Common::KBD_CTRL) == 0 || (key.flags & Common::KBD_SHIFT) =
-= 0) {
+		if ((key.flags & Common::KBD_CTRL) == 0 || (key.flags & Common::KBD_SHIFT) == 0) {
 			continue;
 		}
 		if (key.keycode == Common::KEYCODE_g) {
@@ -815,8 +802,7 @@ void DrivingPuzzle::handleInput(NancyInput &input) {
 		}
 	}
 
-	// Drive continuously s
-o momentum and the chaser animate every frame.
+	// Drive continuously so momentum and the chaser animate every frame.
 	if (_variant == kChase) {
 		updateChaser();
 		if (_state != kRun) {

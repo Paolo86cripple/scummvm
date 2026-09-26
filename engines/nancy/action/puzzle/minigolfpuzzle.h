@@ -52,8 +52,7 @@ protected:
 
 	void redraw();
 	void drawBall();
-	void drawGhostBall(const Common::
-Rect &src, const Common::Point &dest);
+	void drawGhostBall(const Common::Rect &src, const Common::Point &dest);
 	void drawAimPreview();
 	void launchBall(const Common::Point &maskCursor);
 	void writeStrokeCount();			// mirror _strokes into the scorecard's TableData slot
@@ -89,8 +88,7 @@ Rect &src, const Common::Point &dest);
 	byte _winFadeType = 0;
 	uint16 _winFadeTotalTime = 0;
 	uint16 _winFadeToBlackTime = 0;
-	
-Common::Rect _winFadeRect;
+	Common::Rect _winFadeRect;
 
 	Common::Array<Common::Rect> _ballFrames;	// ball roll animation frames
 
@@ -136,8 +134,7 @@ Common::Rect _winFadeRect;
 	double _pipeInVy = 0.0;
 	bool _ballHidden = false;			// ball is inside a pipe (not drawn)
 
-	Graphics:
-:ManagedSurface _boundaryMask;
+	Graphics::ManagedSurface _boundaryMask;
 
 	// Cosmetic overlay sprite (ActionZone type 0xd), e.g. hole 6a's broken wall.
 	Graphics::ManagedSurface _overlayImage;

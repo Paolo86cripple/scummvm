@@ -55,8 +55,7 @@ protected:
 	static const int kNumButtons = 5;
 
 	SoundDescription _feedbackSoundWrong;  // played on incorrect whale click
-	SoundDescription _feedbackSoundRight;  
-// played on correct whale click
+	SoundDescription _feedbackSoundRight;  // played on correct whale click
 
 	uint16 _requiredPairs = kNumButtons;   // how many matches needed to win
 
@@ -118,5 +117,4 @@ protected:
 } // End of namespace Action
 } // End of namespace Nancy
 
-#endif // NANCY_ACT
-ION_SOUNDMATCHPUZZLE_H
+#endif // NANCY_ACTION_SOUNDMATCHPUZZLE_H

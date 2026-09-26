@@ -56,8 +56,7 @@ void PaintPuzzle::readData(Common::SeekableReadStream &stream) {
 		color.g = stream.readByte();
 		color.b = stream.readByte();
 		readRect(stream, color.swatchRect);
-		readRect(s
-tream, color.fillRect);
+		readRect(stream, color.fillRect);
 		if (isNancy15) {
 			readRect(stream, color.objectRect);
 			color.flagLabel = stream.readSint16LE();
@@ -116,8 +115,7 @@ void PaintPuzzle::init() {
 
 	_regionImages.resize(_regions.size());
 	for (uint i = 0; i < _regions.size(); ++i) {
-	
-	if (!_regions[i].name.empty()) {
+		if (!_regions[i].name.empty()) {
 			g_nancy->_resource->loadImage(_regions[i].name, _regionImages[i]);
 		}
 	}
@@ -184,8 +182,7 @@ void PaintPuzzle::drawRegion(uint regionIndex) {
 		return;
 	}
 
-	const Graphics::ManagedSurface &img = _regionImages[regionInd
-ex];
+	const Graphics::ManagedSurface &img = _regionImages[regionIndex];
 	if (img.w == 0 || img.h == 0) {
 		return;
 	}
@@ -245,8 +242,7 @@ void PaintPuzzle::drawSprite(const Graphics::ManagedSurface &img, const Common::
 			continue;
 		}
 
-		for (int x = 0; x < src.width() 
-&& src.left + x < img.w; ++x) {
+		for (int x = 0; x < src.width() && src.left + x < img.w; ++x) {
 			const int dx = dest.x + x;
 			if (dx < 0 || dx >= _drawSurface.w) {
 				continue;
@@ -321,8 +317,7 @@ bool PaintPuzzle::isSolved() const {
 	Common::Array<bool> used(_regions.size(), false);
 	for (uint i = 0; i < _regions.size(); ++i) {
 		bool found = false;
-		for (uint j = 0; j < _regions.size(
-); ++j) {
+		for (uint j = 0; j < _regions.size(); ++j) {
 			if (!used[j] && _regions[j].currentColor == _regions[i].targetColor) {
 				used[j] = true;
 				found = true;
@@ -391,8 +386,7 @@ void PaintPuzzle::handleInput(NancyInput &input) {
 	// as one covers the canvas.
 	for (uint i = 0; i < _exitHotspots.size() && !(isNancy15 && _heldColor >= 0); ++i) {
 		if (!_exitHotspots[i].hotspot.isEmpty() &&
-				NancySceneState.getViewport().
-convertViewportToScreen(_exitHotspots[i].hotspot).contains(input.mousePos)) {
+				NancySceneState.getViewport().convertViewportToScreen(_exitHotspots[i].hotspot).contains(input.mousePos)) {
 			g_nancy->_cursor->setCursorType((CursorManager::CursorType)_exitHotspots[i].cursorType, true);
 			if (input.input & NancyInput::kLeftMouseButtonUp) {
 				_takenExit = (int)i;
@@ -463,8 +457,7 @@ void PaintPuzzle::execute() {
 			_state = kActionTrigger;
 		}
 		break;
-	cas
-e kActionTrigger:
+	case kActionTrigger:
 		// The solve sound gets to finish first
 		if (_takenExit < 0 && isSoundBlockPlaying(_solveSoundBlock)) {
 			break;

@@ -43,8 +43,7 @@ namespace Action {
 // puzzle in Dieter's house.
 class TurningPuzzle : public PuzzleRecord {
 public:
-	en
-um SolveState { kNotSolved, kWaitForAnimation, kWaitBeforeSound, kWaitForSound };
+	enum SolveState { kNotSolved, kWaitForAnimation, kWaitBeforeSound, kWaitForSound };
 	TurningPuzzle() : PuzzleRecord(7) {}
 	virtual ~TurningPuzzle() {}
 
@@ -108,8 +107,7 @@ protected:
 	Common::Array<uint16> _pieceTypeIDs;					// per object
 	Common::Array<Common::Array<uint16>> _correctOrders;	// up to three alternative solutions
 	uint16 _turnDelay = 0;			// header 0x21 - length of a whole turn, in ms
-	uint16 _hoverCursorType = 0;	// header 0x23 - raw Nancy13 cursor id (a turn curso
-r)
+	uint16 _hoverCursorType = 0;	// header 0x23 - raw Nancy13 cursor id (a turn cursor)
 	uint16 _hitInset = 0;			// header 0x25 - hotspots are the dest rect shrunk by this
 	int16 _turnFlagLabel = -1;		// header 0x27 - set once the player turns anything
 	byte _turnFlagValue = 0;		// header 0x29

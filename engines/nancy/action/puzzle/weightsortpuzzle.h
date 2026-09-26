@@ -49,8 +49,7 @@ public:
 	void execute() override;
 	void handleInput(NancyInput &input) override;
 
-	bool isViewportRelativ
-e() const override { return true; }
+	bool isViewportRelative() const override { return true; }
 
 	static const uint kNumOutcomes = 2;
 
@@ -112,8 +111,7 @@ protected:
 
 	void scatter(Object &object);
 	void scatterContainer(uint container);
-	int objectAtCursor(const Co
-mmon::Point &mousePos) const;
+	int objectAtCursor(const Common::Point &mousePos) const;
 	int containerAtCursor(const Common::Point &mousePos) const;
 	int shakeHotspotAtCursor(const Common::Point &mousePos) const;
 	bool canPickUp(const Object &object) const;

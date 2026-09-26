@@ -52,8 +52,7 @@ public:
 	// Bits of a tile type id.
 	enum TileFlags : int32 {
 		kTileWalkable	= 0x001,
-		kTileMovable	= 0x010,	// slides along w
-hen a line is pushed
+		kTileMovable	= 0x010,	// slides along when a line is pushed
 		kTileMissing	= 0x100		// overrides kTileWalkable
 	};
 
@@ -144,8 +143,7 @@ protected:
 	};
 
 	struct ActorAnim {
-		ActorAnimKind kind = kActorSta
-y;
+		ActorAnimKind kind = kActorStay;
 		Common::Point from;
 		Common::Point to;
 		int32 tileID = 0;
@@ -194,8 +192,7 @@ y;
 	int32 characterSinkTime(uint actor, int32 tileID) const;
 	int32 characterRiseTime(uint actor, int32 tileID) const;
 
-	void pushTileAnim(const Com
-mon::Point &cell, TileAnimKind kind, int32 tileID, int32 time);
+	void pushTileAnim(const Common::Point &cell, TileAnimKind kind, int32 tileID, int32 time);
 	void pushActorAnim(uint actor, ActorAnimKind kind, const Common::Point &cell, int32 tileID, int32 time);
 	int32 cellQueueTime(const Common::Point &cell) const;
 	int32 actorQueueTime(uint actor) const;
@@ -238,8 +235,7 @@ mon::Point &cell, TileAnimKind kind, int32 tileID, int32 time);
 	// give the row pitch and the staggered column pitch of the honeycomb.
 	Common::Rect _originCell;
 	Common::Rect _rowStepCell;
-	Common::Rect _colSt
-epCell;
+	Common::Rect _colStepCell;
 
 	byte _unknownGridFlag = 0;
 	int32 _numCols = 0;

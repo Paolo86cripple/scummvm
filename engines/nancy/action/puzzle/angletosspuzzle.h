@@ -44,7 +44,6 @@ namespace Action {
 
 class AngleTossPuzzle : public PuzzleRecord {
 public:
-
 	AngleTossPuzzle() : PuzzleRecord(7) {}
 	virtual ~AngleTossPuzzle() {}
 
@@ -87,8 +86,7 @@ protected:
 	//   Rects 12-16 — data+0xed..0x12d  _powerHotspots[5]  (power-select click areas)
 	//   Rects 17-21 — data+0x13d..0x17d  _powerSprites[5]  (5 power images in sprite sheet)
 
-	Common::Rect _throwHotspot;						// Rect  0 — c
-lickable area for LAUNCH
+	Common::Rect _throwHotspot;						// Rect  0 — clickable area for LAUNCH
 	Common::Rect _throwDisplay;						// Rect  1 — sprite dest on screen
 	Common::Rect _throwSprite;						// Rect  2 — source in image
 	Common::Rect _aimLeftHotspot;					// Rect  3

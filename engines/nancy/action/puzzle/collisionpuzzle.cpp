@@ -64,8 +64,7 @@ void CollisionPuzzle::init() {
 				switch (id) {
 				case 1 :
 					newPiece._w = 2;
-					bre
-ak;
+					break;
 				case 2 :
 					newPiece._h = 2;
 					break;
@@ -144,8 +143,7 @@ void CollisionPuzzle::updateGraphics() {
 		}
 
 		if (_currentlyAnimating != -1) {
-			// Framerate-
-dependent animation. Should be fine since we limit the engine to ~60fps
+			// Framerate-dependent animation. Should be fine since we limit the engine to ~60fps
 			++_currentAnimFrame;
 			bool horizontal = _lastPosition.x != _pieces[_currentlyAnimating]._gridPos.x;
 			int diff = horizontal ?
@@ -198,8 +196,7 @@ void CollisionPuzzle::readData(Common::SeekableReadStream &stream) {
 	// Nancy 10+ TileMove (and Nancy 11+ Collision) store rows then cols (was width then height for square grids)
 	uint16 width, height;
 	if ((_puzzleType == kTileMove && g_nancy->getGameType() >= kGameTypeNancy10) || collisionNancy11) {
-		height = st
-ream.readUint16LE();
+		height = stream.readUint16LE();
 		width = stream.readUint16LE();
 	} else {
 		width = stream.readUint16LE();
@@ -261,8 +258,7 @@ ream.readUint16LE();
 		readRectArray(stream, _pieceSrcs, numPieces, maxPieces);
 		readRectArray(stream, _homeSrcs, numPieces, maxPieces);
 
-		readRect(stream, 
-_verticalWallSrc);
+		readRect(stream, _verticalWallSrc);
 		readRect(stream, _horizontalWallSrc);
 		readRect(stream, _blockSrc);
 	} else {
@@ -334,8 +330,7 @@ void CollisionPuzzle::execute() {
 			return;
 		}
 
-		// C
-heck timer
+		// Check timer
 		if (_timerSrcs.size()) {
 			if ((g_nancy->getTotalPlayTime() - _puzzleStartTime) > _timerTime * 1000) {
 				_state = kActionTrigger;
@@ -397,8 +392,7 @@ heck timer
 				}
 
 				playSolveSound();
-				NancySceneState.setEventFlag(_solveScene
-._flag);
+				NancySceneState.setEventFlag(_solveScene._flag);
 				_solveSoundPlayTime = 0;
 				return;
 			} else {
@@ -482,8 +476,7 @@ Common::Point CollisionPuzzle::movePiece(uint pieceID, WallType direction) {
 			comparePos.y = i;
 		}
 
-		Common::Rect compareRect(comparePos.x, comparePos.y, comparePos.x + _pieces[pieceID]._w, comparePos.y + 
-_pieces[pieceID]._h);
+		Common::Rect compareRect(comparePos.x, comparePos.y, comparePos.x + _pieces[pieceID]._w, comparePos.y + _pieces[pieceID]._h);
 
 		for (uint j = 0; j < _pieces.size(); ++j) {
 			if (pieceID == j) {
@@ -554,8 +547,7 @@ Common::Rect CollisionPuzzle::getScreenPosition(Common::Point gridPos) {
 
 	if (_puzzleType == kTileMove) {
 		// The cell width is that of a 1-wide piece; halving the 2-wide sprite rounds up
-		d
-est.setWidth(_pieceSrcs[1].width() - 1);
+		dest.setWidth(_pieceSrcs[1].width() - 1);
 	}
 
 	dest.moveTo(_gridPos);
@@ -628,8 +620,7 @@ void CollisionPuzzle::drawGrid() {
 					dest.y += 1;
 				}
 
-				_drawSurface.blitFrom(_image, _homeSrcs[cell - 1],
- dest);
+				_drawSurface.blitFrom(_image, _homeSrcs[cell - 1], dest);
 			}
 		}
 	}
@@ -686,8 +677,7 @@ void CollisionPuzzle::handleInput(NancyInput &input) {
 			// Width == height, all movement is permitted, hotspots are 10 pixels wide
 			left.setWidth(10);
 			left.setHeight(screenPos.height() - 20);
-			left.moveTo(screenPos.left, screen
-Pos.top + 10);
+			left.moveTo(screenPos.left, screenPos.top + 10);
 			right = left;
 			right.translate(screenPos.width() - 10, 0);
 
@@ -752,8 +742,7 @@ Pos.top + 10);
 			if (up.contains(input.mousePos)) {
 				checkPos = movePiece(i, kWallUp);
 				if (checkPos != _pieces[i]._gridPos) {
-	
-				g_nancy->_cursor->setCursorType(upCursor);
+					g_nancy->_cursor->setCursorType(upCursor);
 
 					if (input.input & NancyInput::kLeftMouseButtonUp) {
 						_lastPosition = _pieces[i]._gridPos;

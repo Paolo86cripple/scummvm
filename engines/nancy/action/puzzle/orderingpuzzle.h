@@ -39,8 +39,7 @@ namespace Action {
 class OrderingPuzzle : public PuzzleRecord {
 public:
 	enum SolveState { kNotSolved, kPlaySound, kWaitForSound, kStageBlink };
-	enum PuzzleT
-ype { kOrdering, kPiano, kOrderItems, kKeypad, kKeypadTerse };
+	enum PuzzleType { kOrdering, kPiano, kOrderItems, kKeypad, kKeypadTerse };
 	OrderingPuzzle(PuzzleType type) : PuzzleRecord(7), _puzzleType(type) {}
 	virtual ~OrderingPuzzle() {}
 
@@ -92,8 +91,7 @@ protected:
 	Common::Array<Common::Rect> _mixedListDests;
 	Common::Array<Common::Rect> _currentRecipeSrcs;
 	Common::Array<Common::Rect> _currentRecipeDests;
-	bool
- _stageDisplayBlink = false;
+	bool _stageDisplayBlink = false;
 	bool _stageSymbolVisible = true;
 	Time _stageBlinkEndTime;
 	Time _stageBlinkNextToggle;

@@ -61,8 +61,7 @@ Common::String PuzzleRecord::getRecordExtraInfo() const {
 	}
 
 	appendSceneInfo(info, "Solve", _solveScene);
-	a
-ppendSceneInfo(info, "Exit", _exitScene);
+	appendSceneInfo(info, "Exit", _exitScene);
 	return info;
 }
 
@@ -124,8 +123,7 @@ void PuzzleRecord::readExitHotspot(Common::SeekableReadStream &stream) {
 
 bool PuzzleRecord::isExitHotspotHovered(const NancyInput &input) const {
 	return !_exitHotspot.isEmpty() &&
-		NancySceneState.g
-etViewport().convertViewportToScreen(_exitHotspot).contains(input.mousePos);
+		NancySceneState.getViewport().convertViewportToScreen(_exitHotspot).contains(input.mousePos);
 }
 
 void PuzzleRecord::setExitCursor() const {

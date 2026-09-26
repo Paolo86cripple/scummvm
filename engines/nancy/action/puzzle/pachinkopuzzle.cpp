@@ -49,8 +49,7 @@ static const double kDrag = 12.0;				// px/s per second
 // so they collide as circles at the drawn pin + ball radii.
 static const double kPinRadius = 4.0;
 static const double kBallRadius = 5.0;
-static const int kPhysicsSubsteps = 4;			
-// per frame, to avoid tunnelling the pins
+static const int kPhysicsSubsteps = 4;			// per frame, to avoid tunnelling the pins
 
 static const uint32 kHoleLitMs = 400;			// how long a hole stays lit after a catch
 
@@ -108,8 +107,7 @@ void PachinkoPuzzle::readData(Common::SeekableReadStream &stream) {
 	// The bumpers / walls / overlays, in the Nancy13 zone layout.
 	readActionZoneArray(stream, _zones, true);
 
-	// The base trailer's hotspot records; t
-he first is the give-up exit.
+	// The base trailer's hotspot records; the first is the give-up exit.
 	readExitHotspot(stream);
 }
 
@@ -179,8 +177,7 @@ void PachinkoPuzzle::buildHoles() {
 				break;
 			}
 		}
-		if (!cl
-imber) {
+		if (!climber) {
 			continue;
 		}
 
@@ -249,8 +246,7 @@ void PachinkoPuzzle::init() {
 	}
 
 	_pzState = kRunning;
-	
-_lastUpdate = g_nancy->getTotalPlayTime();
+	_lastUpdate = g_nancy->getTotalPlayTime();
 
 	redraw();
 	registerGraphics();
@@ -306,8 +302,7 @@ bool PachinkoPuzzle::collidePins(Ball &ball) const {
 		double nxn = dx / d;
 		double nyn = dy / d;
 		double vx = cos(ball.angle) * ball.speed;
-		double vy = -sin(ball.angle) * ball.spe
-ed;
+		double vy = -sin(ball.angle) * ball.speed;
 		double dot = vx * nxn + vy * nyn;
 		vx -= 2.0 * dot * nxn;
 		vy -= 2.0 * dot * nyn;
@@ -376,8 +371,7 @@ void PachinkoPuzzle::stepBall(Ball &ball, double dt) {
 	}
 }
 
-void PachinkoPuzzle::advance
-Machine(Machine &m, uint32 now) {
+void PachinkoPuzzle::advanceMachine(Machine &m, uint32 now) {
 	if (m.frames.empty() || m.animRate <= 0) {
 		return;
 	}
@@ -443,8 +437,7 @@ void PachinkoPuzzle::execute() {
 		// fall through
 	case kRun: {
 		uint32 now = g_nancy->getTotalPlayTime();
-		double dt = 
-(now - _lastUpdate) / 1000.0;
+		double dt = (now - _lastUpdate) / 1000.0;
 		_lastUpdate = now;
 		if (dt > 0.1) {
 			dt = 0.1;	// clamp long stalls
@@ -518,8 +511,7 @@ void PachinkoPuzzle::execute() {
 			redraw();
 			break;
 		}
-		case kWaitRes
-ult: {
+		case kWaitResult: {
 			bool movieDone = !_resultMovie.isVideoLoaded() ||
 				(!_resultMovie.isRangePlaying());
 			if (_resultMovie.isVideoLoaded() && _resultMovie.update()) {
@@ -581,8 +573,7 @@ void PachinkoPuzzle::handleInput(NancyInput &input) {
 		if (click) {
 			// One launcher click queues one ball.
 			_spawnPending = true;
-			_spawnClickTime = g_nancy->getT
-otalPlayTime();
+			_spawnClickTime = g_nancy->getTotalPlayTime();
 		}
 		input.eatMouseInput();
 		return;

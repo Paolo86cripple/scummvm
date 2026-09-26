@@ -52,8 +52,7 @@ protected:
 	void setDataCursor(uint16 cursorType, bool hotspotVariant = true) const;
 
 	// Plays a random sound from the block and shows its caption, looked up by the sound's
-	// name, first in AUTOTEXT, then in CONVO. Return
-s the sound's description, which is
+	// name, first in AUTOTEXT, then in CONVO. Returns the sound's description, which is
 	// left as "NO SOUND" when the block has nothing to play.
 	SoundDescription playSoundBlock(const RandomSoundBlock &block);
 	bool isSoundBlockPlaying(const RandomSoundBlock &block) const;

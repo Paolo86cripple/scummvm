@@ -55,8 +55,7 @@ void WeightSortPuzzle::readContainer(Common::SeekableReadStream &stream, Contain
 	dst.showTotalWeight = stream.readByte();
 	dst.countsTowardOutcome = (stream.readSint16LE() != 0);
 	dst.pickUpMode = (byte)stream.readSint16LE();
-	dst.dropInPlace = (stream.readSint16LE() 
-!= 0);
+	dst.dropInPlace = (stream.readSint16LE() != 0);
 
 	for (uint i = 0; i < kNumOutcomes; ++i) {
 		dst.ranges[i].maxExclusive = stream.readSint32LE();
@@ -121,8 +120,7 @@ void WeightSortPuzzle::readData(Common::SeekableReadStream &stream) {
 
 	for (uint i = 0; i < kNumOutcomes; ++i) {
 		Outcome &outcome = _outcomes[i];
-		outcome.scene.sceneID 
-= stream.readUint16LE();
+		outcome.scene.sceneID = stream.readUint16LE();
 		outcome.scene.frameID = stream.readUint16LE();
 		outcome.scene.continueSceneSound = kContinueSceneSound;
 		outcome.flag.label = stream.readSint16LE();
@@ -179,8 +177,7 @@ void WeightSortPuzzle::init() {
 	for (uint i = 0; i < _containers.size(); ++i) {
 		const Common::Array<int32> &contents = _containers[i].initialContents;
 		for (uint j = 0; j < contents.size(); ++j) {
-			int32 typeID = contents
-[j];
+			int32 typeID = contents[j];
 			if (typeID < 0 || (uint)typeID >= _objectTypes.size()) {
 				continue;
 			}
@@ -258,8 +255,7 @@ int WeightSortPuzzle::countListed(const Common::Array<int32> &list, int32 type) 
 int WeightSortPuzzle::countIn(uint container, int32 type) const {
 	int count = 0;
 	for (uint i = 0; i < _objects.size(); ++i) {
-		if (_objects[i].container == (int)container && (int32)_objects[i].ty
-pe == type) {
+		if (_objects[i].container == (int)container && (int32)_objects[i].type == type) {
 			++count;
 		}
 	}
@@ -339,8 +335,7 @@ int WeightSortPuzzle::reachedOutcome() const {
 	}
 
 	bool cursorOK = !_firstNeedsEmptyCursor || _carriedObjectID == -1;
-	if (cursorOK && (_firstNeedsAllConta
-iners ? (numPassing[0] == numCounted) : (numPassing[0] > 0))) {
+	if (cursorOK && (_firstNeedsAllContainers ? (numPassing[0] == numCounted) : (numPassing[0] > 0))) {
 		return 0;
 	}
 
@@ -415,8 +410,7 @@ void WeightSortPuzzle::execute() {
 		if (_exitRequested) {
 			_exitScene.execute();
 		} else {
-			
-NancySceneState.setEventFlag(_outcomes[_outcome].flag);
+			NancySceneState.setEventFlag(_outcomes[_outcome].flag);
 			NancySceneState.changeScene(_outcomes[_outcome].scene);
 		}
 
@@ -486,8 +480,7 @@ void WeightSortPuzzle::handleInput(NancyInput &input) {
 	if (object >= 0 && canPickUp(_objects[object])) {
 		setDataCursor(_hoverCursorType);
 		if (click) {
-			_carriedFrom = _object
-s[object].container;
+			_carriedFrom = _objects[object].container;
 			playSoundBlock(_containers[_carriedFrom].pickUpSound);
 			_objects[object].container = -1;
 			carryObject(object, input);

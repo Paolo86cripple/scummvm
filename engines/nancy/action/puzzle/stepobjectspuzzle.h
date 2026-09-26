@@ -54,8 +54,7 @@ protected:
 	enum SoundID {
 		kSoundPickUp = 0,
 		kSoundStep = 1,
-		kSoundCorrectS
-tep = 2,
+		kSoundCorrectStep = 2,
 		kSoundWrongStep = 3,
 		kSoundReset = 4,
 		kSoundSolved = 5,
@@ -127,8 +126,7 @@ tep = 2,
 	bool _lastStepWasDrop = false;
 	bool _lastStepCorrect = false;
 	bool _solved = false;
-	bool _exitRequested = f
-alse;
+	bool _exitRequested = false;
 
 };
 

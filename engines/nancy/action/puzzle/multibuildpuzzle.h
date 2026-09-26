@@ -51,7 +51,6 @@ public:
 
 	bool isViewportRelative() const override { return true; }
 
-
 protected:
 	Common::String getRecordTypeName() const override { return "MultiBuildPuzzle"; }
 	bool isValidDrop() const;
@@ -97,8 +96,7 @@ protected:
 		bool hasSurface[4] = {};
 		Graphics::ManagedSurface image;
 
-		bool isViewportRelat
-ive() const override { return true; }
+		bool isViewportRelative() const override { return true; }
 	};
 
 	Common::Path _primaryImageName;
@@ -144,8 +142,7 @@ ive() const override { return true; }
 	int16 _exitCursorID2 = -1;
 
 	Common::String _solveTextKey;  // Looked up in CONVO chunk first
-	Common::String _solveText;     // Raw fa
-llback used if key missing
+	Common::String _solveText;     // Raw fallback used if key missing
 
 	// "Enough pieces placed" flag; its own field in Nancy 13, the cancel scene's before.
 	FlagDescription _minCountFlag;
@@ -199,8 +196,7 @@ llback used if key missing
 	AnimRender _animRender;
 	uint16 _animFrameCounter = 0;
 	uint16 _animRowCounter = 0;
-	uint32 _an
-imFrameWaitEnd = 0;
+	uint32 _animFrameWaitEnd = 0;
 	Common::Rect _animSrcRect;
 	bool _animActive = false;
 	bool _animEnded = false;

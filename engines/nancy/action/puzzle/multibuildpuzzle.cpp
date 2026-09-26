@@ -54,8 +54,7 @@ void MultiBuildPuzzle::init() {
 	}
 
 	if (_hasAnimImage) {
-		_animRender._drawSurface.create(_animRect.width(), _animRect
-.height(),
+		_animRender._drawSurface.create(_animRect.width(), _animRect.height(),
 				g_nancy->_graphics->getInputPixelFormat());
 		_animRender.setTransparent(true);
 		_animRender._drawSurface.clear(g_nancy->_graphics->getTransColor());
@@ -121,8 +120,7 @@ void MultiBuildPuzzle::registerGraphics() {
 		_animRender.registerGraphics();
 
 	for (uint i = 0; i < _pieces.size(); ++i)
-		_pieces[i]->registe
-rGraphics();
+		_pieces[i]->registerGraphics();
 }
 
 void MultiBuildPuzzle::readData(Common::SeekableReadStream &stream) {
@@ -183,8 +181,7 @@ void MultiBuildPuzzle::readData(Common::SeekableReadStream &stream) {
 		// overlay (cake mixing) and non-empty when it must be rendered live at
 		// rest (plant potting).
 		readRect(stream, p.srcRect);
-		readRect(s
-tream, p.homeRect);
+		readRect(stream, p.homeRect);
 		readRect(stream, p.altSrcRect);
 		readRect(stream, p.cuSrcRect);
 
@@ -254,8 +251,7 @@ tream, p.homeRect);
 		_submitSound.readNormal(stream);
 		readFilename(stream, _submitTextKey);
 		stream.read(textBuf, 200);
-		assembleTextLine(
-textBuf, _submitText, 200);
+		assembleTextLine(textBuf, _submitText, 200);
 
 		readRect(stream, _exitHotspot);
 		_exitCursorID1 = stream.readSint16LE();
@@ -335,8 +331,7 @@ void MultiBuildPuzzle::execute() {
 
 		case kResetButtonHeld:
 			// The button shows its pressed sprite briefly, then clears the board.
-			if
- (g_system->getMillis() >= _timerEnd) {
+			if (g_system->getMillis() >= _timerEnd) {
 				_solveState = kIdle;
 				resetPuzzle();
 			}
@@ -406,8 +401,7 @@ void MultiBuildPuzzle::execute() {
 			NancySceneState.changeScene(_submitScene._sceneChange);
 		} else if (_isCancelled) {
 			NancySceneState.changeScene(_exitScene._sceneChange);
-	
-		// Cancel flag is only set if at least one piece was placed (or
+			// Cancel flag is only set if at least one piece was placed (or
 			// spawned). For sandwich (all counter pieces) the spawn delta is
 			// what trips the gate when a bad ingredient was placed.
 			if (_exitScene._flag.label != kFlagNoLabel) {
@@ -468,8 +462,7 @@ bool MultiBuildPuzzle::altZoneSnapValid() const {
 void MultiBuildPuzzle::spawnCounterPiece(int srcIdx) {
 	if (srcIdx < 0 || srcIdx >= (int)_pieces.size())
 		return;
-	// Defensive cap t
-o avoid runaway memory use (sand castle can spawn endlessly).
+	// Defensive cap to avoid runaway memory use (sand castle can spawn endlessly).
 	if (_pieces.size() >= 80)
 		return;
 
@@ -527,8 +520,7 @@ bool MultiBuildPuzzle::isValidDrop() const {
 	bool inTargetZone =
 		!_targetZone.isEmpty() &&
 		_targetZone.left   < pp.gameRect.left &&
-		pp.gameRect.right  <= _targetZ
-one.right  + kEdgeTolerance &&
+		pp.gameRect.right  <= _targetZone.right  + kEdgeTolerance &&
 		_targetZone.top    < pp.gameRect.top &&
 		pp.gameRect.bottom <= _targetZone.bottom + kEdgeTolerance;
 
@@ -594,8 +586,7 @@ void MultiBuildPuzzle::handleInput(NancyInput &input) {
 	// away at the bottom of the screen to cancel adding it.
 	if (!_isDragging && !vpScreen.contains(input.mousePos)) {
 		if (!checkExitHotspot(_exitHotspot, _exitCursorID1, true, input))
-			checkExitHotspot(_exi
-tHotspot2, _exitCursorID2, false, input);
+			checkExitHotspot(_exitHotspot2, _exitCursorID2, false, input);
 		return;
 	}
 
@@ -644,8 +635,7 @@ tHotspot2, _exitCursorID2, false, input);
 			// ingredient's placement count and returns the piece to the shelf;
 			// there is a single piece per ingredient (no counter-spawn), so the
 			// count is tracked purely by placeCount.
-			const bool addMode = isNancy10 && _altZoneSnapMode == 
-2;
+			const bool addMode = isNancy10 && _altZoneSnapMode == 2;
 
 			if (validDrop) {
 				int srcIdx = (pp.typeIdx >= 0) ? pp.typeIdx : placedIdx;
@@ -710,8 +700,7 @@ tHotspot2, _exitCursorID2, false, input);
 
 		// Only the closeup itself is interactive: clicking it picks it up to
 		// drag. Anywhere else the exit hotspots stay live, so the player can back
-		// away at the bottom of the screen to 
-cancel adding the ingredient.
+		// away at the bottom of the screen to cancel adding the ingredient.
 		if (!pp.gameRect.contains(mouseVP)) {
 			if (!checkExitHotspot(_exitHotspot, _exitCursorID1, true, input))
 				checkExitHotspot(_exitHotspot2, _exitCursorID2, false, input);
@@ -765,8 +754,7 @@ cancel adding the ingredient.
 			                     p.gameRect.left + _rotHotspotWidth,
 			                     p.gameRect.top  + _rotHotspotHeight);
 			if (rotRect.contains(mouseVP)) {
-				if (topmostRot
- == -1 || p.getZOrder() > _pieces[topmostRot]->getZOrder())
+				if (topmostRot == -1 || p.getZOrder() > _pieces[topmostRot]->getZOrder())
 					topmostRot = (int16)i;
 				continue;
 			}
@@ -828,8 +816,7 @@ cancel adding the ingredient.
 	}
 
 	// Exit hotspots: a click in either fires the exit path. Each uses its own data cursor id.
-	if (!checkExitHotspot(_exitHotspot, _exitCursorID1,
- true, input))
+	if (!checkExitHotspot(_exitHotspot, _exitCursorID1, true, input))
 		checkExitHotspot(_exitHotspot2, _exitCursorID2, false, input);
 }
 
@@ -885,8 +872,7 @@ void MultiBuildPuzzle::checkIfSolvedOnExit() {
 
 void MultiBuildPuzzle::submitPuzzle() {
 	// The order is handed over as-is; the two flags say what was in it.
-	u
-pdateSolveFlags();
+	updateSolveFlags();
 	_isSubmitted = true;
 	g_nancy->_sound->playSound(_submitSound);
 	showSubtitle(resolveSubtitleText(_submitTextKey, _submitText, "CONVO"));
@@ -948,8 +934,7 @@ bool MultiBuildPuzzle::updateSolveFlags() {
 		return false;
 
 	// The solve scene's flag marks an exact recipe match. It is cleared until
-	// every ingredient count matc
-hes; only then is it raised to its true value.
+	// every ingredient count matches; only then is it raised to its true value.
 	bool exact = true;
 	for (uint i = 0; i < _numPieces; ++i) {
 		const Piece &p = *_pieces[i];
@@ -1015,8 +1000,7 @@ void MultiBuildPuzzle::checkIfSolved() {
 	g_nancy->_sound->playSound(_solveSound);
 	// A CONVO key that resolves to an empty string means audio-only; otherwise fall
 	// back to the raw caption when the key isn't in CONVO.
-	showSubtitle(resolveSubtitleText(_solveTe
-xtKey, _solveText, "CONVO"));
+	showSubtitle(resolveSubtitleText(_solveTextKey, _solveText, "CONVO"));
 	_solveState = kWaitSolveSound;
 }
 
@@ -1039,6 +1023,68 @@ void MultiBuildPuzzle::clearAnimFrame() {
 void MultiBuildPuzzle::updatePieceRender(int pieceIdx) {
 	Piece &p = *_pieces[pieceIdx];
 	bool isSelected = (!_isDragging && pieceIdx == _selectedPiece);
-	bool isDragging  = (_isDragging  && pieceIdx == _picked
+	bool isDragging  = (_isDragging  && pieceIdx == _pickedUpPiece);
 
-... [Content truncated]
+	// Nancy 10+: a piece with no source rect is baked into the scene overlay
+	// at rest (cake mixing) and must stay hidden. Placed pieces also hide when
+	// a completion animation will cover them. Pieces that do carry a source
+	// rect (plant potting) render normally at rest.
+	if (g_nancy->getGameType() >= kGameTypeNancy10 && !isDragging && !isSelected) {
+		bool bakedAtRest = !p.isPlaced && p.srcRect.isEmpty();
+		if (bakedAtRest || (p.isPlaced && _hasAnimImage)) {
+			p.setVisible(false);
+			p.moveTo(p.gameRect);
+			return;
+		}
+	}
+
+	p.setVisible(true);
+
+	if (p.isPlaced || isDragging) {
+		// Placed or being dragged: show rotation sprite.
+		int rot = p.curRotation;
+		if (!p.hasSurface[rot])
+			rot = 0;
+		if (p.hasSurface[rot]) {
+			int w = p.rotateSurfaces[rot].w;
+			int h = p.rotateSurfaces[rot].h;
+			p._drawSurface.create(w, h, p.rotateSurfaces[rot].format);
+			p._drawSurface.setTransparentColor(p.rotateSurfaces[rot].getTransparentColor());
+			p._drawSurface.blitFrom(p.rotateSurfaces[rot], Common::Point(0, 0));
+		}
+	} else if (isSelected && (_hasCloseupImage || !p.image.empty()) && !p.cuSrcRect.isEmpty()) {
+		// Zoomed closeup, drawn from the piece's own image when it has one.
+		const Graphics::ManagedSurface &source = p.image.empty() ? _closeupImage : p.image;
+		int w = p.cuSrcRect.width();
+		int h = p.cuSrcRect.height();
+		p._drawSurface.create(w, h, source.format);
+		p._drawSurface.setTransparentColor(source.getTransparentColor());
+		p._drawSurface.blitFrom(source, p.cuSrcRect, Common::Point(0, 0));
+	} else {
+		// At rest on the shelf: show srcRect from primary image.
+		int w = p.srcRect.width();
+		int h = p.srcRect.height();
+		p._drawSurface.create(w, h, _primaryImage.format);
+		p._drawSurface.setTransparentColor(_primaryImage.getTransparentColor());
+		p._drawSurface.blitFrom(_primaryImage, p.srcRect, Common::Point(0, 0));
+	}
+
+	p.setTransparent(true);
+	p.moveTo(p.gameRect);
+}
+
+void MultiBuildPuzzle::rotateSurface90CW(const Graphics::ManagedSurface &src, Graphics::ManagedSurface &dst) {
+	int srcW = src.w;
+	int srcH = src.h;
+	dst.create(srcH, srcW, src.format);
+
+	for (int y = 0; y < srcH; ++y) {
+		for (int x = 0; x < srcW; ++x) {
+			uint32 pixel = src.getPixel(x, y);
+			dst.setPixel(srcH - 1 - y, x, pixel);
+		}
+	}
+}
+
+} // End of namespace Action
+} // End of namespace Nancy

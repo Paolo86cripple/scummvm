@@ -64,8 +64,7 @@ void TowerPuzzle::readData(Common::SeekableReadStream &stream) {
 
 	_destRects.resize(6);
 	for (uint ringID = 0; ringID < 6; ++ringID) {
-		_destRects[ringID].r
-esize(3);
+		_destRects[ringID].resize(3);
 		for (uint poleID = 0; poleID < 3; ++poleID) {
 			// Biggest ring can only be in bottom position,
 			// so it only has one rect per pole; second-biggest can
@@ -138,7 +137,6 @@ void TowerPuzzle::execute() {
 			_solveState = kWaitForSound;
 			break;
 		case kWaitForSound :
-
 			if (!isSolveSoundPlaying()) {
 				g_nancy->_sound->stopSound(_solveSound);
 				_state = kActionTrigger;
@@ -217,8 +215,7 @@ void TowerPuzzle::handleInput(NancyInput &input) {
 			}
 
 			// Redraw so the ring isn't visible anymore
-			drawRing(hoveredPoleI
-D, ringPos, _puzzleState->order[hoveredPoleID][ringPos], true);
+			drawRing(hoveredPoleID, ringPos, _puzzleState->order[hoveredPoleID][ringPos], true);
 
 			if (ringPos > 0) {
 				drawRing(hoveredPoleID, ringPos - 1, _puzzleState->order[hoveredPoleID][ringPos - 1]);
@@ -287,8 +284,7 @@ void TowerPuzzle::drawRing(uint poleID, uint position, uint ringID, bool clear) 
 
 	if (clear) {
 		// Just clear the ring, leaving a hole in the surface
-		// that ne
-eds to be filled by redrawing the ring below
+		// that needs to be filled by redrawing the ring below
 		_drawSurface.fillRect(_destRects[ringID][poleID][position], _drawSurface.getTransparentColor());
 		return;
 	}

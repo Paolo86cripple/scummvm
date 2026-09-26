@@ -59,8 +59,7 @@ void EscapeGridPuzzle::readAnimation(Common::SeekableReadStream &stream, Animati
 	}
 }
 
-void EscapeGridPuzzl
-e::readData(Common::SeekableReadStream &stream) {
+void EscapeGridPuzzle::readData(Common::SeekableReadStream &stream) {
 	_busyCursorType = stream.readUint16LE();
 	_hoverCursorType = stream.readUint16LE();
 	readFilename(stream, _tileRefName);
@@ -117,8 +116,7 @@ e::readData(Common::SeekableReadStream &stream) {
 
 		character.tileAnims.resize(numTileAnims / 3);
 		for (uint j = 0; j < character.tileAnims.size(); ++j) {
-			
-CharacterTileAnims &tileAnims = character.tileAnims[j];
+			CharacterTileAnims &tileAnims = character.tileAnims[j];
 			tileAnims.tileTypeID = stream.readSint32LE();
 			for (uint k = 0; k < kNumCharTileAnims; ++k) {
 				readAnimation(stream, tileAnims.anims[k]);
@@ -180,8 +178,7 @@ static void loadPuzzleImage(const Common::Path &name, Graphics::ManagedSurface &
 void EscapeGridPuzzle::init() {
 	initViewportSurface();
 
-	uint32 transColor = _
-drawSurface.getTransparentColor();
+	uint32 transColor = _drawSurface.getTransparentColor();
 
 	if (!_tileRefName.empty()) {
 		g_nancy->_resource->loadImage(_tileRefName, _tileRef);
@@ -246,8 +243,7 @@ drawSurface.getTransparentColor();
 
 	_turn = 0;
 	_moveIssued = false;
-	_sli
-dingPhase = false;
+	_slidingPhase = false;
 	_clickedCell = kNoCell;
 	_jumpFrameMovie = nullptr;
 	_jumpFrameIndex = -1;
@@ -315,8 +311,7 @@ Common::Rect EscapeGridPuzzle::cellRect(const Common::Point &cell) const {
 		(int16)(left + _originCell.width()), (int16)(top + _originCell.height()));
 }
 
-bool Escape
-GridPuzzle::validCell(const Common::Point &cell) const {
+bool EscapeGridPuzzle::validCell(const Common::Point &cell) const {
 	return cell.x >= 0 && cell.y >= 0 && cell.x < _numCols && cell.y < _numRows;
 }
 
@@ -383,8 +378,7 @@ bool EscapeGridPuzzle::canStepOnto(const Common::Array<int32> &grid, const Commo
 // empty, when there is no movable hex ahead of the one landed on.
 void EscapeGridPuzzle::collectLine(const Common::Array<int32> &grid, const Common::Point &from, const Common::Point &to,
 		Common::Array<Common::Point> &line) const {
-	line.cle
-ar();
+	line.clear();
 
 	Direction dir = kNorth;
 	if (!validCell(to) || !(grid[to.y * _numCols + to.x] & kTileMovable) || !directionTo(from, to, dir)) {
@@ -450,8 +444,7 @@ void EscapeGridPuzzle::slideBoard(const Common::Point &from, const Common::Point
 			pushTileAnim(cell, kTileStay, id, delay);
 		}
 
-		int 
-actor = actorAt(cell);
+		int actor = actorAt(cell);
 		if (actor != -1) {
 			if (delay > 0) {
 				pushActorAnim(actor, kActorStay, cell, 0, delay);
@@ -513,8 +506,7 @@ int32 EscapeGridPuzzle::characterSinkTime(uint actor, int32 tileID) const {
 	return framesToTicks(anims->anims[kCharSink].srcs.size());
 }
 
-int32 EscapeGrid
-Puzzle::characterRiseTime(uint actor, int32 tileID) const {
+int32 EscapeGridPuzzle::characterRiseTime(uint actor, int32 tileID) const {
 	int index;
 	const CharacterTileAnims *anims = characterTileAnims(actor, tileID, index);
 	if (!anims) {
@@ -580,8 +572,7 @@ void EscapeGridPuzzle::updateActorAnims(int32 ticks) {
 		}
 
 		ActorAnim &anim = queue[0];
-		if (anim.remaining == anim.total && anim.kind != kActorStay && anim.kind !
-= kActorJump) {
+		if (anim.remaining == anim.total && anim.kind != kActorStay && anim.kind != kActorJump) {
 			const TileType *type = tileType(anim.tileID);
 			if (type) {
 				playSoundBlock(anim.kind == kActorRise ? type->riseSound : type->sinkSound);
@@ -652,8 +643,7 @@ Common::Point EscapeGridPuzzle::chooseOpponentMove(uint actor) {
 	} else {
 		Common::Array<Common::Point> candidates;
 		for (int i = 0; i < kNumDirections; ++i) {
-			candidates.push_ba
-ck(step(_actorCells[actor], (Direction)i));
+			candidates.push_back(step(_actorCells[actor], (Direction)i));
 		}
 
 		while (!candidates.empty()) {
@@ -718,8 +708,7 @@ void EscapeGridPuzzle::searchPath(uint actor, int depth, Common::Array<int32> &g
 void EscapeGridPuzzle::startMove(const Common::Point &target) {
 	Direction dir = kNorth;
 	const Common::Point from = _actorCells[_turn];
-	if (!validCell(target) 
-|| !directionTo(from, target, dir)) {
+	if (!validCell(target) || !directionTo(from, target, dir)) {
 		return;
 	}
 
@@ -803,7 +792,6 @@ int EscapeGridPuzzle::checkOutcome() const {
 		for (uint j = 0; j < _actors[i].goals.size(); ++j) {
 			if (_actorCells[i] == _actors[i].goals[j]) {
 				if (_actors[i].isPlayer) {
-
 					playerArrived = true;
 				} else {
 					opponentArrived = true;
@@ -862,8 +850,7 @@ bool EscapeGridPuzzle::findHoveredCell(const Common::Point &mousePos, Common::Po
 	int stepY = _rowStepCell.top - _originCell.top;
 	int stagger = _colStepCell.top - _originCell.top;
 
-	int dx = pos.x - _originCell
-.left;
+	int dx = pos.x - _originCell.left;
 	if (dx < 0) {
 		dx -= stepX;
 	}
@@ -938,8 +925,7 @@ void EscapeGridPuzzle::drawJump(uint actor, const ActorAnim &anim) {
 	}
 
 	Common::Rect from = cellRect(anim.from);
-	_drawSurface.blitFrom(_jumpFrame, Common::Poin
-t(from.left + character.jumpOffsetX[anim.compassDir],
+	_drawSurface.blitFrom(_jumpFrame, Common::Point(from.left + character.jumpOffsetX[anim.compassDir],
 		from.top + character.jumpOffsetY[anim.compassDir]));
 }
 
@@ -1001,8 +987,7 @@ void EscapeGridPuzzle::drawCell(const Common::Point &cell) {
 		}
 		break;
 	case kTileSink:
-		drawAnimFrame(images.sink, type.sink, queue[0].to
-tal - queue[0].remaining, pos);
+		drawAnimFrame(images.sink, type.sink, queue[0].total - queue[0].remaining, pos);
 		break;
 	case kTileRise:
 		drawAnimFrame(images.rise, type.rise, queue[0].total - queue[0].remaining, pos);
@@ -1094,8 +1079,7 @@ void EscapeGridPuzzle::handleInput(NancyInput &input) {
 		g_nancy->_cursor->setCursorType((CursorManager::CursorType)_busyCursorType, true, false);
 	}
 
-	if (isE
-xitHotspotHovered(input)) {
+	if (isExitHotspotHovered(input)) {
 		if (playerToMove) {
 			setExitCursor();
 		}

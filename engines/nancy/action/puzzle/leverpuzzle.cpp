@@ -58,8 +58,7 @@ void LeverPuzzle::readData(Common::SeekableReadStream &stream) {
 	_destRects.reserve(3);
 	for (uint leverID = 0; leverID < 3; ++leverID) {
 		_destRects.push_back(Common::Rect());
-		r
-eadRect(stream, _destRects.back());
+		readRect(stream, _destRects.back());
 
 		if (leverID == 0) {
 			_screenPosition = _destRects.back();
@@ -144,8 +143,7 @@ void LeverPuzzle::execute() {
 		} else {
 			// The flag is only set here: setting it as soon as the puzzle is solved can
 			// invalidate this record's own dependencies, which stops it from being executed
-			// again
- before it ever reaches this point.
+			// again before it ever reaches this point.
 			_solveScene.execute();
 		}
 

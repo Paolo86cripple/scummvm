@@ -57,8 +57,7 @@ void HypertextParser::addImage(uint16 lineID, const Common::Rect &src) {
 }
 
 void HypertextParser::setImageName(const Common::Path &name) {
-	_im
-ageName = name;
+	_imageName = name;
 }
 
 static uint lineStep(const Font *font) {
@@ -124,8 +123,7 @@ void HypertextParser::drawAllText(const Common::Rect &textBounds, uint leftOffse
 							inlineImage.src = Common::Rect(coords[0], coords[1], coords[2] + 1, coords[3] + 1);
 						}
 
-						met
-aInfo.push({MetaInfo::kImage, numNonSpaceChars, (byte)inlineImages.size()});
+						metaInfo.push({MetaInfo::kImage, numNonSpaceChars, (byte)inlineImages.size()});
 						inlineImages.push_back(inlineImage);
 						continue;
 					}
@@ -211,8 +209,7 @@ aInfo.push({MetaInfo::kImage, numNonSpaceChars, (byte)inlineImages.size()});
 						break;
 					}
 
-					metaInfo.push({MetaInfo::kColor, 
-numNonSpaceChars, (byte)(curToken[1] - '0')});
+					metaInfo.push({MetaInfo::kColor, numNonSpaceChars, (byte)(curToken[1] - '0')});
 					continue;
 				case 'f' :
 					// Font token
@@ -284,8 +281,7 @@ numNonSpaceChars, (byte)(curToken[1] - '0')});
 			currentLine += curToken;
 		}
 
-		font = g_na
-ncy->_graphics->getFont(curFontID);
+		font = g_nancy->_graphics->getFont(curFontID);
 		highlightFont = g_nancy->_graphics->getFont(highlightFontID);
 		assert(font && highlightFont);
 
@@ -337,8 +333,7 @@ ncy->_graphics->getFont(curFontID);
 
 				for (uint i = 0; i < _imageLineIDs.size(); ++i) {
 					if (numNewlineTokens == _imageLineIDs[i]) {
-						// A lot of magic numbers that make sure we draw pixel
--perfect. This is a mess for three reasons:
+						// A lot of magic numbers that make sure we draw pixel-perfect. This is a mess for three reasons:
 						// - The original engine draws strings with a bottom-left anchor, while ScummVM uses top-left
 						// - The original engine uses inclusive rects, while ScummVM uses non-includive
 						// - The original engine does some stupid stuff with spacing
@@ -388,8 +383,7 @@ ncy->_graphics->getFont(curFontID);
 				Common::String subLine;
 
 				while (metaInfo.size() && totalCharsDrawn >= metaInfo.front().numChars) {
-					// We have a color/font change token, a hyperlink, or a mark at begginning of (what's lef
-t of) the current line
+					// We have a color/font change token, a hyperlink, or a mark at begginning of (what's left of) the current line
 					MetaInfo change = metaInfo.pop();
 					switch (change.type) {
 					case MetaInfo::kFont:
@@ -438,8 +432,7 @@ t of) the current line
 							markDest.moveTo(textBounds.left + horizontalOffset + (newLineStart ? 0 : leftOffsetNonNewline) + 1,
 								lineNumber == 0 ?
 									textBounds.top - ((font->getFontHeight() + 1) / 2) + _imageVerticalOffset + 4 :
-									textBounds
-.top + _numDrawnLines * lineStep(font) + _imageVerticalOffset - 4);
+									textBounds.top + _numDrawnLines * lineStep(font) + _imageVerticalOffset - 4);
 						}
 
 						// For now we do not check if we need to go to new line; neither does the original
@@ -500,8 +493,7 @@ t of) the current line
 				Common::String &stringToDraw = subLine.size() ? subLine : line;
 
 				// Draw the normal text
-				const int drawX = textBounds.left + horizontalOffset
- + (newLineStart ? 0 : leftOffsetNonNewline);
+				const int drawX = textBounds.left + horizontalOffset + (newLineStart ? 0 : leftOffsetNonNewline);
 				const int drawY = textBounds.top + _numDrawnLines * lineStep(font) + _imageVerticalOffset;
 				font->drawString(				&_fullSurface,
 												stringToDraw,
@@ -557,8 +549,7 @@ t of) the current line
 			++_numDrawnLines;
 
 			// Record the height of the text currently drawn. Used for textbox scrolling
-			_drawnTextHeight = (_numDrawnLines - 1) * lineStep(font) + _imageVerticalOff
-set;
+			_drawnTextHeight = (_numDrawnLines - 1) * lineStep(font) + _imageVerticalOffset;
 		}
 
 		// Draw the footer image(s)
@@ -622,8 +613,7 @@ void HypertextParser::drawInlineImage(const InlineImage &inlineImage, const Comm
 	int x = textBounds.left + horizontalOffset;
 	if (justification == kJustifyCenter) {
 		x = textBounds.left + (textBounds.width() - src.width()) / 2;
-	} else if (justificati
-on == kJustifyRight) {
+	} else if (justification == kJustifyRight) {
 		x = textBounds.right - src.width();
 	}
 

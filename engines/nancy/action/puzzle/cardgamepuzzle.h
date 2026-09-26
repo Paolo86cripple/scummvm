@@ -52,8 +52,7 @@ protected:
 	// Per-side board: a grid of dealt cards, per-column counts (capped at 3), per-column "complete"
 	// flags (a full column of 3 scores a set) and the running score.
 	struct PlayerBoard {
-		int grid[kM
-axRows][kMaxCols];
+		int grid[kMaxRows][kMaxCols];
 		int colCount[kMaxCols];
 		int colComplete[kMaxCols];
 		int score;
@@ -85,8 +84,7 @@ axRows][kMaxCols];
 
 	// Header flags / dimensions
 	byte _unknown21 = 0;
-	byte _switchTurnRule = 0;
- // data+0x22: how the turn passes after a play
+	byte _switchTurnRule = 0; // data+0x22: how the turn passes after a play
 	byte _startPlayer = 0;    // data+0x23: which side plays first (also the human side)
 	byte _dealMode = 0;       // data+0x24: deal/scoring variant (0, 2 or 0xff)
 	uint16 _numCols = 0;      // data+0x25
@@ -122,8 +120,7 @@ axRows][kMaxCols];
 	uint16 _winSceneStartEnemy = 0;  // data+0x1306
 	int16 _winFlagPlayer = -1;       // data+0x131c
 	int16 _winFlagEnemy = -1;        // data+0x131e
-	bool _gaveUp = false;            // left via t
-he exit hotspot rather than playing out
+	bool _gaveUp = false;            // left via the exit hotspot rather than playing out
 
 	// Voiced lines / SFX (all on the card-game channel). Read selectively from the 0xba3..0x1304 block.
 	Common::String _moveVoiceName;         // data+0xbc4 (card-move SFX)
@@ -158,8 +155,7 @@ he exit hotspot rather than playing out
 	// Runtime board state
 	PlayerBoard _board[2];
 	byte _availMap[kMaxRows][kMaxCols]; // shared deck: 1 = card still on the table
-	int _deckRemainin
-g = 0;
+	int _deckRemaining = 0;
 	int _currentTurn = 0;               // side owning the turn highlight (mirrors _mover)
 	int _lastAiColumn = -1;             // the AI avoids immediately repeating its previous column
 	bool _gameOver = false;

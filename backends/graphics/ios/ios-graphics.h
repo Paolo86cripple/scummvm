@@ -54,7 +54,6 @@ protected:
 	void hideOverlay() override;
 	void applyTouchSettings() const;
 
-
 	void refreshScreen() override;
 
 	int _old_touch_mode;

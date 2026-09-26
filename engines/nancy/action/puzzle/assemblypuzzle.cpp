@@ -58,8 +58,7 @@ void AssemblyPuzzle::registerGraphics() {
 
 void AssemblyPuzzle::readData(Common::SeekableReadStream &stream) {
 	_puzzleState = (AssemblyPuzzleData *)NancySceneState.getPuzzleData(AssemblyPuzzleData::getTag());
-	assert(_
-puzzleState);
+	assert(_puzzleState);
 
 	readFilename(stream, _imageName);
 
@@ -143,8 +142,7 @@ void AssemblyPuzzle::execute() {
 
 		_state = kActionTrigger;
 		break;
-	case kActionT
-rigger:
+	case kActionTrigger:
 		if (isSolveSoundPlaying()) {
 			return;
 		}
@@ -214,8 +212,7 @@ void AssemblyPuzzle::handleInput(NancyInput &input) {
 
 				if (_pickedUpPiece != (int)i && !_pieces[i].placed) {
 					// Clicked on another piece while holding, swap them
-					
-_pickedUpPiece = i;
+					_pickedUpPiece = i;
 					_pieces[i].pickUp();
 					g_nancy->_sound->playSound(_pickUpSound);
 
@@ -275,8 +272,7 @@ _pickedUpPiece = i;
 					} else if (_allowWrongPieceHotspot) {
 						// Wrong place, play a sound
 						g_nancy->_sound->loadSound(_wrongPieceSounds[_curRotation]);
-						g_nancy->_sound->playSound(_w
-rongPieceSounds[_curRotation]);
+						g_nancy->_sound->playSound(_wrongPieceSounds[_curRotation]);
 						if (!_wrongPieceTexts[_curRotation].empty()) {
 							NancySceneState.getTextbox().addTextLine(_wrongPieceTexts[_curRotation], 4000); // check
 						}
