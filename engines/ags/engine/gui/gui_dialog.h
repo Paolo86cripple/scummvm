@@ -34,14 +34,11 @@ class Bitmap;
 } // namespace AGS
 
 // Functions for handling hard-coded GUIs
-// Prepares GUI bitmaps which will be passed to the renderer's draw chain
-AGS::Shared::Bitmap *prepare_gui_screen(int x, int y, int width, int height, bool opaque);
+// Prepares GUI bitmaps which will be passed to the renderer's draw chainAGS::Shared::Bitmap *prepare_gui_screen(int x, int y, int width, int height, bool opaque);
 AGS::Shared::Bitmap *get_gui_screen();
-// Deletes GUI bitmaps
-void clear_gui_screen();
+// Deletes GUI bitmapsvoid clear_gui_screen();
 // Draws virtual screen contents on the GUI bitmaps and assignes them to
-// the renderer's draw chain
-void refresh_gui_screen();
+// the renderer's draw chainvoid refresh_gui_screen();
 int  loadgamedialog();
 int  savegamedialog();
 void preparesavegamelist(int ctrllist);

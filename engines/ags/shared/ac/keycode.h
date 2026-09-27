@@ -262,8 +262,7 @@ enum eAGSKeyCode {
 	eAGSKeyMask = 0x0FFF
 };
 
-// AGS key modifiers
-enum eAGSKeyMod {
+// AGS key modifiersenum eAGSKeyMod {
 	eAGSModNone   = 0,
 	eAGSModLShift = 0x00010000,
 	eAGSModRShift = 0x00020000,
@@ -283,8 +282,7 @@ enum eAGSKeyMod {
 	eAGSModMask   = 0x00FF0000
 };
 
-// Combined key code and a textual representation in UTF-8
-struct KeyInput {
+// Combined key code and a textual representation in UTF-8struct KeyInput {
 	const static size_t UTF8_ARR_SIZE = 5;
 
 	eAGSKeyCode Key = eAGSKeyCodeNone; // actual key code
@@ -313,13 +311,11 @@ inline bool IsAGSModKey(eAGSKeyCode keycode) {
 }
 
 // Tells if the AGS keycode refers to the service key (modifier, PrintScreen and similar);
-// this lets distinct keys that normally should not affect the game
-inline bool IsAGSServiceKey(eAGSKeyCode keycode) {
+// this lets distinct keys that normally should not affect the gameinline bool IsAGSServiceKey(eAGSKeyCode keycode) {
 	return keycode >= eAGSKeyCode_FirstServiceKey;
 }
 
-// Converts eAGSKeyCode to script API code, for "on_key_press" and similar callbacks
-eAGSKeyCode AGSKeyToScriptKey(eAGSKeyCode keycode);
+// Converts eAGSKeyCode to script API code, for "on_key_press" and similar callbackseAGSKeyCode AGSKeyToScriptKey(eAGSKeyCode keycode);
 // Converts eAGSKeyCode to ASCII text representation with the range check; returns 0 on failure
 // Not unicode compatible.
 char AGSKeyToText(eAGSKeyCode keycode);

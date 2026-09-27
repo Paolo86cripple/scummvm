@@ -227,8 +227,7 @@ void multiply_up_to_game_res(int *x, int *y) {
 	y[0] = get_fixed_pixel_size(y[0]);
 }
 
-// TODO: this is silly, make a uniform formula
-void multiply_up(int *x1, int *y1, int *x2, int *y2) {
+// TODO: this is silly, make a uniform formulavoid multiply_up(int *x1, int *y1, int *x2, int *y2) {
 	multiply_up_to_game_res(x1, y1);
 	multiply_up_to_game_res(x2, y2);
 

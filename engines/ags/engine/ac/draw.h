@@ -99,8 +99,7 @@ struct DrawState {
 };
 
 // ObjTexture is a helper struct that pairs a raw bitmap with
-// a renderer's texture and an optional position
-struct ObjTexture {
+// a renderer's texture and an optional positionstruct ObjTexture {
 	// Sprite ID
 	uint32_t SpriteID = UINT32_MAX;
 	// Raw bitmap; used for software render mode,
@@ -133,8 +132,7 @@ struct ObjTexture {
 };
 
 // ObjectCache stores cached object data, used to determine
-// if active sprite / texture should be reconstructed
-struct ObjectCache {
+// if active sprite / texture should be reconstructedstruct ObjectCache {
 	std::unique_ptr<AGS::Shared::Bitmap> image;
 	bool  in_use = false;  // CHECKME: possibly may be removed
 	int   sppic = 0;
@@ -156,77 +154,53 @@ struct DrawFPS {
 	int font = -1; // in case normal font changes at runtime
 };
 
-// Converts AGS color index to the actual bitmap color using game's color depth
-int MakeColor(int color_index);
+// Converts AGS color index to the actual bitmap color using game's color depthint MakeColor(int color_index);
 
 class Viewport;
 class Camera;
 
-// Initializes drawing methods and optimisation
-void init_draw_method();
-// Initializes global game drawing resources
-void init_game_drawdata();
-// Initializes drawing resources upon entering new room
-void init_room_drawdata();
-// Disposes resources related to the current drawing methods
-void dispose_draw_method();
-// Disposes global game drawing resources
-void dispose_game_drawdata();
-// Disposes any temporary resources on leaving current room
-void dispose_room_drawdata();
-// Releases all the cached textures of game objects
-void clear_drawobj_cache();
-// Updates drawing settings depending on main viewport's size and position on screen
-void on_mainviewport_changed();
-// Notifies that a new room viewport was created
-void on_roomviewport_created(int index);
-// Notifies that a new room viewport was deleted
-void on_roomviewport_deleted(int index);
-// Updates drawing settings if room viewport's position or size has changed
-void on_roomviewport_changed(Viewport *view);
-// Detects overlapping viewports, starting from the given index in z-sorted array
-void detect_roomviewport_overlaps(size_t z_index);
-// Updates drawing settings if room camera's size has changed
-void on_roomcamera_changed(Camera *cam);
-// Marks particular object as need to update the texture
-void mark_object_changed(int objid);
+// Initializes drawing methods and optimisationvoid init_draw_method();
+// Initializes global game drawing resourcesvoid init_game_drawdata();
+// Initializes drawing resources upon entering new roomvoid init_room_drawdata();
+// Disposes resources related to the current drawing methodsvoid dispose_draw_method();
+// Disposes global game drawing resourcesvoid dispose_game_drawdata();
+// Disposes any temporary resources on leaving current roomvoid dispose_room_drawdata();
+// Releases all the cached textures of game objectsvoid clear_drawobj_cache();
+// Updates drawing settings depending on main viewport's size and position on screenvoid on_mainviewport_changed();
+// Notifies that a new room viewport was createdvoid on_roomviewport_created(int index);
+// Notifies that a new room viewport was deletedvoid on_roomviewport_deleted(int index);
+// Updates drawing settings if room viewport's position or size has changedvoid on_roomviewport_changed(Viewport *view);
+// Detects overlapping viewports, starting from the given index in z-sorted arrayvoid detect_roomviewport_overlaps(size_t z_index);
+// Updates drawing settings if room camera's size has changedvoid on_roomcamera_changed(Camera *cam);
+// Marks particular object as need to update the texturevoid mark_object_changed(int objid);
 // TODO: write a generic drawable/objcache system where each object
 // allocates a drawable for itself, and disposes one if being removed.
 void reset_drawobj_for_overlay(int objnum);
-// Marks all game objects which reference this sprite for redraw
-void notify_sprite_changed(int sprnum, bool deleted);
+// Marks all game objects which reference this sprite for redrawvoid notify_sprite_changed(int sprnum, bool deleted);
 
-// whether there are currently remnants of a DisplaySpeech
-void mark_screen_dirty();
+// whether there are currently remnants of a DisplaySpeechvoid mark_screen_dirty();
 bool is_screen_dirty();
 
-// marks whole screen as needing a redraw
-void invalidate_screen();
-// marks all the camera frame as needing a redraw
-void invalidate_camera_frame(int index);
+// marks whole screen as needing a redrawvoid invalidate_screen();
+// marks all the camera frame as needing a redrawvoid invalidate_camera_frame(int index);
 // marks certain rectangle on screen as needing a redraw
 // in_room flag tells how to interpret the coordinates: as in-room coords or screen viewport coordinates.
 void invalidate_rect(int x1, int y1, int x2, int y2, bool in_room);
 
 void mark_current_background_dirty();
 
-// Avoid freeing and reallocating the memory if possible
-AGS::Shared::Bitmap *recycle_bitmap(AGS::Shared::Bitmap *bimp, int coldep, int wid, int hit, bool make_transparent = false);
+// Avoid freeing and reallocating the memory if possibleAGS::Shared::Bitmap *recycle_bitmap(AGS::Shared::Bitmap *bimp, int coldep, int wid, int hit, bool make_transparent = false);
 void recycle_bitmap(std::unique_ptr<AGS::Shared::Bitmap> &bimp, int coldep, int wid, int hit, bool make_transparent = false);
 AGS::Engine::IDriverDependantBitmap* recycle_ddb_sprite(AGS::Engine::IDriverDependantBitmap *ddb, uint32_t sprite_id, AGS::Shared::Bitmap *source, bool has_alpha = false, bool opaque = false);
 inline AGS::Engine::IDriverDependantBitmap* recycle_ddb_bitmap(AGS::Engine::IDriverDependantBitmap *ddb, AGS::Shared::Bitmap *source, bool has_alpha = false, bool opaque = false) {
 	return recycle_ddb_sprite(ddb, UINT32_MAX, source, has_alpha, opaque);
 }
-// Draw everything
-void render_graphics(AGS::Engine::IDriverDependantBitmap *extraBitmap = nullptr, int extraX = 0, int extraY = 0);
-// Construct game scene, scheduling drawing list for the renderer
-void construct_game_scene(bool full_redraw = false);
-// Construct final game screen elements; updates and draws mouse cursor
-void construct_game_screen_overlay(bool draw_mouse = true);
+// Draw everythingvoid render_graphics(AGS::Engine::IDriverDependantBitmap *extraBitmap = nullptr, int extraX = 0, int extraY = 0);
+// Construct game scene, scheduling drawing list for the renderervoid construct_game_scene(bool full_redraw = false);
+// Construct final game screen elements; updates and draws mouse cursorvoid construct_game_screen_overlay(bool draw_mouse = true);
 // Construct engine overlay with debugging tools (fps, console)
 void construct_engine_overlay();
-// Clears black game borders in legacy letterbox mode
-void clear_letterbox_borders();
+// Clears black game borders in legacy letterbox modevoid clear_letterbox_borders();
 
 void debug_draw_room_mask(RoomAreaMask mask);
 void debug_draw_movelist(int charnum);
@@ -244,10 +218,8 @@ void draw_gui_sprite(AGS::Shared::Bitmap *ds, bool use_alpha, int xpos, int ypos
 // Puts a pixel of certain color, scales it if running in upscaled resolution (legacy feature)
 void putpixel_scaled(AGS::Shared::Bitmap *ds, int x, int y, int col);
 
-// Render game on screen
-void render_to_screen();
-// Callbacks for the graphics driver
-void draw_game_screen_callback();
+// Render game on screenvoid render_to_screen();
+// Callbacks for the graphics drivervoid draw_game_screen_callback();
 void GfxDriverOnInitCallback(void *data);
 bool GfxDriverSpriteEvtCallback(int evt, int data);
 
@@ -262,10 +234,8 @@ bool GfxDriverSpriteEvtCallback(int evt, int data);
 // in software mode as well.
 bool construct_object_gfx(int objid, bool force_software);
 bool construct_char_gfx(int charid, bool force_software);
-// Returns a cached character image prepared for the render
-AGS::Shared::Bitmap *get_cached_character_image(int charid);
-// Returns a cached object image prepared for the render
-AGS::Shared::Bitmap *get_cached_object_image(int objid);
+// Returns a cached character image prepared for the renderAGS::Shared::Bitmap *get_cached_character_image(int charid);
+// Returns a cached object image prepared for the renderAGS::Shared::Bitmap *get_cached_object_image(int objid);
 // Adds a walk-behind sprite to the list for the given slot
 // (reuses existing texture if possible)
 void add_walkbehind_image(size_t index, AGS::Shared::Bitmap *bmp, int x, int y);
@@ -281,16 +251,13 @@ void setpal();
 // viewport on screen, or scaling game further in the window by the graphic
 // renderer).
 int get_fixed_pixel_size(int pixels);
-// coordinate conversion data,script ---> final game resolution
-extern int data_to_game_coord(int coord);
+// coordinate conversion data,script ---> final game resolutionextern int data_to_game_coord(int coord);
 extern void data_to_game_coords(int *x, int *y);
 extern void data_to_game_round_up(int *x, int *y);
-// coordinate conversion final game resolution ---> data,script
-extern int game_to_data_coord(int coord);
+// coordinate conversion final game resolution ---> data,scriptextern int game_to_data_coord(int coord);
 extern void game_to_data_coords(int &x, int &y);
 extern int game_to_data_round_up(int coord);
-// convert contextual data coordinates to final game resolution
-extern void ctx_data_to_game_coord(int &x, int &y, bool hires_ctx);
+// convert contextual data coordinates to final game resolutionextern void ctx_data_to_game_coord(int &x, int &y, bool hires_ctx);
 extern void ctx_data_to_game_size(int &x, int &y, bool hires_ctx);
 extern int ctx_data_to_game_size(int size, bool hires_ctx);
 extern int game_to_ctx_data_size(int size, bool hires_ctx);

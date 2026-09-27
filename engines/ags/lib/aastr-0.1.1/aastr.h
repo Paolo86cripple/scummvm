@@ -41,8 +41,7 @@
 
 namespace AGS3 {
 
-#ifdef __cplusplus
-extern "C" {
+#ifdef __cplusplusextern "C" {
 #endif
 
 /* Stretching.  */

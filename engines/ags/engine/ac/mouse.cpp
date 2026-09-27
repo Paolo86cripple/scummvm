@@ -55,8 +55,7 @@ using namespace AGS::Shared;
 using namespace AGS::Engine;
 
 // The mouse functions are static so the script doesn't pass
-// in an object parameter
-void Mouse_SetVisible(int isOn) {
+// in an object parametervoid Mouse_SetVisible(int isOn) {
 	if (isOn)
 		ShowMouseCursor();
 	else
@@ -97,8 +96,7 @@ void SetMouseBounds(int x1, int y1, int x2, int y2) {
 }
 
 // mouse cursor functions:
-// set_mouse_cursor: changes visual appearance to specified cursor
-void set_mouse_cursor(int newcurs, bool force_update) {
+// set_mouse_cursor: changes visual appearance to specified cursorvoid set_mouse_cursor(int newcurs, bool force_update) {
 	const int hotspotx = _GP(game).mcurs[newcurs].hotx, hotspoty = _GP(game).mcurs[newcurs].hoty;
 	_GP(mouse).SetHotspot(hotspotx, hotspoty);
 
@@ -154,8 +152,7 @@ void set_default_cursor() {
 	set_mouse_cursor(_G(cur_mode));
 }
 
-// permanently change cursor graphic
-void ChangeCursorGraphic(int curs, int newslot) {
+// permanently change cursor graphicvoid ChangeCursorGraphic(int curs, int newslot) {
 	if ((curs < 0) || (curs >= _GP(game).numcursors))
 		quit("!ChangeCursorGraphic: invalid mouse cursor");
 
@@ -214,8 +211,7 @@ void SetPreviousCursor() {
 	set_cursor_mode(find_previous_enabled_cursor(_G(cur_mode) - 1));
 }
 
-// set_cursor_mode: changes mode and appearance
-void set_cursor_mode(int newmode) {
+// set_cursor_mode: changes mode and appearancevoid set_cursor_mode(int newmode) {
 	if ((newmode < 0) || (newmode >= _GP(game).numcursors))
 		quit("!SetCursorMode: invalid cursor mode specified");
 

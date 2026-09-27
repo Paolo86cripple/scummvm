@@ -137,8 +137,7 @@ private:
 
 
 typedef SpriteDrawListEntry<ALSoftwareBitmap> ALDrawListEntry;
-// Software renderer's sprite batch
-struct ALSpriteBatch {
+// Software renderer's sprite batchstruct ALSpriteBatch {
 	uint32_t ID = 0u;
 	// Clipping viewport, also used as a destination for blitting optional Surface;
 	// in *relative* coordinates to parent surface.

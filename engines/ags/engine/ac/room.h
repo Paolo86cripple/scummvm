@@ -59,15 +59,13 @@ void  unload_old_room();
 void  load_new_room(int newnum, CharacterInfo *forchar);
 void  new_room(int newnum, CharacterInfo *forchar);
 // Sets up a placeholder room object; this is used to avoid occasional crashes
-// in case an API function was called that needs to access a room, while no real room is loaded
-void  set_room_placeholder();
+// in case an API function was called that needs to access a room, while no real room is loadedvoid  set_room_placeholder();
 int   find_highest_room_entered();
 void  first_room_initialization();
 void  check_new_room();
 void  compile_room_script();
 void  on_background_frame_change();
-// Clear the current room pointer if room status is no longer valid
-void  croom_ptr_clear();
+// Clear the current room pointer if room status is no longer validvoid  croom_ptr_clear();
 
 // Following functions convert coordinates between room resolution and region mask.
 // Region masks can be 1:N of the room size: 1:1, 1:2 etc.
@@ -82,8 +80,7 @@ extern int room_to_mask_coord(int coord);
 extern int mask_to_room_coord(int coord);
 
 struct MoveList;
-// Convert move path from room's mask resolution to room resolution
-void convert_move_path_to_room_resolution(MoveList *ml, int from_step = 0, int to_step = -1);
+// Convert move path from room's mask resolution to room resolutionvoid convert_move_path_to_room_resolution(MoveList *ml, int from_step = 0, int to_step = -1);
 
 } // namespace AGS3
 

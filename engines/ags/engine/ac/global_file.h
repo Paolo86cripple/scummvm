@@ -34,8 +34,7 @@ class Stream;
 
 
 int32_t FileOpen(const char *fnmm, AGS::Shared::FileOpenMode open_mode, AGS::Shared::FileWorkMode work_mode);
-// NOTE: FileOpenCMode is a backwards-compatible replacement for old-style global script function FileOpen
-int32_t FileOpenCMode(const char *fnmm, const char *cmode);
+// NOTE: FileOpenCMode is a backwards-compatible replacement for old-style global script function FileOpenint32_t FileOpenCMode(const char *fnmm, const char *cmode);
 void  FileClose(int32_t handle);
 void  FileWrite(int32_t handle, const char *towrite);
 void  FileWriteRawLine(int32_t handle, const char *towrite);

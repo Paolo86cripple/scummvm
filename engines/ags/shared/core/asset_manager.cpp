@@ -42,14 +42,12 @@ bool AssetManager::AssetLibEx::TestFilter(const String &filter) const {
 		(std::find(Filters.begin(), Filters.end(), filter) != Filters.end());
 }
 
-// Asset library sorting function, directories have priority
-bool SortLibsPriorityDir(const AssetLibInfo *lib1, const AssetLibInfo *lib2) {
+// Asset library sorting function, directories have prioritybool SortLibsPriorityDir(const AssetLibInfo *lib1, const AssetLibInfo *lib2) {
 	// first element is less if it's a directory while second is a lib
 	return IsAssetLibDir(lib1) && !IsAssetLibDir(lib2);
 }
 
-// Asset library sorting function, packages have priority
-bool SortLibsPriorityLib(const AssetLibInfo *lib1, const AssetLibInfo *lib2) {
+// Asset library sorting function, packages have prioritybool SortLibsPriorityLib(const AssetLibInfo *lib1, const AssetLibInfo *lib2) {
 	// first element is less if it's a lib while second is a directory
 	return !IsAssetLibDir(lib1) && IsAssetLibDir(lib2);
 }

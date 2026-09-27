@@ -82,8 +82,7 @@ void WriteRoomObject(const RoomObjectInfo &obj, Stream *out) {
 }
 
 
-// Main room data
-HError ReadMainBlock(RoomStruct *room, Stream *in, RoomFileVersion data_ver) {
+// Main room dataHError ReadMainBlock(RoomStruct *room, Stream *in, RoomFileVersion data_ver) {
 	int bpp;
 	if (data_ver >= kRoomVersion_208)
 		bpp = in->ReadInt32();
@@ -324,16 +323,14 @@ HError ReadScriptBlock(char *&buf, Stream *in, RoomFileVersion /*data_ver*/) {
 	return HError::None();
 }
 
-// Compiled room script
-HError ReadCompSc3Block(RoomStruct *room, Stream *in, RoomFileVersion /*data_ver*/) {
+// Compiled room scriptHError ReadCompSc3Block(RoomStruct *room, Stream *in, RoomFileVersion /*data_ver*/) {
 	room->CompiledScript.reset(ccScript::CreateFromStream(in));
 	if (room->CompiledScript == nullptr)
 		return new RoomFileError(kRoomFileErr_ScriptLoadFailed, cc_get_error().ErrorString);
 	return HError::None();
 }
 
-// Room object names
-HError ReadObjNamesBlock(RoomStruct *room, Stream *in, RoomFileVersion data_ver) {
+// Room object namesHError ReadObjNamesBlock(RoomStruct *room, Stream *in, RoomFileVersion data_ver) {
 	size_t name_count = static_cast<uint8_t>(in->ReadInt8());
 	if (name_count != room->Objects.size())
 		return new RoomFileError(kRoomFileErr_InconsistentData,
@@ -348,8 +345,7 @@ HError ReadObjNamesBlock(RoomStruct *room, Stream *in, RoomFileVersion data_ver)
 	return HError::None();
 }
 
-// Room object script names
-HError ReadObjScNamesBlock(RoomStruct *room, Stream *in, RoomFileVersion data_ver) {
+// Room object script namesHError ReadObjScNamesBlock(RoomStruct *room, Stream *in, RoomFileVersion data_ver) {
 	size_t name_count = static_cast<uint8_t>(in->ReadInt8());
 	if (name_count != room->Objects.size())
 		return new RoomFileError(kRoomFileErr_InconsistentData,
@@ -364,8 +360,7 @@ HError ReadObjScNamesBlock(RoomStruct *room, Stream *in, RoomFileVersion data_ve
 	return HError::None();
 }
 
-// Secondary backgrounds
-HError ReadAnimBgBlock(RoomStruct *room, Stream *in, RoomFileVersion data_ver) {
+// Secondary backgroundsHError ReadAnimBgBlock(RoomStruct *room, Stream *in, RoomFileVersion data_ver) {
 	room->BgFrameCount = in->ReadInt8();
 	if (room->BgFrameCount > MAX_ROOM_BGFRAMES)
 		return new RoomFileError(kRoomFileErr_IncompatibleEngine, String::FromFormat("Too many room backgrounds (in room: %d, max: %d).", room->BgFrameCount, MAX_ROOM_BGFRAMES));
@@ -383,8 +378,7 @@ HError ReadAnimBgBlock(RoomStruct *room, Stream *in, RoomFileVersion data_ver) {
 	return HError::None();
 }
 
-// Read custom properties
-HError ReadPropertiesBlock(RoomStruct *room, Stream *in, RoomFileVersion /*data_ver*/) {
+// Read custom propertiesHError ReadPropertiesBlock(RoomStruct *room, Stream *in, RoomFileVersion /*data_ver*/) {
 	int prop_ver = in->ReadInt32();
 	if (prop_ver != 1)
 		return new RoomFileError(kRoomFileErr_PropertiesBlockFormat, String::FromFormat("Expected version %d, got %d", 1, prop_ver));
@@ -443,8 +437,7 @@ HError ReadRoomBlock(RoomStruct *room, Stream *in, RoomFileBlock block, const St
 		String::FromFormat("Type: %s", ext_id.GetCStr()));
 }
 
-// RoomBlockReader reads whole room data, block by block
-class RoomBlockReader : public DataExtReader {
+// RoomBlockReader reads whole room data, block by blockclass RoomBlockReader : public DataExtReader {
 public:
 	RoomBlockReader(RoomStruct *room, RoomFileVersion data_ver, Stream *in)
 		: DataExtReader(in,

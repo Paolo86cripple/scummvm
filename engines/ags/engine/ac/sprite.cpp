@@ -43,8 +43,7 @@ Size get_new_size_for_sprite(const Size &size, const uint32_t sprite_flags) {
 	return newsz;
 }
 
-// from is a 32-bit RGBA image, to is a 15/16/24-bit destination image
-Bitmap *remove_alpha_channel(Bitmap *from) {
+// from is a 32-bit RGBA image, to is a 15/16/24-bit destination imageBitmap *remove_alpha_channel(Bitmap *from) {
 	const int game_cd = _GP(game).GetColorDepth();
 	Bitmap *to = BitmapHelper::CreateBitmap(from->GetWidth(), from->GetHeight(), game_cd);
 	const int maskcol = to->GetMaskColor();

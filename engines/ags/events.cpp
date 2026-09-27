@@ -92,8 +92,7 @@ void EventsManager::pollEvents() {
 	}
 }
 
-#if 0
-bool EventsManager::keypressed() {
+#if 0bool EventsManager::keypressed() {
 	pollEvents();
 	return !_pendingKeys.empty();
 }

@@ -26,8 +26,7 @@ namespace AGS3 {
 
 const char *get_translation(const char *text);
 int IsTranslationAvailable();
-// GetTranslationName assumes a string buffer of MAX_MAXSTRLEN
-int GetTranslationName(char *buffer);
+// GetTranslationName assumes a string buffer of MAX_MAXSTRLENint GetTranslationName(char *buffer);
 
 } // namespace AGS3
 

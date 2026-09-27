@@ -36,8 +36,7 @@ namespace AGS3 {
 namespace AGS {
 namespace Shared {
 
-// Mask option for blitting one bitmap on another
-enum BitmapMaskOption {
+// Mask option for blitting one bitmap on anotherenum BitmapMaskOption {
 	// Plain copies bitmap pixels
 	kBitmap_Copy,
 	// Consider mask color fully transparent and do not copy pixels having it
@@ -56,8 +55,7 @@ namespace Shared {
 
 class Bitmap;
 
-// TODO: revise this construction later
-namespace BitmapHelper {
+// TODO: revise this construction laternamespace BitmapHelper {
 
 // Helper functions, that delete faulty bitmaps automatically, and return
 // NULL if bitmap could not be created.
@@ -66,10 +64,8 @@ namespace BitmapHelper {
 // color depth will be used (as previously set for the system).
 // Creates a new bitmap of the given format; the pixel contents are undefined.
 Bitmap *CreateBitmap(int width, int height, int color_depth = 0);
-// Creates a new bitmap and clears it with the given color
-Bitmap *CreateClearBitmap(int width, int height, int color_depth = 0, int clear_color = 0);
-// Creates a new bitmap and clears it with the transparent color
-Bitmap *CreateTransparentBitmap(int width, int height, int color_depth = 0);
+// Creates a new bitmap and clears it with the given colorBitmap *CreateClearBitmap(int width, int height, int color_depth = 0, int clear_color = 0);
+// Creates a new bitmap and clears it with the transparent colorBitmap *CreateTransparentBitmap(int width, int height, int color_depth = 0);
 // Creates a sub-bitmap of the given bitmap; the sub-bitmap is a reference to
 // particular region inside a parent.
 // WARNING: the parent bitmap MUST be kept in memory for as long as sub-bitmap exists!

@@ -39,40 +39,31 @@ Game data versions and changes:
 
 Versions above are incompatible at the moment.
 
-18 : 2.5.0
-19 : 2.5.1 + 2.52
-20 : 2.5.3
+18 : 2.5.019 : 2.5.1 + 2.5220 : 2.5.3
 
 Lip sync data added.
-21 : 2.5.4
-22 : 2.5.5
+21 : 2.5.422 : 2.5.5
 
 Variable number of sprites.
-24 : 2.5.6
-25 : 2.6.0
+24 : 2.5.625 : 2.6.0
 
 Encrypted global messages and dialogs.
 26 : 2.6.1
 
-Wait() must be called with parameter > 0
-GetRegionAt() clips the input values to the screen size
-Color 0 now means transparent instead of black for text windows
-SetPlayerCharacter() does nothing if the new character is already the player character.
+Wait() must be called with parameter > 0GetRegionAt() clips the input values to the screen sizeColor 0 now means transparent instead of black for text windowsSetPlayerCharacter() does nothing if the new character is already the player character.
 27 : 2.6.2
 
 Script modules. Fixes bug in the inventory display.
 Clickable GUI is selected with regard for the drawing order.
 Pointer to the "player" variable is now accessed via a dynamic object.
-31 : 2.7.0
-32 : 2.7.2
+31 : 2.7.032 : 2.7.2
 
 35 : 3.0.0
 
 Room names are serialized when game is compiled in "debug" mode.
 36 : 3.0.1
 
-Interactions are now scripts. The number for "not set" changed from 0 to -1 for
-a lot of variables (views, sounds).
+Interactions are now scripts. The number for "not set" changed from 0 to -1 fora lot of variables (views, sounds).
 Deprecated switch between low-res and high-res native coordinates.
 37 : 3.1.0
 
@@ -82,45 +73,32 @@ Dialogs are now scripts. New character animation speed.
 Individual character speech animation speed.
 40 : 3.1.2
 
-Audio clips
-41 : 3.2.0
-42 : 3.2.1
+Audio clips41 : 3.2.042 : 3.2.1
 
-43 : 3.3.0
-Added few more game options.
+43 : 3.3.0Added few more game options.
 
-44 : 3.3.1
-Added custom dialog option highlight colour.
+44 : 3.3.1Added custom dialog option highlight colour.
 
-45 : 3.4.0.1
-Support for custom game resolution.
+45 : 3.4.0.1Support for custom game resolution.
 
-46 : 3.4.0.2-.3
-Audio playback speed.
+46 : 3.4.0.2-.3Audio playback speed.
 Custom dialog option rendering extension.
 
-47 : 3.4.0.4
-Custom properties changed at runtime.
+47 : 3.4.0.4Custom properties changed at runtime.
 Ambient lighting
 
-48 : 3.4.1
-OPT_RENDERATSCREENRES, extended engine caps check, font vertical offset.
+48 : 3.4.1OPT_RENDERATSCREENRES, extended engine caps check, font vertical offset.
 
-49 : 3.4.1.2
-Font custom line spacing.
+49 : 3.4.1.2Font custom line spacing.
 
-50 : 3.5.0.8
-Sprites have "real" resolution. Expanded FontInfo data format.
+50 : 3.5.0.8Sprites have "real" resolution. Expanded FontInfo data format.
 Option to allow legacy relative asset resolutions.
 
 3.6.0 :
 Format value is defined as AGS version represented as NN,NN,NN,NN.
-Fonts have adjustable outline
-3.6.0.11:
-New font load flags, control backward compatible font behavior
-3.6.0.16:
-Idle animation speed, modifiable hotspot names, fixed video frame
-3.6.0.21:
+Fonts have adjustable outline3.6.0.11:
+New font load flags, control backward compatible font behavior3.6.0.16:
+Idle animation speed, modifiable hotspot names, fixed video frame3.6.0.21:
 Some adjustments to gui text alignment.
 3.6.1:
 In RTL mode all text is reversed, not only wrappable (labels etc).

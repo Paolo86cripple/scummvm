@@ -52,8 +52,7 @@ struct DialogTopic;
 namespace AGS {
 namespace Shared {
 
-// Error codes for main game file reading
-enum MainGameFileErrorType {
+// Error codes for main game file readingenum MainGameFileErrorType {
 	kMGFErr_NoError,
 	kMGFErr_FileOpenFailed,
 	kMGFErr_SignatureFailed,
@@ -81,8 +80,7 @@ typedef TypedCodeError<MainGameFileErrorType, GetMainGameFileErrorText> MainGame
 typedef ErrorHandle<MainGameFileError> HGameFileError;
 typedef std::unique_ptr<Stream> UStream;
 
-// MainGameSource defines a successfully opened main game file
-struct MainGameSource {
+// MainGameSource defines a successfully opened main game filestruct MainGameSource {
 	// Standart main game file names for 3.* and 2.* games respectively
 	static const char *DefaultFilename_v3;
 	static const char *DefaultFilename_v2;
@@ -137,26 +135,19 @@ struct LoadedGameEntities {
 
 class AssetManager;
 
-// Tells if the given path (library filename) contains main game file
-bool               IsMainGameLibrary(const String &filename);
+// Tells if the given path (library filename) contains main game filebool               IsMainGameLibrary(const String &filename);
 // Scans given directory path for a package containing main game data, returns first found or none.
 String             FindGameData(const String &path);
 String             FindGameData(const String &path, bool(*fn_testfile)(const String &));
-// Opens main game file for reading from an arbitrary file
-HGameFileError     OpenMainGameFile(const String &filename, MainGameSource &src);
+// Opens main game file for reading from an arbitrary fileHGameFileError     OpenMainGameFile(const String &filename, MainGameSource &src);
 // Opens main game file for reading using the current Asset Manager (uses default asset name)
 HGameFileError     OpenMainGameFileFromDefaultAsset(MainGameSource &src, AssetManager *mgr);
-// Reads game data, applies necessary conversions to match current format version
-HGameFileError     ReadGameData(LoadedGameEntities &ents, Stream *in, GameDataVersion data_ver);
-// Pre-reads the heading game data, just enough to identify the game and its special file locations
-void               PreReadGameData(GameSetupStruct &game, Stream *in, GameDataVersion data_ver);
+// Reads game data, applies necessary conversions to match current format versionHGameFileError     ReadGameData(LoadedGameEntities &ents, Stream *in, GameDataVersion data_ver);
+// Pre-reads the heading game data, just enough to identify the game and its special file locationsvoid               PreReadGameData(GameSetupStruct &game, Stream *in, GameDataVersion data_ver);
 // Applies necessary updates, conversions and fixups to the loaded data
-// making it compatible with current engine
-HGameFileError     UpdateGameData(LoadedGameEntities &ents, GameDataVersion data_ver);
-// Ensures that the game saves directory path is valid
-void               FixupSaveDirectory(GameSetupStruct &game);
-// Maps legacy sound numbers to real audio clips
-void               RemapLegacySoundNums(GameSetupStruct &game, std::vector<ViewStruct> &views, GameDataVersion data_ver);
+// making it compatible with current engineHGameFileError     UpdateGameData(LoadedGameEntities &ents, GameDataVersion data_ver);
+// Ensures that the game saves directory path is validvoid               FixupSaveDirectory(GameSetupStruct &game);
+// Maps legacy sound numbers to real audio clipsvoid               RemapLegacySoundNums(GameSetupStruct &game, std::vector<ViewStruct> &views, GameDataVersion data_ver);
 
 } // namespace Shared
 } // namespace AGS

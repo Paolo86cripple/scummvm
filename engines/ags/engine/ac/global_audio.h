@@ -30,8 +30,7 @@ void    StopAmbientSound(int channel);
 void    PlayAmbientSound(int channel, int sndnum, int vol, int x, int y);
 int     IsChannelPlaying(int chan);
 int     IsSoundPlaying();
-// returns -1 on failure, channel number on success
-int     PlaySoundEx(int val1, int channel);
+// returns -1 on failure, channel number on successint     PlaySoundEx(int val1, int channel);
 void    StopAllSounds(int evenAmbient);
 
 void    PlayMusicResetQueue(int newmus);
@@ -67,14 +66,10 @@ struct ScriptAudioChannel;
 ScriptAudioChannel *PlayVoiceClip(CharacterInfo *ch, int sndid, bool as_speech);
 
 //=============================================================================
-// Play voice-over for the active blocking speech and initialize relevant data
-bool    play_voice_speech(int charid, int sndid);
-// Play voice-over clip in non-blocking manner
-bool    play_voice_nonblocking(int charid, int sndid, bool as_speech);
-// Stop voice-over for the active speech and reset relevant data
-void    stop_voice_speech();
-// Stop non-blocking voice-over and revert audio volumes if necessary
-void    stop_voice_nonblocking();
+// Play voice-over for the active blocking speech and initialize relevant databool    play_voice_speech(int charid, int sndid);
+// Play voice-over clip in non-blocking mannerbool    play_voice_nonblocking(int charid, int sndid, bool as_speech);
+// Stop voice-over for the active speech and reset relevant datavoid    stop_voice_speech();
+// Stop non-blocking voice-over and revert audio volumes if necessaryvoid    stop_voice_nonblocking();
 
 } // namespace AGS3
 

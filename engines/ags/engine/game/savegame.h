@@ -70,8 +70,7 @@ enum SavegameVersion {
 	kSvgVersion_LowestSupported = kSvgVersion_321 // change if support dropped
 };
 
-// Error codes for save restoration routine
-enum SavegameErrorType {
+// Error codes for save restoration routineenum SavegameErrorType {
 	kSvgErr_NoError,
 	kSvgErr_FileOpenFailed,
 	kSvgErr_SignatureFailed,
@@ -101,8 +100,7 @@ String GetSavegameErrorText(SavegameErrorType err);
 typedef TypedCodeError<SavegameErrorType, GetSavegameErrorText> SavegameError;
 typedef ErrorHandle<SavegameError> HSaveError;
 
-// SavegameSource defines a successfully opened savegame stream
-struct SavegameSource {
+// SavegameSource defines a successfully opened savegame streamstruct SavegameSource {
 	// Signature of the current savegame format
 	static const char *Signature;
 	// Signature of the legacy savegame format
@@ -119,8 +117,7 @@ struct SavegameSource {
 };
 
 // Supported elements of savegame description;
-// these may be used as flags to define valid fields
-enum SavegameDescElem {
+// these may be used as flags to define valid fieldsenum SavegameDescElem {
 	kSvgDesc_None = 0,
 	kSvgDesc_EnvInfo = 0x0001,
 	kSvgDesc_UserText = 0x0002,
@@ -129,8 +126,7 @@ enum SavegameDescElem {
 };
 
 // SavegameDescription describes savegame with information about the environment
-// it was created in, and custom data provided by user
-struct SavegameDescription {
+// it was created in, and custom data provided by userstruct SavegameDescription {
 	// Name of the engine that saved the game
 	String              EngineName;
 	// Version of the engine that saved the game
@@ -158,20 +154,15 @@ struct SavegameDescription {
 };
 
 
-// Opens savegame for reading; optionally reads description, if any is provided
-HSaveError     OpenSavegame(const String &filename, SavegameSource &src,
+// Opens savegame for reading; optionally reads description, if any is providedHSaveError     OpenSavegame(const String &filename, SavegameSource &src,
                             SavegameDescription &desc, SavegameDescElem elems = kSvgDesc_All);
-// Opens savegame and reads the savegame description
-HSaveError     OpenSavegame(const String &filename, SavegameDescription &desc, SavegameDescElem elems = kSvgDesc_All);
+// Opens savegame and reads the savegame descriptionHSaveError     OpenSavegame(const String &filename, SavegameDescription &desc, SavegameDescElem elems = kSvgDesc_All);
 
-// Reads the game data from the save stream and reinitializes game state
-HSaveError     RestoreGameState(Stream *in, SavegameVersion svg_version);
+// Reads the game data from the save stream and reinitializes game stateHSaveError     RestoreGameState(Stream *in, SavegameVersion svg_version);
 
-// Opens savegame for writing and puts in savegame description
-Stream *StartSavegame(const String &filename, const String &user_text, const Bitmap *user_image);
+// Opens savegame for writing and puts in savegame descriptionStream *StartSavegame(const String &filename, const String &user_text, const Bitmap *user_image);
 
-// Prepares game for saving state and writes game data into the save stream
-void           SaveGameState(Stream *out);
+// Prepares game for saving state and writes game data into the save streamvoid           SaveGameState(Stream *out);
 
 } // namespace Engine
 } // namespace AGS

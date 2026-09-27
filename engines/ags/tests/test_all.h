@@ -25,21 +25,16 @@ namespace AGS3 {
 
 extern void Test_DoAllTests();
 
-// Math tests
-extern void Test_Math();
+// Math testsextern void Test_Math();
 
-// File tests
-extern void Test_File();
+// File testsextern void Test_File();
 extern void Test_IniFile();
 
-// Graphics tests
-extern void Test_Gfx();
+// Graphics testsextern void Test_Gfx();
 
-// Memory / bit-byte operations
-extern void Test_Memory();
+// Memory / bit-byte operationsextern void Test_Memory();
 
-// String tests
-extern void Test_ScriptSprintf();
+// String testsextern void Test_ScriptSprintf();
 extern void Test_String();
 extern void Test_Path();
 extern void Test_Version();

@@ -118,8 +118,7 @@ int IsSoundPlaying() {
 	return 0;
 }
 
-// returns -1 on failure, channel number on success
-int PlaySoundEx(int val1, int channel) {
+// returns -1 on failure, channel number on successint PlaySoundEx(int val1, int channel) {
 
 	if (_G(debug_flags) & DBG_NOSFX)
 		return -1;
@@ -459,8 +458,7 @@ ScriptAudioChannel *PlayVoiceClip(CharacterInfo *ch, int sndid, bool as_speech) 
 	return &_G(scrAudioChannel)[SCHAN_SPEECH];
 }
 
-// Construct an asset name for the voice-over clip for the given character and cue id
-String get_cue_filename(int charid, int sndid, bool old_style = true) {
+// Construct an asset name for the voice-over clip for the given character and cue idString get_cue_filename(int charid, int sndid, bool old_style = true) {
 	String asset_path = get_voice_assetpath();
 	// Clip name generation rule:
 	// New-style: use full script name (past the 'c' prefix),
@@ -478,8 +476,7 @@ String get_cue_filename(int charid, int sndid, bool old_style = true) {
 }
 
 // Play voice-over clip on the common channel;
-// voice_name should be bare clip name without extension
-static bool play_voice_clip_on_channel(const String &voice_name) {
+// voice_name should be bare clip name without extensionstatic bool play_voice_clip_on_channel(const String &voice_name) {
 	stop_and_destroy_channel(SCHAN_SPEECH);
 
 	String asset_name = voice_name;
@@ -515,8 +512,7 @@ static bool play_voice_clip_on_channel(const String &voice_name) {
 }
 
 // Play voice-over clip and adjust audio volumes;
-// voice_name should be bare clip name without extension
-static bool play_voice_clip_impl(const String &voice_name, bool as_speech, bool is_blocking) {
+// voice_name should be bare clip name without extensionstatic bool play_voice_clip_impl(const String &voice_name, bool as_speech, bool is_blocking) {
 	if (!play_voice_clip_on_channel(voice_name))
 		return false;
 	if (!as_speech)
@@ -538,8 +534,7 @@ static bool play_voice_clip_impl(const String &voice_name, bool as_speech, bool 
 	return true;
 }
 
-// Stop voice-over clip and schedule audio volume reset
-static void stop_voice_clip_impl() {
+// Stop voice-over clip and schedule audio volume resetstatic void stop_voice_clip_impl() {
 	_GP(play).music_master_volume = _GP(play).music_vol_was;
 	// update the music in a bit (fixes two speeches follow each other
 	// and music going up-then-down)

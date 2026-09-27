@@ -78,8 +78,7 @@ HRoomFileError OpenRoomFile(const String &filename, RoomDataSource &src) {
 	return ReadRoomHeader(src);
 }
 
-// Read room data header and check that we support this format
-HRoomFileError ReadRoomHeader(RoomDataSource &src) {
+// Read room data header and check that we support this formatHRoomFileError ReadRoomHeader(RoomDataSource &src) {
 	src.DataVersion = (RoomFileVersion)src.InputStream->ReadInt16();
 	if (src.DataVersion < kRoomVersion_250b || src.DataVersion > kRoomVersion_Current)
 		return new RoomFileError(kRoomFileErr_FormatNotSupported, String::FromFormat("Required format version: %d, supported %d - %d", src.DataVersion, kRoomVersion_250b, kRoomVersion_Current));
@@ -110,16 +109,14 @@ static void WriteRoomBlockWriter(Stream *out) {
 	writer_writer(writer_room, out);
 }
 
-// Helper for new-style blocks with string id
-void WriteRoomBlock(const RoomStruct *room, const String &ext_id, PfnWriteRoomBlock writer, Stream *out) {
+// Helper for new-style blocks with string idvoid WriteRoomBlock(const RoomStruct *room, const String &ext_id, PfnWriteRoomBlock writer, Stream *out) {
 	writer_writer = writer;
 	writer_room = room;
 	WriteExtBlock(ext_id, WriteRoomBlockWriter,
 		kDataExt_NumID8 | kDataExt_File64, out);
 }
 
-// Helper for old-style blocks with only numeric id
-void WriteRoomBlock(const RoomStruct *room, RoomFileBlock block, PfnWriteRoomBlock writer, Stream *out) {
+// Helper for old-style blocks with only numeric idvoid WriteRoomBlock(const RoomStruct *room, RoomFileBlock block, PfnWriteRoomBlock writer, Stream *out) {
 	writer_writer = writer;
 	writer_room = room;
 	WriteExtBlock(block, WriteRoomBlockWriter,

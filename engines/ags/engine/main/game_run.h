@@ -42,12 +42,9 @@ void GameLoopUntilNotMoving(const short *move);
 void GameLoopUntilNoOverlay();
 void GameLoopUntilButAnimEnd(int guin, int objn);
 
-// Run the actual game until it ends, or aborted by player/error; loops GameTick() internally
-void RunGameUntilAborted();
-// Update everything game related; wait for the next frame
-void UpdateGameOnce(bool checkControls = false, AGS::Engine::IDriverDependantBitmap *extraBitmap = nullptr, int extraX = 0, int extraY = 0);
-// Update minimal required game state: audio, loop counter, etc; wait for the next frame
-void UpdateGameAudioOnly();
+// Run the actual game until it ends, or aborted by player/error; loops GameTick() internallyvoid RunGameUntilAborted();
+// Update everything game related; wait for the next framevoid UpdateGameOnce(bool checkControls = false, AGS::Engine::IDriverDependantBitmap *extraBitmap = nullptr, int extraX = 0, int extraY = 0);
+// Update minimal required game state: audio, loop counter, etc; wait for the next framevoid UpdateGameAudioOnly();
 // Updates everything related to object views that could have changed in the midst of a
 // blocking script, cursor position and view, poll anything related to cursor position;
 // this function is useful when you don't want to update whole game, but only things
@@ -69,8 +66,7 @@ bool run_service_key_controls(KeyInput &kgn);
 // otherwise returns true and provides mouse button code.
 bool run_service_mb_controls(eAGSMouseButton &mbut, int &mwheelz);
 // Polls few things (exit flag and debugger messages)
-// TODO: refactor this
-void update_polled_stuff();
+// TODO: refactor thisvoid update_polled_stuff();
 
 } // namespace AGS3
 

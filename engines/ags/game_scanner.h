@@ -34,8 +34,7 @@ namespace AGS3 {
  * Only include this code when detection is static, else it forces to
  * duplicate data
  */
-#ifdef DETECTION_STATIC
-class GameScanner {
+#ifdef DETECTION_STATICclass GameScanner {
 	struct Entry {
 		Common::String _id;
 		Common::String _gameName;

@@ -35,8 +35,7 @@ namespace AGS3 {
 namespace AGS {
 namespace Shared {
 
-// Forward declarations
-class Stream;
+// Forward declarationsclass Stream;
 
 enum FileOpenMode {
 	kFile_Open,         // Open existing file
@@ -51,62 +50,40 @@ enum FileWorkMode {
 };
 
 namespace File {
-// Tells if the given path is a directory
-bool        IsDirectory(const String &directory);
-// Tells if the given path is a file
-bool        IsFile(const String &filename);
+// Tells if the given path is a directorybool        IsDirectory(const String &directory);
+// Tells if the given path is a filebool        IsFile(const String &filename);
 // Tells if the given path is file or directory;
-// may be used to check if it's valid to use
-bool        IsFileOrDir(const String &filename);
-// Returns size of a file, or -1 if no such file found
-soff_t      GetFileSize(const String &filename);
-// Tests if file could be opened for reading
-bool        TestReadFile(const String &filename);
-// Opens a file for writing or creates new one if it does not exist; deletes file if it was created during test
-bool        TestWriteFile(const String &filename);
-// Create new empty file and deletes it; returns TRUE if was able to create file
-bool        TestCreateFile(const String &filename);
-// Deletes existing file; returns TRUE if was able to delete one
-bool        DeleteFile(const String &filename);
-// Renames existing file to the new name; returns TRUE on success
-bool		RenameFile(const String &old_name, const String &new_name);
-// Copies a file from src_path to dst_path; returns TRUE on success
-bool		CopyFile(const String &src_path, const String &dst_path, bool overwrite);
+// may be used to check if it's valid to usebool        IsFileOrDir(const String &filename);
+// Returns size of a file, or -1 if no such file foundsoff_t      GetFileSize(const String &filename);
+// Tests if file could be opened for readingbool        TestReadFile(const String &filename);
+// Opens a file for writing or creates new one if it does not exist; deletes file if it was created during testbool        TestWriteFile(const String &filename);
+// Create new empty file and deletes it; returns TRUE if was able to create filebool        TestCreateFile(const String &filename);
+// Deletes existing file; returns TRUE if was able to delete onebool        DeleteFile(const String &filename);
+// Renames existing file to the new name; returns TRUE on successbool		RenameFile(const String &old_name, const String &new_name);
+// Copies a file from src_path to dst_path; returns TRUE on successbool		CopyFile(const String &src_path, const String &dst_path, bool overwrite);
 
-// Sets FileOpenMode and FileWorkMode values corresponding to C-style file open mode string
-bool        GetFileModesFromCMode(const String &cmode, FileOpenMode &open_mode, FileWorkMode &work_mode);
-// Gets C-style file mode from FileOpenMode and FileWorkMode
-String      GetCMode(FileOpenMode open_mode, FileWorkMode work_mode);
+// Sets FileOpenMode and FileWorkMode values corresponding to C-style file open mode stringbool        GetFileModesFromCMode(const String &cmode, FileOpenMode &open_mode, FileWorkMode &work_mode);
+// Gets C-style file mode from FileOpenMode and FileWorkModeString      GetCMode(FileOpenMode open_mode, FileWorkMode work_mode);
 
-// Opens file in the given mode
-Stream *OpenFile(const String &filename, FileOpenMode open_mode, FileWorkMode work_mode);
-// Opens file for reading restricted to the arbitrary offset range
-Stream *OpenFile(const String &filename, soff_t start_off, soff_t end_off);
+// Opens file in the given modeStream *OpenFile(const String &filename, FileOpenMode open_mode, FileWorkMode work_mode);
+// Opens file for reading restricted to the arbitrary offset rangeStream *OpenFile(const String &filename, soff_t start_off, soff_t end_off);
 // Convenience helpers
-// Create a totally new file, overwrite existing one
-inline Stream *CreateFile(const String &filename) {
+// Create a totally new file, overwrite existing oneinline Stream *CreateFile(const String &filename) {
 	return OpenFile(filename, kFile_CreateAlways, kFile_Write);
 }
-// Open existing file for reading
-inline Stream *OpenFileRead(const String &filename) {
+// Open existing file for readinginline Stream *OpenFileRead(const String &filename) {
 	return OpenFile(filename, kFile_Open, kFile_Read);
 }
-// Open existing file for writing (append) or create if it does not exist
-inline Stream *OpenFileWrite(const String &filename) {
+// Open existing file for writing (append) or create if it does not existinline Stream *OpenFileWrite(const String &filename) {
 	return OpenFile(filename, kFile_Create, kFile_Write);
 }
 
-// Opens stdin stream for reading
-Stream *OpenStdin();
-// Opens stdout stream for writing
-Stream *OpenStdout();
-// Opens stderr stream for writing
-Stream *OpenStderr();
+// Opens stdin stream for readingStream *OpenStdin();
+// Opens stdout stream for writingStream *OpenStdout();
+// Opens stderr stream for writingStream *OpenStderr();
 
-// Case insensitive find file
-String FindFileCI(const String &dir_name, const String &file_name);
-// Case insensitive file open: looks up for the file using FindFileCI
-Stream *OpenFileCI(const String &file_name,
+// Case insensitive find fileString FindFileCI(const String &dir_name, const String &file_name);
+// Case insensitive file open: looks up for the file using FindFileCIStream *OpenFileCI(const String &file_name,
 	FileOpenMode open_mode = kFile_Open,
 	FileWorkMode work_mode = kFile_Read);
 

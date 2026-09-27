@@ -26,8 +26,7 @@
 
 namespace AGS3 {
 
-// Describes a texture or node description, for sorting and passing into renderer
-struct SpriteListEntry {
+// Describes a texture or node description, for sorting and passing into rendererstruct SpriteListEntry {
 	// Optional sprite identifier; used as a second factor when sorting
 	int id = -1;
 	AGS::Engine::IDriverDependantBitmap *ddb = nullptr;

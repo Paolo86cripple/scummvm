@@ -54,15 +54,13 @@ namespace AGS3 {
 using namespace AGS::Shared;
 using namespace AGS::Engine;
 
-// Test if engine supports extended capabilities required to run the game
-bool test_game_caps(const std::set<String> &caps, std::set<String> &failed_caps) {
+// Test if engine supports extended capabilities required to run the gamebool test_game_caps(const std::set<String> &caps, std::set<String> &failed_caps) {
 	// Currently we support nothing special
 	failed_caps = caps;
 	return caps.size() == 0;
 }
 
-// Forms a simple list of capability names
-String get_caps_list(const std::set<String> &caps) {
+// Forms a simple list of capability namesString get_caps_list(const std::set<String> &caps) {
 	String caps_list;
 	for (std::set<String>::const_iterator it = caps.begin(); it != caps.end(); ++it) {
 		caps_list.Append("\n\t");

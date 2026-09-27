@@ -53,16 +53,14 @@ namespace RouteFinderLegacy {
 
 #define MANOBJNUM 99
 
-#define MAXPATHBACK 1000
-static int *pathbackx = nullptr;
+#define MAXPATHBACK 1000static int *pathbackx = nullptr;
 static int *pathbacky = nullptr;
 static int waspossible = 1;
 static int suggestx;
 static int suggesty;
 static int line_failed = 0;
 
-// Configuration for the pathfinder
-struct PathfinderConfig {
+// Configuration for the pathfinderstruct PathfinderConfig {
 	const int MaxGranularity = 3;
 
 	// Short sweep is performed in certain radius around requested destination,
@@ -82,8 +80,7 @@ void set_wallscreen(Bitmap *wallscreen_) {
 	_G(wallscreen) = wallscreen_;
 }
 
-// TODO: find a way to reimpl this with Bitmap
-static void line_callback(BITMAP *bmpp, int x, int y, int /*d*/) {
+// TODO: find a way to reimpl this with Bitmapstatic void line_callback(BITMAP *bmpp, int x, int y, int /*d*/) {
 	/*  if ((x>=320) | (y>=200) | (x<0) | (y<0)) line_failed=1;
 	  else */ if (getpixel(bmpp, x, y) < 1)
 		line_failed = 1;
@@ -383,8 +380,7 @@ try_again:
 #define MAX_TRAIL_LENGTH 5000
 
 // Round down the supplied co-ordinates to the area granularity,
-// and move a bit if this causes them to become non-walkable
-static void round_down_coords(int &tmpx, int &tmpy) {
+// and move a bit if this causes them to become non-walkablestatic void round_down_coords(int &tmpx, int &tmpy) {
 	assert(_G(wallscreen) != nullptr);
 
 	int startgran = walk_area_granularity[_G(wallscreen)->GetPixel(tmpx, tmpy)];
@@ -652,8 +648,7 @@ void set_route_move_speed(int speed_x, int speed_y) {
 	_G(move_speed_y) = input_speed_to_fixed(speed_y);
 }
 
-// Calculates the X and Y per game loop, for this stage of the movelist
-void calculate_move_stage(MoveList *mlsp, int aaa, fixed move_speed_x, fixed move_speed_y) {
+// Calculates the X and Y per game loop, for this stage of the movelistvoid calculate_move_stage(MoveList *mlsp, int aaa, fixed move_speed_x, fixed move_speed_y) {
 	assert(mlsp != nullptr);
 
 	// work out the x & y per move. First, opp/adj=tan, so work out the angle

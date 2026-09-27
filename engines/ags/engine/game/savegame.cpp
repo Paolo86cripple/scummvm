@@ -76,8 +76,7 @@ using namespace AGS;
 using namespace AGS::Shared;
 using namespace AGS::Engine;
 
-// function is currently implemented in savegame_v321.cpp
-HSaveError restore_save_data_v321(Stream *in, GameDataVersion data_ver, const PreservedParams &pp, RestoredData &r_data);
+// function is currently implemented in savegame_v321.cppHSaveError restore_save_data_v321(Stream *in, GameDataVersion data_ver, const PreservedParams &pp, RestoredData &r_data);
 
 namespace AGS {
 namespace Engine {
@@ -429,15 +428,13 @@ void RestoreViewportsAndCameras(const RestoredData &r_data) {
 	_GP(play).InvalidateViewportZOrder();
 }
 
-// Resets a number of options that are not supposed to be changed at runtime
-static void CopyPreservedGameOptions(GameSetupStructBase &gs, const PreservedParams &pp) {
+// Resets a number of options that are not supposed to be changed at runtimestatic void CopyPreservedGameOptions(GameSetupStructBase &gs, const PreservedParams &pp) {
 	const auto restricted_opts = GameSetupStructBase::GetRestrictedOptions();
 	for (auto opt : restricted_opts)
 		gs.options[opt] = pp.GameOptions[opt];
 }
 
-// Final processing after successfully restoring from save
-HSaveError DoAfterRestore(const PreservedParams &pp, RestoredData &r_data) {
+// Final processing after successfully restoring from saveHSaveError DoAfterRestore(const PreservedParams &pp, RestoredData &r_data) {
 	// Use a yellow dialog highlight for older game versions
 	// CHECKME: it is dubious that this should be right here
 	if (_G(loaded_game_file_version) < kGameVersion_331)

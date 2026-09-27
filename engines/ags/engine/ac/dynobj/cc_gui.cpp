@@ -29,8 +29,7 @@ namespace AGS3 {
 
 using namespace AGS::Shared;
 
-// return the type name of the object
-const char *CCGUI::GetType() {
+// return the type name of the objectconst char *CCGUI::GetType() {
 	return "GUI";
 }
 
@@ -39,8 +38,7 @@ size_t CCGUI::CalcSerializeSize(const void * /*address*/) {
 }
 
 // serialize the object into BUFFER (which is BUFSIZE bytes)
-// return number of bytes used
-void CCGUI::Serialize(const void *address, Stream *out) {
+// return number of bytes usedvoid CCGUI::Serialize(const void *address, Stream *out) {
 	const ScriptGUI *shh = static_cast<const ScriptGUI *>(address);
 	out->WriteInt32(shh->id);
 }

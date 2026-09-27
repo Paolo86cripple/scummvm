@@ -46,14 +46,12 @@ bool find_nearest_supported_mode(const AGS::Engine::IGfxModeList &modes, const S
                                  const int color_depth, const Size *ratio_reference, const Size *upper_bound,
                                  AGS::Engine::DisplayMode &dm, int *mode_index = nullptr);
 
-// Filter configuration
-struct GfxFilterSetup {
+// Filter configurationstruct GfxFilterSetup {
 	String ID;          // internal filter ID
 	String UserRequest; // filter name, requested by user
 };
 
-// Defines how game frame is scaled inside a larger window
-enum FrameScaleDef {
+// Defines how game frame is scaled inside a larger windowenum FrameScaleDef {
 	kFrame_Undefined = -1,
 	kFrame_Round,        // max round (integer) scaling factor
 	kFrame_Stretch,      // resize to maximal possible inside the display box
@@ -61,8 +59,7 @@ enum FrameScaleDef {
 	kNumFrameScaleDef
 };
 
-// Configuration that is used to determine the size and style of the window
-struct WindowSetup
+// Configuration that is used to determine the size and style of the windowstruct WindowSetup
 {
     AGS3::Size           Size;      // explicit screen metrics
     int                  Scale = 0; // explicit game scale factor
@@ -76,8 +73,7 @@ struct WindowSetup
     WindowSetup(WindowMode mode) : Scale(0), Mode(mode) {}
 };
 
-// Additional parameters for the display mode setup
-struct DisplaySetupEx {
+// Additional parameters for the display mode setupstruct DisplaySetupEx {
 	int                  RefreshRate = 0;  // gfx mode refresh rate
 	bool                 VSync = false;    // vertical sync
 };
@@ -103,8 +99,7 @@ struct DisplayModeSetup {
 	GfxFilterSetup       Filter;        // graphics filter definition
 };
 
-// Display mode color depth variants suggested for the use
-struct ColorDepthOption {
+// Display mode color depth variants suggested for the usestruct ColorDepthOption {
 	int     Bits;   // color depth value in bits
 	bool    Forced; // whether the depth should be forced, or driver's recommendation used
 
@@ -125,30 +120,19 @@ struct ActiveDisplaySetting {
 // Initializes any possible gfx mode, using user config as a recommendation;
 // may try all available renderers and modes before succeeding (or failing)
 bool graphics_mode_init_any(const GraphicResolution &game_res, const DisplayModeSetup &setup, const ColorDepthOption &color_depth);
-// Return last saved display mode of the given kind
-ActiveDisplaySetting graphics_mode_get_last_setting(bool windowed);
-// Creates graphics driver of given id
-bool graphics_mode_create_renderer(const String &driver_id);
-// Try to find and initialize compatible display mode as close to given setup as possible
-bool graphics_mode_set_dm_any(const Size &game_size, const WindowSetup &ws,
+// Return last saved display mode of the given kindActiveDisplaySetting graphics_mode_get_last_setting(bool windowed);
+// Creates graphics driver of given idbool graphics_mode_create_renderer(const String &driver_id);
+// Try to find and initialize compatible display mode as close to given setup as possiblebool graphics_mode_set_dm_any(const Size &game_size, const WindowSetup &ws,
 	const ColorDepthOption &color_depth,
 	const FrameScaleDef frame, const DisplaySetupEx &params);
-// Set the display mode with given parameters
-bool graphics_mode_set_dm(const AGS::Engine::DisplayMode &dm);
-// Set the native image size
-bool graphics_mode_set_native_res(const GraphicResolution &native_res);
-// Get current render frame setup
-FrameScaleDef graphics_mode_get_render_frame();
-// Set the render frame position inside the window
-bool graphics_mode_set_render_frame(const FrameScaleDef &frame_setup);
-// Set requested graphics filter, or default filter if the requested one failed
-bool graphics_mode_set_filter_any(const GfxFilterSetup &setup);
-// Set the scaling filter with given ID
-bool graphics_mode_set_filter(const String &filter_id);
-// Update graphic renderer and render frame when window size changes
-void graphics_mode_on_window_changed(const Size &sz);
-// Releases current graphic mode and shuts down renderer
-void graphics_mode_shutdown();
+// Set the display mode with given parametersbool graphics_mode_set_dm(const AGS::Engine::DisplayMode &dm);
+// Set the native image sizebool graphics_mode_set_native_res(const GraphicResolution &native_res);
+// Get current render frame setupFrameScaleDef graphics_mode_get_render_frame();
+// Set the render frame position inside the windowbool graphics_mode_set_render_frame(const FrameScaleDef &frame_setup);
+// Set requested graphics filter, or default filter if the requested one failedbool graphics_mode_set_filter_any(const GfxFilterSetup &setup);
+// Set the scaling filter with given IDbool graphics_mode_set_filter(const String &filter_id);
+// Update graphic renderer and render frame when window size changesvoid graphics_mode_on_window_changed(const Size &sz);
+// Releases current graphic mode and shuts down renderervoid graphics_mode_shutdown();
 
 } // namespace AGS3
 

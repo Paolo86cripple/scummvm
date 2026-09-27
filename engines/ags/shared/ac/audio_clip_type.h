@@ -24,15 +24,13 @@
 
 namespace AGS3 {
 
-// Forward declaration
-namespace AGS {
+// Forward declarationnamespace AGS {
 namespace Shared {
 class Stream;
 } // namespace Shared
 } // namespace AGS
 
-#define AUDIO_CLIP_TYPE_SOUND 1
-struct AudioClipType {
+#define AUDIO_CLIP_TYPE_SOUND 1struct AudioClipType {
 	int id;
 	int reservedChannels;
 	int volume_reduction_while_speech_playing;

@@ -42,8 +42,7 @@ typedef std::shared_ptr<Bitmap> PBitmap;
 // PreservedParams keeps old values of particular gameplay
 // parameters that are saved before the save restoration
 // and either applied or compared to new values after
-// loading save data
-struct PreservedParams {
+// loading save datastruct PreservedParams {
 	// Whether speech and audio packages available
 	bool SpeechVOX = false;
 	bool MusicVOX = false;
@@ -56,8 +55,7 @@ struct PreservedParams {
 	PreservedParams();
 };
 
-// Audio playback state flags, used only in serialization
-enum AudioSvgPlaybackFlags {
+// Audio playback state flags, used only in serializationenum AudioSvgPlaybackFlags {
 	kSvgAudioPaused = 0x01
 };
 
@@ -74,8 +72,7 @@ enum ViewportSaveFlags {
 };
 
 // RestoredData keeps certain temporary data to help with
-// the restoration process
-struct RestoredData {
+// the restoration processstruct RestoredData {
 	int                     FPS;
 	// Unserialized bitmaps for dynamic surfaces
 	std::vector<std::unique_ptr<Bitmap>> DynamicSurfaces;

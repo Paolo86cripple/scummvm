@@ -49,8 +49,7 @@ using namespace AGS::Shared;
 
 extern void wouttext_outline(Shared::Bitmap *ds, int xxp, int yyp, int usingfont, color_t text_color, const char *texx);
 
-// For engine these are defined in ac.cpp
-extern void replace_macro_tokens(const char *, String &);
+// For engine these are defined in ac.cppextern void replace_macro_tokens(const char *, String &);
 
 
 bool GUIMain::HasAlphaChannel() const {

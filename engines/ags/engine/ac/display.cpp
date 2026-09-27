@@ -68,8 +68,7 @@ struct DisplayVars {
 	int fulltxtheight = 0; // total height of all the text
 } disp;
 
-// Generates a textual image and returns a disposable bitmap
-Bitmap *create_textual_image(const char *text, int asspch, int isThought,
+// Generates a textual image and returns a disposable bitmapBitmap *create_textual_image(const char *text, int asspch, int isThought,
 							 int &xx, int &yy, int &adjustedXX, int &adjustedYY, int wii, int usingfont, int allowShrink,
 							 bool &alphaChannel) {
 	//
@@ -222,8 +221,7 @@ Bitmap *create_textual_image(const char *text, int asspch, int isThought,
 
 // Pass yy = -1 to find Y co-ord automatically
 // allowShrink = 0 for none, 1 for leftwards, 2 for rightwards
-// pass blocking=2 to create permanent overlay
-ScreenOverlay *display_main(int xx, int yy, int wii, const char *text, int disp_type, int usingfont,
+// pass blocking=2 to create permanent overlayScreenOverlay *display_main(int xx, int yy, int wii, const char *text, int disp_type, int usingfont,
 							 int asspch, int isThought, int allowShrink, bool overlayPositionFixed, bool roomlayer) {
 	//
 	// Prepare for the message display
@@ -553,8 +551,7 @@ void wouttextxy_AutoOutline(Bitmap *ds, size_t font, int32_t color, const char *
 	}
 }
 
-// Draw an outline if requested, then draw the text on top
-void wouttext_outline(Shared::Bitmap *ds, int xxp, int yyp, int font, color_t text_color, const char *texx) {
+// Draw an outline if requested, then draw the text on topvoid wouttext_outline(Shared::Bitmap *ds, int xxp, int yyp, int font, color_t text_color, const char *texx) {
 	size_t const text_font = static_cast<size_t>(font);
 	// Draw outline (a backdrop) if requested
 	color_t const outline_color = ds->GetCompatibleColor(_GP(play).speech_text_shadow);
@@ -677,8 +674,7 @@ void draw_button_background(Bitmap *ds, int xx1, int yy1, int xx2, int yy2, GUIM
 }
 
 // Calculate the width that the left and right border of the textwindow
-// GUI take up
-int get_textwindow_border_width(int twgui) {
+// GUI take upint get_textwindow_border_width(int twgui) {
 	if (twgui < 0)
 		return 0;
 
@@ -691,8 +687,7 @@ int get_textwindow_border_width(int twgui) {
 	return borwid;
 }
 
-// get the hegiht of the text window's top border
-int get_textwindow_top_border_height(int twgui) {
+// get the hegiht of the text window's top borderint get_textwindow_top_border_height(int twgui) {
 	if (twgui < 0)
 		return 0;
 
@@ -703,8 +698,7 @@ int get_textwindow_top_border_height(int twgui) {
 }
 
 // Get the padding for a text window
-// -1 for the game's custom text window
-int get_textwindow_padding(int ifnum) {
+// -1 for the game's custom text windowint get_textwindow_padding(int ifnum) {
 	int result;
 
 	if (ifnum < 0)

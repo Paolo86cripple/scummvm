@@ -107,17 +107,14 @@ struct EventHappened {
 };
 
 int run_claimable_event(const char *tsname, bool includeRoom, int numParams, const RuntimeScriptValue *params, bool *eventWasClaimed);
-// runs the global script on_event fnuction
-void run_on_event(int evtype, RuntimeScriptValue &wparam);
+// runs the global script on_event fnuctionvoid run_on_event(int evtype, RuntimeScriptValue &wparam);
 void run_room_event(int id);
-// event list functions
-void setevent(int evtyp, int ev1 = 0, int ev2 = -1000, int ev3 = -1000);
+// event list functionsvoid setevent(int evtyp, int ev1 = 0, int ev2 = -1000, int ev3 = -1000);
 void force_event(int evtyp, int ev1 = 0, int ev2 = -1000, int ev3 = -1000);
 void process_event(const EventHappened *evp);
 void runevent_now(int evtyp, int ev1, int ev2, int ev3);
 void processallevents();
-// end event list functions
-void ClaimEvent();
+// end event list functionsvoid ClaimEvent();
 
 } // namespace AGS3
 

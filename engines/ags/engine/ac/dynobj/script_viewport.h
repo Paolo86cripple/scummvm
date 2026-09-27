@@ -56,8 +56,7 @@ private:
 	int _id = -1; // index of viewport in the game state array
 };
 
-// Unserialize viewport from the memory stream
-ScriptViewport *Viewport_Unserialize(int handle, AGS::Shared::Stream *in, size_t data_sz);
+// Unserialize viewport from the memory streamScriptViewport *Viewport_Unserialize(int handle, AGS::Shared::Stream *in, size_t data_sz);
 
 } // namespace AGS3
 

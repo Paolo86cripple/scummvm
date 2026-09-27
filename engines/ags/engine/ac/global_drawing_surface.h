@@ -27,10 +27,8 @@ namespace AGS3 {
 void RawSaveScreen();
 // RawRestoreScreen: copy backup bitmap back to screen; we
 // deliberately don't free the Shared::Bitmap *cos they can multiple restore
-// and it gets freed on room exit anyway
-void RawRestoreScreen();
-// Restores the backup bitmap, but tints it to the specified level
-void RawRestoreScreenTinted(int red, int green, int blue, int opacity);
+// and it gets freed on room exit anywayvoid RawRestoreScreen();
+// Restores the backup bitmap, but tints it to the specified levelvoid RawRestoreScreenTinted(int red, int green, int blue, int opacity);
 void RawDrawFrameTransparent(int frame, int translev);
 void RawClear(int clr);
 void RawSetColor(int clr);

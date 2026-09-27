@@ -29,19 +29,16 @@ namespace AGS3 {
 
 // Keyboard input handling
 //
-// avoid including SDL.h here, at least for now, because that leads to conflicts with allegro
-union SDL_Event;
+// avoid including SDL.h here, at least for now, because that leads to conflicts with allegrounion SDL_Event;
 
-// Tells if key event refers to one of the mod-keys
-inline bool is_mod_key(const Common::KeyState &ks) {
+// Tells if key event refers to one of the mod-keysinline bool is_mod_key(const Common::KeyState &ks) {
 	return ks.keycode == Common::KEYCODE_LCTRL || ks.keycode == Common::KEYCODE_RCTRL ||
 	       ks.keycode == Common::KEYCODE_LALT || ks.keycode == Common::KEYCODE_RALT ||
 	       ks.keycode == Common::KEYCODE_LSHIFT || ks.keycode == Common::KEYCODE_RSHIFT ||
 	       ks.keycode == Common::KEYCODE_MODE;
 }
 
-// Converts mod key into merged mod (left & right) for easier handling
-inline int make_merged_mod(int mod) {
+// Converts mod key into merged mod (left & right) for easier handlinginline int make_merged_mod(int mod) {
 	int m_mod = 0;
 	if ((mod & Common::KBD_CTRL) != 0) m_mod |= Common::KBD_CTRL;
 	if ((mod & Common::KBD_SHIFT) != 0) m_mod |= Common::KBD_SHIFT;
@@ -55,48 +52,35 @@ inline int make_merged_mod(int mod) {
 // Optionally works in bacward compatible mode (old_keyhandle)
 extern KeyInput ags_keycode_from_scummvm(const Common::Event &event, bool old_keyhandle);
 
-// Tells if there are any buffered key events
-extern bool ags_keyevent_ready();
-// Queries for the next key event in buffer; returns uninitialized data if none was queued
-extern Common::Event ags_get_next_keyevent();
+// Tells if there are any buffered key eventsextern bool ags_keyevent_ready();
+// Queries for the next key event in buffer; returns uninitialized data if none was queuedextern Common::Event ags_get_next_keyevent();
 // Tells if the key is currently down, provided AGS key.
 // NOTE: for particular script codes this function returns positive if either of two keys are down.
 extern int ags_iskeydown(eAGSKeyCode ags_key);
 // Simulates key press with the given AGS key (sends key down, then key up event)
 extern void ags_simulate_keypress(eAGSKeyCode ags_key, eAGSKeyMod mod, bool old_keyhandle);
-// Simulates key down event with the given AGS key
-extern void ags_simulate_keydown(eAGSKeyCode ags_key);
-// Simulates key up event with the given AGS key
-extern void ags_simulate_keyup(eAGSKeyCode ags_key);
+// Simulates key down event with the given AGS keyextern void ags_simulate_keydown(eAGSKeyCode ags_key);
+// Simulates key up event with the given AGS keyextern void ags_simulate_keyup(eAGSKeyCode ags_key);
 
 
 // Mouse input handling
 //
-// Tells if the mouse button is currently down
-extern bool ags_misbuttondown(eAGSMouseButton but);
-// Returns last "clicked" mouse button
-extern eAGSMouseButton ags_mgetbutton();
-// Returns recent relative mouse movement; resets accumulated values
-extern void ags_mouse_acquire_relxy(int &x, int &y);
-// Updates mouse cursor position in game
-extern void ags_domouse();
+// Tells if the mouse button is currently downextern bool ags_misbuttondown(eAGSMouseButton but);
+// Returns last "clicked" mouse buttonextern eAGSMouseButton ags_mgetbutton();
+// Returns recent relative mouse movement; resets accumulated valuesextern void ags_mouse_acquire_relxy(int &x, int &y);
+// Updates mouse cursor position in gameextern void ags_domouse();
 // Returns -1 for wheel down and +1 for wheel up
-// TODO: introduce constants for this
-extern int  ags_check_mouse_wheel();
+// TODO: introduce constants for thisextern int  ags_check_mouse_wheel();
 
 // Other input utilities
 //
 // Clears buffered keypresses and mouse clicks;
-// resets current key/mb states
-void ags_clear_input_state();
+// resets current key/mb statesvoid ags_clear_input_state();
 // Clears buffered keypresses and mouse clicks, if any;
-// does NOT reset current key/mb states
-void ags_clear_input_buffer();
-// Clears buffered mouse movement
-void ags_clear_mouse_movement();
+// does NOT reset current key/mb statesvoid ags_clear_input_buffer();
+// Clears buffered mouse movementvoid ags_clear_mouse_movement();
 // Halts execution until any user input
-// TODO: seriously not a good design, replace with event listening
-extern void ags_wait_until_keypress();
+// TODO: seriously not a good design, replace with event listeningextern void ags_wait_until_keypress();
 
 
 // Events.

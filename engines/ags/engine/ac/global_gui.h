@@ -24,16 +24,13 @@
 
 namespace AGS3 {
 
-// IsGUIOn tells whether GUI is actually displayed on screen right now
-int  IsGUIOn(int guinum);
+// IsGUIOn tells whether GUI is actually displayed on screen right nowint  IsGUIOn(int guinum);
 // This is an internal script function, and is undocumented.
 // It is used by the editor's automatic macro generation.
 // TODO: find out how relevant this comment is?
 int  FindGUIID(const char *GUIName);
-// Sets GUI visible property on
-void InterfaceOn(int ifn);
-// Sets GUI visible property off
-void InterfaceOff(int ifn);
+// Sets GUI visible property onvoid InterfaceOn(int ifn);
+// Sets GUI visible property offvoid InterfaceOff(int ifn);
 void CentreGUI(int ifn);
 int  GetTextWidth(const char *text, int fontnum);
 int  GetTextHeight(const char *text, int fontnum, int width);
@@ -42,10 +39,8 @@ int  GetFontLineSpacing(int fontnum);
 void SetGUIBackgroundPic(int guin, int slotn);
 void DisableInterface();
 void EnableInterface();
-// Returns 1 if user interface is enabled, 0 if disabled
-int  IsInterfaceEnabled();
-// pass trans=0 for fully solid, trans=100 for fully transparent
-void SetGUITransparency(int ifn, int trans);
+// Returns 1 if user interface is enabled, 0 if disabledint  IsInterfaceEnabled();
+// pass trans=0 for fully solid, trans=100 for fully transparentvoid SetGUITransparency(int ifn, int trans);
 void SetGUIClickable(int guin, int clickable);
 void SetGUIZOrder(int guin, int z);
 void SetGUISize(int ifn, int widd, int hitt);

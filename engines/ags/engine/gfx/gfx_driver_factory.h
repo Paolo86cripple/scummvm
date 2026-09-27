@@ -74,10 +74,8 @@ public:
 	virtual PGfxFilter           SetFilter(const String &id, String &filter_error) = 0;
 };
 
-// Query the available graphics factory names
-void GetGfxDriverFactoryNames(StringV &ids);
-// Acquire the graphics factory singleton object by its id
-IGfxDriverFactory *GetGfxDriverFactory(const String id);
+// Query the available graphics factory namesvoid GetGfxDriverFactoryNames(StringV &ids);
+// Acquire the graphics factory singleton object by its idIGfxDriverFactory *GetGfxDriverFactory(const String id);
 
 } // namespace Engine
 } // namespace AGS

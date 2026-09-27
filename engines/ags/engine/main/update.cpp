@@ -103,8 +103,7 @@ static void movelist_handle_remainer(const fixed xpermove, const fixed ypermove,
 	assert(fin_from_part >= 0);
 }
 
-// Handle remaining move fixup, but only if necessary
-static void movelist_handle_remainer(MoveList &m) {
+// Handle remaining move fixup, but only if necessarystatic void movelist_handle_remainer(MoveList &m) {
 	assert(m.numstage > 0);
 	const fixed xpermove = m.xpermove[m.onstage];
 	const fixed ypermove = m.ypermove[m.onstage];
@@ -120,8 +119,7 @@ static void movelist_handle_remainer(MoveList &m) {
 	}
 }
 
-// Test if move completed, returns if just completed
-static bool movelist_handle_donemove(const uint8_t testflag, const fixed xpermove, const int targetx, uint8_t &doneflag, int &xps) {
+// Test if move completed, returns if just completedstatic bool movelist_handle_donemove(const uint8_t testflag, const fixed xpermove, const int targetx, uint8_t &doneflag, int &xps) {
 	if ((doneflag & testflag) != 0)
 		return false; // already done before
 
@@ -250,8 +248,7 @@ void update_cycling_views() {
 	}
 }
 
-// Updates the view of the player character
-void update_player_view() {
+// Updates the view of the player charactervoid update_player_view() {
 	if (_G(playerchar)->flags & CHF_FIXVIEW)
 		return; // view is locked
 
@@ -341,8 +338,7 @@ void update_speech_and_messages() {
 	}
 }
 
-// update sierra-style speech
-void update_sierra_speech() {
+// update sierra-style speechvoid update_sierra_speech() {
 	int voice_pos_ms = -1;
 	if (_GP(play).speech_has_voice) {
 		auto *ch = AudioChans::GetChannel(SCHAN_SPEECH);

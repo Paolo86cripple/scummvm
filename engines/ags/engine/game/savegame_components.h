@@ -45,10 +45,8 @@ namespace SavegameComponents {
 extern void component_handlers_init();
 extern void component_handlers_free();
 
-// Reads all available components from the stream
-HSaveError    ReadAll(Stream *in, SavegameVersion svg_version, const PreservedParams &pp, RestoredData &r_data);
-// Writes a full list of common components to the stream
-HSaveError    WriteAllCommon(Stream *out);
+// Reads all available components from the streamHSaveError    ReadAll(Stream *in, SavegameVersion svg_version, const PreservedParams &pp, RestoredData &r_data);
+// Writes a full list of common components to the streamHSaveError    WriteAllCommon(Stream *out);
 
 // Utility functions for reading and writing legacy interactions,
 // or their "times run" counters separately.
@@ -57,8 +55,7 @@ HSaveError ReadInteraction272(Interaction &intr, Stream *in);
 void WriteTimesRun272(const Interaction &intr, Stream *out);
 void WriteInteraction272(const Interaction &intr, Stream *out);
 
-// Precreates primary camera and viewport and reads legacy camera data
-void ReadLegacyCameraState(Stream *in, RestoredData &r_data);
+// Precreates primary camera and viewport and reads legacy camera datavoid ReadLegacyCameraState(Stream *in, RestoredData &r_data);
 } // namespace SavegameComponents
 
 } // namespace Engine

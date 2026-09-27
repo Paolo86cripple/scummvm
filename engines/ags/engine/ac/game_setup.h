@@ -28,23 +28,20 @@
 
 namespace AGS3 {
 
-// Mouse control activation type
-enum MouseControlWhen {
+// Mouse control activation typeenum MouseControlWhen {
 	kMouseCtrl_Never,       // never control mouse (track system mouse position)
 	kMouseCtrl_Fullscreen,  // control mouse in fullscreen only
 	kMouseCtrl_Always,      // always control mouse (fullscreen and windowed)
 	kNumMouseCtrlOptions
 };
 
-// Mouse speed definition, specifies how the speed setting is applied to the mouse movement
-enum MouseSpeedDef {
+// Mouse speed definition, specifies how the speed setting is applied to the mouse movementenum MouseSpeedDef {
 	kMouseSpeed_Absolute,       // apply speed multiplier directly
 	kMouseSpeed_CurrentDisplay, // keep speed/resolution relation based on current system display mode
 	kNumMouseSpeedDefs
 };
 
-// Screen rotation mode on supported platforms and devices
-enum ScreenRotation {
+// Screen rotation mode on supported platforms and devicesenum ScreenRotation {
 	kScreenRotation_Unlocked = 0,     // player can freely rotate the screen if possible
 	kScreenRotation_Portrait,         // screen can only be in portrait orientation
 	kScreenRotation_Landscape,        // screen can only be in landscape orientation

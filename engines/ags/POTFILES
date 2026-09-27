@@ -1,3 +1,1 @@
-engines/ags/ags.cpp
-engines/ags/dialogs.cpp
-engines/ags/engine/ac/listbox.cpp
+engines/ags/ags.cppengines/ags/dialogs.cppengines/ags/engine/ac/listbox.cpp

@@ -36,23 +36,16 @@ class Bitmap;
 
 bool rle_compress(const uint8_t *data, size_t data_sz, int image_bpp, AGS::Shared::Stream *out);
 bool rle_decompress(uint8_t *data, size_t data_sz, int image_bpp, AGS::Shared::Stream *in);
-// Packs a 8-bit bitmap using RLE compression, and writes into stream along with the palette
-void save_rle_bitmap8(AGS::Shared::Stream *out, const AGS::Shared::Bitmap *bmp, const RGB(*pal)[256] = nullptr);
-// Reads a 8-bit bitmap with palette from the stream and unpacks from RLE
-AGS::Shared::Bitmap *load_rle_bitmap8(AGS::Shared::Stream *in, RGB(*pal)[256] = nullptr);
-// Skips the 8-bit RLE bitmap
-void skip_rle_bitmap8(AGS::Shared::Stream *in);
+// Packs a 8-bit bitmap using RLE compression, and writes into stream along with the palettevoid save_rle_bitmap8(AGS::Shared::Stream *out, const AGS::Shared::Bitmap *bmp, const RGB(*pal)[256] = nullptr);
+// Reads a 8-bit bitmap with palette from the stream and unpacks from RLEAGS::Shared::Bitmap *load_rle_bitmap8(AGS::Shared::Stream *in, RGB(*pal)[256] = nullptr);
+// Skips the 8-bit RLE bitmapvoid skip_rle_bitmap8(AGS::Shared::Stream *in);
 
-// LZW compression
-bool lzw_compress(const uint8_t *data, size_t data_sz, int image_bpp, AGS::Shared::Stream *out);
+// LZW compressionbool lzw_compress(const uint8_t *data, size_t data_sz, int image_bpp, AGS::Shared::Stream *out);
 bool lzw_decompress(uint8_t *data, size_t data_sz, int image_bpp, AGS::Shared::Stream *in, size_t in_sz);
-// Saves bitmap with an optional palette compressed by LZW
-void save_lzw(AGS::Shared::Stream *out, const AGS::Shared::Bitmap *bmpp, const RGB(*pal)[256] = nullptr);
-// Loads bitmap decompressing
-AGS::Shared::Bitmap *load_lzw(AGS::Shared::Stream *in, int dst_bpp, RGB (*pal)[256] = nullptr);
+// Saves bitmap with an optional palette compressed by LZWvoid save_lzw(AGS::Shared::Stream *out, const AGS::Shared::Bitmap *bmpp, const RGB(*pal)[256] = nullptr);
+// Loads bitmap decompressingAGS::Shared::Bitmap *load_lzw(AGS::Shared::Stream *in, int dst_bpp, RGB (*pal)[256] = nullptr);
 
-// Deflate compression
-bool deflate_compress(const uint8_t *data, size_t data_sz, int image_bpp, AGS::Shared::Stream *out);
+// Deflate compressionbool deflate_compress(const uint8_t *data, size_t data_sz, int image_bpp, AGS::Shared::Stream *out);
 bool inflate_decompress(uint8_t *data, size_t data_sz, int image_bpp, AGS::Shared::Stream *in, size_t in_sz);
 
 } // namespace AGS3

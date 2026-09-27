@@ -36,8 +36,7 @@
 
 namespace AGS3 {
 
-// Forward declaration
-namespace AGS {
+// Forward declarationnamespace AGS {
 namespace Shared {
 class Stream;
 } // namespace Shared
@@ -45,22 +44,15 @@ class Stream;
 
 
 // register a memory handle for the object and allow script
-// pointers to point to it
-extern int32_t ccRegisterManagedObject(void *object, IScriptObject *, ScriptValueType obj_type = kScValScriptObject);
-// register a de-serialized object
-extern int32_t ccRegisterUnserializedObject(int index, void *object, IScriptObject *, ScriptValueType obj_type = kScValScriptObject);
-// unregister a particular object
-extern int   ccUnRegisterManagedObject(void *object);
-// remove all registered objects
-extern void  ccUnregisterAllObjects();
-// serialize all objects to disk
-extern void  ccSerializeAllObjects(AGS::Shared::Stream *out);
+// pointers to point to itextern int32_t ccRegisterManagedObject(void *object, IScriptObject *, ScriptValueType obj_type = kScValScriptObject);
+// register a de-serialized objectextern int32_t ccRegisterUnserializedObject(int index, void *object, IScriptObject *, ScriptValueType obj_type = kScValScriptObject);
+// unregister a particular objectextern int   ccUnRegisterManagedObject(void *object);
+// remove all registered objectsextern void  ccUnregisterAllObjects();
+// serialize all objects to diskextern void  ccSerializeAllObjects(AGS::Shared::Stream *out);
 // un-serialise all objects (will remove all currently registered ones)
 extern int   ccUnserializeAllObjects(AGS::Shared::Stream *in, ICCObjectCollectionReader *callback);
-// dispose the object if RefCount==0
-extern void  ccAttemptDisposeObject(int32_t handle);
-// translate between object handles and memory addresses
-extern int32_t ccGetObjectHandleFromAddress(void *address);
+// dispose the object if RefCount==0extern void  ccAttemptDisposeObject(int32_t handle);
+// translate between object handles and memory addressesextern int32_t ccGetObjectHandleFromAddress(void *address);
 extern void *ccGetObjectAddressFromHandle(int32_t handle);
 extern ScriptValueType ccGetObjectAddressAndManagerFromHandle(int32_t handle, void *&object, IScriptObject *&manager);
 

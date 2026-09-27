@@ -205,21 +205,18 @@ enum ScriptAPIVersion {
 extern const char *GetScriptAPIName(ScriptAPIVersion v);
 
 // Determines whether the graphics renderer should scale sprites at the final
-// screen resolution, as opposed to native resolution
-enum RenderAtScreenRes {
+// screen resolution, as opposed to native resolutionenum RenderAtScreenRes {
 	kRenderAtScreenRes_UserDefined = 0,
 	kRenderAtScreenRes_Enabled = 1,
 	kRenderAtScreenRes_Disabled = 2,
 };
 
-// Method to use when blending two sprites with alpha channel
-enum GameSpriteAlphaRenderingStyle {
+// Method to use when blending two sprites with alpha channelenum GameSpriteAlphaRenderingStyle {
 	kSpriteAlphaRender_Legacy = 0,
 	kSpriteAlphaRender_Proper
 };
 
-// Method to use when blending two GUI elements with alpha channel
-enum GameGuiAlphaRenderingStyle {
+// Method to use when blending two GUI elements with alpha channelenum GameGuiAlphaRenderingStyle {
 	kGuiAlphaRender_Legacy = 0,
 	kGuiAlphaRender_AdditiveAlpha,
 	kGuiAlphaRender_Proper

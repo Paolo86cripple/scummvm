@@ -53,8 +53,7 @@ MFLError ReadV30(AssetLibInfo &lib, Stream *in, MFLVersion lib_version);
 
 void     WriteV30(const AssetLibInfo &lib, Stream *out);
 
-// Encryption / decryption
-int      GetNextPseudoRand(int &rand_val);
+// Encryption / decryptionint      GetNextPseudoRand(int &rand_val);
 void     DecryptText(char *text);
 void     ReadEncArray(void *data, size_t size, size_t count, Stream *in, int &rand_val);
 int8_t   ReadEncInt8(Stream *in, int &rand_val);

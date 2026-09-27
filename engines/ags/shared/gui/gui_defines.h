@@ -85,8 +85,7 @@ enum GuiVersion {
 namespace AGS {
 namespace Shared {
 
-// GUIMain's style and behavior flags
-enum GUIMainFlags {
+// GUIMain's style and behavior flagsenum GUIMainFlags {
 	kGUIMain_Clickable = 0x0001,
 	kGUIMain_TextWindow = 0x0002,
 	kGUIMain_Visible = 0x0004,
@@ -99,13 +98,11 @@ enum GUIMainFlags {
 	kGUIMain_OldFmtXorMask = kGUIMain_Clickable
 };
 
-// GUIMain's legacy flags, now converted to GUIMainFlags on load
-enum GUIMainLegacyFlags {
+// GUIMain's legacy flags, now converted to GUIMainFlags on loadenum GUIMainLegacyFlags {
 	kGUIMain_LegacyTextWindow = 5
 };
 
-// GUIMain's style of getting displayed on screen
-enum GUIPopupStyle {
+// GUIMain's style of getting displayed on screenenum GUIPopupStyle {
 	// Normal GUI
 	kGUIPopupNormal = 0,
 	// Shown when the mouse cursor moves to the top of the screen
@@ -119,8 +116,7 @@ enum GUIPopupStyle {
 	kGUIPopupLegacyNormalOff = 4
 };
 
-// The type of GUIControl
-enum GUIControlType {
+// The type of GUIControlenum GUIControlType {
 	kGUIControlUndefined = -1,
 	kGUIButton = 1,
 	kGUILabel = 2,
@@ -130,8 +126,7 @@ enum GUIControlType {
 	kGUIListBox = 6
 };
 
-// GUIControl general style and behavior flags
-enum GUIControlFlags {
+// GUIControl general style and behavior flagsenum GUIControlFlags {
 	kGUICtrl_Default = 0x0001, // only button
 	kGUICtrl_Cancel = 0x0002, // unused
 	kGUICtrl_Enabled = 0x0004,
@@ -147,8 +142,7 @@ enum GUIControlFlags {
 	kGUICtrl_OldFmtXorMask = kGUICtrl_Enabled | kGUICtrl_Visible | kGUICtrl_Clickable
 };
 
-// Label macro flags, define which macros are present in the Label's Text
-enum GUILabelMacro {
+// Label macro flags, define which macros are present in the Label's Textenum GUILabelMacro {
 	kLabelMacro_None = 0,
 	kLabelMacro_Gamename = 0x01,
 	kLabelMacro_Overhotspot = 0x02,
@@ -160,8 +154,7 @@ enum GUILabelMacro {
 	kLabelMacro_All = 0xFFFF
 };
 
-// GUIListBox style and behavior flags
-enum GUIListBoxFlags {
+// GUIListBox style and behavior flagsenum GUIListBoxFlags {
 	kListBox_ShowBorder = 0x01,
 	kListBox_ShowArrows = 0x02,
 	kListBox_SvgIndex = 0x04,
@@ -171,8 +164,7 @@ enum GUIListBoxFlags {
 	kListBox_OldFmtXorMask = kListBox_ShowBorder | kListBox_ShowArrows
 };
 
-// GUITextBox style and behavior flags
-enum GUITextBoxFlags {
+// GUITextBox style and behavior flagsenum GUITextBoxFlags {
 	kTextBox_ShowBorder = 0x0001,
 
 	kTextBox_DefFlags = kTextBox_ShowBorder,
@@ -181,8 +173,7 @@ enum GUITextBoxFlags {
 };
 
 // Savegame data format
-// TODO: move to the engine code
-enum GuiSvgVersion {
+// TODO: move to the engine codeenum GuiSvgVersion {
 	kGuiSvgVersion_Initial = 0,
 	kGuiSvgVersion_350,
 	kGuiSvgVersion_36020,
@@ -190,8 +181,7 @@ enum GuiSvgVersion {
 	kGuiSvgVersion_36025
 };
 
-// Style of GUI drawing in disabled state
-enum GuiDisableStyle {
+// Style of GUI drawing in disabled stateenum GuiDisableStyle {
 	kGuiDis_Undefined = -1, // this is for marking not-disabled state
 	kGuiDis_Greyout = 0,    // paint "gisabled" effect over controls
 	kGuiDis_Blackout = 1,   // invisible controls (but guis are shown
@@ -199,8 +189,7 @@ enum GuiDisableStyle {
 	kGuiDis_Off = 3         // fully invisible guis
 };
 
-// Global GUI options
-struct GuiOptions {
+// Global GUI optionsstruct GuiOptions {
 	// Clip GUI control's contents to the control's rectangle
 	bool ClipControls = true;
 	// How the GUI controls are drawn when the interface is disabled

@@ -26,8 +26,7 @@
 
 namespace AGS3 {
 
-// Error codes
-enum AllegroError {
+// Error codesenum AllegroError {
 	AL_NOERROR = 0,
 	AL_EPERM = 1,
 	AL_ENOENT = 2,

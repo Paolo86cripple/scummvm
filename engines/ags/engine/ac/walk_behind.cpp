@@ -34,8 +34,7 @@ namespace AGS3 {
 using namespace AGS::Shared;
 using namespace AGS::Engine;
 
-// Generates walk-behinds as separate sprites
-void walkbehinds_generate_sprites() {
+// Generates walk-behinds as separate spritesvoid walkbehinds_generate_sprites() {
 	const Bitmap *mask = _GP(thisroom).WalkBehindMask.get();
 	const Bitmap *bg = _GP(thisroom).BgFrames[_GP(play).bg_frame].Graphic.get();
 

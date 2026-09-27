@@ -31,8 +31,7 @@ namespace AGS3 {
 
 using namespace AGS::Shared;
 
-// return the type name of the object
-const char *CCDialog::GetType() {
+// return the type name of the objectconst char *CCDialog::GetType() {
 	return "Dialog";
 }
 
@@ -41,8 +40,7 @@ size_t CCDialog::CalcSerializeSize(const void * /*address*/) {
 }
 
 // serialize the object into BUFFER (which is BUFSIZE bytes)
-// return number of bytes used
-void CCDialog::Serialize(const void *address, Stream *out) {
+// return number of bytes usedvoid CCDialog::Serialize(const void *address, Stream *out) {
 	const ScriptDialog *shh = static_cast<const ScriptDialog *>(address);
 	out->WriteInt32(shh->id);
 }

@@ -26,8 +26,7 @@ namespace AGS3 {
 namespace AGS {
 namespace Shared {
 
-// TODO: revise this construction later
-namespace BitmapHelper {
+// TODO: revise this construction laternamespace BitmapHelper {
 
 Bitmap *CreateBitmap(int width, int height, int color_depth) {
 	Bitmap *bitmap = new Bitmap();
@@ -140,8 +139,7 @@ void ReplaceAlphaWithRGBMask(Bitmap *bmp) {
 	}
 }
 
-// Functor that copies the "mask color" pixels from source to dest
-template <class TPx, size_t BPP_>
+// Functor that copies the "mask color" pixels from source to desttemplate <class TPx, size_t BPP_>
 struct PixelTransCpy {
 	static const size_t BPP = BPP_;
 	inline void operator ()(uint8_t *dst, const uint8_t *src, uint32_t mask_color, bool /*use_alpha*/) const {
@@ -150,8 +148,7 @@ struct PixelTransCpy {
 	}
 };
 
-// Functor that tells to never skip a pixel in the mask
-struct PixelNoSkip {
+// Functor that tells to never skip a pixel in the maskstruct PixelNoSkip {
 	inline bool operator ()(uint8_t * /*data*/, uint32_t /*mask_color*/, bool /*use_alpha*/) const {
 		return false;
 	}
@@ -160,8 +157,7 @@ struct PixelNoSkip {
 typedef PixelTransCpy<uint8_t, 1> PixelTransCpy8;
 typedef PixelTransCpy<uint16_t, 2> PixelTransCpy16;
 
-// Functor that copies the "mask color" pixels from source to dest, 24-bit depth
-struct PixelTransCpy24 {
+// Functor that copies the "mask color" pixels from source to dest, 24-bit depthstruct PixelTransCpy24 {
 	static const size_t BPP = 3;
 	inline void operator ()(uint8_t *dst, const uint8_t *src, uint32_t mask_color, bool /*use_alpha*/) const {
 		const uint8_t *mcol_ptr = (const uint8_t *)&mask_color;
@@ -173,8 +169,7 @@ struct PixelTransCpy24 {
 	}
 };
 
-// Functor that copies the "mask color" pixels from source to dest, 32-bit depth, with alpha
-struct PixelTransCpy32 {
+// Functor that copies the "mask color" pixels from source to dest, 32-bit depth, with alphastruct PixelTransCpy32 {
 	static const size_t BPP = 4;
 	inline void operator ()(uint8_t *dst, const uint8_t *src, uint32_t mask_color, bool use_alpha) const {
 		if (*(const uint32_t *)src == mask_color)
@@ -186,8 +181,7 @@ struct PixelTransCpy32 {
 	}
 };
 
-// Functor that tells to skip pixels if they match the mask color or have alpha = 0
-struct PixelTransSkip32 {
+// Functor that tells to skip pixels if they match the mask color or have alpha = 0struct PixelTransSkip32 {
 	inline bool operator ()(uint8_t *data, uint32_t mask_color, bool use_alpha) const {
 		return *(const uint32_t *)data == mask_color || (use_alpha && data[3] == 0);
 	}
@@ -195,8 +189,7 @@ struct PixelTransSkip32 {
 
 // Applies bitmap mask, using 2 functors:
 // - one that tells whether to skip current pixel;
-// - another that copies the color from src to dest
-template <class FnPxProc, class FnSkip>
+// - another that copies the color from src to desttemplate <class FnPxProc, class FnSkip>
 void ApplyMask(uint8_t *dst, const uint8_t *src, size_t pitch, size_t height,
 	FnPxProc proc, FnSkip skip, uint32_t mask_color, bool dst_has_alpha, bool mask_has_alpha) {
 	for (size_t y = 0; y < height; ++y) {

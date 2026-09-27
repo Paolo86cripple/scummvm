@@ -40,16 +40,13 @@ struct DisplayModeSetup;
 // requested one.
 bool        engine_try_set_gfxmode_any(const DisplayModeSetup &setup);
 // Tries to switch between fullscreen and windowed mode; uses previously saved
-// setup if it is available, or default settings for the new mode
-bool        engine_try_switch_windowed_gfxmode();
-// Update graphic renderer and render frame when window size changes
-void        engine_on_window_changed(const Size &sz);
+// setup if it is available, or default settings for the new modebool        engine_try_switch_windowed_gfxmode();
+// Update graphic renderer and render frame when window size changesvoid        engine_on_window_changed(const Size &sz);
 // Shutdown graphics mode (used before shutting down tha application)
 void        engine_shutdown_gfxmode();
 
 using AGS::Shared::String;
-// Defines a package file location
-struct PackLocation {
+// Defines a package file locationstruct PackLocation {
 	String Name; // filename, for the reference or to use as an ID
 	String Path; // full path
 };
@@ -70,12 +67,10 @@ struct ResourcePaths {
 	String       VoiceDirSub;// full voice-over directory with optional sub-dir
 };
 
-// (Re-)Assign all known asset search paths to the AssetManager
-void engine_assign_assetpaths();
+// (Re-)Assign all known asset search paths to the AssetManagervoid engine_assign_assetpaths();
 
 // Register a callback that will be called before engine is initialised.
-// Used for apps to register their own plugins and other configuration
-typedef void (*t_engine_pre_init_callback)(void);
+// Used for apps to register their own plugins and other configurationtypedef void (*t_engine_pre_init_callback)(void);
 extern void engine_set_pre_init_callback(t_engine_pre_init_callback callback);
 
 } // namespace AGS3

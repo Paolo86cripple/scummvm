@@ -47,15 +47,11 @@ bool   CreateDirectory(const String &path);
 // Makes sure all the sub-directories in the path are created. Parent path is
 // not touched, and function must fail if parent path is not accessible.
 bool   CreateAllDirectories(const String &parent, const String &sub_dirs);
-// Sets current working directory, returns the resulting path
-String SetCurrentDirectory(const String &path);
-// Gets current working directory
-String GetCurrentDirectory();
+// Sets current working directory, returns the resulting pathString SetCurrentDirectory(const String &path);
+// Gets current working directoryString GetCurrentDirectory();
 
-// Get list of subdirs found in the given directory
-bool   GetDirs(const String &dir_path, std::vector<String> &dirs);
-// Get list of files found in the given directory
-bool   GetFiles(const String &dir_path, std::vector<String> &files);
+// Get list of subdirs found in the given directorybool   GetDirs(const String &dir_path, std::vector<String> &dirs);
+// Get list of files found in the given directorybool   GetFiles(const String &dir_path, std::vector<String> &files);
 
 } // namespace Directory
 

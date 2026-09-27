@@ -26,8 +26,7 @@
 
 namespace AGS3 {
 
-#define TEXTBOX_MAXLEN 49
-struct MyTextBox : public NewControl {
+#define TEXTBOX_MAXLEN 49struct MyTextBox : public NewControl {
 	char text[TEXTBOX_MAXLEN + 1];
 	MyTextBox(int xx, int yy, int wii, const char *tee);
 	void draw(AGS::Shared::Bitmap *ds) override;

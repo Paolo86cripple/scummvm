@@ -40,8 +40,7 @@
 
 namespace AGS3 {
 
-// Forward declaration
-namespace AGS {
+// Forward declarationnamespace AGS {
 namespace Shared {
 class Bitmap;
 class Stream;
@@ -64,8 +63,7 @@ struct ScriptOverlay;
 // not actual api input argument
 #define PLAYMP3FILE_MAX_FILENAME_LEN 50
 
-// Savegame data format
-enum GameStateSvgVersion {
+// Savegame data formatenum GameStateSvgVersion {
 	kGSSvgVersion_OldFormat = -1, // TODO: remove after old save support is dropped
 	kGSSvgVersion_Initial = 0,
 	kGSSvgVersion_350 = 1,
@@ -75,8 +73,7 @@ enum GameStateSvgVersion {
 };
 
 
-// Runtime game state
-struct GameState {
+// Runtime game statestruct GameState {
 	// WARNING: following is a part of the script and plugin API
 	// (until further notice)
 	int  score = 0;      // player's current score
@@ -464,8 +461,7 @@ private:
 	AGS_Clock::time_point _ignoreUserInputUntilTime = 0;
 };
 
-// Converts legacy alignment type used in script API
-HorAlignment ConvertLegacyScriptAlignment(LegacyScriptAlignment align);
+// Converts legacy alignment type used in script APIHorAlignment ConvertLegacyScriptAlignment(LegacyScriptAlignment align);
 // Reads legacy alignment type from the value set in script depending on the
 // current Script API level. This is made to make it possible to change
 // Alignment constants in the Script API and still support old version.

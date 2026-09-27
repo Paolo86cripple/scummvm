@@ -32,8 +32,7 @@ struct IScriptObject;
 
 using AGS::Shared::String;
 
-// Helper struct for declaring a script API function registration
-struct ScFnRegister {
+// Helper struct for declaring a script API function registrationstruct ScFnRegister {
 	const char *Name = nullptr;
 	RuntimeScriptValue Fn;   // for script VM calls
 	RuntimeScriptValue PlFn; // for plugins, direct unsafe call style
@@ -66,32 +65,24 @@ bool ccAddExternalStaticArray(const String &name, void *ptr, CCStaticArray *arra
 bool ccAddExternalScriptObject(const String &name, void *ptr, IScriptObject *manager);
 // Register script own functions (defined in the linked scripts)
 bool ccAddExternalScriptSymbol(const String &name, const RuntimeScriptValue &prval, ccInstance *inst);
-// Remove the script access to a variable or function in your program
-void ccRemoveExternalSymbol(const String &name);
-// Remove all external symbols, allowing you to start from scratch
-void ccRemoveAllSymbols();
+// Remove the script access to a variable or function in your programvoid ccRemoveExternalSymbol(const String &name);
+// Remove all external symbols, allowing you to start from scratchvoid ccRemoveAllSymbols();
 
 // FIXME: These functions should replace the older ones; for now they are duplicated to ease
-// the transition
-bool ccAddExternalStaticFunction361(const String &name, ScriptAPIFunction *scfn, void *dirfn = nullptr);
+// the transitionbool ccAddExternalStaticFunction361(const String &name, ScriptAPIFunction *scfn, void *dirfn = nullptr);
 bool ccAddExternalObjectFunction361(const String &name, ScriptAPIObjectFunction *scfn, void *dirfn = nullptr);
 bool ccAddExternalFunction361(const ScFnRegister &scfnreg);
-// Registers an array of static functions
-template<size_t N>
+// Registers an array of static functionstemplate<size_t N>
 inline void ccAddExternalFunctions361(const ScFnRegister (&arr)[N]) {
 	for (const ScFnRegister *it = arr; it != (arr + N); ++it)
 		ccAddExternalFunction361(*it);
 }
 
-// Get the address of an exported variable in the script
-void *ccGetSymbolAddress(const String &name);
-// Get a registered symbol's direct pointer; this is used solely for plugins
-Plugins::PluginMethod ccGetSymbolAddressForPlugin(const String &name);
-// Get a registered Script Object, optionally restricting to the given type name
-void *ccGetScriptObjectAddress(const String &name, const String &type);
+// Get the address of an exported variable in the scriptvoid *ccGetSymbolAddress(const String &name);
+// Get a registered symbol's direct pointer; this is used solely for pluginsPlugins::PluginMethod ccGetSymbolAddressForPlugin(const String &name);
+// Get a registered Script Object, optionally restricting to the given type namevoid *ccGetScriptObjectAddress(const String &name, const String &type);
 
-// DEBUG HOOK
-typedef void (*new_line_hook_type)(ccInstance *, int);
+// DEBUG HOOKtypedef void (*new_line_hook_type)(ccInstance *, int);
 void ccSetDebugHook(new_line_hook_type jibble);
 
 // Set the script interpreter timeout values:
@@ -99,10 +90,8 @@ void ccSetDebugHook(new_line_hook_type jibble);
 // * abort_timeout - [temp disabled] defines the timeout (ms) at which the interpreter will cancel with error.
 // * abort_loops - max script loops without an engine update after which the interpreter will error;
 void ccSetScriptAliveTimer(unsigned sys_poll_timeout, unsigned abort_timeout, unsigned abort_loops);
-// reset the current while loop counter
-void ccNotifyScriptStillAlive();
-// for calling exported plugin functions old-style
-NumberPtr call_function(const Plugins::PluginMethod &method, const RuntimeScriptValue *object, int numparm, const RuntimeScriptValue *parms);
+// reset the current while loop countervoid ccNotifyScriptStillAlive();
+// for calling exported plugin functions old-styleNumberPtr call_function(const Plugins::PluginMethod &method, const RuntimeScriptValue *object, int numparm, const RuntimeScriptValue *parms);
 
 } // namespace AGS3
 

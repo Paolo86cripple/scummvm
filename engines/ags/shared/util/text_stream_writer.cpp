@@ -28,10 +28,8 @@ namespace AGS {
 namespace Shared {
 
 // TODO: perhaps let configure line break character per TextWriter object?
-#if AGS_PLATFORM_OS_WINDOWS
-static const char Endl[2] = { '\r', '\n' };
-#else
-static const char Endl[1] = { '\n' };
+#if AGS_PLATFORM_OS_WINDOWSstatic const char Endl[2] = { '\r', '\n' };
+#elsestatic const char Endl[1] = { '\n' };
 #endif
 
 

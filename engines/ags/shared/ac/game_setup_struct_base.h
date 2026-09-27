@@ -41,8 +41,7 @@
 
 namespace AGS3 {
 
-// Forward declaration
-namespace AGS {
+// Forward declarationnamespace AGS {
 namespace Shared {
 class Stream;
 } // namespace Shared

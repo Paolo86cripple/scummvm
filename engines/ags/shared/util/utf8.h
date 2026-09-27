@@ -87,8 +87,7 @@ inline size_t GetChar(const char *c, size_t clen, Rune *u) {
 	return len;
 }
 
-// Convert utf8 codepoint to the string representation and write to the buffer
-inline size_t SetChar(Rune u, char *c, size_t clen) {
+// Convert utf8 codepoint to the string representation and write to the bufferinline size_t SetChar(Rune u, char *c, size_t clen) {
 	size_t len, i;
 	len = Validate(&u, 0);
 	if (len > UtfSz || len > clen)
@@ -101,8 +100,7 @@ inline size_t SetChar(Rune u, char *c, size_t clen) {
 	return len;
 }
 
-// Calculates utf8 string length in characters
-inline size_t GetLength(const char *c) {
+// Calculates utf8 string length in charactersinline size_t GetLength(const char *c) {
 	size_t len = 0;
 	Rune r;
 	for (size_t chr_sz = 0; (chr_sz = GetChar(c, UtfSz, &r)) > 0; c += chr_sz, ++len);

@@ -45,8 +45,7 @@ int  sys_main_init(/*config*/);
 // should be called last, after everything else backend related is shutdown.
 void sys_main_shutdown();
 // Sets whether the engine wants to update while the window has no focus.
-// TODO: this is a placeholder at the moment, check later if we need any implementation
-void sys_set_background_mode(bool on);
+// TODO: this is a placeholder at the moment, check later if we need any implementationvoid sys_set_background_mode(bool on);
 
 // Display utilities.
 //
@@ -57,15 +56,12 @@ int sys_get_window_display_index();
 int sys_get_desktop_resolution(int &width, int &height);
 // Queries supported desktop modes.
 void sys_get_desktop_modes(std::vector<AGS::Engine::DisplayMode> &dms, int color_depth = 0);
-// Sets output driver for the backend's renderer
-void sys_renderer_set_output(const AGS::Shared::String &name);
+// Sets output driver for the backend's renderervoid sys_renderer_set_output(const AGS::Shared::String &name);
 
 // Audio utilities.
 //
-// Tries to init the audio backend; optionally requests particular driver
-bool sys_audio_init(const AGS::Shared::String &driver_name = "");
-// Shutdown audio backend
-void sys_audio_shutdown();
+// Tries to init the audio backend; optionally requests particular driverbool sys_audio_init(const AGS::Shared::String &driver_name = "");
+// Shutdown audio backendvoid sys_audio_shutdown();
 
 // Window utilities.
 //
@@ -76,19 +72,14 @@ SDL_Window *sys_window_create(const char *window_title, int w, int h, AGS::Engin
 SDL_Window *sys_get_window();
 // Sets current window style, does nothing if window was not created.
 void sys_window_set_style(AGS::Engine::WindowMode mode, int ex_flags = 0);
-// Set new window size; optionally center new window on screen
-bool sys_window_set_size(int w, int h, bool center);
-// Centers the window on screen, optionally choose the display to position on
-void sys_window_center(int display_index = -1);
-// Reduces window's size to fit into the said display bounds, and repositions to the display's center
-void sys_window_fit_in_display(int display_index);
-// Shows or hides system cursor when it's in the game window
-void sys_window_show_cursor(bool on);
+// Set new window size; optionally center new window on screenbool sys_window_set_size(int w, int h, bool center);
+// Centers the window on screen, optionally choose the display to position onvoid sys_window_center(int display_index = -1);
+// Reduces window's size to fit into the said display bounds, and repositions to the display's centervoid sys_window_fit_in_display(int display_index);
+// Shows or hides system cursor when it's in the game windowvoid sys_window_show_cursor(bool on);
 // Locks on unlocks mouse inside the window.
 // Returns new state of the mouse lock.
 bool sys_window_lock_mouse(bool on);
-// Sets mouse position within the game window
-void sys_window_set_mouse(int x, int y);
+// Sets mouse position within the game windowvoid sys_window_set_mouse(int x, int y);
 // Destroy current game window, if one exists.
 void sys_window_destroy();
 // Set window title text.

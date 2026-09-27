@@ -33,8 +33,7 @@ namespace AGSWaves {
 #define screenWidth 640
 #define screenHeight 360
 
-// TODO: Dummy definitions that need to be fixed
-typedef void *stb_vorbis;
+// TODO: Dummy definitions that need to be fixedtypedef void *stb_vorbis;
 typedef void *Mix_Chunk;
 typedef int SDL_AudioSpec;
 typedef int SDL_AudioDeviceID;
@@ -71,8 +70,7 @@ typedef int (*SCAPI_CHARACTER_GETX)(AGSCharacter *ch);
 typedef int (*SCAPI_CHARACTER_GETY)(AGSCharacter *ch);
 typedef int (*SCAPI_CHARACTER_ID) (AGSCharacter *ch);
 
-//WAVE SOUNDS FILES
-struct SoundEffect {
+//WAVE SOUNDS FILESstruct SoundEffect {
 	Audio::SoundHandle _soundHandle;
 	int _repeat = 0;
 	int _volume = 0;

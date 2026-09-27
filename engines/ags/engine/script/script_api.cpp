@@ -45,8 +45,7 @@ enum FormatParseResult {
 	kFormatParseArgLast = kFormatParseArgPointer
 };
 
-// Helper functions for getting parameter value either from script val array or va_list
-inline int GetArgInt(const RuntimeScriptValue *sc_args, va_list *varg_ptr, int arg_idx) {
+// Helper functions for getting parameter value either from script val array or va_listinline int GetArgInt(const RuntimeScriptValue *sc_args, va_list *varg_ptr, int arg_idx) {
 	if (varg_ptr)
 		return va_arg(*varg_ptr, int);
 	else

@@ -35,8 +35,7 @@
 using namespace AGS::Shared;
 
 #define AE_WAITFLAG   0x80000000
-#define MAXANIMSTAGES 10
-struct AnimationStruct {
+#define MAXANIMSTAGES 10struct AnimationStruct {
 	int   x, y;
 	int   data;
 	int   object;
@@ -59,8 +58,7 @@ struct FullAnimation {
 	}
 };
 
-#define MAXPOINTS 30
-struct PolyPoints {
+#define MAXPOINTS 30struct PolyPoints {
 	int x[MAXPOINTS];
 	int y[MAXPOINTS];
 	int numpoints;
@@ -74,8 +72,7 @@ struct PolyPoints {
 
 
 #define MAXANIMS 10
-// Just a list of cut out data
-struct DeprecatedRoomStruct {
+// Just a list of cut out datastruct DeprecatedRoomStruct {
 	// Full-room animations
 	int16_t       numanims;
 	FullAnimation anims[MAXANIMS];
@@ -107,8 +104,7 @@ void PolyPoints::Read(Stream *in) {
 //
 // Pre-2.5 scripts (we don't know how to convert them for the modern engine)
 //
-#define SCRIPT_CONFIG_VERSION 1
-HRoomFileError ReadAncientScriptConfig(Stream *in) {
+#define SCRIPT_CONFIG_VERSION 1HRoomFileError ReadAncientScriptConfig(Stream *in) {
 	int fmt = in->ReadInt32();
 	if (fmt != SCRIPT_CONFIG_VERSION)
 		return new RoomFileError(kRoomFileErr_FormatNotSupported, String::FromFormat("Invalid script configuration format (in room: %d, expected: %d).", fmt, SCRIPT_CONFIG_VERSION));

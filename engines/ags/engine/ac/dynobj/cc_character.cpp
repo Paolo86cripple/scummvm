@@ -32,20 +32,17 @@ namespace AGS3 {
 
 using namespace AGS::Shared;
 
-// return the type name of the object
-const char *CCCharacter::GetType() {
+// return the type name of the objectconst char *CCCharacter::GetType() {
 	return "Character";
 }
 
 // serialize the object into BUFFER (which is BUFSIZE bytes)
-// return number of bytes used
-size_t CCCharacter::CalcSerializeSize(const void * /*address*/) {
+// return number of bytes usedsize_t CCCharacter::CalcSerializeSize(const void * /*address*/) {
 	return sizeof(int32_t);
 }
 
 // serialize the object into BUFFER (which is BUFSIZE bytes)
-// return number of bytes used
-void CCCharacter::Serialize(const void *address, Stream *out) {
+// return number of bytes usedvoid CCCharacter::Serialize(const void *address, Stream *out) {
 	const CharacterInfo *chaa = static_cast<const CharacterInfo *>(address);
 	out->WriteInt32(chaa->index_id);
 }

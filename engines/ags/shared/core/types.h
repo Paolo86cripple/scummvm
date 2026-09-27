@@ -64,8 +64,7 @@ typedef int16 int16_t;
 typedef int32 int32_t;
 typedef int64 int64_t;
 
-typedef int64 soff_t;       // Stream offset type
-typedef int64 intptr_t;
+typedef int64 soff_t;       // Stream offset typetypedef int64 intptr_t;
 typedef uint64 uintptr_t;
 
 // fixed point type
@@ -98,8 +97,7 @@ typedef uint64 uintptr_t;
 #define TRUE true
 #define FALSE false
 
-// TODO: use distinct fixed point class
-enum {
+// TODO: use distinct fixed point classenum {
 	kShift = 16,
 	kUnit = 1 << kShift
 };

@@ -76,8 +76,7 @@ void GameSetupStruct::Free() {
 	SpriteInfos.clear();
 }
 
-// Assigns font info parameters using legacy flags value read from the game data
-void SetFontInfoFromLegacyFlags(FontInfo &finfo, const uint8_t data) {
+// Assigns font info parameters using legacy flags value read from the game datavoid SetFontInfoFromLegacyFlags(FontInfo &finfo, const uint8_t data) {
 	finfo.Flags = (data >> 6) & 0xFF;
 	finfo.Size = data & FFLG_LEGACY_SIZEMASK;
 }

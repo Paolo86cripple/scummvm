@@ -40,8 +40,7 @@ typedef std::map<String, String>         StringOrderMap;
 typedef std::map<String, StringOrderMap> ConfigTree;
 
 //
-// Helper functions for parsing values in a ConfigTree
-bool    CfgReadItem(const ConfigTree &cfg, const String &sectn, const String &item, String &value);
+// Helper functions for parsing values in a ConfigTreebool    CfgReadItem(const ConfigTree &cfg, const String &sectn, const String &item, String &value);
 int     CfgReadInt(const ConfigTree &cfg, const String &sectn, const String &item, int def = 0);
 int     CfgReadInt(const ConfigTree &cfg, const String &sectn, const String &item, int min, int max, int def = 0);
 inline bool CfgReadBoolInt(const ConfigTree &cfg, const String &sectn, const String &item, bool def = false) {
@@ -56,8 +55,7 @@ String  CfgReadString(const ConfigTree &cfg, const String &sectn, const String &
 String  CfgFindKey(const ConfigTree &cfg, const String &sectn, const String &item, bool nocase = false);
 
 //
-// Helper functions for writing values into a ConfigTree
-void    CfgWriteInt(ConfigTree &cfg, const String &sectn, const String &item, int value);
+// Helper functions for writing values into a ConfigTreevoid    CfgWriteInt(ConfigTree &cfg, const String &sectn, const String &item, int value);
 inline void CfgWriteBoolInt(ConfigTree &cfg, const String &sectn, const String &item, bool value) {
 	CfgWriteInt(cfg, sectn, item, static_cast<int>(value));
 }

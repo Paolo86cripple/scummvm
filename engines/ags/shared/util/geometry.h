@@ -136,8 +136,7 @@ struct Line {
 	}
 };
 
-// Helper factory functions
-inline Line HLine(int x1, int x2, int y) {
+// Helper factory functionsinline Line HLine(int x1, int x2, int y) {
 	return Line(x1, y, x2, y);
 }
 
@@ -301,8 +300,7 @@ struct Rect {
 	}
 };
 
-// Helper factory function
-inline Rect RectWH(int x, int y, int width, int height) {
+// Helper factory functioninline Rect RectWH(int x, int y, int width, int height) {
 	return Rect(x, y, x + width - 1, y + height - 1);
 }
 
@@ -358,12 +356,9 @@ struct Circle {
 };
 
 
-// Tells if two rectangles intersect (overlap) at least partially
-bool AreRectsIntersecting(const Rect &r1, const Rect &r2);
-// Tells if the item is completely inside place
-bool IsRectInsideRect(const Rect &place, const Rect &item);
-// Calculates a distance between two axis-aligned rectangles, returns 0 if they intersect
-float DistanceBetween(const Rect &r1, const Rect &r2);
+// Tells if two rectangles intersect (overlap) at least partiallybool AreRectsIntersecting(const Rect &r1, const Rect &r2);
+// Tells if the item is completely inside placebool IsRectInsideRect(const Rect &place, const Rect &item);
+// Calculates a distance between two axis-aligned rectangles, returns 0 if they intersectfloat DistanceBetween(const Rect &r1, const Rect &r2);
 
 int AlignInHRange(int x1, int x2, int off_x, int width, FrameAlignment align);
 int AlignInVRange(int y1, int y2, int off_y, int height, FrameAlignment align);
@@ -376,10 +371,8 @@ Rect OffsetRect(const Rect &r, const Point off);
 Rect CenterInRect(const Rect &place, const Rect &item);
 Rect ClampToRect(const Rect &place, const Rect &item);
 Rect PlaceInRect(const Rect &place, const Rect &item, const RectPlacement &placement);
-// Sum two rectangles, the result is the rectangle bounding them both
-Rect SumRects(const Rect &r1, const Rect &r2);
-// Intersect two rectangles, the resolt is the rectangle bounding their intersection
-Rect IntersectRects(const Rect &r1, const Rect &r2);
+// Sum two rectangles, the result is the rectangle bounding them bothRect SumRects(const Rect &r1, const Rect &r2);
+// Intersect two rectangles, the resolt is the rectangle bounding their intersectionRect IntersectRects(const Rect &r1, const Rect &r2);
 
 //} // namespace Shared
 //} // namespace AGS

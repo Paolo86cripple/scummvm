@@ -52,8 +52,7 @@ public:
 	void ReadFromSavegame(Shared::Stream *in, GuiSvgVersion svg_ver) override;
 	void WriteToSavegame(Shared::Stream *out) const override;
 
-	// TODO: these members are currently public; hide them later
-public:
+	// TODO: these members are currently public; hide them laterpublic:
 	String  Text;
 	int32_t Font;
 	color_t TextColor;

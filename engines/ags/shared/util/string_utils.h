@@ -44,34 +44,27 @@ enum ConversionError {
 	kOutOfRange // the resulting value is out of range
 };
 
-// Convert integer to string, by printing its value
-String          IntToString(int val);
+// Convert integer to string, by printing its valueString          IntToString(int val);
 // Tries to convert whole string into integer value;
-// returns def_val on failure
-int             StringToInt(const String &s, int def_val = 0);
+// returns def_val on failureint             StringToInt(const String &s, int def_val = 0);
 // Tries to convert whole string into integer value;
 // Returns error code if any non-digit character was met or if value is out
 // of range; the 'val' variable will be set with resulting integer, or
-// def_val on failure
-ConversionError StringToInt(const String &s, int &val, int def_val);
+// def_val on failureConversionError StringToInt(const String &s, int &val, int def_val);
 // Tries to convert whole string into float value;
-// returns def_val on failure
-float           StringToFloat(const String &s, float def_val = 0.f);
+// returns def_val on failurefloat           StringToFloat(const String &s, float def_val = 0.f);
 
 // A simple unescape string implementation, unescapes '\\x' into '\x'.
 String          Unescape(const String &s);
-// Converts a classic wildcard search pattern into C++11 compatible regex pattern
-String          WildcardToRegex(const String &wildcard);
+// Converts a classic wildcard search pattern into C++11 compatible regex patternString          WildcardToRegex(const String &wildcard);
 
 // Serialize and unserialize unterminated string prefixed with 32-bit length;
-// length is presented as 32-bit integer integer
-String          ReadString(Stream *in);
+// length is presented as 32-bit integer integerString          ReadString(Stream *in);
 void            ReadString(char *cstr, Stream *in, size_t buf_limit);
 void            ReadString(char **cstr, Stream *in);
 void            ReadString(String &s, Stream *in);
 // Read a string and trailing padding, aligning total read data to int32
-// this is a special case used strictly for legacy save format
-String          ReadStringAligned(Stream *in);
+// this is a special case used strictly for legacy save formatString          ReadStringAligned(Stream *in);
 void            SkipString(Stream *in);
 void            WriteString(const String &s, Stream *out);
 void            WriteString(const char *cstr, Stream *out);
@@ -97,8 +90,7 @@ void            SkipCStr(Stream *in);
 void            WriteCStr(const char *cstr, Stream *out);
 void            WriteCStr(const String &s, Stream *out);
 
-// Serialize and unserialize a string map, both keys and values are read using ReadString
-void            ReadStringMap(StringMap &map, Stream *in);
+// Serialize and unserialize a string map, both keys and values are read using ReadStringvoid            ReadStringMap(StringMap &map, Stream *in);
 void            WriteStringMap(const StringMap &map, Stream *out);
 
 // Convert utf-8 string to ascii/ansi representation;

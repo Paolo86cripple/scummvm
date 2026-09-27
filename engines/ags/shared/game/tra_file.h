@@ -75,12 +75,9 @@ struct Translation {
 };
 
 
-// Parses translation data and tests whether it matches the given game
-HError TestTraGameID(int game_uid, const String &game_name, Stream *in);
-// Reads full translation data from the provided stream
-HError ReadTraData(Translation &tra, Stream *in);
-// Writes all translation data to the stream
-void WriteTraData(const Translation &tra, Stream *out);
+// Parses translation data and tests whether it matches the given gameHError TestTraGameID(int game_uid, const String &game_name, Stream *in);
+// Reads full translation data from the provided streamHError ReadTraData(Translation &tra, Stream *in);
+// Writes all translation data to the streamvoid WriteTraData(const Translation &tra, Stream *out);
 
 } // namespace Shared
 } // namespace AGS

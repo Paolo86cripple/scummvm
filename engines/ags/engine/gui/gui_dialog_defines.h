@@ -102,8 +102,7 @@ class Bitmap;
 }
 
 //  =========  STRUCTS  ========
-#ifdef OBSOLETE
-struct DisplayProperties {
+#ifdef OBSOLETEstruct DisplayProperties {
 	int width;
 	int height;
 	int colors;

@@ -39,8 +39,7 @@ class Bitmap;
 }
 //=============================================================================
 
-// [IKM] 2012-09-13: this function is now defined in engine and editor separately
-extern void __my_setcolor(int *ctset, int newcol, int wantColDep);
+// [IKM] 2012-09-13: this function is now defined in engine and editor separatelyextern void __my_setcolor(int *ctset, int newcol, int wantColDep);
 
 extern void wsetrgb(int coll, int r, int g, int b, RGB *pall);
 extern void wcolrotate(unsigned char start, unsigned char finish, int dir, RGB *pall);
@@ -48,12 +47,10 @@ extern void wcolrotate(unsigned char start, unsigned char finish, int dir, RGB *
 extern AGS::Shared::Bitmap *wnewblock(AGS::Shared::Bitmap *src, int x1, int y1, int x2, int y2);
 
 extern void wputblock(AGS::Shared::Bitmap *ds, int xx, int yy, AGS::Shared::Bitmap *bll, int xray);
-// CHECKME: temporary solution for plugin system
-extern void wputblock_raw(AGS::Shared::Bitmap *ds, int xx, int yy, BITMAP *bll, int xray);
+// CHECKME: temporary solution for plugin systemextern void wputblock_raw(AGS::Shared::Bitmap *ds, int xx, int yy, BITMAP *bll, int xray);
 extern const int col_lookups[32];
 
-// TODO: these are used only in the Editor's agsnative.cpp
-extern int __wremap_keep_transparent;
+// TODO: these are used only in the Editor's agsnative.cppextern int __wremap_keep_transparent;
 extern void wremap(RGB *pal1, AGS::Shared::Bitmap *picc, RGB *pal2);
 extern void wremapall(RGB *pal1, AGS::Shared::Bitmap *picc, RGB *pal2);
 

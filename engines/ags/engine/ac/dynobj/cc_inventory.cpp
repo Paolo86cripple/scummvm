@@ -30,8 +30,7 @@ namespace AGS3 {
 
 using namespace AGS::Shared;
 
-// return the type name of the object
-const char *CCInventory::GetType() {
+// return the type name of the objectconst char *CCInventory::GetType() {
 	return "Inventory";
 }
 
@@ -40,8 +39,7 @@ size_t CCInventory::CalcSerializeSize(const void * /*address*/) {
 }
 
 // serialize the object into BUFFER (which is BUFSIZE bytes)
-// return number of bytes used
-void CCInventory::Serialize(const void *address, Stream *out) {
+// return number of bytes usedvoid CCInventory::Serialize(const void *address, Stream *out) {
 	const ScriptInvItem *shh = static_cast<const ScriptInvItem *>(address);
 	out->WriteInt32(shh->id);
 }

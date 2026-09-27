@@ -68,8 +68,7 @@ ScriptDictBase *Dict_Create(bool sorted, bool case_sensitive) {
 	return dic;
 }
 
-// TODO: we need memory streams
-ScriptDictBase *Dict_Unserialize(int index, AGS::Shared::Stream *in, size_t data_sz) {
+// TODO: we need memory streamsScriptDictBase *Dict_Unserialize(int index, AGS::Shared::Stream *in, size_t data_sz) {
 	if (data_sz < sizeof(int32_t) * 2)
 		quit("Dict_Unserialize: not enough data."); // TODO: don't quit, return error
 	const int sorted = in->ReadInt32();
@@ -202,8 +201,7 @@ ScriptSetBase *Set_Create(bool sorted, bool case_sensitive) {
 	return set;
 }
 
-// TODO: we need memory streams
-ScriptSetBase *Set_Unserialize(int index, AGS::Shared::Stream *in, size_t data_sz) {
+// TODO: we need memory streamsScriptSetBase *Set_Unserialize(int index, AGS::Shared::Stream *in, size_t data_sz) {
 	if (data_sz < sizeof(int32_t) * 2)
 		quit("Set_Unserialize: not enough data."); // TODO: don't quit, return error
 	const int sorted = in->ReadInt32();

@@ -54,8 +54,7 @@ typedef ImBufferPtrT<uint8_t *> ImBufferPtr;
 typedef ImBufferPtrT<const uint8_t *> ImBufferCPtr;
 
 
-// Finds the given color's index in the palette, or returns SIZE_MAX if such color is not there
-static size_t lookup_palette(uint32_t col, uint32_t palette[256], uint32_t ncols) {
+// Finds the given color's index in the palette, or returns SIZE_MAX if such color is not therestatic size_t lookup_palette(uint32_t col, uint32_t palette[256], uint32_t ncols) {
 	for (size_t i = 0; i < ncols; ++i)
 		if (palette[i] == col) return i;
 	return SIZE_MAX;
@@ -489,8 +488,7 @@ void SpriteFile::SeekToSprite(sprkey_t index) {
 }
 
 
-// Finds the topmost occupied slot index
-static sprkey_t FindTopmostSprite(const std::vector<std::pair<bool, Bitmap *>> &sprites) {
+// Finds the topmost occupied slot indexstatic sprkey_t FindTopmostSprite(const std::vector<std::pair<bool, Bitmap *>> &sprites) {
 	sprkey_t topmost = -1;
 	for (sprkey_t i = 0; i < static_cast<sprkey_t>(sprites.size()); ++i)
 		if (sprites[i].first)

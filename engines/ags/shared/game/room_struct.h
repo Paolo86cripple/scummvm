@@ -63,8 +63,7 @@ typedef std::shared_ptr<ccScript> PScript;
 // later, when more engine source is put in AGS namespace and
 // refactored.
 
-// Room's area mask type
-enum RoomAreaMask {
+// Room's area mask typeenum RoomAreaMask {
 	kRoomAreaNone = 0,
 	kRoomAreaHotspot,
 	kRoomAreaWalkBehind,
@@ -72,8 +71,7 @@ enum RoomAreaMask {
 	kRoomAreaRegion
 };
 
-// Room's audio volume modifier
-enum RoomVolumeMod {
+// Room's audio volume modifierenum RoomVolumeMod {
 	kRoomVolumeQuietest = -3,
 	kRoomVolumeQuieter = -2,
 	kRoomVolumeQuiet = -1,
@@ -89,8 +87,7 @@ enum RoomVolumeMod {
 	kRoomVolumeMax = kRoomVolumeExtra2,
 };
 
-// Extended room boolean options
-enum RoomFlags {
+// Extended room boolean optionsenum RoomFlags {
 	kRoomFlag_BkgFrameLocked = 0x01
 };
 
@@ -119,8 +116,7 @@ class Stream;
 
 typedef std::shared_ptr<Bitmap> PBitmap;
 
-// Various room options
-struct RoomOptions {
+// Various room optionsstruct RoomOptions {
 	// Index of the startup music in the room
 	// this is a deprecated option, used before 3.2.* with old audio API.
 	int  StartupMusic;
@@ -139,8 +135,7 @@ struct RoomOptions {
 	RoomOptions();
 };
 
-// Single room background frame
-struct RoomBgFrame {
+// Single room background framestruct RoomBgFrame {
 	PBitmap     Graphic;
 	// Palette is only valid in 8-bit games
 	RGB         Palette[256];
@@ -161,8 +156,7 @@ struct RoomEdges {
 	RoomEdges(int l, int r, int t, int b);
 };
 
-// Room hotspot description
-struct RoomHotspot {
+// Room hotspot descriptionstruct RoomHotspot {
 	String      Name;
 	String      ScriptName;
 	// Custom properties
@@ -176,8 +170,7 @@ struct RoomHotspot {
 	Point       WalkTo;
 };
 
-// Room object description
-struct RoomObjectInfo {
+// Room object descriptionstruct RoomObjectInfo {
 	int32_t         Room;
 	int32_t         X;
 	int32_t         Y;
@@ -198,8 +191,7 @@ struct RoomObjectInfo {
 	RoomObjectInfo();
 };
 
-// Room region description
-struct RoomRegion {
+// Room region descriptionstruct RoomRegion {
 	// Light level (-100 -> +100) or Tint luminance (0 - 255)
 	int32_t         Light;
 	// Tint setting (R-B-G-S)
@@ -214,8 +206,7 @@ struct RoomRegion {
 	RoomRegion();
 };
 
-// Walkable area description
-struct WalkArea {
+// Walkable area descriptionstruct WalkArea {
 	// Apply player character's normal view on this area
 	int32_t     CharacterView;
 	// Character's scaling (-100 -> +100 %)
@@ -232,8 +223,7 @@ struct WalkArea {
 	WalkArea();
 };
 
-// Walk-behind description
-struct WalkBehind {
+// Walk-behind descriptionstruct WalkBehind {
 	// Object's z-order in the room
 	int32_t Baseline;
 
@@ -253,8 +243,7 @@ struct MessageInfo {
 };
 
 
-// Room's legacy resolution type
-enum RoomResolutionType {
+// Room's legacy resolution typeenum RoomResolutionType {
 	kRoomRealRes = 0, // room should always be treated as-is
 	kRoomLoRes = 1, // created for low-resolution game
 	kRoomHiRes = 2 // created for high-resolution game
@@ -310,8 +299,7 @@ public:
 	// Gets region's tint luminance in 0 to 100 range value; returns 0 if region's light level is set
 	int  GetRegionTintLuminance(int id) const;
 
-	// TODO: all members are currently public because they are used everywhere; hide them later
-public:
+	// TODO: all members are currently public because they are used everywhere; hide them laterpublic:
 	// Game's unique ID, corresponds to GameSetupStructBase::uniqueid.
 	// If this field has a valid value and does not match actual game's id,
 	// then engine will refuse to start this room.
@@ -380,11 +368,9 @@ private:
 };
 
 
-// Loads new room data into the given RoomStruct object
-void load_room(const String &filename, RoomStruct *room, bool game_is_hires, const std::vector<SpriteInfo> &sprinfos);
+// Loads new room data into the given RoomStruct objectvoid load_room(const String &filename, RoomStruct *room, bool game_is_hires, const std::vector<SpriteInfo> &sprinfos);
 // Checks if it's necessary and upscales low-res room backgrounds and masks for the high resolution game
-// NOTE: it does not upscale object coordinates, because that is usually done when the room is loaded
-void UpscaleRoomBackground(RoomStruct *room, bool game_is_hires);
+// NOTE: it does not upscale object coordinates, because that is usually done when the room is loadedvoid UpscaleRoomBackground(RoomStruct *room, bool game_is_hires);
 // Ensures that all existing room masks match room background size and
 // MaskResolution property, resizes mask bitmaps if necessary.
 void FixRoomMasks(RoomStruct *room);

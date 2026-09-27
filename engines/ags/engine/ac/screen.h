@@ -39,8 +39,7 @@ namespace AGS {
 namespace Shared {
 class Bitmap;
 } // namespace Shared
-} // namespace AGS
-namespace AGS {
+} // namespace AGSnamespace AGS {
 namespace Engine {
 class IDriverDependantBitmap;
 } // namespace Engine

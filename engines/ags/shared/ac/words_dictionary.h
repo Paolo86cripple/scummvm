@@ -51,18 +51,15 @@ struct WordsDictionary {
 	int   find_index(const char *);
 };
 
-// Decrypts text found in the given buffer, writes back to the same buffer
-extern void decrypt_text(char *buf, size_t buf_sz);
-// Reads an encrypted string from the stream and decrypts into the provided buffer
-extern void read_string_decrypt(AGS::Shared::Stream *in, char *buf, size_t buf_sz);
+// Decrypts text found in the given buffer, writes back to the same bufferextern void decrypt_text(char *buf, size_t buf_sz);
+// Reads an encrypted string from the stream and decrypts into the provided bufferextern void read_string_decrypt(AGS::Shared::Stream *in, char *buf, size_t buf_sz);
 // Reads an encrypted string from the stream and returns as a string;
 // uses provided vector as a temporary decryption buffer (avoid extra allocs)
 extern AGS::Shared::String read_string_decrypt(AGS::Shared::Stream *in, std::vector<char> &dec_buf);
 extern void read_dictionary(WordsDictionary *dict, AGS::Shared::Stream *in);
 
 #if defined (OBSOLETE)
-// TODO: not a part of wordsdictionary, move to obsoletes
-extern void freadmissout(short *pptr, AGS::Shared::Stream *in);
+// TODO: not a part of wordsdictionary, move to obsoletesextern void freadmissout(short *pptr, AGS::Shared::Stream *in);
 #endif
 
 extern void encrypt_text(char *toenc);

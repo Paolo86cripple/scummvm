@@ -47,13 +47,10 @@ using AGS::Shared::AssetPath;
 using AGS::Shared::Stream;
 using AGS::Shared::String;
 
-// Looks for valid asset library everywhere and returns path, or empty string if failed
-String  find_assetlib(const String &filename);
+// Looks for valid asset library everywhere and returns path, or empty string if failedString  find_assetlib(const String &filename);
 
-// Returns the path to the audio asset, considering the given bundling type
-AssetPath get_audio_clip_assetpath(int bundling_type, const String &filename);
-// Returns the path to the voice-over asset
-AssetPath get_voice_over_assetpath(const String &filename);
+// Returns the path to the audio asset, considering the given bundling typeAssetPath get_audio_clip_assetpath(int bundling_type, const String &filename);
+// Returns the path to the voice-over assetAssetPath get_voice_over_assetpath(const String &filename);
 
 // Custom AGS PACKFILE user object
 // TODO: it is preferrable to let our Stream define custom readable window instead,

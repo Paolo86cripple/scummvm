@@ -60,8 +60,7 @@ enum DataEndianess {
 inline int FlagToFlag(int value, int flag1, int flag2) {
 	return ((value & flag1) != 0) * flag2;
 }
-// Sets flag2 if flag1 is NOT set
-inline int FlagToNoFlag(int value, int flag1, int flag2) {
+// Sets flag2 if flag1 is NOT setinline int FlagToNoFlag(int value, int flag1, int flag2) {
 	return ((value & flag1) == 0) * flag2;
 }
 
@@ -165,8 +164,7 @@ inline float FloatFromBE(const float val) {
 } // namespace BitByteOperations
 
 
-// Aliases for easier calling
-namespace BBOp = BitByteOperations;
+// Aliases for easier callingnamespace BBOp = BitByteOperations;
 
 
 } // namespace Shared

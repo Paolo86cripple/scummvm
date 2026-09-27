@@ -56,8 +56,7 @@ int CalcFrameSoundVolume(int obj_vol, int anim_vol, int scale = 100);
 // Handle the new animation frame (play linked sounds, etc);
 // sound_volume is an optional *relative* factor, 100 is default (unchanged)
 void CheckViewFrame(int view, int loop, int frame, int sound_volume = 100);
-// draws a view frame, flipped if appropriate
-void DrawViewFrame(AGS::Shared::Bitmap *ds, const ViewFrame *vframe, int x, int y, bool alpha_blend = false);
+// draws a view frame, flipped if appropriatevoid DrawViewFrame(AGS::Shared::Bitmap *ds, const ViewFrame *vframe, int x, int y, bool alpha_blend = false);
 
 } // namespace AGS3
 

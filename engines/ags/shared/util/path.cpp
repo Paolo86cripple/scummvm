@@ -261,8 +261,7 @@ String GetPathInASCII(const String &path) {
 #endif
 }
 
-#if AGS_PLATFORM_OS_WINDOWS
-String WidePathNameToAnsi(LPCWSTR pathw) {
+#if AGS_PLATFORM_OS_WINDOWSString WidePathNameToAnsi(LPCWSTR pathw) {
 	WCHAR short_path[MAX_PATH_SZ];
 	char ascii_buffer[MAX_PATH_SZ];
 	LPCWSTR arg_path = pathw;

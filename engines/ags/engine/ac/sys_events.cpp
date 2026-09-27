@@ -35,8 +35,7 @@
 #include "ags/events.h"
 #include "ags/globals.h"
 
-// TODO: Replace me
-typedef int SDL_Scancode;
+// TODO: Replace metypedef int SDL_Scancode;
 
 
 namespace AGS3 {
@@ -54,8 +53,7 @@ using namespace AGS::Shared;
 using namespace AGS::Engine;
 
 extern void domouse(int str);
-// Convert mouse button id to flags
-const int MouseButton2Bits[kNumMouseButtons] =
+// Convert mouse button id to flagsconst int MouseButton2Bits[kNumMouseButtons] =
 	{ 0, MouseBitLeft, MouseBitRight, MouseBitMiddle };
 static void(*_on_quit_callback)(void) = nullptr;
 static void(*_on_switchin_callback)(void) = nullptr;
@@ -157,8 +155,7 @@ static int scummvm_button_to_mask(Common::EventType type) {
 	}
 }
 
-// Returns accumulated mouse button state and clears internal cache by timer
-static int mouse_button_poll() {
+// Returns accumulated mouse button state and clears internal cache by timerstatic int mouse_button_poll() {
 	auto now = AGS_Clock::now();
 	int result = _G(mouse_button_state) | _G(mouse_accum_button_state);
 	if (now >= _G(mouse_clear_at_time)) {

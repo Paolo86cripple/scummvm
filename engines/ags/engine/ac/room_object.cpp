@@ -109,8 +109,7 @@ void RoomObject::UpdateCyclingView(int ref_id) {
 	CheckViewFrame();
 }
 
-// Calculate wanted frame sound volume based on multiple factors
-int RoomObject::GetFrameSoundVolume() const {
+// Calculate wanted frame sound volume based on multiple factorsint RoomObject::GetFrameSoundVolume() const {
 	// NOTE: room objects don't have "scale volume" flag at the moment
 	return AGS3::CalcFrameSoundVolume(anim_volume, cur_anim_volume);
 }

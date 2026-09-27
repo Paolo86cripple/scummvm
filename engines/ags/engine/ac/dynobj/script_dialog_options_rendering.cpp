@@ -27,8 +27,7 @@ namespace AGS3 {
 
 using namespace AGS::Shared;
 
-// return the type name of the object
-const char *ScriptDialogOptionsRendering::GetType() {
+// return the type name of the objectconst char *ScriptDialogOptionsRendering::GetType() {
 	return "DialogOptionsRendering";
 }
 
@@ -37,8 +36,7 @@ size_t ScriptDialogOptionsRendering::CalcSerializeSize(const void * /*address*/)
 }
 
 // serialize the object into BUFFER (which is BUFSIZE bytes)
-// return number of bytes used
-void ScriptDialogOptionsRendering::Serialize(const void *address, Stream *out) {
+// return number of bytes usedvoid ScriptDialogOptionsRendering::Serialize(const void *address, Stream *out) {
 }
 
 void ScriptDialogOptionsRendering::Unserialize(int index, Stream *in, size_t data_sz) {

@@ -145,8 +145,7 @@ void SetGUIClickable(int guin, int clickable) {
 	GUI_SetClickable(&_GP(scrGui)[guin], clickable);
 }
 
-// pass trans=0 for fully solid, trans=100 for fully transparent
-void SetGUITransparency(int ifn, int trans) {
+// pass trans=0 for fully solid, trans=100 for fully transparentvoid SetGUITransparency(int ifn, int trans) {
 	if ((ifn < 0) || (ifn >= _GP(game).numgui))
 		quit("!SetGUITransparency: invalid GUI number");
 
@@ -216,8 +215,7 @@ void EnableInterface() {
 	}
 }
 
-// Returns 1 if user interface is enabled, 0 if disabled
-int IsInterfaceEnabled() {
+// Returns 1 if user interface is enabled, 0 if disabledint IsInterfaceEnabled() {
 	return (_GP(play).disabled_user_interface > 0) ? 0 : 1;
 }
 

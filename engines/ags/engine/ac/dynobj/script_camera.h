@@ -56,8 +56,7 @@ private:
 	int _id = -1; // index of camera in the game state array
 };
 
-// Unserialize camera from the memory stream
-ScriptCamera *Camera_Unserialize(int handle, AGS::Shared::Stream *in, size_t data_sz);
+// Unserialize camera from the memory streamScriptCamera *Camera_Unserialize(int handle, AGS::Shared::Stream *in, size_t data_sz);
 
 } // namespace AGS3
 

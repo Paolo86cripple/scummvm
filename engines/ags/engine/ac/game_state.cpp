@@ -866,8 +866,7 @@ void GameState::WriteCustomProperties_v340(Stream *out, GameDataVersion data_ver
 	}
 }
 
-// Converts legacy alignment type used in script API
-HorAlignment ConvertLegacyScriptAlignment(LegacyScriptAlignment align) {
+// Converts legacy alignment type used in script APIHorAlignment ConvertLegacyScriptAlignment(LegacyScriptAlignment align) {
 	switch (align) {
 	case kLegacyScAlignLeft:
 		return kHAlignLeft;

@@ -37,19 +37,14 @@ void apply_debug_config(const AGS::Shared::ConfigTree &cfg);
 void shutdown_debug();
 
 // prints debug messages of given type tagged with kDbgGroup_Game,
-// prepending it with current room number and script position info
-void debug_script_print(AGS::Shared::MessageType mt, const char *msg, ...);
+// prepending it with current room number and script position infovoid debug_script_print(AGS::Shared::MessageType mt, const char *msg, ...);
 // prints formatted debug warnings tagged with kDbgGroup_Game,
-// prepending it with current room number and script position info
-void debug_script_warn(const char *msg, ...);
+// prepending it with current room number and script position infovoid debug_script_warn(const char *msg, ...);
 // prints formatted debug message tagged with kDbgGroup_Game,
-// prepending it with current room number and script position info
-void debug_script_log(const char *msg, ...);
+// prepending it with current room number and script position infovoid debug_script_log(const char *msg, ...);
 
-// Connect engine to external debugger, if one is available
-bool init_editor_debugging();
-// allow LShift to single-step,  RShift to pause flow
-void scriptDebugHook(ccInstance *ccinst, int linenum);
+// Connect engine to external debugger, if one is availablebool init_editor_debugging();
+// allow LShift to single-step,  RShift to pause flowvoid scriptDebugHook(ccInstance *ccinst, int linenum);
 
 } // namespace AGS3
 

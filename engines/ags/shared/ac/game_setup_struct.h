@@ -56,8 +56,7 @@ using AGS::Shared::PInteractionScripts;
 using AGS::Shared::HGameFileError;
 
 
-// TODO: split GameSetupStruct into struct used to hold loaded game data, and actual runtime object
-struct GameSetupStruct : public GameSetupStructBase {
+// TODO: split GameSetupStruct into struct used to hold loaded game data, and actual runtime objectstruct GameSetupStruct : public GameSetupStructBase {
 	// This array is used only to read data into;
 	// font parameters are then put and queried in the fonts module
 	// TODO: split into installation params (used only when reading) and runtime params
@@ -181,8 +180,7 @@ struct OldGameSetupStruct;
 void ConvertOldGameStruct(OldGameSetupStruct *ogss, GameSetupStruct *gss);
 #endif // OBSOLETE
 
-// Finds an audio clip using legacy convention index
-ScriptAudioClip *GetAudioClipForOldStyleNumber(GameSetupStruct &game, bool is_music, int num);
+// Finds an audio clip using legacy convention indexScriptAudioClip *GetAudioClipForOldStyleNumber(GameSetupStruct &game, bool is_music, int num);
 
 } // namespace AGS3
 

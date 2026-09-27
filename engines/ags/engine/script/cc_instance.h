@@ -108,8 +108,7 @@ struct ScriptPosition {
 };
 
 
-// Running instance of the script
-struct ccInstance {
+// Running instance of the scriptstruct ccInstance {
 public:
 	typedef std::unordered_map<int32_t, ScriptVariable> ScVarMap;
 	typedef std::shared_ptr<ScVarMap>                   PScVarMap;

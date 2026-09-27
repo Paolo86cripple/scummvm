@@ -31,8 +31,7 @@ using AGS::Shared::HError;
 
 // Preload particular game-describing parameters from the game data header (title, save game dir name, etc)
 HError preload_game_data();
-// Loads game data and reinitializes the game state; assigns error message in case of failure
-HError load_game_file();
+// Loads game data and reinitializes the game state; assigns error message in case of failureHError load_game_file();
 void display_game_file_error(HError err);
 
 } // namespace AGS3

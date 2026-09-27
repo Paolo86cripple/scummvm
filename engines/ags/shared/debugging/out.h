@@ -126,8 +126,7 @@ enum CommonDebugGroup : uint32 {
 	kDbgGroup_ManObj
 };
 
-// Debug group identifier defining either numeric or string id, or both
-struct DebugGroupID {
+// Debug group identifier defining either numeric or string id, or bothstruct DebugGroupID {
 	uint32_t    ID;
 	String      SID;
 
@@ -151,18 +150,12 @@ namespace Debug {
 //
 // Debug output
 //
-// Output a plain message of default group and default type
-void Printf(const String &text);
-// Output a plain message of default group and given type
-void Printf(MessageType mt, const String &text);
-// Output a plain message of given group and type
-void Printf(DebugGroupID group_id, MessageType mt, const String &text);
-// Output formatted message of default group and default type
-void Printf(const char *fmt, ...);
-// Output formatted message of default group and given type
-void Printf(MessageType mt, const char *fmt, ...);
-// Output formatted message of given group and type
-void Printf(DebugGroupID group_id, MessageType mt, const char *fmt, ...);
+// Output a plain message of default group and default typevoid Printf(const String &text);
+// Output a plain message of default group and given typevoid Printf(MessageType mt, const String &text);
+// Output a plain message of given group and typevoid Printf(DebugGroupID group_id, MessageType mt, const String &text);
+// Output formatted message of default group and default typevoid Printf(const char *fmt, ...);
+// Output formatted message of default group and given typevoid Printf(MessageType mt, const char *fmt, ...);
+// Output formatted message of given group and typevoid Printf(DebugGroupID group_id, MessageType mt, const char *fmt, ...);
 
 } // namespace Debug
 

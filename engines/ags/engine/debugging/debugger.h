@@ -32,8 +32,7 @@ struct ScriptPosition;
 int check_for_messages_from_debugger();
 bool send_state_to_debugger(const char *msg);
 bool send_exception_to_debugger(const char *qmsg);
-// Returns current script's location and callstack
-AGS::Shared::String get_cur_script(int numberOfLinesOfCallStack);
+// Returns current script's location and callstackAGS::Shared::String get_cur_script(int numberOfLinesOfCallStack);
 void check_debug_keys();
 
 #define DBG_NOIFACE       1

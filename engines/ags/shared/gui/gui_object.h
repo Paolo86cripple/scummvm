@@ -113,8 +113,7 @@ public:
 	virtual void    ReadFromSavegame(Shared::Stream *in, GuiSvgVersion svg_ver);
 	virtual void    WriteToSavegame(Shared::Stream *out) const;
 
-	// TODO: these members are currently public; hide them later
-public:
+	// TODO: these members are currently public; hide them laterpublic:
 	// Manually marks GUIObject as graphically changed
 	// NOTE: this only matters if control's own graphic changes, but not its
 	// logical (visible, clickable, etc) or visual (e.g. transparency) state.
@@ -162,8 +161,7 @@ LegacyGUIAlignment GetLegacyGUIAlignment(HorAlignment align);
 
 // Tells if all controls are disabled
 
-// Tells if the given control is considered enabled, taking global flag into account
-inline bool IsGUIEnabled(AGS::Shared::GUIObject *g) {
+// Tells if the given control is considered enabled, taking global flag into accountinline bool IsGUIEnabled(AGS::Shared::GUIObject *g) {
 	return (_G(all_buttons_disabled) < 0) && g->IsEnabled();
 }
 

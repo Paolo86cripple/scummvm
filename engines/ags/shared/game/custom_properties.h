@@ -85,8 +85,7 @@ struct PropertyDesc {
 };
 
 // NOTE: AGS has case-insensitive property IDs
-// Schema - a map of property descriptions
-typedef std::unordered_map<String, PropertyDesc, IgnoreCase_Hash, IgnoreCase_EqualTo> PropertySchema;
+// Schema - a map of property descriptionstypedef std::unordered_map<String, PropertyDesc, IgnoreCase_Hash, IgnoreCase_EqualTo> PropertySchema;
 
 
 namespace Properties {
@@ -97,8 +96,7 @@ void WriteSchema(const PropertySchema &schema, Stream *out);
 // The non-matching existing map items, if any, are NOT erased.
 // NOTE: "aligned" parameter is for legacy saves support only.
 PropertyError ReadValues(StringIMap &map, Stream *in, bool aligned = false);
-// Writes property values chunk to the stream
-void WriteValues(const StringIMap &map, Stream *out);
+// Writes property values chunk to the streamvoid WriteValues(const StringIMap &map, Stream *out);
 
 } // namespace Properties
 

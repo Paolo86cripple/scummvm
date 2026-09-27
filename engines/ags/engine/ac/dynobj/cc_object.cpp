@@ -31,8 +31,7 @@ namespace AGS3 {
 
 using namespace AGS::Shared;
 
-// return the type name of the object
-const char *CCObject::GetType() {
+// return the type name of the objectconst char *CCObject::GetType() {
 	return "Object";
 }
 
@@ -41,8 +40,7 @@ size_t CCObject::CalcSerializeSize(const void * /*address*/) {
 }
 
 // serialize the object into BUFFER (which is BUFSIZE bytes)
-// return number of bytes used
-void CCObject::Serialize(const void *address, Stream *out) {
+// return number of bytes usedvoid CCObject::Serialize(const void *address, Stream *out) {
 	const ScriptObject *shh = static_cast<const ScriptObject *>(address);
 	out->WriteInt32(shh->id);
 }

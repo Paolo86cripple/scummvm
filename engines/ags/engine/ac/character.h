@@ -36,8 +36,7 @@ namespace AGS3 {
 
 bool	is_valid_character(int char_id);
 // Asserts the character ID is valid,
-// if not then prints a warning to the log; returns assertion result
-bool	AssertCharacter(const char *apiname, int char_id);
+// if not then prints a warning to the log; returns assertion resultbool	AssertCharacter(const char *apiname, int char_id);
 
 void    Character_AddInventory(CharacterInfo *chaa, ScriptInvItem *invi, int addIndex);
 void    Character_AddWaypoint(CharacterInfo *chaa, int x, int y);
@@ -185,21 +184,16 @@ class Bitmap;
 
 // Configures and starts character animation.
 void animate_character(CharacterInfo *chap, int loopn, int sppd, int rept, int direction = 0, int sframe = 0, int volume = 100);
-// Clears up animation parameters
-void stop_character_anim(CharacterInfo *chap);
+// Clears up animation parametersvoid stop_character_anim(CharacterInfo *chap);
 void walk_character(int chac, int tox, int toy, int ignwal, bool autoWalkAnims);
 int  find_looporder_index(int curloop);
-// returns 0 to use diagonal, 1 to not
-int  useDiagonal(CharacterInfo *char1);
-// returns 1 normally, or 0 if they only have horizontal animations
-int  hasUpDownLoops(CharacterInfo *char1);
+// returns 0 to use diagonal, 1 to notint  useDiagonal(CharacterInfo *char1);
+// returns 1 normally, or 0 if they only have horizontal animationsint  hasUpDownLoops(CharacterInfo *char1);
 void start_character_turning(CharacterInfo *chinf, int useloop, int no_diagonal);
 void fix_player_sprite(MoveList *cmls, CharacterInfo *chinf);
-// Check whether two characters have walked into each other
-int  has_hit_another_character(int sourceChar);
+// Check whether two characters have walked into each otherint  has_hit_another_character(int sourceChar);
 int  doNextCharMoveStep(CharacterInfo *chi, int &char_index, CharacterExtras *chex);
-// Tells if character is currently moving, in eWalkableAreas mode
-bool is_char_walking_ndirect(CharacterInfo *chi);
+// Tells if character is currently moving, in eWalkableAreas modebool is_char_walking_ndirect(CharacterInfo *chi);
 int  find_nearest_walkable_area_within(int *xx, int *yy, int range, int step);
 void find_nearest_walkable_area(int *xx, int *yy);
 void FindReasonableLoopForCharacter(CharacterInfo *chap);
@@ -213,11 +207,9 @@ CharacterInfo *GetCharacterAtScreen(int xx, int yy);
 // calculates resulting sprite size.
 void update_character_scale(int charid);
 CharacterInfo *GetCharacterAtRoom(int x, int y);
-// Get character ID at the given room coordinates
-int is_pos_on_character(int xx, int yy);
+// Get character ID at the given room coordinatesint is_pos_on_character(int xx, int yy);
 void get_char_blocking_rect(int charid, int *x1, int *y1, int *width, int *y2);
-// Check whether the source char is standing inside otherChar's blocking rectangle
-int is_char_in_blocking_rect(int sourceChar, int otherChar, int *fromxptr, int *cwidptr);
+// Check whether the source char is standing inside otherChar's blocking rectangleint is_char_in_blocking_rect(int sourceChar, int otherChar, int *fromxptr, int *cwidptr);
 int my_getpixel(AGS::Shared::Bitmap *blk, int x, int y);
 int check_click_on_character(int xx, int yy, int mood);
 void _DisplaySpeechCore(int chid, const char *displbuf);
@@ -227,8 +219,7 @@ int get_character_currently_talking();
 void DisplaySpeech(const char *texx, int aschar);
 int update_lip_sync(int talkview, int talkloop, int *talkframeptr);
 
-// Recalculate dynamic character properties, e.g. after restoring a game save
-void restore_characters();
+// Recalculate dynamic character properties, e.g. after restoring a game savevoid restore_characters();
 
 // Calculates character's bounding box in room coordinates (takes only in-room transform into account)
 // use_frame_0 optionally tells to use frame 0 of current loop instead of current frame.
@@ -238,8 +229,7 @@ Rect GetCharacterRoomBBox(int charid, bool use_frame_0 = false);
 // or the one that is least far away from its camera; calculated as a perpendicular distance between two AABBs.
 PViewport FindNearestViewport(int charid);
 
-// order of loops to turn character in circle from down to down
-extern int turnlooporder[8];
+// order of loops to turn character in circle from down to downextern int turnlooporder[8];
 
 } // namespace AGS3
 

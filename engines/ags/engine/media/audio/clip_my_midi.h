@@ -27,8 +27,7 @@
 
 namespace AGS3 {
 
-// MIDI
-struct MYMIDI : public SOUNDCLIP {
+// MIDIstruct MYMIDI : public SOUNDCLIP {
 	Audio::Mixer *_mixer;
 	Common::SeekableReadStream *_data;
 	int lengthInSeconds;

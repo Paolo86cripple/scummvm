@@ -141,8 +141,7 @@ int FindMatchingMultiWordWord(char *thisword, const char **text) {
 }
 
 // parse_sentence: pass compareto as NULL to parse the sentence, or
-// compareto as non-null to check if it matches the passed sentence
-int parse_sentence(const char *src_text, int *numwords, short *wordarray, short *compareto, int comparetonum) {
+// compareto as non-null to check if it matches the passed sentenceint parse_sentence(const char *src_text, int *numwords, short *wordarray, short *compareto, int comparetonum) {
 	char thisword[150] = "\0";
 	int  i = 0, comparing = 0;
 	int8 in_optional = 0, do_word_now = 0;

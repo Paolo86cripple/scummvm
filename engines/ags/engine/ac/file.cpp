@@ -298,8 +298,7 @@ FSLocation GetGameUserConfigDir() {
 	return dir.Concat(_GP(game).saveGameFolderName);
 }
 
-// Constructs data dir using rules for default system location
-inline FSLocation MakeDefaultDataDir(const FSLocation &def_dir) {
+// Constructs data dir using rules for default system locationinline FSLocation MakeDefaultDataDir(const FSLocation &def_dir) {
 	// Relative dir is resolved relative to the game data dir
 	if (is_relative_filename(def_dir.FullDir))
 		return FSLocation(_GP(ResPaths).DataDir).Rebase(def_dir.FullDir);
@@ -308,8 +307,7 @@ inline FSLocation MakeDefaultDataDir(const FSLocation &def_dir) {
 	return def_dir.Concat(_GP(game).saveGameFolderName);
 }
 
-// Constructs data dir using rules for the user-specified location
-inline FSLocation MakeUserDataDir(const String &user_dir) {
+// Constructs data dir using rules for the user-specified locationinline FSLocation MakeUserDataDir(const String &user_dir) {
 	// If user-set location is inside game dir, then form a relative path
 	if (is_relative_filename(user_dir))
 		return FSLocation(_GP(ResPaths).DataDir).Rebase(user_dir);
@@ -531,8 +529,7 @@ static int ags_pf_ferror(void *userdata) {
 	return ((AGS_PACKFILE_OBJ *)userdata)->stream->GetError() ? 1 : 0;
 }
 
-// Custom PACKFILE callback table
-static PACKFILE_VTABLE ags_packfile_vtable = {
+// Custom PACKFILE callback tablestatic PACKFILE_VTABLE ags_packfile_vtable = {
 	ags_pf_fclose,
 	ags_pf_getc,
 	ags_pf_ungetc,

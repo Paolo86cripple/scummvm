@@ -73,10 +73,8 @@ bool font_first_renderer_loaded();
 bool is_font_loaded(size_t fontNumber);
 bool is_bitmap_font(size_t fontNumber);
 bool font_supports_extended_characters(size_t fontNumber);
-// Get font's name, if it's available, otherwise returns empty string
-const char *get_font_name(size_t fontNumber);
-// Get a collection of FFLG_* flags corresponding to this font
-int get_font_flags(size_t fontNumber);
+// Get font's name, if it's available, otherwise returns empty stringconst char *get_font_name(size_t fontNumber);
+// Get a collection of FFLG_* flags corresponding to this fontint get_font_flags(size_t fontNumber);
 // TODO: with changes to WFN font renderer that implemented safe rendering of
 // strings containing invalid chars (since 3.3.1) this function is not
 // important, except for (maybe) few particular cases.
@@ -84,12 +82,9 @@ int get_font_flags(size_t fontNumber);
 // at random times (usually - drawing routines).
 // Need to check whether it is safe to completely remove it.
 void ensure_text_valid_for_font(char *text, size_t fontnum);
-// Get font's scaling multiplier
-int get_font_scaling_mul(size_t fontNumber);
-// Calculate actual width of a line of text
-int get_text_width(const char *texx, size_t fontNumber);
-// Get the maximal width of the line of text, with corresponding outlining
-int get_text_width_outlined(const char *text, size_t font_number);
+// Get font's scaling multiplierint get_font_scaling_mul(size_t fontNumber);
+// Calculate actual width of a line of textint get_text_width(const char *texx, size_t fontNumber);
+// Get the maximal width of the line of text, with corresponding outliningint get_text_width_outlined(const char *text, size_t font_number);
 // Get the maximal height of the line of text;
 // note that this won't be a nominal font's height, but the max of each met glyph's graphical height.
 int get_text_height(const char *text, size_t font_number);
@@ -97,41 +92,29 @@ int get_text_height(const char *text, size_t font_number);
 // note that this is a "formal" font height, that may have different value
 // depending on compatibility mode (used when running old games);
 int get_font_height(size_t fontNumber);
-// Get the maximal height of the given font, with corresponding outlining
-int get_font_height_outlined(size_t fontNumber);
+// Get the maximal height of the given font, with corresponding outliningint get_font_height_outlined(size_t fontNumber);
 // Get font's surface height: this always returns the height enough to accommodate
-// font letters on a bitmap or a texture; the distinction is needed for compatibility reasons
-int get_font_surface_height(size_t fontNumber);
+// font letters on a bitmap or a texture; the distinction is needed for compatibility reasonsint get_font_surface_height(size_t fontNumber);
 // Get font's maximal graphical extent: this means the farthest vertical positions of glyphs,
 // relative to the "pen" position. Besides letting to calculate the surface height,
 // this information also lets to detect if some of the glyphs may appear above y0.
 std::pair<int, int> get_font_surface_extent(size_t fontNumber);
-// Get font's line spacing
-int get_font_linespacing(size_t fontNumber);
-// Set font's line spacing
-void set_font_linespacing(size_t fontNumber, int spacing);
-// Get font's outline type
-int  get_font_outline(size_t font_number);
+// Get font's line spacingint get_font_linespacing(size_t fontNumber);
+// Set font's line spacingvoid set_font_linespacing(size_t fontNumber, int spacing);
+// Get font's outline typeint  get_font_outline(size_t font_number);
 // Get font's automatic outline thickness (if set)
 int  get_font_outline_thickness(size_t font_number);
 // Gets the total maximal height of the given number of lines printed with the given font;
-// note that this uses formal font height, for compatibility purposes
-int get_text_lines_height(size_t fontNumber, size_t numlines);
+// note that this uses formal font height, for compatibility purposesint get_text_lines_height(size_t fontNumber, size_t numlines);
 // Gets the height of a graphic surface enough to accommodate this number of text lines;
-// note this accounts for the real pixel font height
-int get_text_lines_surf_height(size_t fontNumber, size_t numlines);
-// Set font's outline type
-void set_font_outline(size_t font_number, int outline_type,
+// note this accounts for the real pixel font heightint get_text_lines_surf_height(size_t fontNumber, size_t numlines);
+// Set font's outline typevoid set_font_outline(size_t font_number, int outline_type,
 	enum FontInfo::AutoOutlineStyle style = FontInfo::kSquared, int thickness = 1);
 bool is_font_antialiased(size_t font_number);
-// Outputs a single line of text on the defined position on bitmap, using defined font, color and parameters
-void wouttextxy(AGS::Shared::Bitmap *ds, int xxx, int yyy, size_t fontNumber, color_t text_color, const char *texx);
-// Assigns FontInfo to the font
-void set_fontinfo(size_t fontNumber, const FontInfo &finfo);
-// Gets full information about the font
-FontInfo get_fontinfo(size_t font_number);
-// Loads a font from disk
-bool load_font_size(size_t fontNumber, const FontInfo &font_info); void wgtprintf(AGS::Shared::Bitmap *ds, int xxx, int yyy, size_t fontNumber, color_t text_color, char *fmt, ...);
+// Outputs a single line of text on the defined position on bitmap, using defined font, color and parametersvoid wouttextxy(AGS::Shared::Bitmap *ds, int xxx, int yyy, size_t fontNumber, color_t text_color, const char *texx);
+// Assigns FontInfo to the fontvoid set_fontinfo(size_t fontNumber, const FontInfo &finfo);
+// Gets full information about the fontFontInfo get_fontinfo(size_t font_number);
+// Loads a font from diskbool load_font_size(size_t fontNumber, const FontInfo &font_info); void wgtprintf(AGS::Shared::Bitmap *ds, int xxx, int yyy, size_t fontNumber, color_t text_color, char *fmt, ...);
 // Allocates two outline stencil buffers, or returns previously creates ones;
 // these buffers are owned by the font, they should not be deleted by the caller.
 void alloc_font_outline_buffers(size_t font_number,
@@ -139,13 +122,10 @@ void alloc_font_outline_buffers(size_t font_number,
 	int text_width, int text_height, int color_depth);
 // Perform necessary adjustments on all fonts in case the text render mode changed (anti-aliasing etc)
 void adjust_fonts_for_render_mode(bool aa_mode);
-// Free particular font's data
-void wfreefont(size_t fontNumber);
-// Free all fonts data
-void free_all_fonts();
+// Free particular font's datavoid wfreefont(size_t fontNumber);
+// Free all fonts datavoid free_all_fonts();
 
-// Tells if the text should be antialiased when possible
-bool ShouldAntiAliasText();
+// Tells if the text should be antialiased when possiblebool ShouldAntiAliasText();
 
 // SplitLines class represents a list of lines and is meant to reduce
 // subsequent memory (de)allocations if used often during game loops
@@ -184,8 +164,7 @@ private:
 };
 
 // Break up the text into lines restricted by the given width;
-// returns number of lines, or 0 if text cannot be split well to fit in this width
-size_t split_lines(const char *texx, SplitLines &lines, int width, int fontNumber, size_t max_lines = -1);
+// returns number of lines, or 0 if text cannot be split well to fit in this widthsize_t split_lines(const char *texx, SplitLines &lines, int width, int fontNumber, size_t max_lines = -1);
 
 } // namespace AGS3
 

@@ -226,8 +226,7 @@ void GetGlobalString(int index, char *strval) {
 	snprintf(strval, MAX_MAXSTRLEN, "%s", _GP(play).globalstrings[index]);
 }
 
-// TODO: refactor this method, and use same shared procedure at both normal stop/startup and in RunAGSGame
-int RunAGSGame(const String &newgame, unsigned int mode, int data) {
+// TODO: refactor this method, and use same shared procedure at both normal stop/startup and in RunAGSGameint RunAGSGame(const String &newgame, unsigned int mode, int data) {
 
 	can_run_delayed_command();
 
@@ -542,8 +541,7 @@ void ShowInputBoxImpl(const char *msg, char *bufr, size_t buf_len) {
 }
 
 // GetLocationType exported function - just call through
-// to the main function with default 0
-int GetLocationType(int xxx, int yyy) {
+// to the main function with default 0int GetLocationType(int xxx, int yyy) {
 	return __GetLocationType(xxx, yyy, 0);
 }
 

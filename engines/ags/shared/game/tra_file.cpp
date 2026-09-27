@@ -116,8 +116,7 @@ HError ReadTraBlock(Translation &tra, Stream *in, TraFileBlock block, const Stri
 		String::FromFormat("Type: %s", ext_id.GetCStr()));
 }
 
-// TRABlockReader reads whole TRA data, block by block
-class TRABlockReader : public DataExtReader {
+// TRABlockReader reads whole TRA data, block by blockclass TRABlockReader : public DataExtReader {
 public:
 	TRABlockReader(Translation &tra, Stream *in)
 		: DataExtReader(in, kDataExt_NumID32 | kDataExt_File32)
@@ -181,8 +180,7 @@ HError ReadTraData(Translation &tra, Stream *in) {
 	return reader.Read();
 }
 
-// TODO: perhaps merge with encrypt/decrypt utilities
-static const char *EncryptText(std::vector<char> &en_buf, const String &s) {
+// TODO: perhaps merge with encrypt/decrypt utilitiesstatic const char *EncryptText(std::vector<char> &en_buf, const String &s) {
 	if (en_buf.size() < s.GetLength() + 1)
 		en_buf.resize(s.GetLength() + 1);
 	strncpy(&en_buf.front(), s.GetCStr(), s.GetLength() + 1);
@@ -190,8 +188,7 @@ static const char *EncryptText(std::vector<char> &en_buf, const String &s) {
 	return &en_buf.front();
 }
 
-// TODO: perhaps merge with encrypt/decrypt utilities
-static const char *EncryptEmptyString(std::vector<char> &en_buf) {
+// TODO: perhaps merge with encrypt/decrypt utilitiesstatic const char *EncryptEmptyString(std::vector<char> &en_buf) {
 	en_buf[0] = 0;
 	encrypt_text(&en_buf.front());
 	return &en_buf.front();

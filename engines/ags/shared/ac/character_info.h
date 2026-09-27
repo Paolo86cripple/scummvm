@@ -98,8 +98,7 @@ enum CharacterSvgVersion {
 };
 
 
-// Predeclare a design-time Character extension
-struct CharacterInfo2;
+// Predeclare a design-time Character extensionstruct CharacterInfo2;
 // Predeclare a runtime Character extension (TODO: refactor and remove this from here)
 struct CharacterExtras;
 
@@ -221,8 +220,7 @@ private:
 };
 
 
-// Design-time Character extended fields
-struct CharacterInfo2 {
+// Design-time Character extended fieldsstruct CharacterInfo2 {
 	// Unrestricted scriptname and name fields
 	AGS::Shared::String scrname_new;
 	AGS::Shared::String name_new;

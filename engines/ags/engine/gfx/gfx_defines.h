@@ -29,8 +29,7 @@ namespace AGS3 {
 namespace AGS {
 namespace Engine {
 
-// GraphicResolution struct determines image size and color depth
-struct GraphicResolution : Size {
+// GraphicResolution struct determines image size and color depthstruct GraphicResolution : Size {
 	int32_t ColorDepth; // color depth in bits per pixel
 
 	GraphicResolution()
@@ -56,8 +55,7 @@ enum WindowMode {
 	kWnd_FullDesktop    // borderless window filling whole desktop
 };
 
-// DisplayMode struct provides extended description of display mode
-struct DisplayMode : public GraphicResolution {
+// DisplayMode struct provides extended description of display modestruct DisplayMode : public GraphicResolution {
 	int32_t RefreshRate = 0;
 	bool Vsync = false;
 	WindowMode Mode = kWnd_Windowed;

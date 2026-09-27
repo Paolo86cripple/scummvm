@@ -32,30 +32,25 @@ int Mouse_GetModeGraphic(int curs);
 void Mouse_ChangeModeView(int curs, int newview, int delay);
 void Mouse_ChangeModeView2(int curs, int newview);
 // The Mouse:: functions are static so the script doesn't pass
-// in an object parameter
-void SetMousePosition(int newx, int newy);
+// in an object parametervoid SetMousePosition(int newx, int newy);
 int GetCursorMode();
 void SetNextCursor();
 void SetPreviousCursor();
-// permanently change cursor graphic
-void ChangeCursorGraphic(int curs, int newslot);
+// permanently change cursor graphicvoid ChangeCursorGraphic(int curs, int newslot);
 void ChangeCursorHotspot(int curs, int x, int y);
 int IsButtonDown(int which);
 int IsModeEnabled(int which);
 void SetMouseBounds(int x1, int y1, int x2, int y2);
 void RefreshMouse();
 // mouse cursor functions:
-// set_mouse_cursor: changes visual appearance to specified cursor
-void set_mouse_cursor(int newcurs, bool force_update = false);
+// set_mouse_cursor: changes visual appearance to specified cursorvoid set_mouse_cursor(int newcurs, bool force_update = false);
 // set_default_cursor: resets visual appearance to current mode (walk, look, etc);
 void set_default_cursor();
-// set_cursor_mode: changes mode and appearance
-void set_cursor_mode(int newmode);
+// set_cursor_mode: changes mode and appearancevoid set_cursor_mode(int newmode);
 void enable_cursor_mode(int modd);
 void disable_cursor_mode(int modd);
 
-// Try to enable or disable mouse speed control by the engine
-void Mouse_EnableControl(bool on);
+// Try to enable or disable mouse speed control by the enginevoid Mouse_EnableControl(bool on);
 void SimulateMouseClick(int button_id);
 
 //=============================================================================

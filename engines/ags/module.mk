@@ -368,18 +368,15 @@ MODULE_OBJS = \
 	plugins/ags_waves/warper.o \
 	plugins/ags_waves/weather.o
 
-ifdef USE_FREETYPE2
-MODULE_OBJS += \
+ifdef USE_FREETYPE2MODULE_OBJS += \
 	lib/freetype-2.1.3/autohint/ahangles.o \
 	lib/freetype-2.1.3/autohint/ahglobal.o \
 	lib/freetype-2.1.3/autohint/ahglyph.o \
 	lib/freetype-2.1.3/autohint/ahhint.o \
 	lib/freetype-2.1.3/ftgloadr.o \
-	lib/freetype-2.1.3/ftutil.o
-endif
+	lib/freetype-2.1.3/ftutil.oendif
 
-ifdef ENABLE_AGS_TESTS
-MODULE_OBJS += \
+ifdef ENABLE_AGS_TESTSMODULE_OBJS += \
 	tests/test_all.o \
 	tests/test_file.o \
 	tests/test_gfx.o \
@@ -388,29 +385,16 @@ MODULE_OBJS += \
 	tests/test_memory.o \
 	tests/test_sprintf.o \
 	tests/test_string.o \
-	tests/test_version.o
-endif
+	tests/test_version.oendif
 
-ifdef SCUMMVM_NEON
-MODULE_OBJS += \
-	lib/allegro/surface_neon.o
-endif
-ifdef SCUMMVM_SSE2
-MODULE_OBJS += \
-	lib/allegro/surface_sse2.o
-endif
-ifdef SCUMMVM_AVX2
-MODULE_OBJS += \
-	lib/allegro/surface_avx2.o
-endif
+ifdef SCUMMVM_NEONMODULE_OBJS += \
+	lib/allegro/surface_neon.oendififdef SCUMMVM_SSE2MODULE_OBJS += \
+	lib/allegro/surface_sse2.oendififdef SCUMMVM_AVX2MODULE_OBJS += \
+	lib/allegro/surface_avx2.oendif
 
-# This module can be built as a plugin
-ifeq ($(ENABLE_AGS), DYNAMIC_PLUGIN)
-PLUGIN := 1
-endif
+# This module can be built as a pluginifeq ($(ENABLE_AGS), DYNAMIC_PLUGIN)
+PLUGIN := 1endif
 
-# Include common rules
-include $(srcdir)/rules.mk
+# Include common rulesinclude $(srcdir)/rules.mk
 
-# Detection objects
-DETECT_OBJS += $(MODULE)/detection.o
+# Detection objectsDETECT_OBJS += $(MODULE)/detection.o

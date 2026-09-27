@@ -26,8 +26,7 @@ namespace AGS3 {
 
 using namespace AGS::Shared;
 
-// CHECKME: actually NULLs here will be equal to kFile_Open & kFile_Read
-const FileOpenMode sc_File::fopenModes[] =
+// CHECKME: actually NULLs here will be equal to kFile_Open & kFile_Readconst FileOpenMode sc_File::fopenModes[] =
 { kFile_Open/*CHECKME, was undefined*/, kFile_Open, kFile_CreateAlways, kFile_Create };
 const FileWorkMode sc_File::fworkModes[] =
 { kFile_Read/*CHECKME, was undefined*/, kFile_Read, kFile_Write, kFile_Write };

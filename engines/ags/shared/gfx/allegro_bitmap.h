@@ -264,10 +264,8 @@ private:
 
 namespace BitmapHelper {
 // TODO: revise those functions later (currently needed in a few very specific cases)
-// NOTE: the resulting object __owns__ bitmap data from now on
-Bitmap *CreateRawBitmapOwner(BITMAP *al_bmp);
-// NOTE: the resulting object __does not own__ bitmap data
-Bitmap *CreateRawBitmapWrapper(BITMAP *al_bmp);
+// NOTE: the resulting object __owns__ bitmap data from now onBitmap *CreateRawBitmapOwner(BITMAP *al_bmp);
+// NOTE: the resulting object __does not own__ bitmap dataBitmap *CreateRawBitmapWrapper(BITMAP *al_bmp);
 } // namespace BitmapHelper
 
 } // namespace Shared

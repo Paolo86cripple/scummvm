@@ -95,8 +95,7 @@ void ScriptDrawingSurface::SizeToGameResolution(int *valueToAdjust) {
 	*valueToAdjust = ctx_data_to_game_size(*valueToAdjust, highResCoordinates != 0);
 }
 
-// convert actual co-ordinate back to what the script is expecting
-void ScriptDrawingSurface::SizeToDataResolution(int *valueToAdjust) {
+// convert actual co-ordinate back to what the script is expectingvoid ScriptDrawingSurface::SizeToDataResolution(int *valueToAdjust) {
 	*valueToAdjust = game_to_ctx_data_size(*valueToAdjust, highResCoordinates != 0);
 }
 

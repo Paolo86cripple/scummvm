@@ -154,8 +154,7 @@ void CheckViewFrame(int view, int loop, int frame, int sound_volume) {
 	}
 }
 
-// draws a view frame, flipped if appropriate
-void DrawViewFrame(Bitmap *ds, const ViewFrame *vframe, int x, int y, bool alpha_blend) {
+// draws a view frame, flipped if appropriatevoid DrawViewFrame(Bitmap *ds, const ViewFrame *vframe, int x, int y, bool alpha_blend) {
 	// NOTE: DrawViewFrame supports alpha blending only since OPT_SPRITEALPHA;
 	// this is why there's no sense in blending if it's not set (will do no good anyway).
 	Bitmap *vf_bmp = _GP(spriteset)[vframe->pic];

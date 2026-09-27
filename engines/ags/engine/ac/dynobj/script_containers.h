@@ -27,14 +27,10 @@ namespace AGS3 {
 class ScriptDictBase;
 class ScriptSetBase;
 
-// Create and register new dictionary
-ScriptDictBase *Dict_Create(bool sorted, bool case_sensitive);
-// Unserialize dictionary from the memory stream
-ScriptDictBase *Dict_Unserialize(int index, AGS::Shared::Stream *in, size_t data_sz);
-// Create and register new set
-ScriptSetBase *Set_Create(bool sorted, bool case_sensitive);
-// Unserialize set from the memory stream
-ScriptSetBase *Set_Unserialize(int index, AGS::Shared::Stream *in, size_t data_sz);
+// Create and register new dictionaryScriptDictBase *Dict_Create(bool sorted, bool case_sensitive);
+// Unserialize dictionary from the memory streamScriptDictBase *Dict_Unserialize(int index, AGS::Shared::Stream *in, size_t data_sz);
+// Create and register new setScriptSetBase *Set_Create(bool sorted, bool case_sensitive);
+// Unserialize set from the memory streamScriptSetBase *Set_Unserialize(int index, AGS::Shared::Stream *in, size_t data_sz);
 
 } // namespace AGS3
 

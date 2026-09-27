@@ -182,6 +182,5 @@ Common::StringArray AGSMetaEngine::getGameTranslations(const Common::String &dom
 
 #if PLUGIN_ENABLED_DYNAMIC(AGS)
 REGISTER_PLUGIN_DYNAMIC(AGS, PLUGIN_TYPE_ENGINE, AGSMetaEngine);
-#else
-REGISTER_PLUGIN_STATIC(AGS, PLUGIN_TYPE_ENGINE, AGSMetaEngine);
+#elseREGISTER_PLUGIN_STATIC(AGS, PLUGIN_TYPE_ENGINE, AGSMetaEngine);
 #endif

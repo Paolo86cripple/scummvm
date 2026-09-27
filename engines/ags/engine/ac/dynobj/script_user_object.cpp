@@ -31,8 +31,7 @@ using namespace AGS::Shared;
 
 const char *ScriptUserObject::TypeName = "UserObject";
 
-// return the type name of the object
-const char *ScriptUserObject::GetType() {
+// return the type name of the objectconst char *ScriptUserObject::GetType() {
 	return TypeName;
 }
 
@@ -74,8 +73,7 @@ void ScriptUserObject::Unserialize(int index, Stream *in, size_t data_sz) {
 	ccRegisterUnserializedObject(index, &new_data[MemHeaderSz], this);
 }
 
-// Allocates managed struct containing two ints: X and Y
-ScriptUserObject *ScriptStructHelpers::CreatePoint(int x, int y) {
+// Allocates managed struct containing two ints: X and YScriptUserObject *ScriptStructHelpers::CreatePoint(int x, int y) {
 	DynObjectRef ref = ScriptUserObject::Create(sizeof(int32_t) * 2);
 	ref.Mgr->WriteInt32(ref.Obj, 0, x);
 	ref.Mgr->WriteInt32(ref.Obj, sizeof(int32_t), y);

@@ -777,8 +777,7 @@ void ScummVMRendererGraphicsDriver::highcolor_fade_out(Bitmap *vs, void(*draw_ca
 /** END FADE.C **/
 
 // palette fading routiens
-// from allegro, modified for mp3
-void initialize_fade_256(int r, int g, int b) {
+// from allegro, modified for mp3void initialize_fade_256(int r, int g, int b) {
 	int a;
 	for (a = 0; a < 256; a++) {
 		faded_out_palette[a].r = r / 4;

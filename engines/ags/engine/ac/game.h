@@ -89,10 +89,8 @@ int Game_GetMODPattern();
 //=============================================================================
 int Game_GetDialogCount();
 
-// Sets a default save directory, based on platform driver settings and user config
-void SetDefaultSaveDirectory();
-// Sets a new save directory within the save parent; copies "restart" slot if available
-int Game_SetSaveGameDirectory(const char *newFolder);
+// Sets a default save directory, based on platform driver settings and user configvoid SetDefaultSaveDirectory();
+// Sets a new save directory within the save parent; copies "restart" slot if availableint Game_SetSaveGameDirectory(const char *newFolder);
 const char *Game_GetSaveSlotDescription(int slnum);
 
 const char *Game_GetGlobalStrings(int index);
@@ -149,8 +147,7 @@ bool Game_ChangeSpeechVox(const char *newFilename);
 //=============================================================================
 
 void set_debug_mode(bool on);
-// Sets logical game FPS, telling how often the game should update
-void set_game_speed(int new_fps);
+// Sets logical game FPS, telling how often the game should updatevoid set_game_speed(int new_fps);
 // Gets strictly logical game FPS, regardless of whether this is real FPS right now or not.
 float get_game_speed();
 void setup_for_dialog();
@@ -158,21 +155,15 @@ void restore_after_dialog();
 AGS::Shared::String get_save_game_directory();
 AGS::Shared::String get_save_game_suffix();
 void set_save_game_suffix(const AGS::Shared::String &suffix);
-// Returns full path to the save for the given slot number
-AGS::Shared::String get_save_game_path(int slotNum);
+// Returns full path to the save for the given slot numberAGS::Shared::String get_save_game_path(int slotNum);
 // Try calling built-in restore game dialog;
-// NOTE: this is a script command; may be aborted according to the game & room settings
-void restore_game_dialog();
-// Unconditionally display a built-in restore game dialog
-bool do_restore_game_dialog();
+// NOTE: this is a script command; may be aborted according to the game & room settingsvoid restore_game_dialog();
+// Unconditionally display a built-in restore game dialogbool do_restore_game_dialog();
 // Try calling built-in save game dialog;
-// NOTE: this is a script command; may be aborted according to the game & room settings
-void save_game_dialog();
-// Unconditionally display a built-in save game dialog
-bool do_save_game_dialog();
+// NOTE: this is a script command; may be aborted according to the game & room settingsvoid save_game_dialog();
+// Unconditionally display a built-in save game dialogbool do_save_game_dialog();
 void free_do_once_tokens();
-// Free all the memory associated with the game
-void unload_game();
+// Free all the memory associated with the gamevoid unload_game();
 void save_game(int slotn, const char *descript);
 bool read_savedgame_description(const AGS::Shared::String &savedgame, AGS::Shared::String &description);
 std::unique_ptr<AGS::Shared::Bitmap> read_savedgame_screenshot(const AGS::Shared::String &savedgame);
@@ -181,8 +172,7 @@ std::unique_ptr<AGS::Shared::Bitmap> read_savedgame_screenshot(const AGS::Shared
 bool try_restore_save(int slot);
 bool try_restore_save(const AGS::Shared::String &path, int slot);
 void serialize_bitmap(const AGS::Shared::Bitmap *thispic, AGS::Shared::Stream *out);
-// On Windows we could just use IIDFromString but this is platform-independent
-void convert_guid_from_text_to_binary(const char *guidText, unsigned char *buffer);
+// On Windows we could just use IIDFromString but this is platform-independentvoid convert_guid_from_text_to_binary(const char *guidText, unsigned char *buffer);
 AGS::Shared::Bitmap *read_serialized_bitmap(AGS::Shared::Stream *in);
 void skip_serialized_bitmap(AGS::Shared::Stream *in);
 long write_screen_shot_for_vista(AGS::Shared::Stream *out, AGS::Shared::Bitmap *screenshot);
@@ -197,14 +187,10 @@ void stop_fast_forwarding();
 
 int __GetLocationType(int xxx, int yyy, int allowHotspot0);
 
-// Called whenever game loses input focus
-void display_switch_out();
-// Called whenever game gets input focus
-void display_switch_in();
-// Called when the game looses input focus and must suspend
-void display_switch_out_suspend();
-// Called when the game gets input focus and should resume
-void display_switch_in_resume();
+// Called whenever game loses input focusvoid display_switch_out();
+// Called whenever game gets input focusvoid display_switch_in();
+// Called when the game looses input focus and must suspendvoid display_switch_out_suspend();
+// Called when the game gets input focus and should resumevoid display_switch_in_resume();
 
 void replace_tokens(const char *srcmes, char *destm, size_t maxlen);
 const char *get_global_message(int msnum);

@@ -79,8 +79,7 @@ void get_lastcpos(int &lastcx_, int &lastcy_) {
 	lastcy_ = _G(lastcy);
 }
 
-// new routing using JPS
-static int find_route_jps(int fromx, int fromy, int destx, int desty) {
+// new routing using JPSstatic int find_route_jps(int fromx, int fromy, int destx, int desty) {
 	sync_nav_wallscreen();
 
 	std::vector<int> path, cpath;
@@ -139,8 +138,7 @@ inline fixed calc_move_speed_at_angle(fixed speed_x, fixed speed_y, fixed xdist,
 	return useMoveSpeed;
 }
 
-// Calculates the X and Y per game loop, for this stage of the movelist
-void calculate_move_stage(MoveList *mlsp, int aaa, fixed move_speed_x, fixed move_speed_y) {
+// Calculates the X and Y per game loop, for this stage of the movelistvoid calculate_move_stage(MoveList *mlsp, int aaa, fixed move_speed_x, fixed move_speed_y) {
 	// work out the x & y per move. First, opp/adj=tan, so work out the angle
 	if (mlsp->pos[aaa] == mlsp->pos[aaa + 1]) {
 		mlsp->xpermove[aaa] = 0;

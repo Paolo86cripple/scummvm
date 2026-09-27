@@ -27,16 +27,11 @@
 
 namespace AGS3 {
 
-// Setup engine after the graphics mode has changed
-void engine_post_gfxmode_setup(const Size &init_desktop, const DisplayMode &old_dm);
-// Prepare engine for graphics mode release; could be called before switching display mode too
-void engine_pre_gfxmode_release();
-// Prepare engine to the graphics mode shutdown and gfx driver destruction
-void engine_pre_gfxsystem_shutdown();
-// Applies necessary changes after screen<->virtual coordinate transformation has changed
-void on_coordinates_scaling_changed();
-// prepares game screen for rotation setting
-void engine_adjust_for_rotation_settings();
+// Setup engine after the graphics mode has changedvoid engine_post_gfxmode_setup(const Size &init_desktop, const DisplayMode &old_dm);
+// Prepare engine for graphics mode release; could be called before switching display mode toovoid engine_pre_gfxmode_release();
+// Prepare engine to the graphics mode shutdown and gfx driver destructionvoid engine_pre_gfxsystem_shutdown();
+// Applies necessary changes after screen<->virtual coordinate transformation has changedvoid on_coordinates_scaling_changed();
+// prepares game screen for rotation settingvoid engine_adjust_for_rotation_settings();
 
 } // namespace AGS3
 

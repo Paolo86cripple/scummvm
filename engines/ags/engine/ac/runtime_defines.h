@@ -59,8 +59,7 @@ namespace AGS3 {
 #define QUEUED_MUSIC_REPEAT 10000
 #define MAX_AUDIO_TYPES  30
 
-// Legacy (pre 3.5.0) alignment types used in the script API
-enum LegacyScriptAlignment {
+// Legacy (pre 3.5.0) alignment types used in the script APIenum LegacyScriptAlignment {
 	kLegacyScAlignLeft = 1,
 	kLegacyScAlignCentre = 2,
 	kLegacyScAlignRight = 3

@@ -47,8 +47,7 @@ protected:
 };
 
 // Extended font renderer interface.
-// WARNING: this interface is exposed for plugins and declared for the second time in agsplugin.h
-class IAGSFontRenderer2 : public IAGSFontRenderer {
+// WARNING: this interface is exposed for plugins and declared for the second time in agsplugin.hclass IAGSFontRenderer2 : public IAGSFontRenderer {
 public:
 	// Returns engine API version this font renderer complies to.
 	// Must not be lower than 26 (this interface was added at API v26).
@@ -78,8 +77,7 @@ struct FontRenderParams {
 	int LoadMode = 0; // contains font flags from FFLG_LOADMODEMASK
 };
 
-// Describes loaded font's properties
-struct FontMetrics {
+// Describes loaded font's propertiesstruct FontMetrics {
 	// Nominal font's height, equals to the game-requested size of the font.
 	// This may or not be equal to font's face height; sometimes a font cannot
 	// be scaled exactly to particular size, and then nominal height appears different

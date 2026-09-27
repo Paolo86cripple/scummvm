@@ -151,8 +151,7 @@ void sys_audio_shutdown() {
 // ----------------------------------------------------------------------------
 // TODO: support multiple windows? in case we need some for diag purposes etc
 
-#ifdef TODO
-static SDL_Window *window = nullptr;
+#ifdef TODOstatic SDL_Window *window = nullptr;
 
 SDL_Window *sys_window_create(const char *window_title, int w, int h, WindowMode mode, int ex_flags) {
 	if (window) {
@@ -189,8 +188,7 @@ SDL_Window *sys_window_create(const char *window_title, int w, int h, WindowMode
 #endif
 	return window;
 }
-#else
-SDL_Window *sys_window_create(const char *window_title, int w, int h, bool windowed, int ex_flags) {
+#elseSDL_Window *sys_window_create(const char *window_title, int w, int h, bool windowed, int ex_flags) {
 	error("TODO: sys_window_create");
 	return nullptr;
 }
@@ -260,8 +258,7 @@ void sys_window_fit_in_display(int display_index) {
 	// No implementation in ScummVM
 }
 
-#if AGS_PLATFORM_OS_WINDOWS
-void *sys_win_get_window() {
+#if AGS_PLATFORM_OS_WINDOWSvoid *sys_win_get_window() {
 	if (!window) return nullptr;
 	SDL_SysWMinfo wmInfo;
 	SDL_VERSION(&wmInfo.version);

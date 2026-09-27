@@ -30,24 +30,19 @@ class Bitmap;
 }
 }
 
-// TODO: merge with other Rect declared in bitmap unit
-struct _Rect {
+// TODO: merge with other Rect declared in bitmap unitstruct _Rect {
 	int x1, y1, x2, y2;
 };
 
-// Get object at the given screen coordinates
-int  GetObjectIDAtScreen(int xx, int yy);
-// Get object at the given room coordinates
-int  GetObjectIDAtRoom(int roomx, int roomy);
+// Get object at the given screen coordinatesint  GetObjectIDAtScreen(int xx, int yy);
+// Get object at the given room coordinatesint  GetObjectIDAtRoom(int roomx, int roomy);
 void SetObjectTint(int obj, int red, int green, int blue, int opacity, int luminance);
 void RemoveObjectTint(int obj);
 void SetObjectView(int obn, int vii);
 // Assigns given object to the view's frame, and activates frame (plays linked sound, etc)
 void SetObjectFrame(int obn, int viw, int lop, int fra);
-// Assigns given object to the view's frame
-bool SetObjectFrameSimple(int obn, int viw, int lop, int fra);
-// pass trans=0 for fully solid, trans=100 for fully transparent
-void SetObjectTransparency(int obn, int trans);
+// Assigns given object to the view's framebool SetObjectFrameSimple(int obn, int viw, int lop, int fra);
+// pass trans=0 for fully solid, trans=100 for fully transparentvoid SetObjectTransparency(int obn, int trans);
 void SetObjectBaseline(int obn, int basel);
 int  GetObjectBaseline(int obn);
 void AnimateObject6(int obn, int loopn, int spdd, int rept, int direction, int blocking);

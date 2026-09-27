@@ -91,22 +91,15 @@ void set_invalidrects_globaloffs(int x, int y);
 // Inits dirty rects array for the given room camera/viewport pair
 // View_index indicates the room viewport (>= 0) or the main viewport (-1)
 void init_invalid_regions(int view_index, const Size &surf_size, const Rect &viewport);
-// Deletes dirty rects for particular index
-void delete_invalid_regions(int view_index);
-// Disposes dirty rects arrays
-void dispose_invalid_regions(bool room_only);
-// Update the coordinate transformation for the particular dirty rects object
-void set_invalidrects_cameraoffs(int view_index, int x, int y);
-// Mark the whole screen dirty
-void invalidate_all_rects();
-// Mark the whole camera surface dirty
-void invalidate_all_camera_rects(int view_index);
-// Mark certain rectangle dirty; in_room tells if coordinates are room viewport or screen coords
-void invalidate_rect_ds(int x1, int y1, int x2, int y2, bool in_room);
+// Deletes dirty rects for particular indexvoid delete_invalid_regions(int view_index);
+// Disposes dirty rects arraysvoid dispose_invalid_regions(bool room_only);
+// Update the coordinate transformation for the particular dirty rects objectvoid set_invalidrects_cameraoffs(int view_index, int x, int y);
+// Mark the whole screen dirtyvoid invalidate_all_rects();
+// Mark the whole camera surface dirtyvoid invalidate_all_camera_rects(int view_index);
+// Mark certain rectangle dirty; in_room tells if coordinates are room viewport or screen coordsvoid invalidate_rect_ds(int x1, int y1, int x2, int y2, bool in_room);
 // Mark rectangle dirty, treat pos as global screen coords (not offset by legacy letterbox mode)
 void invalidate_rect_global(int x1, int y1, int x2, int y2);
-// Paints the black screen background in the regions marked as dirty
-void update_black_invreg_and_reset(AGS::Shared::Bitmap *ds);
+// Paints the black screen background in the regions marked as dirtyvoid update_black_invreg_and_reset(AGS::Shared::Bitmap *ds);
 // Copies the room regions marked as dirty from source (src) to destination (ds) with the given offset (x, y)
 // no_transform flag tells the system that the regions should be plain copied to the ds.
 void update_room_invreg_and_reset(int view_index, AGS::Shared::Bitmap *ds, AGS::Shared::Bitmap *src, bool no_transform);

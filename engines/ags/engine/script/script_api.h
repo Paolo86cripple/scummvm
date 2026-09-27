@@ -37,8 +37,7 @@ namespace AGS3 {
 
 struct RuntimeScriptValue;
 
-// TODO: replace void* with base object class when possible; also put array class for parameters
-typedef RuntimeScriptValue ScriptAPIFunction(const RuntimeScriptValue *params, int32_t param_count);
+// TODO: replace void* with base object class when possible; also put array class for parameterstypedef RuntimeScriptValue ScriptAPIFunction(const RuntimeScriptValue *params, int32_t param_count);
 typedef RuntimeScriptValue ScriptAPIObjectFunction(void *self, const RuntimeScriptValue *params, int32_t param_count);
 
 // Sprintf that takes either script values or common argument list from plugin.
@@ -46,8 +45,7 @@ typedef RuntimeScriptValue ScriptAPIObjectFunction(void *self, const RuntimeScri
 // NULL, with varg_ptr having HIGHER priority.
 const char *ScriptSprintf(char *buffer, size_t buf_length, const char *format,
                           const RuntimeScriptValue *sc_args, int32_t sc_argc, va_list *varg_ptr);
-// Sprintf that takes script values as arguments
-inline const char *ScriptSprintf(char *buffer, size_t buf_length, const char *format, const RuntimeScriptValue *args, int32_t argc) {
+// Sprintf that takes script values as argumentsinline const char *ScriptSprintf(char *buffer, size_t buf_length, const char *format, const RuntimeScriptValue *args, int32_t argc) {
 	return ScriptSprintf(buffer, buf_length, format, args, argc, nullptr);
 }
 // Variadic sprintf (needed, because all arguments are pushed as pointer-sized values). Currently used only when plugin calls

@@ -37,8 +37,7 @@ void SOUNDCLIP::set_volume100(int volume) {
 	adjust_volume();
 }
 
-// Sets the current volume property in units of 255
-void SOUNDCLIP::set_volume255(int volume) {
+// Sets the current volume property in units of 255void SOUNDCLIP::set_volume255(int volume) {
 	_vol255 = volume;
 	_vol100 = (_vol255 * 100) / 255;
 	adjust_volume();

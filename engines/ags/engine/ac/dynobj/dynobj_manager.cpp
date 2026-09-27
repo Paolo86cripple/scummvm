@@ -47,8 +47,7 @@ namespace AGS3 {
 using namespace AGS::Shared;
 
 // register a memory handle for the object and allow script
-// pointers to point to it
-int32_t ccRegisterManagedObject(void *object, IScriptObject *callback, ScriptValueType obj_type) {
+// pointers to point to itint32_t ccRegisterManagedObject(void *object, IScriptObject *callback, ScriptValueType obj_type) {
 	int32_t handl = _GP(pool).AddObject(object, callback, obj_type);
 
 	ManagedObjectLog("Register managed object type '%s' handle=%d addr=%08X",
@@ -57,23 +56,19 @@ int32_t ccRegisterManagedObject(void *object, IScriptObject *callback, ScriptVal
 	return handl;
 }
 
-// register a de-serialized object
-int32_t ccRegisterUnserializedObject(int index, void *object, IScriptObject *callback, ScriptValueType obj_type) {
+// register a de-serialized objectint32_t ccRegisterUnserializedObject(int index, void *object, IScriptObject *callback, ScriptValueType obj_type) {
 	return _GP(pool).AddUnserializedObject(object, callback, obj_type, index);
 }
 
-// unregister a particular object
-int ccUnRegisterManagedObject(void *object) {
+// unregister a particular objectint ccUnRegisterManagedObject(void *object) {
 	return _GP(pool).RemoveObject(object);
 }
 
-// remove all registered objects
-void ccUnregisterAllObjects() {
+// remove all registered objectsvoid ccUnregisterAllObjects() {
 	_GP(pool).reset();
 }
 
-// serialize all objects to disk
-void ccSerializeAllObjects(Stream *out) {
+// serialize all objects to diskvoid ccSerializeAllObjects(Stream *out) {
 	_GP(pool).WriteToDisk(out);
 }
 
@@ -82,13 +77,11 @@ int ccUnserializeAllObjects(Stream *in, ICCObjectCollectionReader *callback) {
 	return _GP(pool).ReadFromDisk(in, callback);
 }
 
-// dispose the object if RefCount==0
-void ccAttemptDisposeObject(int32_t handle) {
+// dispose the object if RefCount==0void ccAttemptDisposeObject(int32_t handle) {
 	_GP(pool).CheckDispose(handle);
 }
 
-// translate between object handles and memory addresses
-int32_t ccGetObjectHandleFromAddress(void *address) {
+// translate between object handles and memory addressesint32_t ccGetObjectHandleFromAddress(void *address) {
 	// set to null
 	if (address == nullptr)
 		return 0;

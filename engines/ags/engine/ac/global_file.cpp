@@ -50,8 +50,7 @@ int32_t FileOpenCMode(const char *fnmm, const char *cmode) {
 	return FileOpen(fnmm, open_mode, work_mode);
 }
 
-// Find a free file slot to use
-int32_t FindFreeFileSlot() {
+// Find a free file slot to useint32_t FindFreeFileSlot() {
 	int useindx = 0;
 	for (; useindx < _G(num_open_script_files); useindx++) {
 		if (_G(valid_handles)[useindx].stream == nullptr)

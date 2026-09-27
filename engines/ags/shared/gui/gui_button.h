@@ -59,8 +59,7 @@ enum LegacyButtonAlignment {
 };
 
 // Defines button placeholder mode; the mode is set
-// depending on special tags found in button text
-enum GUIButtonPlaceholder {
+// depending on special tags found in button textenum GUIButtonPlaceholder {
 	kButtonPlace_None,
 	kButtonPlace_InvItemStretch,
 	kButtonPlace_InvItemCenter,

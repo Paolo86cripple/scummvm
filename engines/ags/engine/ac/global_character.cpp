@@ -153,8 +153,7 @@ void SetCharacterBaseline(int obn, int basel) {
 	Character_SetBaseline(&_GP(game).chars[obn], basel);
 }
 
-// pass trans=0 for fully solid, trans=100 for fully transparent
-void SetCharacterTransparency(int obn, int trans) {
+// pass trans=0 for fully solid, trans=100 for fully transparentvoid SetCharacterTransparency(int obn, int trans) {
 	if (!is_valid_character(obn))
 		quit("!SetCharTransparent: invalid character number specified");
 
@@ -220,8 +219,7 @@ void MoveCharacterStraight(int cc, int xx, int yy) {
 	Character_WalkStraight(&_GP(game).chars[cc], xx, yy, IN_BACKGROUND);
 }
 
-// Append to character path
-void MoveCharacterPath(int chac, int tox, int toy) {
+// Append to character pathvoid MoveCharacterPath(int chac, int tox, int toy) {
 	if (!is_valid_character(chac))
 		quit("!MoveCharacterPath: invalid character specified");
 
@@ -278,8 +276,7 @@ void SetCharacterFrame(int chaa, int view, int loop, int frame) {
 	Character_LockViewFrame(&_GP(game).chars[chaa], view, loop, frame);
 }
 
-// similar to SetCharView, but aligns the frame to make it line up
-void SetCharacterViewEx(int chaa, int vii, int loop, int align) {
+// similar to SetCharView, but aligns the frame to make it line upvoid SetCharacterViewEx(int chaa, int vii, int loop, int align) {
 
 	Character_LockViewAligned(&_GP(game).chars[chaa], vii, loop, ConvertLegacyScriptAlignment((LegacyScriptAlignment)align));
 }
@@ -535,8 +532,7 @@ void __sc_displayspeech(int chid, const char *text) {
 }
 
 // **** THIS IS UNDOCUMENTED BECAUSE IT DOESN'T WORK PROPERLY
-// **** AT 640x400 AND DOESN'T USE THE RIGHT SPEECH STYLE
-void DisplaySpeechAt(int xx, int yy, int wii, int aschar, const char *spch) {
+// **** AT 640x400 AND DOESN'T USE THE RIGHT SPEECH STYLEvoid DisplaySpeechAt(int xx, int yy, int wii, int aschar, const char *spch) {
 	data_to_game_coords(&xx, &yy);
 	wii = data_to_game_coord(wii);
 	_displayspeech(get_translation(spch), aschar, xx, yy, wii, 0);

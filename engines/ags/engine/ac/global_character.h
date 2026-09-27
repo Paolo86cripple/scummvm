@@ -35,8 +35,7 @@ void SetCharacterIdle(int who, int iview, int itime);
 int  GetCharacterWidth(int ww);
 int  GetCharacterHeight(int charid);
 void SetCharacterBaseline(int obn, int basel);
-// pass trans=0 for fully solid, trans=100 for fully transparent
-void SetCharacterTransparency(int obn, int trans);
+// pass trans=0 for fully solid, trans=100 for fully transparentvoid SetCharacterTransparency(int obn, int trans);
 void AnimateCharacter4(int chh, int loopn, int sppd, int rept);
 void AnimateCharacter6(int chh, int loopn, int sppd, int rept, int direction, int blocking);
 void SetPlayerCharacter(int newchar);
@@ -46,8 +45,7 @@ void SetCharacterIgnoreLight(int who, int yesorno);
 void MoveCharacter(int cc, int xx, int yy);
 void MoveCharacterDirect(int cc, int xx, int yy);
 void MoveCharacterStraight(int cc, int xx, int yy);
-// Append to character path
-void MoveCharacterPath(int chac, int tox, int toy);
+// Append to character pathvoid MoveCharacterPath(int chac, int tox, int toy);
 
 void SetCharacterSpeedEx(int chaa, int xspeed, int yspeed);
 void SetCharacterSpeed(int chaa, int nspeed);
@@ -56,8 +54,7 @@ void SetCharacterSpeechView(int chaa, int vii);
 void SetCharacterBlinkView(int chaa, int vii, int intrv);
 void SetCharacterView(int chaa, int vii);
 void SetCharacterFrame(int chaa, int view, int loop, int frame);
-// similar to SetCharView, but aligns the frame to make it line up
-void SetCharacterViewEx(int chaa, int vii, int loop, int align);
+// similar to SetCharView, but aligns the frame to make it line upvoid SetCharacterViewEx(int chaa, int vii, int loop, int align);
 void SetCharacterViewOffset(int chaa, int vii, int xoffs, int yoffs);
 void ChangeCharacterView(int chaa, int vii);
 void SetCharacterClickable(int cha, int clik);

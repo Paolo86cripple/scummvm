@@ -31,8 +31,7 @@ namespace AGS3 {
 
 using namespace AGS::Shared;
 
-// return the type name of the object
-const char *CCGUIObject::GetType() {
+// return the type name of the objectconst char *CCGUIObject::GetType() {
 	return "GUIObject";
 }
 
@@ -41,8 +40,7 @@ size_t CCGUIObject::CalcSerializeSize(const void * /*address*/) {
 }
 
 // serialize the object into BUFFER (which is BUFSIZE bytes)
-// return number of bytes used
-void CCGUIObject::Serialize(const void *address, Stream *out) {
+// return number of bytes usedvoid CCGUIObject::Serialize(const void *address, Stream *out) {
 	const GUIObject *guio = static_cast<const GUIObject *>(address);
 	out->WriteInt32(guio->ParentId);
 	out->WriteInt32(guio->Id);

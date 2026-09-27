@@ -83,8 +83,7 @@ void GUITextBox::Draw(Bitmap *ds, int x, int y) {
 	DrawTextBoxContents(ds, x, y, text_color);
 }
 
-// TODO: a shared utility function
-static void Backspace(String &text) {
+// TODO: a shared utility functionstatic void Backspace(String &text) {
 	if (get_uformat() == U_UTF8) {// Find where the last utf8 char begins
 		const char *ptr_end = text.GetCStr() + text.GetLength();
 		const char *ptr = ptr_end - 1;

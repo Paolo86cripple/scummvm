@@ -57,10 +57,8 @@ extern bool play_mpeg_video(const char *name, int flags, VideoSkipType skip, boo
 extern bool play_theora_video(const char *name, int flags, VideoSkipType skip, bool showError);
 extern bool play_flc_video(int numb, int flags, VideoSkipType skip);
 
-// Pause the active video
-extern void video_pause();
-// Resume the active video
-extern void video_resume();
+// Pause the active videoextern void video_pause();
+// Resume the active videoextern void video_resume();
 
 } // namespace AGS3
 

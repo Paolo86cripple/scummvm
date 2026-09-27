@@ -38,19 +38,14 @@ namespace Shared {
 
 namespace Path {
 
-// Get a filename from a path
-String get_filename(const String &path);
-// Get an extension from a filename
-String get_extension(const String &path);
+// Get a filename from a pathString get_filename(const String &path);
+// Get an extension from a filenameString get_extension(const String &path);
 
 // Returns parent directory of the given path;
-// returns "." (current dir) if the path does not contain a parent segment
-String  GetParent(const String &path);
+// returns "." (current dir) if the path does not contain a parent segmentString  GetParent(const String &path);
 // Returns parent directory of the given path;
-// returns "." (current dir) if the path does not contain a parent segment
-String  GetFilename(const String &path);
-// Returns file's extension; file may be a fully qualified path too
-String  GetFileExtension(const String &path);
+// returns "." (current dir) if the path does not contain a parent segmentString  GetFilename(const String &path);
+// Returns file's extension; file may be a fully qualified path tooString  GetFileExtension(const String &path);
 
 // Makes a platform-dependant path comparison.
 // This takes into consideration platform's filename case (in)sensivity and
@@ -69,12 +64,9 @@ bool    IsSameOrSubDir(const String &parent, const String &path);
 bool    IsRelativePath(const String &path);
 
 // Makes a path have only '/' slashes; this is to make it easier to work
-// with path, knowing it contains only one type of directory separators
-void    FixupPath(String &path);
-// Fixups path and removes trailing slash
-String  MakePathNoSlash(const String &path);
-// Fixups path and adds trailing slash if it's missing
-String  MakeTrailingSlash(const String &path);
+// with path, knowing it contains only one type of directory separatorsvoid    FixupPath(String &path);
+// Fixups path and removes trailing slashString  MakePathNoSlash(const String &path);
+// Fixups path and adds trailing slash if it's missingString  MakeTrailingSlash(const String &path);
 // Converts any path to an absolute path; relative paths are assumed to
 // refer to the current working directory.
 String  MakeAbsolutePath(const String &path);
@@ -82,25 +74,19 @@ String  MakeAbsolutePath(const String &path);
 // if walking out of the 'base'. Returns empty string on failure.
 // NOTE: the 'base' is only considered a directory if it has a trailing slash.
 String  MakeRelativePath(const String &base, const String &path);
-// Creates path by combining directory, file name and extension
-String  MakePath(const String &parent, const String &filename, const String &ext);
-// Appends another section to existing path
-String  &AppendPath(String &path, const String &child);
-// Concatenates parent and relative paths
-String  ConcatPaths(const String &parent, const String &child);
+// Creates path by combining directory, file name and extensionString  MakePath(const String &parent, const String &filename, const String &ext);
+// Appends another section to existing pathString  &AppendPath(String &path, const String &child);
+// Concatenates parent and relative pathsString  ConcatPaths(const String &parent, const String &child);
 String  ConcatPaths(String &buf, const String &parent, const String &child);
-// Splits path into components, divided by path separator
-std::vector<String> Split(const String &path);
+// Splits path into components, divided by path separatorstd::vector<String> Split(const String &path);
 
 // Subsitutes illegal characters with '_'. This function uses a combined set
 // of illegal chars from all the supported platforms to make a name that
 // could be copied across systems without problems.
 String  FixupSharedFilename(const String &filename);
 
-// Converts filepath into ASCII variant; returns empty string on failure
-String  GetPathInASCII(const String &path);
-// Converts filepath from command line's argument into ASCII variant
-String  GetCmdLinePathInASCII(const char *arg, int arg_index);
+// Converts filepath into ASCII variant; returns empty string on failureString  GetPathInASCII(const String &path);
+// Converts filepath from command line's argument into ASCII variantString  GetCmdLinePathInASCII(const char *arg, int arg_index);
 } // namespace Path
 
 } // namespace Shared

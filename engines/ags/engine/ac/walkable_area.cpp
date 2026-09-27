@@ -183,8 +183,7 @@ Bitmap *prepare_walkable_areas(int sourceChar) {
 }
 
 // return the walkable area at the character's feet, taking into account
-// that he might just be off the edge of one
-int get_walkable_area_at_location(int xx, int yy) {
+// that he might just be off the edge of oneint get_walkable_area_at_location(int xx, int yy) {
 
 	int onarea = get_walkable_area_pixel(xx, yy);
 

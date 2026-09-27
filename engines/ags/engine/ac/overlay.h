@@ -59,10 +59,8 @@ size_t add_screen_overlay(bool roomlayer, int x, int y, int type, AGS::Shared::B
 void remove_screen_overlay(int type);
 void remove_all_overlays();
 // Creates and registers a managed script object for // Creates and registers a managed script object for existing overlay object;
-// optionally adds an internal engine reference to prevent object's disposal
-ScriptOverlay *create_scriptoverlay(ScreenOverlay &over, bool internal_ref = false);
-// Restores overlays, e.g. after restoring a game save
-void restore_overlays();
+// optionally adds an internal engine reference to prevent object's disposalScriptOverlay *create_scriptoverlay(ScreenOverlay &over, bool internal_ref = false);
+// Restores overlays, e.g. after restoring a game savevoid restore_overlays();
 
 std::vector<ScreenOverlay> &get_overlays();
 

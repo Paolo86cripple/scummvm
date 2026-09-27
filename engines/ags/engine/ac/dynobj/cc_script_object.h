@@ -37,8 +37,7 @@
 
 namespace AGS3 {
 
-// Forward declaration
-namespace AGS {
+// Forward declarationnamespace AGS {
 namespace Shared {
 class Stream;
 } // namespace Shared
@@ -46,8 +45,7 @@ class Stream;
 
 struct IScriptObject;
 
-// A convenience struct for grouping handle and dynamic object
-struct DynObjectRef {
+// A convenience struct for grouping handle and dynamic objectstruct DynObjectRef {
 	const int Handle = 0;
 	void *const Obj = nullptr;
 	IScriptObject *const Mgr = nullptr;

@@ -67,23 +67,20 @@ void engine_adjust_for_rotation_settings() {
 #endif
 }
 
-// Setup gfx driver callbacks and options
-void engine_post_gfxmode_driver_setup() {
+// Setup gfx driver callbacks and optionsvoid engine_post_gfxmode_driver_setup() {
 	_G(gfxDriver)->SetCallbackForPolling(update_polled_stuff);
 	_G(gfxDriver)->SetCallbackToDrawScreen(draw_game_screen_callback, construct_engine_overlay);
 	_G(gfxDriver)->SetCallbackOnSpriteEvt(GfxDriverSpriteEvtCallback);
 }
 
-// Reset gfx driver callbacks
-void engine_pre_gfxmode_driver_cleanup() {
+// Reset gfx driver callbacksvoid engine_pre_gfxmode_driver_cleanup() {
 	_G(gfxDriver)->SetCallbackForPolling(nullptr);
 	_G(gfxDriver)->SetCallbackToDrawScreen(nullptr, nullptr);
 	_G(gfxDriver)->SetCallbackOnSpriteEvt(nullptr);
 	_G(gfxDriver)->SetMemoryBackBuffer(nullptr);
 }
 
-// Setup color conversion parameters
-void engine_setup_color_conversions(int coldepth) {
+// Setup color conversion parametersvoid engine_setup_color_conversions(int coldepth) {
 	// default shifts for how we store the sprite data
 	_G(_rgb_r_shift_32) = 16;
 	_G(_rgb_g_shift_32) = 8;
@@ -120,19 +117,16 @@ void engine_setup_color_conversions(int coldepth) {
 }
 
 // Setup drawing modes and color conversions;
-// they depend primarily on gfx driver capabilities and new color depth
-void engine_post_gfxmode_draw_setup(const DisplayMode &dm) {
+// they depend primarily on gfx driver capabilities and new color depthvoid engine_post_gfxmode_draw_setup(const DisplayMode &dm) {
 	engine_setup_color_conversions(dm.ColorDepth);
 	init_draw_method();
 }
 
-// Cleanup auxiliary drawing objects
-void engine_pre_gfxmode_draw_cleanup() {
+// Cleanup auxiliary drawing objectsvoid engine_pre_gfxmode_draw_cleanup() {
 	dispose_draw_method();
 }
 
-// Setup mouse control mode and graphic area
-void engine_post_gfxmode_mouse_setup(const Size &init_desktop) {
+// Setup mouse control mode and graphic areavoid engine_post_gfxmode_mouse_setup(const Size &init_desktop) {
 	// Assign mouse control parameters.
 	//
 	// NOTE that we setup speed and other related properties regardless of
@@ -156,15 +150,13 @@ void engine_post_gfxmode_mouse_setup(const Size &init_desktop) {
 		_GP(mouse).TryLockToWindow();
 }
 
-// Reset mouse controls before changing gfx mode
-void engine_pre_gfxmode_mouse_cleanup() {
+// Reset mouse controls before changing gfx modevoid engine_pre_gfxmode_mouse_cleanup() {
 	// Always disable mouse control and unlock mouse when releasing down gfx mode
 	_GP(mouse).SetMovementControl(false);
 	_GP(mouse).UnlockFromWindow();
 }
 
-// Fill in _GP(scsystem) struct with display mode parameters
-void engine_setup_scsystem_screen(const DisplayMode &dm) {
+// Fill in _GP(scsystem) struct with display mode parametersvoid engine_setup_scsystem_screen(const DisplayMode &dm) {
 	_GP(scsystem).windowed = dm.IsWindowed();
 	_GP(scsystem).vsync = dm.Vsync;
 }

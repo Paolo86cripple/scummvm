@@ -73,8 +73,7 @@ bool is_font_loaded(size_t fontNumber) {
 	return fontNumber < _GP(fonts).size() && _GP(fonts)[fontNumber].Renderer != nullptr;
 }
 
-// Finish font's initialization
-static void font_post_init(size_t fontNumber) {
+// Finish font's initializationstatic void font_post_init(size_t fontNumber) {
 	Font &font = _GP(fonts)[fontNumber];
 	// If no font height property was provided, then try several methods,
 	// depending on which interface is available
@@ -339,8 +338,7 @@ void unescape_script_string(const char *cstr, std::vector<char> &out) {
 	out.insert(out.end(), cstr, off + 1);
 }
 
-// Break up the text into lines
-size_t split_lines(const char *todis, SplitLines &lines, int wii, int fonnt, size_t max_lines) {
+// Break up the text into linessize_t split_lines(const char *todis, SplitLines &lines, int wii, int fonnt, size_t max_lines) {
 	// NOTE: following hack accommodates for the legacy math mistake in split_lines.
 	// It's hard to tell how crucial it is for the game looks, so research may be needed.
 	// TODO: IMHO this should rely not on game format, but script API level, because it
@@ -461,8 +459,7 @@ FontInfo get_fontinfo(size_t font_number) {
 	return FontInfo();
 }
 
-// Loads a font from disk
-bool load_font_size(size_t fontNumber, const FontInfo &font_info) {
+// Loads a font from diskbool load_font_size(size_t fontNumber, const FontInfo &font_info) {
 	if (_GP(fonts).size() <= fontNumber)
 		_GP(fonts).resize(fontNumber + 1);
 	else

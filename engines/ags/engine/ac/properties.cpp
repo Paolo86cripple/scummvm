@@ -61,16 +61,14 @@ String get_property_value(const StringIMap &st_prop, const StringIMap &rt_prop, 
 	return def_val;
 }
 
-// Get an integer property
-int get_int_property(const StringIMap &st_prop, const StringIMap &rt_prop, const char *property) {
+// Get an integer propertyint get_int_property(const StringIMap &st_prop, const StringIMap &rt_prop, const char *property) {
 	PropertyDesc desc;
 	if (!get_property_desc(desc, property, kPropertyInteger))
 		return 0;
 	return StrUtil::StringToInt(get_property_value(st_prop, rt_prop, property, desc.DefaultValue));
 }
 
-// Get a string property
-void get_text_property(const StringIMap &st_prop, const StringIMap &rt_prop, const char *property, char *bufer) {
+// Get a string propertyvoid get_text_property(const StringIMap &st_prop, const StringIMap &rt_prop, const char *property, char *bufer) {
 	PropertyDesc desc;
 	if (!get_property_desc(desc, property, kPropertyString))
 		return;

@@ -50,13 +50,11 @@ enum BlendMode {
 
 namespace GfxDef {
 
-// Converts percentage of transparency into alpha
-inline int Trans100ToAlpha255(int transparency) {
+// Converts percentage of transparency into alphainline int Trans100ToAlpha255(int transparency) {
 	return ((100 - transparency) * 255) / 100;
 }
 
-// Converts alpha into percentage of transparency
-inline int Alpha255ToTrans100(int alpha) {
+// Converts alpha into percentage of transparencyinline int Alpha255ToTrans100(int alpha) {
 	return 100 - ((alpha * 100) / 255);
 }
 
@@ -104,8 +102,7 @@ inline int LegacyTrans255ToTrans100(int legacy_transparency) {
 // Convert legacy 100-ranged transparency into proper 255-ranged alpha
 // 0      => alpha 255
 // 100    => alpha 0
-// 1 - 99 => alpha 1 - 244
-inline int LegacyTrans100ToAlpha255(int legacy_transparency) {
+// 1 - 99 => alpha 1 - 244inline int LegacyTrans100ToAlpha255(int legacy_transparency) {
 	switch (legacy_transparency) {
 	case 0:
 		return 255; // this means opaque
@@ -117,8 +114,7 @@ inline int LegacyTrans100ToAlpha255(int legacy_transparency) {
 	}
 }
 
-// Convert legacy 255-ranged transparency into proper 255-ranged alpha
-inline int LegacyTrans255ToAlpha255(int legacy_transparency) {
+// Convert legacy 255-ranged transparency into proper 255-ranged alphainline int LegacyTrans255ToAlpha255(int legacy_transparency) {
 	switch (legacy_transparency) {
 	case 0:
 		return 255; // this means opaque
@@ -130,8 +126,7 @@ inline int LegacyTrans255ToAlpha255(int legacy_transparency) {
 	}
 }
 
-// Convert 255-ranged alpha into legacy 255-ranged transparency
-inline int Alpha255ToLegacyTrans255(int alpha) {
+// Convert 255-ranged alpha into legacy 255-ranged transparencyinline int Alpha255ToLegacyTrans255(int alpha) {
 	switch (alpha) {
 	case 255:
 		return 0; // this means opaque

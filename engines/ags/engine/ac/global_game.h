@@ -42,8 +42,7 @@ struct SaveListItem {
 	}
 };
 
-// Notify the running game that the engine requested immediate stop
-void AbortGame();
+// Notify the running game that the engine requested immediate stopvoid AbortGame();
 void GiveScore(int amnt);
 void restart_game();
 void RestoreGameSlot(int slnum);
@@ -74,20 +73,16 @@ void EndSkippingUntilCharStops();
 // 2 = any key
 // 3 = mouse button
 // 4 = mouse button or any key
-// 5 = right click or ESC only
-void StartCutscene(int skipwith);
+// 5 = right click or ESC onlyvoid StartCutscene(int skipwith);
 int EndCutscene();
-// Tell the game to skip current cutscene
-void SkipCutscene();
+// Tell the game to skip current cutscenevoid SkipCutscene();
 
-// ShowInputBox assumes a string buffer of MAX_MAXSTRLEN
-void ShowInputBox(const char *msg, char *bufr);
+// ShowInputBox assumes a string buffer of MAX_MAXSTRLENvoid ShowInputBox(const char *msg, char *bufr);
 void ShowInputBoxImpl(const char *msg, char *bufr, size_t buf_len);
 
 int GetLocationType(int xxx, int yyy);
 void SaveCursorForLocationChange();
-// GetLocationName assumes a string buffer of MAX_MAXSTRLEN
-void GetLocationName(int xxx, int yyy, char *buf);
+// GetLocationName assumes a string buffer of MAX_MAXSTRLENvoid GetLocationName(int xxx, int yyy, char *buf);
 
 int IsKeyPressed(int keycode);
 

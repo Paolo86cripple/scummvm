@@ -40,15 +40,13 @@
 
 namespace AGS3 {
 
-// Forward declaration
-namespace AGS {
+// Forward declarationnamespace AGS {
 namespace Shared {
 class Stream;
 }
 }
 // The CharacterInfo struct size is fixed because it's exposed to script
-// and plugin API, therefore new stuff has to go here
-struct CharacterExtras {
+// and plugin API, therefore new stuff has to go herestruct CharacterExtras {
 	short invorder[MAX_INVORDER] = {};
 	short invorder_count = 0;
 	// TODO: implement full AABB and keep updated, so that engine could rely on these cached values all time = 0;

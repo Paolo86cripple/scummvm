@@ -26,16 +26,12 @@
 
 namespace AGS3 {
 
-void Display(const char *texx, ...); // applies translation
-void DisplaySimple(const char *text); // does not apply translation
-void DisplayMB(const char *text); // forces standard Display message box
-void DisplayAt(int xxp, int yyp, int widd, const char *text);
+void Display(const char *texx, ...); // applies translationvoid DisplaySimple(const char *text); // does not apply translationvoid DisplayMB(const char *text); // forces standard Display message boxvoid DisplayAt(int xxp, int yyp, int widd, const char *text);
 void DisplayAtY(int ypos, const char *texx);
 void DisplayMessage(int msnum);
 void DisplayMessageAtY(int msnum, int ypos);
 void DisplayTopBar(int ypos, int ttexcol, int backcol, const char *title, const char *text);
-// Display a room/global message in the bar
-void DisplayMessageBar(int ypos, int ttexcol, int backcol, const char *title, int msgnum);
+// Display a room/global message in the barvoid DisplayMessageBar(int ypos, int ttexcol, int backcol, const char *title, int msgnum);
 
 void SetSpeechStyle(int newstyle);
 void SetSkipSpeech(SkipSpeechStyle newval);

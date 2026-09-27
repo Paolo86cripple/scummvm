@@ -140,8 +140,7 @@ private:
 };
 
 
-// Basic error handle, containing Error object
-typedef ErrorHandle<Error> HError;
+// Basic error handle, containing Error objecttypedef ErrorHandle<Error> HError;
 
 
 // TypedCodeError is the Error's subclass, which only purpose is to override

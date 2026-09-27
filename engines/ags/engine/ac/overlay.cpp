@@ -308,8 +308,7 @@ void Overlay_SetZOrder(ScriptOverlay *scover, int zorder) {
 //=============================================================================
 
 // Creates and registers a managed script object for existing overlay object
-// optionally adds an internal engine reference to prevent object's disposal
-ScriptOverlay *create_scriptoverlay(ScreenOverlay &over, bool internal_ref) {
+// optionally adds an internal engine reference to prevent object's disposalScriptOverlay *create_scriptoverlay(ScreenOverlay &over, bool internal_ref) {
 	ScriptOverlay *scover = new ScriptOverlay();
 	scover->overlayId = over.type;
 	int handl = ccRegisterManagedObject(scover, scover);
@@ -333,8 +332,7 @@ static void invalidate_and_subref(ScreenOverlay &over) {
 	over.associatedOverlayHandle = 0; // reset internal handle
 }
 
-// Frees overlay resources and tell to dispose script object if there are no refs left
-static void dispose_overlay(ScreenOverlay &over) {
+// Frees overlay resources and tell to dispose script object if there are no refs leftstatic void dispose_overlay(ScreenOverlay &over) {
 	over.SetImage(nullptr);
 	// invalidate script object and dispose it if there are no more refs
 	if (over.associatedOverlayHandle > 0) {

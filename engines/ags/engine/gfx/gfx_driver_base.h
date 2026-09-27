@@ -43,8 +43,7 @@ namespace Engine {
 using AGS::Shared::Bitmap;
 using AGS::Shared::PlaneScaling;
 
-// Sprite batch, defines viewport and an optional model transformation for the list of sprites
-struct SpriteBatchDesc {
+// Sprite batch, defines viewport and an optional model transformation for the list of spritesstruct SpriteBatchDesc {
 	uint32_t                 Parent = UINT32_MAX;
 	// View rectangle for positioning and clipping, in resolution coordinates
 	// (this may be screen or game frame resolution, depending on circumstances)
@@ -73,8 +72,7 @@ struct SpriteBatchDesc {
 
 typedef std::vector<SpriteBatchDesc> SpriteBatchDescs;
 
-// The single sprite entry in the render list
-template<class T_DDB>
+// The single sprite entry in the render listtemplate<class T_DDB>
 struct SpriteDrawListEntry {
 	T_DDB *ddb = nullptr; // TODO: use shared pointer?
 	uint32_t node = 0; // sprite batch / scene node index
@@ -195,8 +193,7 @@ protected:
 
 
 
-// Parent class for the video memory DDBs
-class BaseDDB : public IDriverDependantBitmap {
+// Parent class for the video memory DDBsclass BaseDDB : public IDriverDependantBitmap {
 public:
 	int GetWidth() const override {
 		return _width;
@@ -232,8 +229,7 @@ protected:
 	TextureData() = default;
 };
 
-// Generic TextureTile base
-struct TextureTile {
+// Generic TextureTile basestruct TextureTile {
 	int x = 0, y = 0;
 	int width = 0, height = 0;
 	// allocWidth and allocHeight tell the actual allocated texture size

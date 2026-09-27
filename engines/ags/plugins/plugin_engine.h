@@ -71,12 +71,10 @@ int pl_run_plugin_hook_by_index(uint32_t pl_index, int event, int data);
 // Runs event for a plugin identified by its name.
 int pl_run_plugin_hook_by_name(AGS::Shared::String &pl_name, int event, int data);
 
-// Tries to register plugins, either by loading dynamic libraries, or getting any kind of replacement
-AGS::Engine::GameInitError pl_register_plugins(const std::vector<AGS::Shared::PluginInfo> &infos);
+// Tries to register plugins, either by loading dynamic libraries, or getting any kind of replacementAGS::Engine::GameInitError pl_register_plugins(const std::vector<AGS::Shared::PluginInfo> &infos);
 bool pl_is_plugin_loaded(const char *pl_name);
 
-//returns whether _any_ plugins want a particular event
-bool pl_any_want_hook(int event);
+//returns whether _any_ plugins want a particular eventbool pl_any_want_hook(int event);
 
 void pl_set_file_handle(long data, AGS::Shared::Stream *stream);
 void pl_clear_file_handle();

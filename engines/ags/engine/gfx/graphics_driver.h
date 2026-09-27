@@ -46,8 +46,7 @@ typedef std::shared_ptr<AGS::Shared::Bitmap> PBitmap;
 
 namespace Engine {
 
-// Forward declaration
-class IDriverDependantBitmap;
+// Forward declarationclass IDriverDependantBitmap;
 class IGfxFilter;
 typedef std::shared_ptr<IGfxFilter> PGfxFilter;
 using AGS::Shared::PBitmap;
@@ -81,8 +80,7 @@ struct SpriteTransform {
 	}
 };
 
-// Describes 3 render matrixes: world, view and projection
-struct RenderMatrixes {
+// Describes 3 render matrixes: world, view and projectionstruct RenderMatrixes {
 	/*
 	glm::mat4 World;
 	glm::mat4 View;

@@ -41,8 +41,7 @@ ScreenOverlay::~ScreenOverlay() {
 		free_dynamic_sprite(_sprnum, false);
 }
 
-// TODO: this may be avoided if we somehow make (dynamic) sprites reference counted when assigning ID too
-ScreenOverlay &ScreenOverlay::operator=(ScreenOverlay &&over) {
+// TODO: this may be avoided if we somehow make (dynamic) sprites reference counted when assigning ID tooScreenOverlay &ScreenOverlay::operator=(ScreenOverlay &&over) {
 	*this = over;
 	over._sprnum = 0;
 	return *this;

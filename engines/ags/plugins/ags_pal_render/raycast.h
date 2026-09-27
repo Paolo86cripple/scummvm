@@ -60,14 +60,9 @@ struct wallType {
 
 extern bool raycastOn;
 extern double posX;
-extern double posY; //x and y start position
-extern double dirX;
-extern double dirY; //initial direction vector
-extern double planeX;
-extern double planeY; //the 2d raycaster version of camera plane
-extern double moveSpeed; //the constant value is in squares/second
-extern double rotSpeed; //the constant value is in radians/second
-extern unsigned char worldMap[MAP_WIDTH][MAP_HEIGHT];
+extern double posY; //x and y start positionextern double dirX;
+extern double dirY; //initial direction vectorextern double planeX;
+extern double planeY; //the 2d raycaster version of camera planeextern double moveSpeed; //the constant value is in squares/secondextern double rotSpeed; //the constant value is in radians/secondextern unsigned char worldMap[MAP_WIDTH][MAP_HEIGHT];
 extern unsigned char lightMap[MAP_WIDTH][MAP_HEIGHT];
 extern int ceilingMap[MAP_WIDTH][MAP_HEIGHT];
 extern int floorMap[MAP_WIDTH][MAP_HEIGHT];
@@ -76,22 +71,19 @@ extern unsigned char seenMap[MAP_WIDTH][MAP_HEIGHT];
 extern int textureSlot;
 extern int ambientlight;
 
-#define numSprites 256
-extern Sprite sprite[numSprites];
+#define numSprites 256extern Sprite sprite[numSprites];
 
 
 #define texWidth 64
 #define texHeight 64
-#define MAX_TEXTURES 512
-extern unsigned char texture[][texWidth * texHeight];
+#define MAX_TEXTURES 512extern unsigned char texture[][texWidth * texHeight];
 
 extern bool heightmapOn;
 
 
 extern wallType wallData[256];
 
-//arrays used to sort the sprites
-extern unsigned char **transcolorbuffer;
+//arrays used to sort the spritesextern unsigned char **transcolorbuffer;
 extern unsigned char **transalphabuffer;
 extern double **transzbuffer;
 extern bool *transslicedrawn;

@@ -30,20 +30,16 @@ namespace AGS3 {
 using AGS::Shared::String;
 using AGS::Shared::ConfigTree;
 
-// Set up default config settings
-void config_defaults();
+// Set up default config settingsvoid config_defaults();
 // Find and default configuration file (usually located in the game installation directory)
 String find_default_cfg_file();
-// Find all-games user configuration file
-String find_user_global_cfg_file();
+// Find all-games user configuration fileString find_user_global_cfg_file();
 // Find and game-specific user configuration file (located into writable user directory)
 String find_user_cfg_file();
 // Apply overriding values from the external config (e.g. for mobile ports)
 void override_config_ext(ConfigTree &cfg);
-// Setup game using final config tree
-void apply_config(const ConfigTree &cfg);
-// Fixup game setup parameters
-void post_config();
+// Setup game using final config treevoid apply_config(const ConfigTree &cfg);
+// Fixup game setup parametersvoid post_config();
 
 void save_config_file();
 

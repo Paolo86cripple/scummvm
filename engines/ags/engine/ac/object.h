@@ -44,8 +44,7 @@ class Bitmap;
 
 extern bool is_valid_object(int obj_id);
 // Asserts the object ID is valid in the current room,
-// if not then prints a warning to the log; returns assertion result
-bool    AssertObject(const char *apiname, int obj_id);
+// if not then prints a warning to the log; returns assertion resultbool    AssertObject(const char *apiname, int obj_id);
 int     Object_IsCollidingWithObject(ScriptObject *objj, ScriptObject *obj2);
 ScriptObject *GetObjectAtScreen(int xx, int yy);
 ScriptObject *GetObjectAtRoom(int x, int y);
@@ -102,19 +101,16 @@ bool    Object_SetTextProperty(ScriptObject *objj, const char *property, const c
 // Deduces room object's scale, accounting for both manual scaling and the room region effects;
 // calculates resulting sprite size.
 void    update_object_scale(int objid);
-// Deduces arbitrary object's scale, accounting for both manual scaling and the room region effects
-void    update_object_scale(int &res_zoom, int &res_width, int &res_height,
+// Deduces arbitrary object's scale, accounting for both manual scaling and the room region effectsvoid    update_object_scale(int &res_zoom, int &res_width, int &res_height,
 						    int objx, int objy, int sprnum, int own_zoom, bool use_region_scaling);
 void    move_object(int objj, int tox, int toy, int spee, int ignwal);
 void    get_object_blocking_rect(int objid, int *x1, int *y1, int *width, int *y2);
 int     isposinbox(int mmx, int mmy, int lf, int tp, int rt, int bt);
 // xx,yy is the position in room co-ordinates that we are checking
 // arx,ary,spww,sphh are the sprite's bounding box (including sprite scaling);
-// bitmap_original tells whether bitmap is an original sprite, or transformed version
-int     is_pos_in_sprite(int xx, int yy, int arx, int ary, AGS::Shared::Bitmap *sprit, int spww, int sphh, int flipped, bool bitmap_original);
+// bitmap_original tells whether bitmap is an original sprite, or transformed versionint     is_pos_in_sprite(int xx, int yy, int arx, int ary, AGS::Shared::Bitmap *sprit, int spww, int sphh, int flipped, bool bitmap_original);
 // X and Y co-ordinates must be in native format
-// X and Y are ROOM coordinates
-int     check_click_on_object(int roomx, int roomy, int mood);
+// X and Y are ROOM coordinatesint     check_click_on_object(int roomx, int roomy, int mood);
 
 // Shared functions that prepare or advance the view animation;
 // used by characters, room objects and buttons.

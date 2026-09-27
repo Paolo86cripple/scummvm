@@ -215,63 +215,51 @@ void AudioChannel_SetRoomLocation(ScriptAudioChannel *channel, int xPos, int yPo
 //
 //=============================================================================
 
-// int | ScriptAudioChannel *channel
-RuntimeScriptValue Sc_AudioChannel_GetID(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+// int | ScriptAudioChannel *channelRuntimeScriptValue Sc_AudioChannel_GetID(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_INT(ScriptAudioChannel, AudioChannel_GetID);
 }
 
-// int | ScriptAudioChannel *channel
-RuntimeScriptValue Sc_AudioChannel_GetIsPlaying(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+// int | ScriptAudioChannel *channelRuntimeScriptValue Sc_AudioChannel_GetIsPlaying(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_INT(ScriptAudioChannel, AudioChannel_GetIsPlaying);
 }
 
-// int | ScriptAudioChannel *channel
-RuntimeScriptValue Sc_AudioChannel_GetPanning(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+// int | ScriptAudioChannel *channelRuntimeScriptValue Sc_AudioChannel_GetPanning(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_INT(ScriptAudioChannel, AudioChannel_GetPanning);
 }
 
-// void | ScriptAudioChannel *channel, int newPanning
-RuntimeScriptValue Sc_AudioChannel_SetPanning(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+// void | ScriptAudioChannel *channel, int newPanningRuntimeScriptValue Sc_AudioChannel_SetPanning(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_VOID_PINT(ScriptAudioChannel, AudioChannel_SetPanning);
 }
 
-// ScriptAudioClip* | ScriptAudioChannel *channel
-RuntimeScriptValue Sc_AudioChannel_GetPlayingClip(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+// ScriptAudioClip* | ScriptAudioChannel *channelRuntimeScriptValue Sc_AudioChannel_GetPlayingClip(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_OBJ(ScriptAudioChannel, ScriptAudioClip, _GP(ccDynamicAudioClip), AudioChannel_GetPlayingClip);
 }
 
-// int | ScriptAudioChannel *channel
-RuntimeScriptValue Sc_AudioChannel_GetPosition(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+// int | ScriptAudioChannel *channelRuntimeScriptValue Sc_AudioChannel_GetPosition(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_INT(ScriptAudioChannel, AudioChannel_GetPosition);
 }
 
-// int | ScriptAudioChannel *channel
-RuntimeScriptValue Sc_AudioChannel_GetPositionMs(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+// int | ScriptAudioChannel *channelRuntimeScriptValue Sc_AudioChannel_GetPositionMs(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_INT(ScriptAudioChannel, AudioChannel_GetPositionMs);
 }
 
-// int | ScriptAudioChannel *channel
-RuntimeScriptValue Sc_AudioChannel_GetLengthMs(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+// int | ScriptAudioChannel *channelRuntimeScriptValue Sc_AudioChannel_GetLengthMs(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_INT(ScriptAudioChannel, AudioChannel_GetLengthMs);
 }
 
-// int | ScriptAudioChannel *channel
-RuntimeScriptValue Sc_AudioChannel_GetVolume(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+// int | ScriptAudioChannel *channelRuntimeScriptValue Sc_AudioChannel_GetVolume(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_INT(ScriptAudioChannel, AudioChannel_GetVolume);
 }
 
-// int | ScriptAudioChannel *channel, int newVolume
-RuntimeScriptValue Sc_AudioChannel_SetVolume(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+// int | ScriptAudioChannel *channel, int newVolumeRuntimeScriptValue Sc_AudioChannel_SetVolume(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_INT_PINT(ScriptAudioChannel, AudioChannel_SetVolume);
 }
 
-// void | ScriptAudioChannel *channel
-RuntimeScriptValue Sc_AudioChannel_Stop(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+// void | ScriptAudioChannel *channelRuntimeScriptValue Sc_AudioChannel_Stop(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_VOID(ScriptAudioChannel, AudioChannel_Stop);
 }
 
-// void | ScriptAudioChannel *channel, int newPosition
-RuntimeScriptValue Sc_AudioChannel_Seek(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+// void | ScriptAudioChannel *channel, int newPositionRuntimeScriptValue Sc_AudioChannel_Seek(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_VOID_PINT(ScriptAudioChannel, AudioChannel_Seek);
 }
 
@@ -279,8 +267,7 @@ RuntimeScriptValue Sc_AudioChannel_SeekMs(void *self, const RuntimeScriptValue *
 	API_OBJCALL_VOID_PINT(ScriptAudioChannel, AudioChannel_SeekMs);
 }
 
-// void | ScriptAudioChannel *channel, int xPos, int yPos
-RuntimeScriptValue Sc_AudioChannel_SetRoomLocation(void *self, const RuntimeScriptValue *params, int32_t param_count) {
+// void | ScriptAudioChannel *channel, int xPos, int yPosRuntimeScriptValue Sc_AudioChannel_SetRoomLocation(void *self, const RuntimeScriptValue *params, int32_t param_count) {
 	API_OBJCALL_VOID_PINT2(ScriptAudioChannel, AudioChannel_SetRoomLocation);
 }
 

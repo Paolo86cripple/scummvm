@@ -44,40 +44,30 @@ AGS::Shared::Bitmap *create_textual_image(const char *text, int asspch, int isTh
 // Creates a textual overlay using the given parameters;
 // Pass yy = -1 to find Y co-ord automatically
 // allowShrink = 0 for none, 1 for leftwards, 2 for rightwards
-// pass blocking=2 to create permanent overlay
-ScreenOverlay *display_main(int xx, int yy, int wii, const char *text, int disp_type, int usingfont,
+// pass blocking=2 to create permanent overlayScreenOverlay *display_main(int xx, int yy, int wii, const char *text, int disp_type, int usingfont,
 							int asspch, int isThought, int allowShrink, bool overlayPositionFixed, bool roomlayer = false);
-// Displays a standard blocking message box at a given position
-void display_at(int xx, int yy, int wii, const char *text);
-// Cleans up display message state
-void post_display_cleanup();
+// Displays a standard blocking message box at a given positionvoid display_at(int xx, int yy, int wii, const char *text);
+// Cleans up display message statevoid post_display_cleanup();
 // Tests the given string for the voice-over tags and plays cue clip for the given character;
 // will assign replacement string, which will be blank string if game is in "voice-only" mode
 // and clip was started, or string cleaned from voice-over tags which is safe to display on screen.
 // Returns whether voice-over clip was started successfully.
 bool try_auto_play_speech(const char *text, const char *&replace_text, int charid);
-// Calculates meaningful length of the displayed text
-int GetTextDisplayLength(const char *text);
-// Calculates number of game loops for displaying a text on screen
-int GetTextDisplayTime(const char *text, int canberel = 0);
-// Draw an outline if requested, then draw the text on top
-void wouttext_outline(AGS::Shared::Bitmap *ds, int xxp, int yyp, int usingfont, color_t text_color, const char *texx);
+// Calculates meaningful length of the displayed textint GetTextDisplayLength(const char *text);
+// Calculates number of game loops for displaying a text on screenint GetTextDisplayTime(const char *text, int canberel = 0);
+// Draw an outline if requested, then draw the text on topvoid wouttext_outline(AGS::Shared::Bitmap *ds, int xxp, int yyp, int usingfont, color_t text_color, const char *texx);
 void wouttext_aligned(AGS::Shared::Bitmap *ds, int usexp, int yy, int oriwid, int usingfont, color_t text_color, const char *text, HorAlignment align);
 void do_corner(AGS::Shared::Bitmap *ds, int sprn, int xx1, int yy1, int typx, int typy);
-// Returns the image of a button control on the GUI under given child index
-int get_but_pic(GUIMain *guo, int indx);
+// Returns the image of a button control on the GUI under given child indexint get_but_pic(GUIMain *guo, int indx);
 void draw_button_background(AGS::Shared::Bitmap *ds, int xx1, int yy1, int xx2, int yy2, GUIMain *iep);
 // Calculate the width that the left and right border of the textwindow
-// GUI take up
-int get_textwindow_border_width(int twgui);
-// get the hegiht of the text window's top border
-int get_textwindow_top_border_height(int twgui);
+// GUI take upint get_textwindow_border_width(int twgui);
+// get the hegiht of the text window's top borderint get_textwindow_top_border_height(int twgui);
 // draw_text_window: draws the normal or custom text window
 // create a new bitmap the size of the window before calling, and
 //   point text_window_ds to it
 // returns text start x & y pos in parameters
-// Warning!: draw_text_window() and draw_text_window_and_bar() can create new text_window_ds
-void draw_text_window(AGS::Shared::Bitmap **text_window_ds, bool should_free_ds, int *xins, int *yins, int *xx, int *yy, int *wii, color_t *set_text_color, int ovrheight, int ifnum);
+// Warning!: draw_text_window() and draw_text_window_and_bar() can create new text_window_dsvoid draw_text_window(AGS::Shared::Bitmap **text_window_ds, bool should_free_ds, int *xins, int *yins, int *xx, int *yy, int *wii, color_t *set_text_color, int ovrheight, int ifnum);
 void draw_text_window_and_bar(AGS::Shared::Bitmap **text_window_ds, bool should_free_ds,
                               int *xins, int *yins, int *xx, int *yy, int *wii, color_t *set_text_color, int ovrheight = 0, int ifnum = -1);
 int get_textwindow_padding(int ifnum);

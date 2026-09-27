@@ -74,8 +74,7 @@ enum InteractionVersion {
 	kInteractionVersion_Initial = 1
 };
 
-// InteractionValue represents an argument of interaction command
-struct InteractionValue {
+// InteractionValue represents an argument of interaction commandstruct InteractionValue {
 	InterValType Type;  // value type
 	int          Value; // value definition
 	int          Extra;
@@ -92,8 +91,7 @@ struct InteractionValue {
 struct InteractionCommandList;
 typedef std::unique_ptr<InteractionCommandList> UInterCmdList;
 
-// InteractionCommand represents a single command (action), an item of Command List
-struct InteractionCommand {
+// InteractionCommand represents a single command (action), an item of Command Liststruct InteractionCommand {
 	int                     Type;       // type of action
 	InteractionValue        Data[MAX_ACTION_ARGS]; // action arguments
 	UInterCmdList           Children;   // list of sub-actions
@@ -118,8 +116,7 @@ struct InteractionCommand {
 
 typedef std::vector<InteractionCommand> InterCmdVector;
 // InteractionCommandList represents a list of commands (actions) that need to be
-// performed on particular game event
-struct InteractionCommandList {
+// performed on particular game eventstruct InteractionCommandList {
 	InterCmdVector  Cmds;     // actions to run
 	int             TimesRun; // used by engine to track score changes
 
@@ -137,8 +134,7 @@ protected:
 };
 
 
-// InteractionEvent is a single event with a list of commands to performed
-struct InteractionEvent {
+// InteractionEvent is a single event with a list of commands to performedstruct InteractionEvent {
 	int           Type;     // type of event
 	int           TimesRun; // used by engine to track score changes
 	UInterCmdList Response; // list of commands to run
@@ -150,8 +146,7 @@ struct InteractionEvent {
 };
 
 typedef std::vector<InteractionEvent> InterEvtVector;
-// Interaction is the list of events and responses for a game or game object
-struct Interaction {
+// Interaction is the list of events and responses for a game or game objectstruct Interaction {
 	// The first few event types depend on the item - ID's of 100+ are
 	// custom events (used for subroutines)
 	InterEvtVector Events;
@@ -181,8 +176,7 @@ struct Interaction {
 typedef std::shared_ptr<Interaction> PInteraction;
 
 
-// Legacy pre-3.0 kind of global and local room variables
-struct InteractionVariable {
+// Legacy pre-3.0 kind of global and local room variablesstruct InteractionVariable {
 	String Name{};
 	char   Type{ '\0' };
 	int    Value{ 0 };

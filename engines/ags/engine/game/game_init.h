@@ -36,8 +36,7 @@ namespace AGS3 {
 namespace AGS {
 namespace Engine {
 
-// Error codes for initializing the game
-enum GameInitErrorType {
+// Error codes for initializing the gameenum GameInitErrorType {
 	kGameInitErr_NoError,
 	// currently AGS requires at least one font to be present in game
 	kGameInitErr_NoFonts,
@@ -53,8 +52,7 @@ AGS::Shared::String GetGameInitErrorText(GameInitErrorType err);
 typedef AGS::Shared::TypedCodeError<GameInitErrorType, GetGameInitErrorText> GameInitError;
 typedef AGS::Shared::ErrorHandle<GameInitError> HGameInitError;
 
-// Sets up game state for play using preloaded data
-HGameInitError  InitGameState(const AGS::Shared::LoadedGameEntities &ents, GameDataVersion data_ver);
+// Sets up game state for play using preloaded dataHGameInitError  InitGameState(const AGS::Shared::LoadedGameEntities &ents, GameDataVersion data_ver);
 
 } // namespace Engine
 } // namespace AGS

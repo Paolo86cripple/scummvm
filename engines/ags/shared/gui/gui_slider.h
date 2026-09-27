@@ -56,8 +56,7 @@ public:
 	void ReadFromSavegame(Stream *in, GuiSvgVersion svg_ver) override;
 	void WriteToSavegame(Stream *out) const override;
 
-	// TODO: these members are currently public; hide them later
-public:
+	// TODO: these members are currently public; hide them laterpublic:
 	int32_t MinValue;
 	int32_t MaxValue;
 	int32_t Value;

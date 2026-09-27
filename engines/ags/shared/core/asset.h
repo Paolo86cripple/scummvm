@@ -35,8 +35,7 @@ namespace AGS3 {
 namespace AGS {
 namespace Shared {
 
-// Information on single asset
-struct AssetInfo {
+// Information on single assetstruct AssetInfo {
 	// A pair of filename and libuid is assumed to be unique in game scope
 	String      FileName;   // filename associated with asset
 	int32_t     LibUid;     // index of library partition (separate file)
@@ -46,8 +45,7 @@ struct AssetInfo {
 	AssetInfo();
 };
 
-// Information on multifile asset library
-struct AssetLibInfo {
+// Information on multifile asset librarystruct AssetLibInfo {
 	String BasePath;                   // full path to the base filename
 	String BaseDir;                    // library's directory
 	String BaseFileName;               // library's base (head) filename

@@ -91,8 +91,7 @@ void DisplayTopBar(int ypos, int ttexcol, int backcol, const char *title, const 
 	DisplayAtY(_GP(play).top_bar_ypos, text);
 }
 
-// Display a room/global message in the bar
-void DisplayMessageBar(int ypos, int ttexcol, int backcol, const char *title, int msgnum) {
+// Display a room/global message in the barvoid DisplayMessageBar(int ypos, int ttexcol, int backcol, const char *title, int msgnum) {
 	char msgbufr[3001];
 	get_message_text(msgnum, msgbufr);
 	DisplayTopBar(ypos, ttexcol, backcol, title, msgbufr);

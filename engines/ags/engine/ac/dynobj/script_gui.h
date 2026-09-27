@@ -24,8 +24,7 @@
 
 namespace AGS3 {
 
-// 64 bit: This struct must be 8 byte long
-struct ScriptGUI {
+// 64 bit: This struct must be 8 byte longstruct ScriptGUI {
 	int id;
 	int __padding;
 };

@@ -186,8 +186,7 @@ void SetObjectFrame(int obn, int viw, int lop, int fra) {
 	_G(objs)[obn].CheckViewFrame();
 }
 
-// pass trans=0 for fully solid, trans=100 for fully transparent
-void SetObjectTransparency(int obn, int trans) {
+// pass trans=0 for fully solid, trans=100 for fully transparentvoid SetObjectTransparency(int obn, int trans) {
 	if (!is_valid_object(obn)) quit("!SetObjectTransparent: invalid object number specified");
 	if ((trans < 0) || (trans > 100)) quit("!SetObjectTransparent: transparency value must be between 0 and 100");
 

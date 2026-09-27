@@ -85,8 +85,7 @@ String GetGameInitErrorText(GameInitErrorType err) {
 	return "Unknown error.";
 }
 
-// Initializes audio channels and clips and registers them in the script system
-void InitAndRegisterAudioObjects(GameSetupStruct &game) {
+// Initializes audio channels and clips and registers them in the script systemvoid InitAndRegisterAudioObjects(GameSetupStruct &game) {
 	for (int i = 0; i < game.numCompatGameChannels; ++i) {
 		_G(scrAudioChannel)[i].id = i;
 		ccRegisterManagedObject(&_G(scrAudioChannel)[i], &_GP(ccDynamicAudio));
@@ -102,8 +101,7 @@ void InitAndRegisterAudioObjects(GameSetupStruct &game) {
 	}
 }
 
-// Initializes characters and registers them in the script system
-void InitAndRegisterCharacters(GameSetupStruct &game) {
+// Initializes characters and registers them in the script systemvoid InitAndRegisterCharacters(GameSetupStruct &game) {
 	for (int i = 0; i < game.numcharacters; ++i) {
 		game.chars[i].walking = 0;
 		game.chars[i].animating = 0;
@@ -125,8 +123,7 @@ void InitAndRegisterCharacters(GameSetupStruct &game) {
 	}
 }
 
-// Initializes dialog and registers them in the script system
-void InitAndRegisterDialogs(GameSetupStruct &game) {
+// Initializes dialog and registers them in the script systemvoid InitAndRegisterDialogs(GameSetupStruct &game) {
 	_GP(scrDialog).resize(MAX(1, game.numdialog)); // ensure at least 1 element, we must register buffer
 	for (int i = 0; i < game.numdialog; ++i) {
 		_GP(scrDialog)[i].id = i;
@@ -138,8 +135,7 @@ void InitAndRegisterDialogs(GameSetupStruct &game) {
 	}
 }
 
-// Initializes dialog options rendering objects and registers them in the script system
-void InitAndRegisterDialogOptions() {
+// Initializes dialog options rendering objects and registers them in the script systemvoid InitAndRegisterDialogOptions() {
 	ccRegisterManagedObject(&_GP(ccDialogOptionsRendering), &_GP(ccDialogOptionsRendering));
 
 	_G(dialogOptionsRenderingSurface) = new ScriptDrawingSurface();
@@ -148,8 +144,7 @@ void InitAndRegisterDialogOptions() {
 	ccAddObjectReference(dorsHandle);
 }
 
-// Initializes gui and registers them in the script system
-HError InitAndRegisterGUI(GameSetupStruct &game) {
+// Initializes gui and registers them in the script systemHError InitAndRegisterGUI(GameSetupStruct &game) {
 	_GP(scrGui).resize(MAX(1, game.numgui)); // ensure at least 1 element, we must register buffer
 	for (int i = 0; i < game.numgui; ++i) {
 		_GP(scrGui)[i].id = -1;
@@ -169,8 +164,7 @@ HError InitAndRegisterGUI(GameSetupStruct &game) {
 	return HError::None();
 }
 
-// Initializes inventory items and registers them in the script system
-void InitAndRegisterInvItems(GameSetupStruct &game) {
+// Initializes inventory items and registers them in the script systemvoid InitAndRegisterInvItems(GameSetupStruct &game) {
 	for (int i = 0; i < MAX_INV; ++i) {
 		_G(scrInv)[i].id = i;
 		_G(scrInv)[i].reserved = 0;
@@ -181,8 +175,7 @@ void InitAndRegisterInvItems(GameSetupStruct &game) {
 	}
 }
 
-// Initializes room hotspots and registers them in the script system
-void InitAndRegisterHotspots() {
+// Initializes room hotspots and registers them in the script systemvoid InitAndRegisterHotspots() {
 	for (int i = 0; i < MAX_ROOM_HOTSPOTS; ++i) {
 		_G(scrHotspot)[i].id = i;
 		_G(scrHotspot)[i].reserved = 0;
@@ -190,15 +183,13 @@ void InitAndRegisterHotspots() {
 	}
 }
 
-// Initializes room objects and registers them in the script system
-void InitAndRegisterRoomObjects() {
+// Initializes room objects and registers them in the script systemvoid InitAndRegisterRoomObjects() {
 	for (int i = 0; i < MAX_ROOM_OBJECTS; ++i) {
 		ccRegisterManagedObject(&_G(scrObj)[i], &_GP(ccDynamicObject));
 	}
 }
 
-// Initializes room regions and registers them in the script system
-void InitAndRegisterRegions() {
+// Initializes room regions and registers them in the script systemvoid InitAndRegisterRegions() {
 	for (int i = 0; i < MAX_ROOM_REGIONS; ++i) {
 		_G(scrRegion)[i].id = i;
 		_G(scrRegion)[i].reserved = 0;
@@ -206,8 +197,7 @@ void InitAndRegisterRegions() {
 	}
 }
 
-// Registers static entity arrays in the script system
-void RegisterStaticArrays(GameSetupStruct &game) {
+// Registers static entity arrays in the script systemvoid RegisterStaticArrays(GameSetupStruct &game) {
 	_GP(StaticCharacterArray).Create(&_GP(ccDynamicCharacter), sizeof(CharacterInfo), sizeof(CharacterInfo));
 	_GP(StaticObjectArray).Create(&_GP(ccDynamicObject), sizeof(ScriptObject), sizeof(ScriptObject));
 	_GP(StaticGUIArray).Create(&_GP(ccDynamicGUI), sizeof(ScriptGUI), sizeof(ScriptGUI));
@@ -225,8 +215,7 @@ void RegisterStaticArrays(GameSetupStruct &game) {
 	ccAddExternalStaticArray("dialog", &_GP(scrDialog)[0], &_GP(StaticDialogArray));
 }
 
-// Initializes various game entities and registers them in the script system
-HError InitAndRegisterGameEntities(GameSetupStruct &game) {
+// Initializes various game entities and registers them in the script systemHError InitAndRegisterGameEntities(GameSetupStruct &game) {
 	InitAndRegisterAudioObjects(game);
 	InitAndRegisterCharacters(game);
 	InitAndRegisterDialogs(game);

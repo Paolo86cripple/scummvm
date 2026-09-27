@@ -43,8 +43,7 @@ namespace Shared {
 
 class Bitmap;
 
-// TODO: research old version differences
-enum SpriteFileVersion {
+// TODO: research old version differencesenum SpriteFileVersion {
 	kSprfVersion_Undefined = 0,
 	kSprfVersion_Uncompressed = 4,
 	kSprfVersion_Compressed = 5,
@@ -63,15 +62,13 @@ enum SpriteIndexFileVersion {
 	kSpridxfVersion_Current = kSpridxfVersion_HighSpriteLimit
 };
 
-// Instructions to how the sprites are allowed to be stored
-enum SpriteStorage {
+// Instructions to how the sprites are allowed to be storedenum SpriteStorage {
 	// When possible convert the sprite into another format for less disk space
 	// e.g. save 16/32-bit images as 8-bit colormaps with palette
 	kSprStore_OptimizeForSize = 0x01
 };
 
-// Format in which the sprite's pixel data is stored
-enum SpriteFormat {
+// Format in which the sprite's pixel data is storedenum SpriteFormat {
 	kSprFmt_Undefined = 0, // undefined, or keep as-is
 	// Encoded as a 8-bit colormap with palette of 24-bit RGB values
 	kSprFmt_PaletteRgb888 = 32,
@@ -90,8 +87,7 @@ enum SpriteCompression {
 
 typedef int32_t sprkey_t;
 
-// SpriteFileIndex contains sprite file's table of contents
-struct SpriteFileIndex {
+// SpriteFileIndex contains sprite file's table of contentsstruct SpriteFileIndex {
 	int SpriteFileIDCheck = 0; // tag matching sprite file and index file
 	std::vector<int16_t> Widths;
 	std::vector<int16_t> Heights;
@@ -227,8 +223,7 @@ int SaveSpriteFile(const String &save_to_file,
 	const std::vector<std::pair<bool, Bitmap *> > &sprites,
 	SpriteFile *read_from_file, // optional file to read missing sprites from
 	int store_flags, SpriteCompression compress, SpriteFileIndex &index);
-// Saves sprite index table in a separate file
-extern int SaveSpriteIndex(const String &filename, const SpriteFileIndex &index);
+// Saves sprite index table in a separate fileextern int SaveSpriteIndex(const String &filename, const SpriteFileIndex &index);
 
 } // namespace Shared
 } // namespace AGS

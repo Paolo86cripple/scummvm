@@ -34,8 +34,7 @@
 
 namespace AGS3 {
 
-// Forward declaration
-namespace AGS {
+// Forward declarationnamespace AGS {
 namespace Shared {
 class Stream;
 }
@@ -52,8 +51,7 @@ class SplitLines;
 namespace AGS {
 namespace Shared {
 
-// Legacy GUIMain visibility state, which combined Visible property and override factor
-enum LegacyGUIVisState {
+// Legacy GUIMain visibility state, which combined Visible property and override factorenum LegacyGUIVisState {
 	kGUIVisibility_LockedOff = -1, // locked hidden (used by PopupMouseY guis)
 	kGUIVisibility_Off = 0, // hidden
 	kGUIVisibility_On = 1  // shown
@@ -173,8 +171,7 @@ private:
 	// Same as FindControlAt but expects local space coordinates
 	int32_t FindControlAtLocal(int atx, int aty, int leeway, bool must_be_clickable) const;
 
-	// TODO: all members are currently public; hide them later
-public:
+	// TODO: all members are currently public; hide them laterpublic:
 	int32_t ID;             // GUI identifier
 	String  Name;           // the name of the GUI
 
@@ -224,60 +221,43 @@ extern GuiOptions Options;
 // Applies current text direction setting (may depend on multiple factors)
 String ApplyTextDirection(const String &text);
 // Calculates the text's draw position, given the alignment
-// optionally returns the real graphical rect that the text would occupy
-Point CalcTextPosition(const char *text, int font, const Rect &frame, FrameAlignment align, Rect *gr_rect = nullptr);
+// optionally returns the real graphical rect that the text would occupyPoint CalcTextPosition(const char *text, int font, const Rect &frame, FrameAlignment align, Rect *gr_rect = nullptr);
 // Calculates the text's draw position and horizontal extent,
-// using strictly horizontal alignment
-Line CalcTextPositionHor(const char *text, int font, int x1, int x2, int y, FrameAlignment align);
+// using strictly horizontal alignmentLine CalcTextPositionHor(const char *text, int font, int x1, int x2, int y, FrameAlignment align);
 // Calculates the graphical rect that the text would occupy
-// if drawn at the given coordinates
-Rect CalcTextGraphicalRect(const char *text, int font, const Point &at);
+// if drawn at the given coordinatesRect CalcTextGraphicalRect(const char *text, int font, const Point &at);
 // Calculates the graphical rect that the text would occupy
-// if drawn aligned to the given frame
-Rect CalcTextGraphicalRect(const char *text, int font, const Rect &frame, FrameAlignment align);
+// if drawn aligned to the given frameRect CalcTextGraphicalRect(const char *text, int font, const Rect &frame, FrameAlignment align);
 // Calculates a vertical graphical extent for a given font,
 // which is a top and bottom offsets in zero-based coordinates.
 // NOTE: this applies font size fixups.
 Line CalcFontGraphicalVExtent(int font);
-// Draw standart "shading" effect over rectangle
-void DrawDisabledEffect(Bitmap *ds, const Rect &rc);
-// Draw text aligned inside rectangle
-void DrawTextAligned(Bitmap *ds, const char *text, int font, color_t text_color, const Rect &frame, FrameAlignment align);
-// Draw text aligned horizontally inside given bounds
-void DrawTextAlignedHor(Bitmap *ds, const char *text, int font, color_t text_color, int x1, int x2, int y, FrameAlignment align);
+// Draw standart "shading" effect over rectanglevoid DrawDisabledEffect(Bitmap *ds, const Rect &rc);
+// Draw text aligned inside rectanglevoid DrawTextAligned(Bitmap *ds, const char *text, int font, color_t text_color, const Rect &frame, FrameAlignment align);
+// Draw text aligned horizontally inside given boundsvoid DrawTextAlignedHor(Bitmap *ds, const char *text, int font, color_t text_color, int x1, int x2, int y, FrameAlignment align);
 
-// Parses the string and returns combination of label macro flags
-GUILabelMacro FindLabelMacros(const String &text);
+// Parses the string and returns combination of label macro flagsGUILabelMacro FindLabelMacros(const String &text);
 // Applies text transformation necessary for rendering, in accordance to the
-// current game settings, such as right-to-left render, and anything else
-String TransformTextForDrawing(const String &text, bool translate, bool apply_direction);
+// current game settings, such as right-to-left render, and anything elseString TransformTextForDrawing(const String &text, bool translate, bool apply_direction);
 // Wraps given text to make it fit into width, stores it in the lines;
-// apply_direction param tells whether text direction setting should be applied
-size_t SplitLinesForDrawing(const char *text, bool apply_direction, SplitLines &lines, int font, int width, size_t max_lines = -1);
+// apply_direction param tells whether text direction setting should be appliedsize_t SplitLinesForDrawing(const char *text, bool apply_direction, SplitLines &lines, int font, int width, size_t max_lines = -1);
 
-// Mark all existing GUI for redraw
-void MarkAllGUIForUpdate(bool redraw, bool reset_over_ctrl);
-// Mark all translatable GUI controls for redraw
-void MarkForTranslationUpdate();
+// Mark all existing GUI for redrawvoid MarkAllGUIForUpdate(bool redraw, bool reset_over_ctrl);
+// Mark all translatable GUI controls for redrawvoid MarkForTranslationUpdate();
 // Mark all GUI which use the given font for recalculate/redraw;
-// pass -1 to update all the textual controls together
-void MarkForFontUpdate(int font);
-// Mark labels that acts as special text placeholders for redraw
-void MarkSpecialLabelsForUpdate(GUILabelMacro macro);
+// pass -1 to update all the textual controls togethervoid MarkForFontUpdate(int font);
+// Mark labels that acts as special text placeholders for redrawvoid MarkSpecialLabelsForUpdate(GUILabelMacro macro);
 // Mark inventory windows for redraw, optionally only ones linked to given character;
-// also marks buttons with inventory icon mode
-void MarkInventoryForUpdate(int char_id, bool is_player);
+// also marks buttons with inventory icon modevoid MarkInventoryForUpdate(int char_id, bool is_player);
 
 // Reads all GUIs and their controls.
 // WARNING: the data is read into the global arrays (guis, guibuts, and so on)
 // TODO: remove is_savegame param after dropping support for old saves
-// because only they use ReadGUI to read runtime GUI data
-HError ReadGUI(Stream *in, bool is_savegame = false);
+// because only they use ReadGUI to read runtime GUI dataHError ReadGUI(Stream *in, bool is_savegame = false);
 // Writes all GUIs and their controls.
 // WARNING: the data is written from the global arrays (guis, guibuts, and so on)
 void WriteGUI(Stream *out);
-// Converts legacy GUIVisibility into appropriate GUIMain properties
-void ApplyLegacyVisibility(GUIMain &gui, LegacyGUIVisState vis);
+// Converts legacy GUIVisibility into appropriate GUIMain propertiesvoid ApplyLegacyVisibility(GUIMain &gui, LegacyGUIVisState vis);
 
 // Rebuilds GUIs, connecting them to the child controls in memory.
 // WARNING: the data is processed in the global arrays (guis, guibuts, and so on)

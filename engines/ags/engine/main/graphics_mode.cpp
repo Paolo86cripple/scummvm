@@ -78,8 +78,7 @@ bool create_gfx_driver(const String &gfx_driver_id) {
 	return true;
 }
 
-// Set requested graphics filter, or default filter if the requested one failed
-bool graphics_mode_set_filter_any(const GfxFilterSetup &setup) {
+// Set requested graphics filter, or default filter if the requested one failedbool graphics_mode_set_filter_any(const GfxFilterSetup &setup) {
 	Debug::Printf("Requested gfx filter: %s", setup.UserRequest.GetCStr());
 	if (!graphics_mode_set_filter(setup.ID)) {
 		String def_filter = _G(GfxFactory)->GetDefaultFilterID();
@@ -203,8 +202,7 @@ static Size precalc_screen_size(const Size &game_size, const WindowSetup &ws, co
 #endif
 }
 
-// Find closest possible compatible display mode and initialize it
-bool try_init_compatible_mode(const DisplayMode &dm) {
+// Find closest possible compatible display mode and initialize itbool try_init_compatible_mode(const DisplayMode &dm) {
 	const Size &screen_size = Size(dm.Width, dm.Height);
 	// Find nearest compatible mode and init that
 	Debug::Printf("Attempt to find nearest supported resolution for screen size %d x %d (%d-bit) %s, on display %d",
@@ -248,8 +246,7 @@ bool try_init_compatible_mode(const DisplayMode &dm) {
 	return result;
 }
 
-// Try to find and initialize compatible display mode as close to given setup as possible
-static bool try_init_mode_using_setup(const GraphicResolution &game_res, const WindowSetup &ws,
+// Try to find and initialize compatible display mode as close to given setup as possiblestatic bool try_init_mode_using_setup(const GraphicResolution &game_res, const WindowSetup &ws,
 		const int col_depth, const FrameScaleDef frame,
 		const GfxFilterSetup &filter, const DisplaySetupEx &params) {
 	// We determine the requested size of the screen using setup options
@@ -322,8 +319,7 @@ bool create_gfx_driver_and_init_mode_any(const String &gfx_driver_id,
 	return result;
 }
 
-#ifdef USE_SIMPLE_GFX_INIT
-static bool simple_create_gfx_driver_and_init_mode(const String &gfx_driver_id,
+#ifdef USE_SIMPLE_GFX_INITstatic bool simple_create_gfx_driver_and_init_mode(const String &gfx_driver_id,
 		const GraphicResolution &game_res, const DisplayModeSetup &setup,
 		const ColorDepthOption &color_depth) {
 	if (!graphics_mode_create_renderer(gfx_driver_id)) {

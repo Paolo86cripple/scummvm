@@ -87,8 +87,7 @@ int run_claimable_event(const char *tsname, bool includeRoom, int numParams, con
 	return 0;
 }
 
-// runs the global script on_event function
-void run_on_event(int evtype, RuntimeScriptValue &wparam) {
+// runs the global script on_event functionvoid run_on_event(int evtype, RuntimeScriptValue &wparam) {
 	RuntimeScriptValue params[]{ evtype , wparam };
 	QueueScriptFunction(kScInstGame, "on_event", 2, params);
 }
@@ -103,8 +102,7 @@ void run_room_event(int id) {
 	}
 }
 
-// event list functions
-void setevent(int evtyp, int ev1, int ev2, int ev3) {
+// event list functionsvoid setevent(int evtyp, int ev1, int ev2, int ev3) {
 	EventHappened evt;
 	evt.type = evtyp;
 	evt.data1 = ev1;

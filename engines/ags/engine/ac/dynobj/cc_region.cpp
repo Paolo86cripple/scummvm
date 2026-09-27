@@ -31,8 +31,7 @@ namespace AGS3 {
 
 using namespace AGS::Shared;
 
-// return the type name of the object
-const char *CCRegion::GetType() {
+// return the type name of the objectconst char *CCRegion::GetType() {
 	return "Region";
 }
 
@@ -41,8 +40,7 @@ size_t CCRegion::CalcSerializeSize(const void * /*address*/) {
 }
 
 // serialize the object into BUFFER (which is BUFSIZE bytes)
-// return number of bytes used
-void CCRegion::Serialize(const void *address, Stream *out) {
+// return number of bytes usedvoid CCRegion::Serialize(const void *address, Stream *out) {
 	const ScriptRegion *shh = static_cast<const ScriptRegion *>(address);
 	out->WriteInt32(shh->id);
 }

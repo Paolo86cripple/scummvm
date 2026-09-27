@@ -70,8 +70,7 @@ struct DebugGroup {
 	}
 };
 
-// DebugOutput is a slot for IOutputHandler with its own group filter
-class DebugOutput {
+// DebugOutput is a slot for IOutputHandler with its own group filterclass DebugOutput {
 public:
 	DebugOutput(const String &id, IOutputHandler *handler, MessageType def_verbosity = kDbgMsg_All, bool enabled = true);
 

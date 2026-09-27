@@ -327,8 +327,7 @@ int ManagedObjectPool::ReadFromDisk(Stream *in, ICCObjectCollectionReader *reade
 	return 0;
 }
 
-// de-allocate all objects
-void ManagedObjectPool::reset() {
+// de-allocate all objectsvoid ManagedObjectPool::reset() {
 	for (int i = 1; i < nextHandle; i++) {
 		auto &o = objects[i];
 		if (!o.isUsed()) {

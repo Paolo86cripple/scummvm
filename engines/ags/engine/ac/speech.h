@@ -56,8 +56,7 @@ SkipSpeechStyle internal_skip_speech_to_user(int internal_val);
 bool init_voicepak(const AGS::Shared::String &name = "");
 // Gets voice pack's ID name, that is a filename without "sp_" prefix and no extension.
 AGS::Shared::String get_voicepak_name();
-// Gets an asset's parent path for voice-over clips and data files
-AGS::Shared::String get_voice_assetpath();
+// Gets an asset's parent path for voice-over clips and data filesAGS::Shared::String get_voice_assetpath();
 
 } // namespace AGS3
 

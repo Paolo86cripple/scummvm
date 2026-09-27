@@ -87,8 +87,7 @@ static int GetAlfontFlags(int load_mode) {
 	return flags;
 }
 
-// Loads a TTF font of a certain size
-static ALFONT_FONT *LoadTTF(const String &filename, int fontSize, int alfont_flags) {
+// Loads a TTF font of a certain sizestatic ALFONT_FONT *LoadTTF(const String &filename, int fontSize, int alfont_flags) {
 	std::unique_ptr<Stream> reader(_GP(AssetMgr)->OpenAsset(filename));
 	if (!reader)
 		return nullptr;
@@ -105,8 +104,7 @@ static ALFONT_FONT *LoadTTF(const String &filename, int fontSize, int alfont_fla
 	return alfptr;
 }
 
-// Fill the FontMetrics struct from the given ALFONT
-static void FillMetrics(ALFONT_FONT *alfptr, FontMetrics *metrics) {
+// Fill the FontMetrics struct from the given ALFONTstatic void FillMetrics(ALFONT_FONT *alfptr, FontMetrics *metrics) {
 	metrics->NominalHeight  = alfont_get_font_height(alfptr);
 	metrics->RealHeight = alfont_get_font_real_height(alfptr);
 	metrics->CompatHeight = metrics->NominalHeight; // just set to default here

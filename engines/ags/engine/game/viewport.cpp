@@ -39,8 +39,7 @@ const Rect &Camera::GetRect() const {
 	return _position;
 }
 
-// Sets explicit room camera's orthographic size
-void Camera::SetSize(const Size cam_size) {
+// Sets explicit room camera's orthographic sizevoid Camera::SetSize(const Size cam_size) {
 	// TODO: currently we don't support having camera larger than room background
 	// (or rather - looking outside of the room background); look into this later
 	const Size real_room_sz = (_G(displayed_room) >= 0 && (_GP(thisroom).Width > 0 && _GP(thisroom).Height > 0)) ?
@@ -62,8 +61,7 @@ void Camera::SetSize(const Size cam_size) {
 	_hasChangedSize = true;
 }
 
-// Puts room camera to the new location in the room
-void Camera::SetAt(int x, int y) {
+// Puts room camera to the new location in the roomvoid Camera::SetAt(int x, int y) {
 	int cw = _position.GetWidth();
 	int ch = _position.GetHeight();
 	int room_width = data_to_game_coord(_GP(thisroom).Width);
@@ -76,32 +74,27 @@ void Camera::SetAt(int x, int y) {
 	_hasChangedPosition = true;
 }
 
-// Tells if camera is currently locked at custom position
-bool Camera::IsLocked() const {
+// Tells if camera is currently locked at custom positionbool Camera::IsLocked() const {
 	return _locked;
 }
 
-// Locks room camera at its current position
-void Camera::Lock() {
+// Locks room camera at its current positionvoid Camera::Lock() {
 	debug_script_log("Room camera locked");
 	_locked = true;
 }
 
-// Similar to SetAt, but also locks camera preventing it from following player character
-void Camera::LockAt(int x, int y) {
+// Similar to SetAt, but also locks camera preventing it from following player charactervoid Camera::LockAt(int x, int y) {
 	debug_script_log("Room camera locked to %d,%d", x, y);
 	SetAt(x, y);
 	_locked = true;
 }
 
-// Releases camera lock, letting it follow player character
-void Camera::Release() {
+// Releases camera lock, letting it follow player charactervoid Camera::Release() {
 	_locked = false;
 	debug_script_log("Room camera released back to engine control");
 }
 
-// Link this camera to a new viewport; this does not unlink any linked ones
-void Camera::LinkToViewport(ViewportRef viewport) {
+// Link this camera to a new viewport; this does not unlink any linked onesvoid Camera::LinkToViewport(ViewportRef viewport) {
 	auto new_locked = viewport.lock();
 	if (!new_locked)
 		return;
@@ -113,8 +106,7 @@ void Camera::LinkToViewport(ViewportRef viewport) {
 	_viewportRefs.push_back(viewport);
 }
 
-// Unlinks this camera from a given viewport; does nothing if link did not exist
-void Camera::UnlinkFromViewport(int id) {
+// Unlinks this camera from a given viewport; does nothing if link did not existvoid Camera::UnlinkFromViewport(int id) {
 	for (auto vp = _viewportRefs.begin(); vp != _viewportRefs.end(); ++vp) {
 		auto locked = vp->lock();
 		if (locked && locked->GetID() == id) {

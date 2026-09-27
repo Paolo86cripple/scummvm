@@ -59,8 +59,7 @@ const ScriptError &cc_get_error();
 AGS::Shared::String cc_get_err_callstack(int max_lines = INT_MAX);
 void cc_error(const char *, ...);
 void cc_error(const ScriptError &err);
-// Project-dependent script error formatting
-AGS::Shared::String cc_format_error(const AGS::Shared::String &message);
+// Project-dependent script error formattingAGS::Shared::String cc_format_error(const AGS::Shared::String &message);
 
 } // namespace AGS3
 

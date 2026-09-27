@@ -141,8 +141,7 @@ void IniFile::RemoveSection(SectionIterator sec) {
 }
 
 
-// Moves string pointer forward to the first non-space character
-const char *SkipSpace(const char *line, const char *endl) {
+// Moves string pointer forward to the first non-space characterconst char *SkipSpace(const char *line, const char *endl) {
 	for (; line != endl && Common::isSpace(*line); ++line);
 	return line;
 }

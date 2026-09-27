@@ -211,8 +211,7 @@ void RoomStatus::WriteToSavegame(Stream *out, GameDataVersion data_ver) const {
 	out->WriteInt32(0);
 }
 
-// Replaces all accesses to the roomstats array
-RoomStatus *getRoomStatus(int room) {
+// Replaces all accesses to the roomstats arrayRoomStatus *getRoomStatus(int room) {
 	if (!_G(room_statuses)[room]) {
 		// First access, allocate and initialise the status
 		_G(room_statuses)[room].reset(new RoomStatus());

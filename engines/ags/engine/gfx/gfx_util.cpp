@@ -58,8 +58,7 @@ struct BlendModeSetter {
 };
 
 // Array of blender descriptions
-// NOTE: set kRgbToRgbBlender to fallback to common image blitting
-static const BlendModeSetter BlendModeSets[kNumBlendModes] = {
+// NOTE: set kRgbToRgbBlender to fallback to common image blittingstatic const BlendModeSetter BlendModeSets[kNumBlendModes] = {
 	{ kRgbToRgbBlender, kRgbToRgbBlender, kRgbToRgbBlender, kRgbToRgbBlender, kRgbToRgbBlender }, // kBlendMode_NoAlpha
 	{ kArgbToArgbBlender, kArgbToRgbBlender, kRgbToArgbBlender, kOpaqueBlenderMode, kRgbToRgbBlender }, // kBlendMode_Alpha
 	// NOTE: add new modes here

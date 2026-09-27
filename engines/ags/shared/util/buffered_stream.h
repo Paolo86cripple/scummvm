@@ -83,8 +83,7 @@ private:
 };
 
 
-// Creates a BufferedStream limited by an arbitrary offset range
-class BufferedSectionStream : public BufferedStream {
+// Creates a BufferedStream limited by an arbitrary offset rangeclass BufferedSectionStream : public BufferedStream {
 public:
 	BufferedSectionStream(const String &file_name, soff_t start_pos, soff_t end_pos,
 		FileOpenMode open_mode, FileWorkMode work_mode, DataEndianess stream_endianess = kLittleEndian);

@@ -270,8 +270,7 @@ void shutdown_debug() {
 	_GP(DebugLogFile).reset();
 }
 
-// Prepends message text with current room number and running script info, then logs result
-static void debug_script_print_impl(const String &msg, MessageType mt) {
+// Prepends message text with current room number and running script info, then logs resultstatic void debug_script_print_impl(const String &msg, MessageType mt) {
 	String script_ref;
 	ccInstance *curinst = ccInstance::GetCurrentInstance();
 	if (curinst != nullptr) {
@@ -479,8 +478,7 @@ void break_into_debugger() {
 
 int scrDebugWait = 0;
 
-// allow LShift to single-step,  RShift to pause flow
-void scriptDebugHook(ccInstance *ccinst, int linenum) {
+// allow LShift to single-step,  RShift to pause flowvoid scriptDebugHook(ccInstance *ccinst, int linenum) {
 
 	if (_G(pluginsWantingDebugHooks) > 0) {
 		// a plugin is handling the debugging

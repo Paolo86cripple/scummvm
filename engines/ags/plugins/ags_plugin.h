@@ -42,17 +42,14 @@
 namespace AGS3 {
 
 // If the plugin isn't using DDraw, don't require the headers
-#ifndef DIRECTDRAW_VERSION
-typedef void *LPDIRECTDRAW2;
+#ifndef DIRECTDRAW_VERSIONtypedef void *LPDIRECTDRAW2;
 typedef void *LPDIRECTDRAWSURFACE2;
 #endif
 
-#ifndef DIRECTSOUND_VERSION
-typedef void *LPDIRECTSOUND;
+#ifndef DIRECTSOUND_VERSIONtypedef void *LPDIRECTSOUND;
 #endif
 
-#ifndef DIRECTINPUT_VERSION
-typedef void *LPDIRECTINPUTDEVICE;
+#ifndef DIRECTINPUT_VERSIONtypedef void *LPDIRECTINPUTDEVICE;
 #endif
 
 class BITMAP;
@@ -204,8 +201,7 @@ struct AGSMouseCursor {
 	int8  flags = 0;          // MCF_flags above
 };
 
-// The editor-to-plugin interface
-class IAGSEditor {
+// The editor-to-plugin interfaceclass IAGSEditor {
 public:
 	int32 version = 0;
 	int32 pluginId = 0;   // used internally, do not touch this
@@ -319,8 +315,7 @@ struct AGSRenderMatrixes {
 	float ProjMatrix[16];
 };
 
-// Render stage description
-struct AGSRenderStageDesc {
+// Render stage descriptionstruct AGSRenderStageDesc {
 	// Which version of the plugin interface the struct corresponds to;
 	// this field must be filled by a plugin before passing the struct into the engine!
 	int Version = 0;
@@ -328,8 +323,7 @@ struct AGSRenderStageDesc {
 	AGSRenderMatrixes Matrixes;
 };
 
-// Game info
-struct AGSGameInfo {
+// Game infostruct AGSGameInfo {
 	// Which version of the plugin interface the struct corresponds to;
 	// this field must be filled by a plugin before passing the struct into the engine!
 	int Version;
@@ -341,8 +335,7 @@ struct AGSGameInfo {
 	int UniqueId;
 };
 
-// The plugin-to-engine interface
-class IAGSEngine {
+// The plugin-to-engine interfaceclass IAGSEngine {
 public:
 	int32 version = 0;
 	int32 pluginId = 0;   // used internally, do not touch

@@ -29,8 +29,7 @@ namespace AGS3 {
 
 typedef int64 file_off_t;
 
-// Size of the buffer enough to accommodate a UTF-8 path
-const size_t MAX_PATH_SZ = 1024;
+// Size of the buffer enough to accommodate a UTF-8 pathconst size_t MAX_PATH_SZ = 1024;
 
 extern Common::ArchiveMemberPtr getFile(const char *path);
 

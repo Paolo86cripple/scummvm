@@ -30,8 +30,7 @@ using namespace AGS::Shared;
 
 const char *CCDynamicArray::TypeName = "CCDynamicArray";
 
-// return the type name of the object
-const char *CCDynamicArray::GetType() {
+// return the type name of the objectconst char *CCDynamicArray::GetType() {
 	return TypeName;
 }
 

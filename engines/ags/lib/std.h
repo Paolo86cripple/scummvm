@@ -22,12 +22,10 @@
 #ifndef AGS_LIB_STD_H
 #define AGS_LIB_STD_H
 
-// Declare Std namespace
-namespace Std {
+// Declare Std namespacenamespace Std {
 }
 
-// Map Common::Std to AGS3::std
-namespace AGS3 {
+// Map Common::Std to AGS3::stdnamespace AGS3 {
 	namespace std = ::Std;
 } // namespace AGS3
 

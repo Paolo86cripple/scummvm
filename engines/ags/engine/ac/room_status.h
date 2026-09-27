@@ -30,8 +30,7 @@
 
 namespace AGS3 {
 
-// Forward declaration
-namespace AGS {
+// Forward declarationnamespace AGS {
 namespace Shared {
 class Stream;
 } // namespace Shared
@@ -48,8 +47,7 @@ struct HotspotState {
 	void WriteToSavegame(AGS::Shared::Stream *out) const;
 };
 
-// Savegame data format for RoomStatus
-enum RoomStatSvgVersion {
+// Savegame data format for RoomStatusenum RoomStatSvgVersion {
 	kRoomStatSvgVersion_Initial = 0, // [UNSUPPORTED] from 3.5.0 pre-alpha
 	// NOTE: in 3.5.0 "Room States" had lower index than "Loaded Room State" by mistake
 	kRoomStatSvgVersion_350_Mismatch = 0, // an incorrect "Room States" version from 3.5.0
@@ -107,8 +105,7 @@ struct RoomStatus {
 	void WriteToSavegame(AGS::Shared::Stream *out, GameDataVersion data_ver) const;
 };
 
-// Replaces all accesses to the roomstats array
-RoomStatus *getRoomStatus(int room);
+// Replaces all accesses to the roomstats arrayRoomStatus *getRoomStatus(int room);
 // Used in places where it is only important to know whether the player
 // had previously entered the room. In this case it is not necessary
 // to initialise the status because a player can only have been in

@@ -43,8 +43,7 @@ enum MoveResult {
 // will carry over remaining progress onto the next segment. Otherwise won't.
 // TODO: do not reset mslot in this function, reset externally instead.
 MoveResult do_movelist_move(short &mslot, int &pos_x, int &pos_y, bool smooth_move);
-// Recalculate derived (non-serialized) values in movelists
-void restore_movelists();
+// Recalculate derived (non-serialized) values in movelistsvoid restore_movelists();
 // Update various things on the game frame (historical code mess...)
 void update_stuff();
 

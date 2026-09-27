@@ -45,8 +45,7 @@ extern PALSTRUCT objectivepal[256];
 
 // this class exists solely to take advantage of g++'s
 // -fvisibility-inlines-hidden option, so that these
-// methods can be inlined without any trace or complaint
-class Mix {
+// methods can be inlined without any trace or complaintclass Mix {
 public:
 //unsigned char MixColorAlpha (unsigned char fg,unsigned char bg,unsigned char alpha);
 //unsigned char MixColorAdditive (unsigned char fg,unsigned char bg,unsigned char alpha);

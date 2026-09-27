@@ -49,8 +49,7 @@ namespace AGS3 {
 using namespace AGS::Shared;
 using namespace AGS::Engine;
 
-// Filename of the default config file, the one found in the game installation
-const char *DefaultConfigFileName = "acsetup.cfg";
+// Filename of the default config file, the one found in the game installationconst char *DefaultConfigFileName = "acsetup.cfg";
 
 WindowSetup parse_window_mode(const String &option, bool as_windowed, WindowSetup def_value) {
 	// "full_window" option means pseudo fullscreen ("borderless fullscreen window")
@@ -81,8 +80,7 @@ WindowSetup parse_window_mode(const String &option, bool as_windowed, WindowSetu
 	return def_value;
 }
 
-// Legacy screen size definition
-enum ScreenSizeDefinition {
+// Legacy screen size definitionenum ScreenSizeDefinition {
 	kScreenDef_Undefined = -1,
 	kScreenDef_Explicit,        // define by width & height
 	kScreenDef_ByGameScaling,   // define by game scale factor
@@ -119,8 +117,7 @@ static FrameScaleDef parse_legacy_scaling_option(const String &option, int &scal
 	return frame;
 }
 
-// Parses legacy filter ID and converts it into current scaling options
-bool parse_legacy_frame_config(const String &scaling_option, String &filter_id,
+// Parses legacy filter ID and converts it into current scaling optionsbool parse_legacy_frame_config(const String &scaling_option, String &filter_id,
 	FrameScaleDef &frame, int &scale_factor) {
 	struct {
 		String LegacyName;

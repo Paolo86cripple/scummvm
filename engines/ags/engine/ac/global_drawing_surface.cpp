@@ -46,15 +46,13 @@ using namespace AGS::Engine;
 #define RAW_END()
 #define RAW_SURFACE() (_GP(play).raw_drawing_surface.get())
 
-// RawSaveScreen: copy the current screen to a backup bitmap
-void RawSaveScreen() {
+// RawSaveScreen: copy the current screen to a backup bitmapvoid RawSaveScreen() {
 	auto source = _GP(thisroom).BgFrames[_GP(play).bg_frame].Graphic;
 	_G(raw_saved_screen).reset(BitmapHelper::CreateBitmapCopy(source.get()));
 }
 // RawRestoreScreen: copy backup bitmap back to screen; we
 // deliberately don't free the Bitmap *cos they can multiple restore
-// and it gets freed on room exit anyway
-void RawRestoreScreen() {
+// and it gets freed on room exit anywayvoid RawRestoreScreen() {
 	if (_G(raw_saved_screen) == nullptr) {
 		debug_script_warn("RawRestoreScreen: unable to restore, since the screen hasn't been saved previously.");
 		return;
@@ -64,8 +62,7 @@ void RawRestoreScreen() {
 	invalidate_screen();
 	mark_current_background_dirty();
 }
-// Restores the backup bitmap, but tints it to the specified level
-void RawRestoreScreenTinted(int red, int green, int blue, int opacity) {
+// Restores the backup bitmap, but tints it to the specified levelvoid RawRestoreScreenTinted(int red, int green, int blue, int opacity) {
 	if (_G(raw_saved_screen) == nullptr) {
 		debug_script_warn("RawRestoreScreenTinted: unable to restore, since the screen hasn't been saved previously.");
 		return;
