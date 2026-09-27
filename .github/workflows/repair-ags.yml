@@ -11,37 +11,11 @@ jobs:
         with:
           fetch-depth: 0
           ref: ags-custom
-      - name: Remove identifier-splitting newlines
+      - name: fix
         run: |
           git config user.name "Paolo86cripple"
           git config user.email "Paolo86cripple@users.noreply.github.com"
-          python3 <<'EOF'
-          import os
-          ID = set(bytes(range(48,58))+bytes(range(65,91))+bytes(range(97,123))+b'_')
-          fixed, trunc = [], []
-          for root, d, fs in os.walk('engines/ags'):
-              for fn in fs:
-                  p = os.path.join(root, fn)
-                  b = open(p, 'rb').read()
-                  if len(b) >= 32790:
-                      trunc.append((p, len(b)))
-                      continue
-                  out = bytearray()
-                  n = 0
-                  for i, c in enumerate(b):
-                      if c == 10 and 0 < i < len(b)-1 and b[i-1] in ID and b[i+1] in ID:
-                          n += 1
-                          continue
-                      out.append(c)
-                  if n:
-                      open(p, 'wb').write(bytes(out))
-                      fixed.append((p, n))
-          with open('REPAIR_REPORT.txt', 'w') as f:
-              f.write('FIXED (file, newlines removed):\n')
-              f.write(''.join('%s %d\n' % t for t in fixed))
-              f.write('TRUNCATED (irrecoverable, need manual restore):\n')
-              f.write(''.join('%s %d\n' % t for t in trunc))
-          print('fixed:', len(fixed), 'truncated:', len(trunc))
-          EOF
+          echo aW1wb3J0IG9zCklEID0gc2V0KGJ5dGVzKHJhbmdlKDQ4LDU4KSkrYnl0ZXMocmFuZ2UoNjUsOTEpKStieXRlcyhyYW5nZSg5NywxMjMpKStiJ18nKQpmaXhlZCwgdHJ1bmMgPSBbXSwgW10KZm9yIHJvb3QsIGQsIGZzIGluIG9zLndhbGsoJ2VuZ2luZXMvYWdzJyk6CiAgICBmb3IgZm4gaW4gZnM6CiAgICAgICAgcCA9IG9zLnBhdGguam9pbihyb290LCBmbikKICAgICAgICBiID0gb3BlbihwLCAncmInKS5yZWFkKCkKICAgICAgICBpZiBsZW4oYikgPj0gMzI3OTA6CiAgICAgICAgICAgIHRydW5jLmFwcGVuZCgocCwgbGVuKGIpKSkKICAgICAgICAgICAgY29udGludWUKICAgICAgICBvdXQgPSBieXRlYXJyYXkoKQogICAgICAgIG4gPSAwCiAgICAgICAgZm9yIGksIGMgaW4gZW51bWVyYXRlKGIpOgogICAgICAgICAgICBpZiBjID09IDEwIGFuZCAwIDwgaSA8IGxlbihiKS0xIGFuZCBiW2ktMV0gaW4gSUQgYW5kIGJbaSsxXSBpbiBJRDoKICAgICAgICAgICAgICAgIG4gKz0gMQogICAgICAgICAgICAgICAgY29udGludWUKICAgICAgICAgICAgb3V0LmFwcGVuZChjKQogICAgICAgIGlmIG46CiAgICAgICAgICAgIG9wZW4ocCwgJ3diJykud3JpdGUoYnl0ZXMob3V0KSkKICAgICAgICAgICAgZml4ZWQuYXBwZW5kKChwLCBuKSkKd2l0aCBvcGVuKCdSRVBBSVJfUkVQT1JULnR4dCcsICd3JykgYXMgZjoKICAgIGYud3JpdGUoJ0ZJWEVEOlxuJykKICAgIGYud3JpdGUoJycuam9pbignJXMgJWRcbicgJSB0IGZvciB0IGluIGZpeGVkKSkKICAgIGYud3JpdGUoJ1RSVU5DQVRFRDpcbicpCiAgICBmLndyaXRlKCcnLmpvaW4oJyVzICVkXG4nICUgdCBmb3IgdCBpbiB0cnVuYykpCnByaW50KCdmaXhlZDonLCBsZW4oZml4ZWQpLCAndHJ1bmNhdGVkOicsIGxlbih0cnVuYykp | base64 -d > /tmp/fix.py
+          python3 /tmp/fix.py
           git add -A
           git diff --cached --quiet || (git commit -m "AGS: repair v2 - remove identifier-splitting newlines" && git push origin ags-custom)
