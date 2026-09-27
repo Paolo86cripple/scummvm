@@ -831,8 +831,7 @@ const PlainGameDescriptor GAME_NAMES[] = {
 	{ "bjcase4", "Ben Jordan P.I. Case 4: Horror at Number 50" },
 	{ "bjcase5", "Ben Jordan P.I. Case 5: Land of the Rising Dead" },
 	{ "bjcase6", "Ben Jordan P.I. Case 6: Scourge of the Sea People" },
-	{ "bjcase7", "Ben Jordan P.I. Case 7: The Cardinal Sins" },
-	{ "bjcase8", "Ben Jordan P.I. Case 8: Relics of the Past" },
+	{ "bjcase7", "Ben Jordan P.I. Case 7: The Cardinal Sins" },	{ "bjcase8", "Ben Jordan P.I. Case 8: Relics of the Past" },
 	{ "bjcults", "Ben Jordan and the dark cults" },
 	{ "bjpww1", "Ben Jordan P.W.W. Case 1: Wrath of the Skunk Ape" },
 	{ "blackbirdpie", "Blackbird Pie" },
@@ -5069,8 +5068,7 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	GAME_ENTRY_PLUGIN_STEAM_NOAUTOSAVE("geminirue", "Gemini Rue.ags", "ab6c0c2d89adb2d529131190a657be6a", 58309817, GAMEFLAG_PLUGINS_AGSTEAM_WADJETEYE),  //Linux v3.7.4
 	GAME_ENTRY_PLUGIN_STEAM_NOAUTOSAVE("geminirue", "Gemini Rue.ags", "ab6c0c2d89adb2d529131190a657be6a", 58296560, GAMEFLAG_PLUGINS_AGSTEAM_WADJETEYE),  //Steamdeck
 	GAME_ENTRY_PLUGIN_STEAM_NOAUTOSAVE("geminirue", "Gemini Rue.ags", "ab6c0c2d89adb2d529131190a657be6a", 58317436, GAMEFLAG_PLUGINS_AGSTEAM_WADJETEYE),  //Steamdeck
-	GAME_ENTRY("geminirue", "gemini_rue_pc.exe", "e8f1d07a6b363e9cc80dac5367f1b4ba", 72860463), // Humble Bundle
-	GAME_ENTRY("geminirue", "ac2game.dat", "f3c0c7d3892bdd8963e8ce017f73de08", 62852566), // Android
+	GAME_ENTRY("geminirue", "gemini_rue_pc.exe", "e8f1d07a6b363e9cc80dac5367f1b4ba", 72860463), // Humble Bundle	GAME_ENTRY("geminirue", "ac2game.dat", "f3c0c7d3892bdd8963e8ce017f73de08", 62852566), // Android
 	GAME_ENTRY("geminirue", "ac2game.dat", "e8f1d07a6b363e9cc80dac5367f1b4ba", 72836785), // MacOS, Humble Bundle
 	GAME_ENTRY_EN_STEAM("ghostdream", "ghostdream.exe", "05594881531d62e4575545f3c8fd2576", 480856325),
 	GAME_ENTRY_EN_STEAM("ghostman", "Rebut And Ghostman.exe", "0241777c2537fc5d077c05cde10bfa9f", 10312749),
@@ -6829,8 +6827,7 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	GAME_ENTRY_EN("bird", "bird.ags", "dfa991c129b488afcf54b957cd8d5710", 107520461),  // Linux
 	GAME_ENTRY_EN("birdsandbees", "birdy.exe", "06a03fe35791b0578068ab1873455463", 4250415),
 	GAME_ENTRY_EN("birdybirdy", "BirdyBirdy.exe", "f907e03f753f87a08d67ee20719654c2", 21144151),  //  Windows
-	GAME_ENTRY_EN("birdybirdy", "BirdyBirdy.ags", "ec6416ed1649d7a829fe6f31be40498a", 8890619),  //Linux
-	GAME_ENTRY_EN("bitstream", "Bitstream.exe", "e8617c9bf3fce67aa8da088c6daa4152", 610992645),
+	GAME_ENTRY_EN("birdybirdy", "BirdyBirdy.ags", "ec6416ed1649d7a829fe6f31be40498a", 8890619),  //Linux	GAME_ENTRY_EN("bitstream", "Bitstream.exe", "e8617c9bf3fce67aa8da088c6daa4152", 610992645),
 	GAME_ENTRY_EN("bittersweet", "Bittersweet.exe", "23a67b6de10ec35e9f5a4dfc7d928222", 42348607),  // v1.02 itch.io
 	GAME_ENTRY_EN("biwa", "biwa.exe", "0500aacb6c176d47ac0f8158f055db83", 6109499),
 	GAME_ENTRY_EN("bjcase1", "bj1.exe", "4b1378721f4f066f75102f3dca809224", 5678910),
@@ -7223,8 +7220,7 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	GAME_ENTRY_EN("dangerousderek", "DangerousDerek.exe", "f6a5f0a2f617b84174b5ab48147ae9f7", 7416843),
 	GAME_ENTRY("dangerouslandsrt2", "DL_RT2.exe", "0710e2ec71042617f565c01824f0cf3c", 16730647),  // v1.0 En-Ru
 	GAME_ENTRY("dangerouslandsrt2", "dlrt2.exe", "0710e2ec71042617f565c01824f0cf3c", 21636362),  // v1.5 En-Ru
-	GAME_ENTRY_EN("dannydreadisoncall", "On Call.exe", "ef480ccb0831e452e55456e0ca24c761", 8787649),
-	GAME_ENTRY("dannydreadisoncall", "On Call.exe", "ef480ccb0831e452e55456e0ca24c761", 8791050),  //En-It
+	GAME_ENTRY_EN("dannydreadisoncall", "On Call.exe", "ef480ccb0831e452e55456e0ca24c761", 8787649),	GAME_ENTRY("dannydreadisoncall", "On Call.exe", "ef480ccb0831e452e55456e0ca24c761", 8791050),  //En-It
 	GAME_ENTRY_EN("dantesday", "Dante's Day.exe", "0500aacb6c176d47ac0f8158f055db83", 7504000),
 	GAME_ENTRY_EN_PLATFORM("dariuscarnival", "Darius' Fun carnival.exe", "8bf7402e2fafde47b7ebd30ae5f03792", 10431910, "Beta"),
 	GAME_ENTRY_EN("darkblack", "DarkBlack.exe", "e80586fdc2db32f65658b235d8cbc159", 8714374),
@@ -9130,8 +9126,7 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	GAME_ENTRY_EN("pocketfluff", "Pketfluf.exe", "0b7529a76f38283d6e850b8d56526fc1", 10858438),
 	GAME_ENTRY_LANG("pocketquest", "Pocket.exe", "465f972675db2da6040518221af5b0ba", 28532586, Common:: RU_RUS),
 	GAME_ENTRY_EN("poddwellers", "Pod Dwellers.exe", "9982a80801abee56c9c8977d5e7424d7", 7305546),  // Linux
-	GAME_ENTRY_EN("poddwellers", "Pod Dwellers.ags", "593038a65aae682cbcd7be9fe51fa84b", 4196662),  // Windows
-	GAME_ENTRY_EN("poeng", "poe.exe", "618d7dce9631229b4579340b964c6810", 29811225),
+	GAME_ENTRY_EN("poddwellers", "Pod Dwellers.ags", "593038a65aae682cbcd7be9fe51fa84b", 4196662),  // Windows	GAME_ENTRY_EN("poeng", "poe.exe", "618d7dce9631229b4579340b964c6810", 29811225),
 	GAME_ENTRY_EN("politicallyyours", "Politically Yours.exe", "031bce0ec1a563faffc19a62ea17e35f", 4640266),
 	GAME_ENTRY_EN("polybius", "POLYBIUS.ags", "c96f5b59eb5e271aac8a381a71617117", 34538177),
 	GAME_ENTRY_EN("pompadourpete", "4hg.exe", "615e73fc1874e92d60a1996c2330ea36", 6008514),
@@ -10117,8 +10112,7 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	GAME_ENTRY_EN("thestarryskyaboveme", "The Starry Sky Above Me.ags", "0761ef29f813294a6babdae64d122f84", 23949709),
 	GAME_ENTRY_EN("thestinker", "The Stinker.exe", "be13cb758d3568b0532695081ab64683", 51481517),
 	GAME_ENTRY_EN("thesummoned", "The Summoned.exe", "22d2d13d88310758fc76ff9d6e4f23b8", 15309757),
-	GAME_ENTRY_EN("thesundownmystery", "Sundown.exe", "a08ab253c4d2f255b9139f2aa5fe7006", 31839270),
-	GAME_ENTRY_EN("thesunsets", "The Sun Sets.ags", "cb849ee93749b5651e798074a7c0f659", 106389227),
+	GAME_ENTRY_EN("thesundownmystery", "Sundown.exe", "a08ab253c4d2f255b9139f2aa5fe7006", 31839270),	GAME_ENTRY_EN("thesunsets", "The Sun Sets.ags", "cb849ee93749b5651e798074a7c0f659", 106389227),
 	GAME_ENTRY_EN("thesunsets", "The Sun Sets.ags", "a1fee31e02becd659c07b38e7251211d", 104615748),
 	GAME_ENTRY("thesurvivors", "Les_Survivants.exe", "c5d2c54c20cb606519b86d3890ee7fc0", 265445972),  //En-Fr
 	GAME_ENTRY_EN("thesylph", "The Sylph.exe", "20d3b102325d45a9f5841b5cf4e9e45d", 6006983),
@@ -10253,8 +10247,7 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	GAME_ENTRY_EN("twelvethirteenep1", "1213.exe", "3b7cceb3e4bdb031dc5d8f290936e94b", 2942386),
 	GAME_ENTRY_EN_PLATFORM("twelvethirteenep1", "1213_ep1.exe", "3b7cceb3e4bdb031dc5d8f290936e94b", 3283696, "Special Edition"), // From SE
 	GAME_ENTRY_EN("twelvethirteenep2", "1213_ep2.exe", "3b7cceb3e4bdb031dc5d8f290936e94b", 3602361),
-	GAME_ENTRY_EN_PLATFORM("twelvethirteenep2", "1213_ep2.exe", "3b7cceb3e4bdb031dc5d8f290936e94b", 3656275, "Special Edition"), // From SE
-	GAME_ENTRY_EN("twelvethirteenep3", "1213_ep3.exe", "3b7cceb3e4bdb031dc5d8f290936e94b", 3205606),
+	GAME_ENTRY_EN_PLATFORM("twelvethirteenep2", "1213_ep2.exe", "3b7cceb3e4bdb031dc5d8f290936e94b", 3656275, "Special Edition"), // From SE	GAME_ENTRY_EN("twelvethirteenep3", "1213_ep3.exe", "3b7cceb3e4bdb031dc5d8f290936e94b", 3205606),
 	GAME_ENTRY_EN_PLATFORM("twelvethirteenep3", "1213_ep3.exe", "3b7cceb3e4bdb031dc5d8f290936e94b", 3246117, "Special Edition"), // From SE
 	DETECTION_ENTRY_GUIO("twelvethirteense", "1213 SE.exe", "3b7cceb3e4bdb031dc5d8f290936e94b", 644458, Common::EN_ANY, nullptr, GUIO2(GUIO_NOLANG, GUIO_NOLAUNCHLOAD), ADGF_NO_FLAGS, 0),  // Menu
 	GAME_ENTRY_EN("twentiesflappersvsthemummy", "Twenties Flappers vs The Mummy.exe", "a524cbb1c51589903c4043b98917f1d9", 15042196),
