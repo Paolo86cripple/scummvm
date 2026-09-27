@@ -86,8 +86,8 @@ Common::String InsaneRebel2::getLevelPrefix(int levelId) {
 void InsaneRebel2::runGame() {
 	SmushPlayer *splayer = ((ScummEngine_v7 *)_vm)->_splayer;
 
-	if (_vm->_game.features & GF_DEMO) {
-		splayer->play("OPEN/O_DEMO.SAN", 15);
+	if (_release.nonInteractiveVideo) {
+		splayer->play(_release.nonInteractiveVideo, 15);
 		return;
 	}
 
@@ -142,7 +142,7 @@ void InsaneRebel2::runGame() {
 				int selectedLevel = _selectedChapter + 1;
 				debugC(DEBUG_INSANE, "InsaneRebel2: Starting chapter %d (level %d)", _selectedChapter + 1, selectedLevel);
 
-				if (selectedLevel == 16) {
+				if (selectedLevel == 16 && _release.ending) {
 					playEndingSequence();
 				}
 
@@ -150,10 +150,15 @@ void InsaneRebel2::runGame() {
 					int result = runLevel(selectedLevel);
 
 					if (result == kLevelNextLevel) {
-						updatePilotProgress(selectedLevel,
+						selectedLevel = _release.getNextChapter(selectedLevel);
+						if (!selectedLevel) {
+							if (_release.completionVideo && !_vm->shouldQuit())
+								playCinematic(_release.completionVideo, 0x08);
+							break;
+						}
+						updatePilotProgress(selectedLevel - 1,
 							_playerScore, _playerLives, 0, _playerRating);
-						selectedLevel++;
-						if (selectedLevel > 15) {
+						if (selectedLevel == 16) {
 							playEndingSequence();
 							break;
 						}
@@ -198,7 +203,7 @@ void InsaneRebel2::playMissionBriefing() {
 	splayer->play("OPEN/O_LEVEL.SAN", 15);
 }
 
-void InsaneRebel2::playCinematic(const char *filename) {
+void InsaneRebel2::playCinematic(const char *filename, int16 flags) {
 	restoreDamageFlashPalette();
 	resetVideoAudio();
 	_gameplaySectionActive = false;
@@ -206,7 +211,7 @@ void InsaneRebel2::playCinematic(const char *filename) {
 	_rebelStatusBarSprite = 0;
 
 	SmushPlayer *splayer = ((ScummEngine_v7 *)_vm)->_splayer;
-	splayer->setCurVideoFlags(0x28);
+	splayer->setCurVideoFlags(flags);
 	splayer->play(filename, 15);
 }
 
@@ -325,7 +330,11 @@ void InsaneRebel2::prepareLevelEndStats(int levelId, int accuracy, int flightErr
 		return;
 	}
 
-	const Rebel2LevelEndParams &p = kRebel2LevelEndParams[levelId];
+	Rebel2LevelEndParams p = kRebel2LevelEndParams[levelId];
+	if (levelId == 6 && _release.skipMiningFacilityAttack) {
+		p.titleStartBeforeEnd = 120;
+		p.titleEndBeforeEnd = 10;
+	}
 	const bool hasAccuracy = (accuracy >= 0 && p.accLow >= 0 && p.accHigh >= 0);
 	const bool hasFlightErrors = (flightErrors >= 0 && p.errLow >= 0 && p.errHigh >= 0);
 	const int ratingAward = calculateLevelEndRating(
@@ -382,6 +391,8 @@ void InsaneRebel2::playLevelEnd(int levelId, int accuracy, int flightErrors, boo
 	Common::String dir = getLevelDir(levelId);
 	Common::String prefix = getLevelPrefix(levelId);
 	Common::String filename = Common::String::format("%s/%sEND.SAN", dir.c_str(), prefix.c_str());
+	if (levelId == 6 && _release.skipMiningFacilityAttack)
+		filename = "LEV06/06END_B.SAN";
 
 	debugC(DEBUG_INSANE, "Playing level %d end: %s", levelId, filename.c_str());
 
@@ -510,7 +521,7 @@ int InsaneRebel2::runLevel(int levelId) {
 
 	debugC(DEBUG_INSANE, "Starting level %d", levelId);
 
-	if (levelId < 1 || levelId > 15) {
+	if (levelId < 1 || levelId > 15 || !_release.isChapterAvailable(levelId)) {
 		warning("Rebel2: Invalid level ID %d", levelId);
 		return kLevelReturnToMenu;
 	}
@@ -536,7 +547,8 @@ int InsaneRebel2::runLevel(int levelId) {
 	CursorMan.showMouse(false);
 	g_system->lockMouse(true);
 
-	if (_activePilot >= 0 && _activePilot < _numPilots && _pilots[_activePilot].damage[levelId - 1] < 0xFF) {
+	if (!_release.unlockAvailableLevels && _activePilot >= 0 && _activePilot < _numPilots &&
+			_pilots[_activePilot].damage[levelId - 1] < 0xFF) {
 		_playerLives = _pilots[_activePilot].lives[levelId - 1];
 		_playerScore = _pilots[_activePilot].score[levelId - 1];
 		_playerRating = _pilots[_activePilot].rating[levelId - 1];
