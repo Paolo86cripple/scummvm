@@ -1,4 +1,4 @@
-name: Repair AGS files corrupted by write tools
+name: Repair AGS v2
 on:
   workflow_dispatch:
 permissions:
@@ -11,47 +11,37 @@ jobs:
         with:
           fetch-depth: 0
           ref: ags-custom
-      - name: Detect and repair inserted newlines
+      - name: Remove identifier-splitting newlines
         run: |
           git config user.name "Paolo86cripple"
           git config user.email "Paolo86cripple@users.noreply.github.com"
-          python3 - <<'EOF'
-          import os, sys
-          PERIOD = 2001
-          fixed, truncated, skipped = [], [], 0
-          for root, dirs, files in os.walk('engines/ags'):
-              for fn in files:
+          python3 <<'EOF'
+          import os
+          ID = set(bytes(range(48,58))+bytes(range(65,91))+bytes(range(97,123))+b'_')
+          fixed, trunc = [], []
+          for root, d, fs in os.walk('engines/ags'):
+              for fn in fs:
                   p = os.path.join(root, fn)
-                  try:
-                      with open(p, 'rb') as f: data = f.read()
-                  except: continue
-                  if not data: continue
-                  if len(data) >= 32790:
-                      truncated.append((p, len(data)))
-                  hits = [i for i in range(2000, len(data), PERIOD) if data[i:i+1] == b'\n']
-                  if len(hits) >= 3:
-                      out = bytearray()
-                      for i, b in enumerate(data):
-                          if i % PERIOD == 2000 and b == 10:
-                              continue
-                          out.append(b)
-                      with open(p, 'wb') as f: f.write(bytes(out))
-                      fixed.append((p, len(hits)))
-                  else:
-                      skipped += 1
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as s:
-              s.write('## Repair report\n\n')
-              s.write('Repaired files: %d\n\n' % len(fixed))
-              for p, n in fixed: s.write('- %s: %d inserted newlines removed\n' % (p, n))
-              s.write('\nTRUNCATED (unrecoverable): %d\n\n' % len(truncated))
-              for p, n in truncated: s.write('- %s: %d bytes\n' % (p, n))
-              s.write('\nClean files: %d\n' % skipped)
-          print('repaired:', len(fixed), 'truncated:', len(truncated), 'clean:', skipped)
+                  b = open(p, 'rb').read()
+                  if len(b) >= 32790:
+                      trunc.append((p, len(b)))
+                      continue
+                  out = bytearray()
+                  n = 0
+                  for i, c in enumerate(b):
+                      if c == 10 and 0 < i < len(b)-1 and b[i-1] in ID and b[i+1] in ID:
+                          n += 1
+                          continue
+                      out.append(c)
+                  if n:
+                      open(p, 'wb').write(bytes(out))
+                      fixed.append((p, n))
+          with open('REPAIR_REPORT.txt', 'w') as f:
+              f.write('FIXED (file, newlines removed):\n')
+              f.write(''.join('%s %d\n' % t for t in fixed))
+              f.write('TRUNCATED (irrecoverable, need manual restore):\n')
+              f.write(''.join('%s %d\n' % t for t in trunc))
+          print('fixed:', len(fixed), 'truncated:', len(trunc))
           EOF
-          if git diff --quiet; then
-            echo "no changes needed"
-          else
-            git add -A
-            git commit -m "AGS: repair files corrupted by API write tool (remove inserted newlines)"
-            git push origin ags-custom
-          fi
+          git add -A
+          git diff --cached --quiet || (git commit -m "AGS: repair v2 - remove identifier-splitting newlines" && git push origin ags-custom)
