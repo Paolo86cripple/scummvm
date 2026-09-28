@@ -1,0 +1,81 @@
+/* ScummVM - Graphic Adventure Engine
+ *
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+#ifndef INTERSPECTIVE_EVENTMANAGER_H
+#define INTERSPECTIVE_EVENTMANAGER_H
+
+#include "common/list.h"
+#include "common/rect.h"
+#include "common/singleton.h"
+#include "common/str.h"
+
+#include "interspective/types.h"
+
+namespace Interspective {
+//
+
+class EventManager;
+class Debugger;
+
+/**
+ * Abstract base class of everything clickable. Automatically registers itself with the event manager.
+ */
+class Clickable {
+public:
+	Clickable();
+	virtual ~Clickable();
+
+	// Returns true when the DOS click handler script actually ran.
+	virtual bool clicked() = 0;
+
+	virtual Common::Rect area() const = 0;
+	virtual byte zIndex() const = 0;
+	virtual bool isClickable() const { return true; }
+
+private:
+	friend class EventManager;
+};
+
+class EventManager : public Common::Singleton<EventManager>, public Paintable {
+public:
+	EventManager() : _debug(false) {}
+	void clicked(Common::Point pos);
+	Common::String hoverObjectName(Common::Point pos) const;
+
+	void paint(Graphics *g) const;
+	byte zIndex() const { return 0; }
+
+	friend class Debugger;
+
+private:
+	void toggleDebug();
+
+	friend class Clickable;
+	void push(Clickable *c);
+	void pop(Clickable *c);
+
+	Common::List<Clickable *> _handlers;
+	bool _debug;
+};
+
+} // End of namespace Interspective
+
+#endif // INTERSPECTIVE_EVENTMANAGER_H

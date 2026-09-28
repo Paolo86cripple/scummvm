@@ -1,0 +1,119 @@
+/* ScummVM - Graphic Adventure Engine
+ *
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+#include "interspective/value.h"
+
+#include "common/rect.h"
+#include "common/textconsole.h"
+
+#include "interspective/inter.h"
+#include "interspective/util.h"
+
+namespace Interspective {
+//
+
+CodePointer::CodePointer(uint16 off, Interpreter *i) : _offset(off), _interpreter(i) {
+	init();
+}
+
+void CodePointer::init() {
+	// Guard on _interpreter too — _offset is no longer indeterminate after
+	// the default-ctor fix, but a moved-from / cleared CodePointer can still
+	// have _offset != 0 with _interpreter == 0 (e.g. after reset()).
+	if (_offset && _interpreter)
+		snprintf(_inspect, 40, "code offset 0x%04x of %s", _offset, _interpreter->name());
+	else
+		snprintf(_inspect, 40, "null pointer");
+}
+
+void CodePointer::run() const {
+	if (_offset && _interpreter)
+		_interpreter->run(_offset);
+}
+
+void CodePointer::run(OpcodeMode mode) const {
+	if (_offset && _interpreter)
+		_interpreter->run(_offset, mode);
+}
+
+bool CodePointer::memoryReference(DosMemoryReference &ref) const {
+	return _interpreter && _interpreter->memoryReference(_offset, ref);
+}
+
+static bool checkedCodePointerField(const CodePointer &ptr, int off, uint16 &absolute) {
+	Interpreter *interpreter = ptr.interpreter();
+	if (!interpreter) {
+		warning("Interspective: field read through null code pointer");
+		return false;
+	}
+
+	const int32 fieldOffset = int32(ptr.offset()) + off;
+	if (fieldOffset < 0 || fieldOffset > 0xffff) {
+		warning("Interspective: field offset %d outside %s code pointer 0x%04x",
+				off, interpreter->name(), ptr.offset());
+		return false;
+	}
+
+	absolute = uint16(fieldOffset);
+	return true;
+}
+
+template<>
+uint16 &CodePointer::field<uint16>(uint16 &p, int off) const {
+	uint16 absolute = 0;
+	if (!checkedCodePointerField(*this, off, absolute) ||
+		!_interpreter->readCodeWord(absolute, p))
+		p = 0;
+	return p;
+}
+
+template<>
+int16 &CodePointer::field<int16>(int16 &p, int off) const {
+	uint16 z;
+	field(z, off);
+	p = dosSignedWord(z);
+	return p;
+}
+
+template<>
+Common::Point &CodePointer::field<Common::Point>(Common::Point &p, int off) const {
+	field(p.x, off);
+	field(p.y, off + 2);
+	return p;
+}
+
+template<>
+byte &CodePointer::field<byte>(byte &p, int off) const {
+	uint16 absolute = 0;
+	if (!checkedCodePointerField(*this, off, absolute) ||
+		!_interpreter->readCodeByte(absolute, p))
+		p = 0;
+	return p;
+}
+
+template<>
+bool &CodePointer::field<bool>(bool &p, int off) const {
+	byte b;
+	field(b, off);
+	return p = b;
+}
+
+} // End of namespace Interspective

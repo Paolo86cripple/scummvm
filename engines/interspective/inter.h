@@ -1,0 +1,156 @@
+/* ScummVM - Graphic Adventure Engine
+ *
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+#ifndef INTERSPECTIVE_INTER_H
+#define INTERSPECTIVE_INTER_H
+
+#include "common/list.h"
+#include "common/rect.h"
+#include "common/span.h"
+#include "common/str.h"
+#include "common/util.h"
+
+#include "interspective/value.h"
+
+namespace Interspective {
+
+class Animation;
+class Logic;
+class Opcode;
+class Engine;
+class Resources;
+class Graphics;
+class Interpreter;
+
+enum Status {
+	kReturned = 0,
+	kInvalidOpcode = 1
+};
+
+class BytecodeCursor {
+public:
+	BytecodeCursor();
+	BytecodeCursor(Interpreter *interpreter, uint16 offset);
+
+	uint16 offset() const { return _offset; }
+	bool canRead(uint16 size = 1) const;
+	bool peekByte(uint16 relativeOffset, byte &value) const;
+	bool readByte(byte &value);
+	bool readUint16(uint16 &value);
+	bool skip(uint16 count);
+	void seek(uint16 offset) { _offset = offset; }
+	void seekEnd();
+
+private:
+	Interpreter *_interpreter;
+	uint16 _offset;
+};
+
+class Interpreter {
+private:
+	enum OpResultCode {
+		kThxBye,
+		kReturn,
+		kFail,
+		kElse,
+		kEndIf,
+		kJump
+	};
+	struct OpResult {
+		OpResult(OpResultCode c) : code(c) {}
+		OpResult(const CodePointer &p) : code(kJump), address(p) {}
+		OpResultCode code;
+		CodePointer address;
+	};
+
+public:
+	Interpreter(Logic *l, Common::Span<byte> code, const char *name);
+	~Interpreter();
+
+	void init();
+
+	/**
+	 * Run bytecode.
+	 * @param code a Common::ReadStream pointing to code. The interpreter takes ownership of it.
+	 * @param mode interpreting mode.
+	 */
+	Status run(uint16 offset, OpcodeMode mode);
+
+	friend class Opcode;
+
+	template<int opcode>
+	OpResult opcodeHandler(ValueVector &args, CodePointer current, CodePointer next);
+
+	template<int N>
+	void init_opcodes();
+
+	typedef OpResult (Interpreter::*OpcodeHandler)(ValueVector &args, CodePointer current, CodePointer next);
+	OpcodeHandler _handlers[256];
+	static const uint8 _argumentsCounts[];
+
+	Logic *_logic;
+
+	const char *name() const { return _name; }
+
+	bool containsCodeRange(uint16 offset, uint16 size = 1) const;
+	bool readCodeByte(uint16 offset, byte &value) const;
+	bool readCodeWord(uint16 offset, uint16 &value) const;
+	bool writeCodeWord(uint16 offset, uint16 value);
+	bool readCodeRect(uint16 offset, Common::Rect &rect) const;
+	bool memoryReference(uint16 offset, DosMemoryReference &ref) const;
+	uint16 codeSize() const { return uint16(_code.size()); }
+	Common::Span<const byte> codeSpan(uint16 offset, uint16 size) const;
+	Common::Span<byte> mutableCodeSpan(uint16 offset, uint16 size);
+	bool extractFirstStatusOverlayLine(uint16 offset, Common::String &text);
+
+	friend class CodePointer;
+
+	Resources *resources() const { return _resources; }
+	void rememberAnimation(Animation *anim) { _animations.push_back(anim); }
+
+private:
+	char _name[100];
+	template<class T>
+	T *readArgument(BytecodeCursor &code);
+	Value *getArgument(BytecodeCursor &code);
+
+	Common::Span<byte> _code;
+	uint16 _mode;
+	uint16 _runEntry; // entry offset of current run(); DOS wait handlers use
+					  // the per-opcode g_block_start_di/es snapshot instead.
+
+public:
+	uint16 runEntry() const { return _runEntry; }
+
+private:
+	Status run(uint16 offset);
+	Status run(uint16 offset, int ifDepth);
+
+	Common::List<Animation *> _animations;
+
+	Engine *_engine;
+	Resources *_resources;
+	Graphics *_graphics;
+};
+
+} // End of namespace Interspective
+
+#endif // INTERSPECTIVE_INTER_H
