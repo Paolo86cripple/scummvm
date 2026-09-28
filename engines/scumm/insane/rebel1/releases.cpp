@@ -46,11 +46,33 @@ static const Rebel1Release kReleases[] = {
 		0x7fff, false, { 0, 0, 0 }, &kRetailWalker
 	},
 	{
+		// v0.67: the original at 0x28ac plays the logo once, then loops the
+		// preview. Neither the menu movie nor any chapter assets are supplied.
+		"Demo v0.67", "REBEL.EXE", "OPEN/O1LOGO.ANM", nullptr, "OPEN/O1OPEN.ANM", nullptr, false, false,
+		{ 0 }, nullptr,
+		0, false, { 0, 0, 0 }, &kRetailWalker
+	},
+	{
+		// CD-ROM Demo v1.5: the original dispatcher at 0x1478d redirects
+		// chapter 1 to 2, chapter 3 to 10, and returns to the menu after 10.
+		"Demo v1.5", "ASSAULT.EXE", "OPEN/O1LOGO.ANM", "OPEN/O1DEMO.ANM", "OPEN/O1OPEN.ANM", nullptr, false, true,
+		{ 2, 10 }, nullptr,
+		0x7fff, false, { 0, 0, 0 }, &kRetailWalker
+	},
+	{
 		// CD-ROM Demo v1.51: the original dispatcher skips chapters 3-9 and
 		// 11-15, their transitions, and the retail ending.
 		"Demo v1.51", "ASSAULT.EXE", "OPEN/O1LOGO.ANM", nullptr, "OPEN/O1OPEN.ANM", nullptr, false, true,
 		{ 1, 2, 10 }, nullptr,
 		0x7fff, false, { 0, 0, 0 }, &kRetailWalker
+	},
+	{
+		// PC Media 1 preview: the dispatcher at 0x1496e redirects every
+		// chapter and transition to the intro/menu at 0x151f2. No chapter
+		// assets are supplied; the demo notice precedes the preview movie.
+		"Demo v1.7", "ASSAULT.EXE", "OPEN/O1LOGO.ANM", "OPEN/O1DEMO.ANM", "OPEN/O1OPEN.ANM", nullptr, false, false,
+		{ 0 }, nullptr,
+		0, false, { 0, 0, 0 }, &kRetailWalker
 	},
 	{
 		// The dispatcher at 0x3466 starts at chapter 8, skips 9, and returns
@@ -59,6 +81,13 @@ static const Rebel1Release kReleases[] = {
 		"Demo 1994-04-13", "REBEL.EXE", "OPEN/O1LOGO.ANM", "OPEN/O1DEMO.ANM", "OPEN/O1OPEN.ANM", nullptr, false, false,
 		{ 8, 10 }, kDemo940413RestoredLevels,
 		1 << (6 - 1), true, { 0x289dc, 0x1a, 0x222 }, &kDemo940413Walker
+	},
+	{
+		// Macintosh v1.0: CODE 3 at 0x38c uses the same chapter order as
+		// v1.02c below. The supplied chapter assets and tuning also match.
+		"Demo v1.0", nullptr, "OPEN/O1LOGO.ANM", nullptr, "OPEN/O1OPEN.ANM", nullptr, false, false,
+		{ 6, 9 }, nullptr,
+		0x7fff, false, { 0, 0, 0 }, &kRetailWalker
 	},
 	{
 		// Macintosh v1.02c: CODE 3's dispatcher redirects chapters 1-5 to 6,
