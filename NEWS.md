@@ -48,6 +48,7 @@ For a more comprehensive changelog of the latest experimental code, see:
    - Added support for other Wintermute engine games, over 140 titles.
    - Added support for Der Schatz im Silbersee (Treasure of the Silver Lake).
    - Added support for The Fool's Errand.
+   - Added support for Harvester.
 
  General:
    - Optimised mixing and rate converters, for better performance.
@@ -55,6 +56,9 @@ For a more comprehensive changelog of the latest experimental code, see:
    - Fixed bug with inability to specify game overrides for MIDI and MT-32
      devices.
    - Switched Nuked-OPL3 AdLib emulator to Nuked-OPL3-fast fork.
+   - Added support for "obfuscated" InstallShield files. This mainly affected
+     certain Nancy Drew games, that can now be run without having to run the
+     Windows installer first.
 
  Asylum:
    - Fixed missing or incorrect walking sounds in some scenes.
