@@ -1089,6 +1089,7 @@ const PlainGameDescriptor GAME_NAMES[] = {
 	{ "cougarisland", "The Secret of Cougar Island" },
 	{ "cougarsquestforfreedom", "Cougar's Quest for Freedom" },
 	{ "counterfeit", "Counterfeit" },
+	{ "countofmontecristo", "The Count of Monte Cristo" },
 	{ "coupdecup", "Coup de Cup" },
 	{ "coyote1", "Coyote Episode I: The Mexican" },
 	{ "crackwell1", "The Crackwell Legacy" },
@@ -1224,6 +1225,7 @@ const PlainGameDescriptor GAME_NAMES[] = {
 	{ "disparu", "Disparu: A Dream Cat Mystery" },
 	{ "disquiet", "Disquiet" },
 	{ "distancenoobject", "Distance no object" },
+	{ "divinecomedy", "The Divine Comedy" },
 	{ "djdeceased", "D. Jones: Deceased" },
 	{ "dlistdiva", "D-List Diva" },
 	{ "dobutsu", "Dobutsu no Costco" },
@@ -1537,6 +1539,7 @@ const PlainGameDescriptor GAME_NAMES[] = {
 	{ "gaygreg", "Gay Greg is Grounded" },
 	{ "gemcollector", "Gem Collector" },
 	{ "genbu", "Genbu's Favour" },
+	{ "genesisofthegods", "Genesis of the Gods" },
 	{ "geometricshapes1circleboy", "Geometric Shapes 1: Circleboy" },
 	{ "gesundheit", "Gesundheit!" },
 	{ "getawayfrompluto", "Get away from PLUTO" },
@@ -3242,6 +3245,7 @@ const PlainGameDescriptor GAME_NAMES[] = {
 	{ "tactician", "Tactician: Civil War" },
 	{ "takes2tangle", "It Takes Two to Tangle" },
 	{ "taleofalegacy", "A Tale of a Legacy / En busca de un legado" },
+	{ "taleoftwocities", "A Tale of Two Cities" },
 	{ "talesfromtheroad", "Tales From the Road" },
 	{ "talesofchickenry", "Tales of Chickenry" },
 	{ "talesofinfimum", "Tales of INFIMUM" },
@@ -5965,6 +5969,7 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	DEMO_ENTRY_EN("endacopia", "Endacopia Demo.ags", "4fdc141cb9b076fba20fed68ec8ae186", 72678066),  // Steam Demo
 	DEMO_ENTRY("englishhaunting", "An English Haunting DEMO.exe", "5528c91a1e289389553f97b50ef67bcd", 245477194),  // Eng-Esp
 	DEMO_ENTRY_EN("enterthestory", "Enter The Story.exe", "0514661a4ba6772cf0db0cf839fc7003", 19589742),
+	DEMO_ENTRY_EN("enterthestory", "Enter The Story.exe", "0514661a4ba6772cf0db0cf839fc7003", 19233065),
 	DEMO_ENTRY_EN("ericmegalith", "eric.exe", "06a03fe35791b0578068ab1873455463", 83259322),
 	DEMO_ENTRY_EN("everlight", "Everlight.exe", "0500aacb6c176d47ac0f8158f055db83", 17597037),
 	DEMO_ENTRY_EN("everythingm", "TinyMika.exe", "66adc3431f0626a2c6e80f31a21f0981", 3529496),
@@ -7222,6 +7227,7 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	GAME_ENTRY_EN("cougarsquestforfreedom", "chra.exe", "0500aacb6c176d47ac0f8158f055db83", 12590916),  //v1.0
 	GAME_ENTRY_EN("cougarsquestforfreedom", "cqff.exe", "0500aacb6c176d47ac0f8158f055db83", 12590916),
 	GAME_ENTRY_EN("counterfeit", "counterfeit.exe", "ef1645ccd3d16691ec3908c91f340c34", 2232297),
+	GAME_ENTRY_EN("countofmontecristo", "The Count of Monte Cristo.exe", "0514661a4ba6772cf0db0cf839fc7003", 123573181),
 	GAME_ENTRY_EN("coupdecup", "newgame.exe", "949f7440e3692b7366c2029979dee9a0", 9635719),
 	GAME_ENTRY_EN("coyote1", "coyote.exe", "a524cbb1c51589903c4043b98917f1d9", 33124533),
 	GAME_ENTRY_EN("crackwell1", "Crackwell.exe", "06a03fe35791b0578068ab1873455463", 2990976),
@@ -7389,6 +7395,7 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	GAME_ENTRY_EN("disquiet", "Disquiet.exe", "f90f5f612ed5879addfdd8634d093333", 9624101),
 	GAME_ENTRY_EN("distancenoobject", "Distance no object.exe", "5cca0f8af961d2bc1c6e475437d3b23b", 98011325),  // Windows
 	GAME_ENTRY_EN("distancenoobject", "Distance no object.ags", "60b1978b591c4ffcb63e81e69d425343", 94977705),  // Linux
+	GAME_ENTRY_EN("divinecomedy", "The Divine Comedy.exe", "0514661a4ba6772cf0db0cf839fc7003", 205361603),
 	GAME_ENTRY_EN("djdeceased", "RON.exe", "0710e2ec71042617f565c01824f0cf3c", 1175250),
 	GAME_ENTRY_EN("dlistdiva", "D-List Diva.exe", "aed48ef1dd9615ab3df8504b277e8d45", 8330523),
 	GAME_ENTRY_EN("dlistdiva", "D-List Diva.exe", "aed48ef1dd9615ab3df8504b277e8d45", 8338409),
@@ -7756,6 +7763,7 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	GAME_ENTRY_EN("gaygreg", "ggig.exe", "3128b9f90e2f954ba704414ae854d10b", 3876381),
 	GAME_ENTRY_EN("gemcollector", "gemgame.exe", "789facada85e12c3ac19d5a6d4379a49", 75235335),
 	GAME_ENTRY_EN("genbu", "Genbu.exe", "64fcaf7da0b257ea831f89c54be0ad72", 1892238),
+	GAME_ENTRY_EN("genesisofthegods", "Genesis of The Gods.exe", "0514661a4ba6772cf0db0cf839fc7003", 185605502),
 	GAME_ENTRY_EN("geometricshapes1circleboy", "Circle1.exe", "06a03fe35791b0578068ab1873455463", 2389129),
 	GAME_ENTRY_EN("getawayfrompluto", "Get away.exe", "f3a13b2d6c2e0fe04c6f466062920e23", 755529),
 	GAME_ENTRY_EN("getfood", "getfood.exe", "495d45fb8adfd49690ae3b97921feec6", 10600153),
@@ -8308,6 +8316,7 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	GAME_ENTRY_EN("leopoldkettle", "The Adventures of Leopold Kettle.exe", "92ddda7d8b443e02c39b2e28d24073b4", 10316570),
 	GAME_ENTRY_LANG("lesangimmortels", "le sang des immortels.ags", "4d42dc8a737a6b4f83eda7b3d7bb6955", 35135485, Common::FR_FRA),
 	GAME_ENTRY_EN("lesmiserables", "Les Miserables.exe", "0514661a4ba6772cf0db0cf839fc7003", 127582664),
+	GAME_ENTRY_EN("lesmiserables", "Les Miserables.exe", "0514661a4ba6772cf0db0cf839fc7003", 128475253),
 	GAME_ENTRY_EN("lessthanthree", "Less Than Three.exe", "3e62eafed0fc365821b7afdbf1aec3d8", 6505133),
 	GAME_ENTRY_EN("lessthanthree", "Less Than Three.exe", "3e62eafed0fc365821b7afdbf1aec3d8", 6506759),
 	GAME_ENTRY_EN("letscook", "Let's Cook School of cooking.exe", "338fa79960d40689063af31c671b8729", 96730408),
@@ -9874,6 +9883,7 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	GAME_ENTRY_EN("takes2tangle", "IT4.ags", "763959969411fd0d991d0938b28c383e", 298236792),  // 1.0.0.12
 	GAME_ENTRY("taleofalegacy", "A Tale of a Legacy.exe", "387ff720e746ae46e93f463fd58d77a4", 347029015),  // Eng-Esp
 	GAME_ENTRY_LANG("taleofalegacy", "En busca de un legado.exe", "387ff720e746ae46e93f463fd58d77a4", 346758500, Common::ES_ESP),
+	GAME_ENTRY_EN("taleoftwocities", "A Tale of Two Cities.exe", "9c912b25b6768af44931d7cb40d1dac4", 105603393)
 	GAME_ENTRY_EN("talesfromtheroad", "TFTR.exe", "7ddb9e776648faed5a51170d087074e9", 7004383),  // Windows
 	GAME_ENTRY_EN("talesfromtheroad", "TFTR.ags", "33cb992abc983bbdb22fe0ae2c8eb8b9", 4517071),  // Linux
 	GAME_ENTRY_EN("talesofchickenry", "Chickenry.exe", "aabdafae8b57dfc48fdf158a72326c23", 50338519),
