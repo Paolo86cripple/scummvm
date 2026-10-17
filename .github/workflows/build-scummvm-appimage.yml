@@ -236,7 +236,9 @@ jobs:
             ScummVM-*-compat.txt
 
   # ---------------------------------------------------------------------
-  # 3) Pacchetto Arch/CachyOS (.pkg.tar.zst), mirato AVX2
+  # 3) Pacchetti Arch/CachyOS (.pkg.tar.zst): avx2 (Arch normale) e znver3
+  #    (CachyOS per CPU AMD Zen 3). La variante è scelta dalla variabile
+  #    SCUMMVM_VARIANT letta da packaging/arch/PKGBUILD.
   # ---------------------------------------------------------------------
   build-arch-pkg:
     needs: check-updates
@@ -244,6 +246,14 @@ jobs:
     runs-on: ubuntu-22.04
     container:
       image: archlinux:base-devel
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: avx2
+            asset: scummvm-x86_64.pkg.tar.zst
+          - variant: znver3
+            asset: scummvm-znver3-x86_64.pkg.tar.zst
     steps:
       - name: Checkout repo (per il PKGBUILD)
         uses: actions/checkout@v4
@@ -269,18 +279,19 @@ jobs:
           chown -R builder:builder /build
 
       - name: Build pacchetto (makepkg)
-        run: su builder -c "cd /build && makepkg -s --noconfirm --skippgpcheck"
+        run: su builder -c "cd /build && SCUMMVM_VARIANT=${{ matrix.variant }} makepkg -s --noconfirm --skippgpcheck"
 
       - name: Rinomina e prepara artifact
         run: |
           PKG=$(find /build -maxdepth 1 -name "*.pkg.tar.zst" | head -n1)
-          cp "$PKG" "$GITHUB_WORKSPACE/scummvm-x86_64.pkg.tar.zst"
+          test -n "$PKG"
+          cp "$PKG" "$GITHUB_WORKSPACE/${{ matrix.asset }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: arch-package
-          path: scummvm-*.pkg.tar.zst
+          name: arch-package-${{ matrix.variant }}
+          path: ${{ matrix.asset }}
 
   # ---------------------------------------------------------------------
   # 4) Pubblica tutto in un'unica release "continuous"
@@ -326,7 +337,10 @@ jobs:
             echo
             echo "I valori sopra sono rigenerati dal payload finale degli AppImage a ogni build: non sono mantenuti manualmente."
             echo
-            echo "Pacchetto Arch/CachyOS: ottimizzato AVX2."
+            echo "Pacchetti Arch/CachyOS:"
+            echo "- \`scummvm-x86_64.pkg.tar.zst\`: Arch normale, ottimizzato AVX2 (pacchetto \`scummvm-git\`)."
+            echo "- \`scummvm-znver3-x86_64.pkg.tar.zst\`: CachyOS, compilato con \`-march=znver3\` per CPU AMD Zen 3 o successive (pacchetto \`scummvm-git-znver3\`)."
+            echo "I due pacchetti sono in conflitto tra loro: installarne uno solo."
             echo
             echo "Commit sorgente: ${{ needs.check-updates.outputs.upstream_sha }}"
           } > release-body.md
