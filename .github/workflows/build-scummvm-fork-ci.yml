@@ -119,13 +119,13 @@ jobs:
             -i "$ICON_FILE" \
             --plugin gtk \
             --output appimage
-          mv ScummVM*.AppImage "ScummVM-${{ matrix.variant }}.AppImage"
+          mv ScummVM*.AppImage "scummvm-${{ matrix.variant }}.AppImage"
 
       - name: Verifica e aggiorna compatibilità runtime
         shell: bash
         run: |
           set -euo pipefail
-          APPIMAGE=$(find "$GITHUB_WORKSPACE" -maxdepth 1 -type f -name "ScummVM-${{ matrix.variant }}.AppImage" -print -quit)
+          APPIMAGE=$(find "$GITHUB_WORKSPACE" -maxdepth 1 -type f -name "scummvm-${{ matrix.variant }}.AppImage" -print -quit)
           test -n "$APPIMAGE"
 
           . /etc/os-release
@@ -166,7 +166,7 @@ jobs:
             exit 1
           fi
 
-          REPORT="$GITHUB_WORKSPACE/ScummVM-${{ matrix.variant }}-compat.txt"
+          REPORT="$GITHUB_WORKSPACE/scummvm-${{ matrix.variant }}-compat.txt"
           {
             echo "ScummVM AppImage compatibility report"
             echo "Generated automatically by GitHub Actions"
@@ -195,8 +195,8 @@ jobs:
         with:
           name: appimage-${{ matrix.variant }}
           path: |
-            ScummVM-*.AppImage
-            ScummVM-*-compat.txt
+            scummvm-*.AppImage
+            scummvm-*-compat.txt
           retention-days: 7
 
   # ---------------------------------------------------------------------
@@ -213,9 +213,9 @@ jobs:
       matrix:
         include:
           - variant: avx2
-            asset: scummvm-x86_64.pkg.tar.zst
+            asset: scummvm-avx2.pkg.tar.zst
           - variant: znver3
-            asset: scummvm-znver3-x86_64.pkg.tar.zst
+            asset: scummvm-znver3.pkg.tar.zst
     steps:
       - name: Installa dipendenze (git deve esserci PRIMA del checkout)
         run: |
@@ -289,8 +289,8 @@ jobs:
           make_latest: true
           fail_on_unmatched_files: true
           files: |
-            artifacts/**/ScummVM-generic.AppImage
-            artifacts/**/ScummVM-avx2.AppImage
-            artifacts/**/ScummVM-*-compat.txt
-            artifacts/**/scummvm-x86_64.pkg.tar.zst
-            artifacts/**/scummvm-znver3-x86_64.pkg.tar.zst
+            artifacts/**/scummvm-generic.AppImage
+            artifacts/**/scummvm-avx2.AppImage
+            artifacts/**/scummvm-*-compat.txt
+            artifacts/**/scummvm-avx2.pkg.tar.zst
+            artifacts/**/scummvm-znver3.pkg.tar.zst

@@ -156,13 +156,13 @@ jobs:
             -i "$ICON_FILE" \
             --plugin gtk \
             --output appimage
-          mv ScummVM*.AppImage "ScummVM-${{ matrix.variant }}.AppImage"
+          mv ScummVM*.AppImage "scummvm-${{ matrix.variant }}.AppImage"
 
       - name: Verifica e aggiorna compatibilità runtime
         shell: bash
         run: |
           set -euo pipefail
-          APPIMAGE=$(find "$GITHUB_WORKSPACE" -maxdepth 1 -type f -name "ScummVM-${{ matrix.variant }}.AppImage" -print -quit)
+          APPIMAGE=$(find "$GITHUB_WORKSPACE" -maxdepth 1 -type f -name "scummvm-${{ matrix.variant }}.AppImage" -print -quit)
           test -n "$APPIMAGE"
 
           . /etc/os-release
@@ -203,7 +203,7 @@ jobs:
             exit 1
           fi
 
-          REPORT="$GITHUB_WORKSPACE/ScummVM-${{ matrix.variant }}-compat.txt"
+          REPORT="$GITHUB_WORKSPACE/scummvm-${{ matrix.variant }}-compat.txt"
           {
             echo "ScummVM AppImage compatibility report"
             echo "Generated automatically by GitHub Actions"
@@ -232,8 +232,8 @@ jobs:
         with:
           name: appimage-${{ matrix.variant }}
           path: |
-            ScummVM-*.AppImage
-            ScummVM-*-compat.txt
+            scummvm-*.AppImage
+            scummvm-*-compat.txt
 
   # ---------------------------------------------------------------------
   # 3) Pacchetti Arch/CachyOS (.pkg.tar.zst): avx2 (Arch normale) e znver3
@@ -251,9 +251,9 @@ jobs:
       matrix:
         include:
           - variant: avx2
-            asset: scummvm-x86_64.pkg.tar.zst
+            asset: scummvm-avx2.pkg.tar.zst
           - variant: znver3
-            asset: scummvm-znver3-x86_64.pkg.tar.zst
+            asset: scummvm-znver3.pkg.tar.zst
     steps:
       - name: Checkout repo (per il PKGBUILD)
         uses: actions/checkout@v4
@@ -311,7 +311,7 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          REPORTS=(dist/ScummVM-*-compat.txt)
+          REPORTS=(dist/scummvm-*-compat.txt)
           if [ ${#REPORTS[@]} -eq 0 ]; then
             echo "::error::Nessun report di compatibilità trovato"
             exit 1
@@ -338,8 +338,8 @@ jobs:
             echo "I valori sopra sono rigenerati dal payload finale degli AppImage a ogni build: non sono mantenuti manualmente."
             echo
             echo "Pacchetti Arch/CachyOS:"
-            echo "- \`scummvm-x86_64.pkg.tar.zst\`: Arch normale, ottimizzato AVX2 (pacchetto \`scummvm-git\`)."
-            echo "- \`scummvm-znver3-x86_64.pkg.tar.zst\`: CachyOS, compilato con \`-march=znver3\` per CPU AMD Zen 3 o successive (pacchetto \`scummvm-git-znver3\`)."
+            echo "- \`scummvm-avx2.pkg.tar.zst\`: Arch normale, ottimizzato AVX2 (pacchetto \`scummvm-git\`)."
+            echo "- \`scummvm-znver3.pkg.tar.zst\`: CachyOS, compilato con \`-march=znver3\` per CPU AMD Zen 3 o successive (pacchetto \`scummvm-git-znver3\`)."
             echo "I due pacchetti sono in conflitto tra loro: installarne uno solo."
             echo
             echo "Commit sorgente: ${{ needs.check-updates.outputs.upstream_sha }}"
