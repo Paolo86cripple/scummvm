@@ -27,7 +27,7 @@
 #include "common/rect.h"
 #include "common/str.h"
 #include "harvester/cheats.h"
-#include "harvester/dialogue.h"
+#include "harvester/dialogue/dialogue.h"
 #include "harvester/inventory.h"
 #include "harvester/menu/menu.h"
 #include "harvester/scene/scene.h"
@@ -71,6 +71,7 @@ public:
 	bool requestDebugRoomChange(const Common::String &roomName);
 
 	Common::Error runDemoEnding();
+	Common::Error runHelpScreen(const byte *palette, float paletteBrightness);
 	Common::Error runRoomMenu(const IndexedBitmap &backdrop, const byte *palette,
 		float paletteBrightness, bool canSaveGame);
 	Common::Error runRoomNpcDialogue(const IndexedBitmap &backdrop, const byte *palette,
