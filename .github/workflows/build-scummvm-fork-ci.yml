@@ -277,6 +277,27 @@ jobs:
         with:
           path: artifacts
 
+      # GitHub confronta i nomi degli asset senza distinguere maiuscole e
+      # minuscole: i vecchi ScummVM-*.AppImage / ScummVM-*-compat.txt
+      # bloccano l'upload dei nuovi scummvm-*. Si eliminano qui, per nome
+      # esatto, i soli asset con i nomi usati prima della rinomina; se non
+      # ci sono (o la release non esiste ancora) lo step non fa nulla.
+      - name: Elimina gli asset con i vecchi nomi dalla release "nightly"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for asset in \
+            ScummVM-generic.AppImage ScummVM-avx2.AppImage \
+            ScummVM-generic-compat.txt ScummVM-avx2-compat.txt \
+            scummvm-x86_64.pkg.tar.zst scummvm-znver3-x86_64.pkg.tar.zst
+          do
+            if gh release delete-asset nightly "$asset" --repo "$GITHUB_REPOSITORY" --yes 2>/dev/null; then
+              echo "Eliminato asset obsoleto: $asset"
+            else
+              echo "Asset non presente, salto: $asset"
+            fi
+          done
+
       - name: Pubblica/aggiorna release "nightly"
         uses: softprops/action-gh-release@v2
         with:
