@@ -8,6 +8,14 @@ on:
 permissions:
   contents: write
 
+# Un solo run alla volta per ref, così due pubblicazioni non si sovrappongono
+# sulla stessa release. cancel-in-progress è false di proposito: annullare un
+# run a metà della pubblicazione lascerebbe la release con asset parziali.
+# I run in attesa vengono sostituiti dal più recente.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   # ---------------------------------------------------------------------
   # AppImage: due varianti, generic (SSE4.2) e avx2 (AVX2+FMA)
