@@ -283,7 +283,6 @@ void OSystem_Wii::initSize(uint width, uint height,
 		free(_gamePixelsTexture);
 
 		if (_pfGame.bytesPerPixel > 1) {
-			// TODO: Support other texture formats?
 			tex_format = GFX_TF_RGB565;
 			_pfGameTexture = _pfRGB565;
 		} else {
@@ -347,7 +346,11 @@ void OSystem_Wii::updateMousePalette() {
 			// In this case, clear the palette
 			memset(_texMouse.palette, 0, 256 * 2);
 		} else {
-			memcpy(_texMouse.palette, _texGame.palette, 256 * 2);
+			u8 r, g, b;
+			for (uint i = 0; i < 256; ++i) {
+				_pfRGB565.colorToRGB(_texGame.palette[i], r, g, b);
+				_texMouse.palette[i] = _pfRGB3444.ARGBToColor(0xff, r, g, b);
+			}
 		}
 
 		_cursorPaletteDirty = true;
@@ -485,8 +488,8 @@ void OSystem_Wii::updateScreen() {
 					                    _gameWidth * _pfGame.bytesPerPixel,
 					                    _gameWidth, _gameHeight, _pfGameTexture, _pfGame);
 				}
-
 			}
+            
 			gfx_tex_convert(&_texGame, _gamePixelsTexture);
 			_gameDirty = false;
 		}
@@ -677,7 +680,6 @@ void OSystem_Wii::setMouseCursor(const void *buf, uint w, uint h, int hotspotX,
 
 	gfx_tex_format_t tex_format = GFX_TF_PALETTE_RGB5A3;
 	uint tw, th;
-	uint32 oldKeycolor = _mouseKeyColor;
 
 	if (!format)
 		_pfCursor = Graphics::PixelFormat::createFormatCLUT8();
@@ -737,7 +739,6 @@ void OSystem_Wii::setMouseCursor(const void *buf, uint w, uint h, int hotspotX,
 				else
 					d++;
 			}
-
 			d += tw - w;
 		}
 	} else {
@@ -760,6 +761,6 @@ void OSystem_Wii::setMouseCursor(const void *buf, uint w, uint h, int hotspotX,
 	_cursorScaleX = fracToDouble(scaleX);
 	_cursorScaleY = fracToDouble(scaleY);
 
-	if (_pfCursor.bytesPerPixel == 1 && oldKeycolor != _mouseKeyColor)
+	if (_pfCursor.bytesPerPixel == 1)
 		updateMousePalette();
 }

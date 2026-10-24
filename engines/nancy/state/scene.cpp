@@ -470,6 +470,14 @@ void Scene::setPlayerTime(Time time, byte relative) {
 	}
 }
 
+void Scene::setPlayerClock(Time time) {
+	_timers.playerTime = time;
+
+	if (_ndui) {
+		_ndui->updatePlayerTime();
+	}
+}
+
 uint Scene::getPlayerTimeMinutes() const {
 	auto *bootSummary = GetEngineData(BSUM);
 	assert(bootSummary);
@@ -575,12 +583,12 @@ void Scene::removeItemFromInventory(int16 id, bool pickUp) {
 	if (_flags.items[id] == g_nancy->_true || getHeldItem() == id) {
 		_flags.items[id] = g_nancy->_false;
 
+		// Unlike adding an item, this is silent: the inventory UI plays the
+		// click itself when the player takes an item out
 		if (pickUp) {
 			setHeldItem(id);
-			g_nancy->_sound->playSound("BUOK");
 		} else if (getHeldItem() == id) {
 			setHeldItem(-1);
-			g_nancy->_sound->playSound("BUOK");
 		}
 
 		if (_ndui) {
@@ -851,13 +859,14 @@ int32 Scene::getCharacterUIResource(uint characterIndex, uint index) {
 
 void Scene::installInventorySoundOverride(byte command, const SoundDescription &sound,
 		const Common::String &caption, uint16 itemID, byte characterIndex) {
-	InventorySoundOverride newOverride;
+	InventorySoundOverrideData::Override newOverride;
 
 	// An override can be installed on a character who isn't being played, so it
 	// waits in their own set until they are
 	uint targetCharacter = characterIndex < kMaxPlayerCharacters ?
 		characterIndex : MIN<uint>(g_nancy->getPlayerCharacter(), kMaxPlayerCharacters - 1);
-	Common::HashMap<uint16, InventorySoundOverride> &overrides = _inventorySoundOverrides[targetCharacter];
+	auto *overrideData = (InventorySoundOverrideData *)getPuzzleData(InventorySoundOverrideData::getTag());
+	Common::HashMap<uint16, InventorySoundOverrideData::Override> &overrides = overrideData->overrides[targetCharacter];
 
 	switch (command) {
 	case kInvSoundOverrideCommandNoSound :
@@ -913,8 +922,9 @@ static Common::String getSoundSubtitle(const Common::String &soundName, const Co
 	return fallback;
 }
 
-Common::HashMap<uint16, Scene::InventorySoundOverride> &Scene::activeSoundOverrides() {
-	return _inventorySoundOverrides[MIN<uint>(g_nancy->getPlayerCharacter(), kMaxPlayerCharacters - 1)];
+Common::HashMap<uint16, InventorySoundOverrideData::Override> &Scene::activeSoundOverrides() {
+	auto *overrideData = (InventorySoundOverrideData *)getPuzzleData(InventorySoundOverrideData::getTag());
+	return overrideData->overrides[MIN<uint>(g_nancy->getPlayerCharacter(), kMaxPlayerCharacters - 1)];
 }
 
 // Nancy15 moved the "can't" responses out of the inventory data and into the
@@ -962,7 +972,7 @@ void Scene::playPlayerCantSound(int16 itemID) {
 	Common::String caption;
 
 	if (itemID >= 0 && activeSoundOverrides().contains(itemID)) {
-		InventorySoundOverride &override = activeSoundOverrides()[itemID];
+		InventorySoundOverrideData::Override &override = activeSoundOverrides()[itemID];
 
 		if (override.isDefault) {
 			// Back to the character's generic response
@@ -1042,7 +1052,7 @@ void Scene::playItemCantSound(int16 itemID, bool notHoldingSound) {
 	} else if ((uint)itemID < _flags.items.size()) {
 		if (activeSoundOverrides().contains(itemID)) {
 			// We have an override installed
-			InventorySoundOverride &override = activeSoundOverrides()[itemID];
+			InventorySoundOverrideData::Override &override = activeSoundOverrides()[itemID];
 			if (!override.isDefault) {
 				// Not set to the default sound, play the override
 				g_nancy->_sound->loadSound(override.sound);
@@ -1426,7 +1436,31 @@ bool Scene::changePlayerCharacter(uint characterIndex) {
 	loadCharacterInventory(characterIndex);
 	loadCharacterResources(characterIndex);
 
+	// The inventory panel was filled in before the swap, with the items of the
+	// outgoing character
+	auto *playerChar = (PlayerCharacterData *)getPuzzleData(PlayerCharacterData::getTag());
+	if (_ndui && playerChar) {
+		const Common::Array<byte> &previousItems = playerChar->getInventory(previousCharacter).items;
+		for (uint i = 0; i < previousItems.size(); ++i) {
+			if (previousItems[i] == g_nancy->_true) {
+				_ndui->showInventoryItem(i, false);
+			}
+		}
+
+		showInventoryButtons();
+	}
+
 	return true;
+}
+
+void Scene::showInventoryButtons() {
+	// The most recent items come first
+	const Common::Array<int16> &order = _inventoryBox.getOrder();
+	for (int i = (int)order.size() - 1; i >= 0; --i) {
+		if (order[i] != -1 && _flags.items[order[i]] == g_nancy->_true) {
+			_ndui->showInventoryItem(order[i], true);
+		}
+	}
 }
 
 void Scene::inheritBrotherProgress(uint characterIndex) {
@@ -2213,13 +2247,6 @@ void Scene::load(bool fromSaveFile) {
 		}
 	}
 
-	for (uint i = 0; i < kMaxPlayerCharacters; ++i) {
-		for (auto &override : _inventorySoundOverrides[i]) {
-			g_nancy->_sound->stopSound(override._value.sound);
-		}
-		_inventorySoundOverrides[i].clear();
-	}
-
 	_timers.sceneTime = 0;
 	g_nancy->_sound->clearListenerPositionOverride();
 	g_nancy->_sound->recalculateSoundEffects();
@@ -2298,6 +2325,9 @@ void Scene::loadScriptedScene(bool fromSaveFile) {
 
 	const bool hasBackground = !summary->getBackgroundName().empty();
 	_viewport.setVisible(hasBackground);
+
+	// Nancy21's camera can zoom into the main stream
+	_viewport.setViewTransform(_streams.getViewTransform(SceneStreamManager::getMainStreamName()));
 
 	if (hasBackground) {
 		_viewport.loadVideo(_sceneState.summary.videoFile, _sceneState.currentScene.frameID, 0, kPanNone, kLargeVideoFormat);
@@ -2756,7 +2786,14 @@ void Scene::handleInput() {
 			_hasSkippedMovie = _activeMovie->skip();
 #ifdef ENABLE_NANCY_V4
 		} else if (_scriptScene) {
-			_scriptScene->skipMovies();
+			// The movies of any stream go first, along with what is said in them.
+			// Without one, Esc ends what the characters are saying.
+			bool hasSkipped = _scriptScene->skipMovies();
+			hasSkipped |= _streams.skipMovies();
+			if (!hasSkipped) {
+				_scriptScene->skipSpeech();
+				_streams.skipSpeech();
+			}
 #endif
 		} else if (g_nancy->getGameType() <= kGameTypeNancy15) {
 			// Nancy16 has no main menu state
@@ -3104,8 +3141,8 @@ void Scene::initUI() {
 #endif
 		// The panels are there before the first frame of the scene, which can
 		// hide some of them right away
-		_streams.begin("UIStream", pcui->uiName.toString(), 0, StreamFlags());
-		_streams.loadNow("UIStream");
+		_streams.begin(SceneStreamManager::getUIStreamName(), pcui->uiName.toString(), 0, StreamFlags());
+		_streams.loadNow(SceneStreamManager::getUIStreamName());
 		return;
 	}
 
@@ -3119,13 +3156,7 @@ void Scene::initUI() {
 		_ndui->createPhoneBook();
 	}
 
-	// The most recent items come first
-	const Common::Array<int16> &order = _inventoryBox.getOrder();
-	for (int i = (int)order.size() - 1; i >= 0; --i) {
-		if (order[i] != -1 && _flags.items[order[i]] == g_nancy->_true) {
-			_ndui->showInventoryItem(order[i], true);
-		}
-	}
+	showInventoryButtons();
 
 	// Nancy17 has no prep records; the script that runs when a character takes
 	// over starts the streams that fill the journal and the task list
@@ -3174,13 +3205,7 @@ void Scene::onScriptedUILoaded() {
 	_ndui->createItemButtons();
 	Script::showPlayerEntries();
 
-	// The most recent items come first
-	const Common::Array<int16> &order = _inventoryBox.getOrder();
-	for (int i = (int)order.size() - 1; i >= 0; --i) {
-		if (order[i] != -1 && _flags.items[order[i]] == g_nancy->_true) {
-			_ndui->showInventoryItem(order[i], true);
-		}
-	}
+	showInventoryButtons();
 
 	_ndui->restoreState(((UIStateData *)getPuzzleData(UIStateData::getTag()))->changes);
 	_ndui->applyMatteColor();
