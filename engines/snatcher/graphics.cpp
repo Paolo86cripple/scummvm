@@ -27,6 +27,7 @@
 #include "snatcher/text.h"
 #include "snatcher/transition.h"
 #include "common/endian.h"
+#include "common/ptr.h"
 #include "common/stream.h"
 #include "common/system.h"
 #include "graphics/pixelformat.h"
@@ -34,7 +35,7 @@
 namespace Snatcher {
 
 GraphicsEngine::GraphicsEngine(const Graphics::PixelFormat *pxf, OSystem *system, Common::Platform platform, const VMInfo &vmstate, SoundEngine *snd, bool enableAspectRatioCorrection) :
-	_system(system), _state(vmstate), _animator(nullptr), _text(nullptr), _dataMode(0), _screen(nullptr), _bpp(pxf ? pxf->bytesPerPixel : 1), _verbAreaType(0) {
+	_system(system), _state(vmstate), _animator(nullptr), _text(nullptr), _dataMode(0), _screen(nullptr), _bpp(pxf ? pxf->bytesPerPixel : 1), _verbAreaType(0), _animSaveLoadData(nullptr), _animSaveLoadDataExt() {
 	assert(system);
 	_palette = Palette::create(pxf, _system->getPaletteManager(), platform, _state);
 	assert(_palette);
@@ -273,19 +274,23 @@ uint16 GraphicsEngine::frameCount() const {
 	return _state.frameCount();
 }
 
-void GraphicsEngine::loadState(Common::SeekableReadStream *in, bool onlyTempData) {
+void GraphicsEngine::loadState(Common::SeekableReadStream *in, SaveFlags flags) {
 	if (in->readUint32BE() != MKTAG('S', 'N', 'A', 'T'))
 		error("%s(): Save file invalid or corrupt", __FUNCTION__);
 	in->read(_animSaveLoadData, 64);
 
-	if (onlyTempData)
+	if (flags & (kSaveFlagsTempData))
 		return;
 
-	//for (int i = 0; i < 13; ++i)
-	//	_state.setVar(i, in->readByte());
+	_animSaveLoadDataExt = true;
+
+	for (int i = 0; i < 13; ++i)
+		_state.setVar(i, in->readByte());
+
+	_trs->loadState(in);
 }
 
-void GraphicsEngine::saveState(Common::SeekableWriteStream *out, bool onlyTempData) {
+void GraphicsEngine::saveState(Common::SeekableWriteStream *out, SaveFlags flags) {
 	out->writeUint32BE(MKTAG('S', 'N', 'A', 'T'));
 	for (int i = 0; i < 64; ++i) {
 		uint8 v = 0;
@@ -307,11 +312,13 @@ void GraphicsEngine::saveState(Common::SeekableWriteStream *out, bool onlyTempDa
 	}
 	out->write(_animSaveLoadData, 64);
 
-	if (onlyTempData)
+	if (flags & (kSaveFlagsTempData))
 		return;
 
 	for (int i = 0; i < 13; ++i)
 		out->writeByte(_state.getVar(i));
+
+	_trs->saveState(out);
 }
 
 void GraphicsEngine::postLoadProcess() {
@@ -335,6 +342,11 @@ void GraphicsEngine::postLoadProcess() {
 			setAnimParameter(i, kAnimParaScriptComFlags, getAnimParameter(i, kAnimParaScriptComFlags) & ~1);
 		setAnimParameter(i, kAnimParaAllowFrameDrop, (v & 0x20) ? 1 : 0);
 	}
+
+	if (!(_animSaveLoadDataExt))
+		return;
+
+	_trs->postLoadProcess();
 }
 
 void GraphicsEngine::createMouseCursor() {

@@ -82,9 +82,10 @@ public:
 
 	bool init(Audio::Mixer *mixer) override;
 
-	void cdaPlay(int track) override;
+	void cdaPlay(int track, uint32 bcdTime = 0) override;
 	void cdaStop() override;
 	bool cdaIsPlaying() const override;
+	int cdaGetCurTrack() const override;
 	uint32 cdaGetTime() const override;
 
 	void fmSendCommand(int cmd, int restoreVolume) override;
@@ -137,7 +138,7 @@ private:
 		uint32 dataSize;
 	};
 	Common::Array<PCMCacheEntry> _pcmCache;
-	SmpStrPtr createSamplesStream(uint32 addr);
+	SmpStrPtr getSamplesStream(uint32 addr);
 
 	struct PCMResourceInfo {
 		uint8 prio;
@@ -1781,9 +1782,14 @@ bool SegaSoundDevice::init(Audio::Mixer *mixer) {
 	return true;
 }
 
-void SegaSoundDevice::cdaPlay(int track) {
+void SegaSoundDevice::cdaPlay(int track, uint32 bcdTime) {
 	assert(track > 0);
-	g_system->getAudioCDManager()->play(track - 1, 1, 0, 0);
+
+	uint32 frm = 0;
+	if (bcdTime != 0)
+		frm = Util::decodeBCDTimeStamp(bcdTime, Util::kBCD_MMSSFR) / (1000 / 75);
+
+	g_system->getAudioCDManager()->play(track - 1, 1, frm, 0);
 	_lastTrack = track;
 	_musicStartTime = g_system->getMillis();
 }
@@ -1797,8 +1803,14 @@ bool SegaSoundDevice::cdaIsPlaying() const {
 	return g_system->getAudioCDManager()->isPlaying();
 }
 
+int SegaSoundDevice::cdaGetCurTrack() const {
+	return cdaIsPlaying() ? _lastTrack : -1;
+}
+
 uint32 SegaSoundDevice::cdaGetTime() const {
 	uint32 relTime = cdaIsPlaying() ? g_system->getMillis() - _musicStartTime : 0;
+	if (_pauseStartTime)
+		relTime -= (g_system->getMillis() - _pauseStartTime);
 	return Util::makeBCDTimeStamp(relTime, Util::kBCD_MMSSFR);
 }
 
@@ -2039,7 +2051,7 @@ bool SegaSoundDevice::pcmLoadData() {
 		if (i == 6 || i == 8 || i == 9 || i == 10)
 			continue;
 
-		SmpStrPtr str = createSamplesStream(_pcmResidentDataInfo[i].addr + 0x10);
+		SmpStrPtr str = getSamplesStream(_pcmResidentDataInfo[i].addr + 0x10);
 		int64 sz = str->size() - 1;
 		uint8 *smp = new uint8[sz + 2]();
 		str->read(smp, sz);
@@ -2168,12 +2180,15 @@ void SegaSoundDevice::pcmDelayedStart() {
 	_pcmState &= ~4;
 }
 
-SegaSoundDevice::SmpStrPtr SegaSoundDevice::createSamplesStream(uint32 addr) {
+SegaSoundDevice::SmpStrPtr SegaSoundDevice::getSamplesStream(uint32 addr) {
 	uint32 numSamples = 0;
 
-	for (Common::Array<PCMCacheEntry>::const_iterator i = _pcmCache.begin(); i != _pcmCache.end(); ++i) {
-		if (i->addr == addr && i->resNo == _pcmResourceNumber)
-			return SmpStrPtr(new Common::MemoryReadStream(i->data.get(), i->dataSize, DisposeAfterUse::NO));
+	for (Common::Array<PCMCacheEntry>::iterator i = _pcmCache.begin(); i != _pcmCache.end(); ++i) {
+		if (i->addr != addr || i->resNo != _pcmResourceNumber)
+			continue;
+		_pcmCache.push_back(*i);
+		_pcmCache.erase(i);
+		return SmpStrPtr(new Common::MemoryReadStream(_pcmCache.back().data.get(), _pcmCache.back().dataSize, DisposeAfterUse::NO));
 	}
 
 	Common::SeekableReadStream *str = _fio->readStream(addr < 0x65000 ? 54 : 55);
@@ -2225,7 +2240,7 @@ void SegaSoundDevice::pcmResetUnit(uint8 unit, PCMSound &s) {
 }
 
 void SegaSoundDevice::pcmStartSoundInternal(uint8 unit, uint8 chan, PCMSound &s) {
-	SmpStrPtr smp = createSamplesStream(s.addr);
+	SmpStrPtr smp = getSamplesStream(s.addr);
 	_sai->playPCMStream(smp, chan << 5, 0x2000, chan, s.rate, calcPan(s), calcVolume(unit, s));
 }
 
