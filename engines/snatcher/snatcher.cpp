@@ -96,7 +96,7 @@ Common::Error SnatcherEngine::run() {
 }
 
 bool SnatcherEngine::initResource() {
-	_fio = new FIO(this, _game.isBigEndian);
+	_fio = new FIO(this);
 	if (!_fio)
 		return false;
 
@@ -223,7 +223,7 @@ void SnatcherEngine::playBootLogoAnimation(const GameState &state) {
 		delayUntil(nextFrame);
 	}
 }
-int g = 0;
+
 bool SnatcherEngine::start() {
 	Util::rngReset();
 	GameState state;
@@ -263,7 +263,6 @@ bool SnatcherEngine::start() {
 				bool blockedMod = _cmdQueue->enabled();
 				if (_cmdQueue->enabled()) {
 					_cmdQueue->run(state);
-					g = state.script.curPos;
 					blockedMod = _gfx->busy(0);
 				}
 				if (!blockedMod) {
@@ -306,6 +305,7 @@ bool SnatcherEngine::start() {
 				++state.totalPlayTime;
 			}
 		}
+
 		if (_reset)
 			--_reset;
 
@@ -540,9 +540,11 @@ void SnatcherEngine::updateMainState(GameState &state) {
 
 	case 4:
 		// Reset
-		_cmdQueue->writeUInt16(0x02);
-		_cmdQueue->start();
-		_reset = 100;
+		if (_reset == 0) {
+			_cmdQueue->writeUInt16(0x02);
+			_cmdQueue->start();
+			_reset = 100;
+		}
 		break;
 
 	default:
