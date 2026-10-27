@@ -33,18 +33,23 @@ class ManagedSurface;
 
 namespace Hollywood {
 
-class IndexedSurfaceBuffer;
+// Bounded little-endian reads shared by the archive and scene-data decoders.
+uint16 readUint16LE(const Common::Array<byte> &source, uint offset);
+int16 readSint16LE(const Common::Array<byte> &source, uint offset);
+uint32 readUint32LE(const Common::Array<byte> &source, uint offset);
 
 enum {
-	kResourceChunkCount = 40
+	kResourceChunkCount = 40,
+	kMaxResourceChunkCount = 50
 };
 
 struct ResourceChunkTable {
-	uint32 offsets[kResourceChunkCount];
-	uint32 sizes[kResourceChunkCount];
+	uint32 offsets[kMaxResourceChunkCount];
+	uint32 sizes[kMaxResourceChunkCount];
+	uint count = 0;
 
 	void clear();
-	bool load(Common::SeekableReadStream &stream);
+	bool load(Common::SeekableReadStream &stream, uint chunkCount = kResourceChunkCount);
 	bool isValidChunk(uint index) const;
 };
 
@@ -55,7 +60,7 @@ class ChunkArchive {
 public:
 	ChunkArchive();
 
-	bool open(const Common::Path &fileName);
+	bool open(const Common::Path &fileName, uint chunkCount = kResourceChunkCount);
 	void close();
 
 	const Common::Path &fileName() const { return _fileName; }
@@ -68,8 +73,8 @@ public:
 		const char *debugName);
 	bool readFixedChunk(uint index, Graphics::ManagedSurface &destination, uint fixedSize,
 		const char *debugName);
-	bool readFixedChunk(uint index, IndexedSurfaceBuffer &destination, uint fixedSize,
-		const char *debugName);
+	bool readFixedChunk(uint index, byte *destination, uint destinationSize,
+		uint fixedSize, const char *debugName);
 	bool readVariableChunk(uint index, Common::Array<byte> &destination);
 	bool readChunkTo(uint index, Common::Array<byte> &destination, uint32 destinationOffset);
 

@@ -74,18 +74,34 @@ bool SceneScriptNR07::ClickedOnActor(int actorId) {
 		if (Game_Flag_Query(kFlagNR07McCoyIsCop)) {
 			DM_Add_To_List_Never_Repeat_Once_Selected(1100, -1, 3, 8); // VOIGT-KAMPFF
 			DM_Add_To_List_Never_Repeat_Once_Selected(1110, 8, -1, -1); // CRYSTAL
-			if (Actor_Clue_Query(kActorMcCoy, kClueSuspectDektora)) {
+			bool canAskAboutMoonbus = Actor_Clue_Query(kActorMcCoy, kClueSuspectDektora);
+			if (!canAskAboutMoonbus && _vm->_cutContent) {
+				// Can also ask this if McCoy saw Clovis at the moonbus and with Dektora.
+				canAskAboutMoonbus = (
+					Actor_Clue_Query(kActorMcCoy, kClueGaffsInformation)
+						|| Actor_Clue_Query(kActorMcCoy, kClueCrystalsCase))
+					&& Actor_Clue_Query(kActorMcCoy, kClueClovisAtMoonbus)
+					&& (Actor_Clue_Query(kActorMcCoy, kClueIzosFriend)
+						|| Actor_Clue_Query(kActorMcCoy, kClueDektorasDressingRoom));
+			}
+			if (canAskAboutMoonbus) {
 				DM_Add_To_List_Never_Repeat_Once_Selected(1120, 3, 6, 7); // MOONBUS
 			}
 			if (Actor_Clue_Query(kActorMcCoy, kClueCarRegistration1)) {
 				DM_Add_To_List_Never_Repeat_Once_Selected(1130, 3, 5, 7); // BLACK SEDAN
 			}
-			if (_vm->_cutContent
-				&& Game_Flag_Query(kFlagAR02DektoraBoughtScorpions) // if Dektora bought the scorpions
-				&& ((Actor_Clue_Query(kActorMcCoy, kClueWomanInAnimoidRow) // and McCoy saw her with the box
-					 && Actor_Clue_Query(kActorMcCoy, kClueScorpions))
-					|| Actor_Clue_Query(kActorMcCoy, kClueScorpionbox)) // or saw the box in her room (always there)
-			) {
+			bool canAskAboutScorpions;
+			if (_vm->_cutContent) {
+				// Can ask this if Dektora bought the scorpions and McCoy saw her with the box
+				// or he saw the box in the outer dressing room (it's there in all cases).
+				canAskAboutScorpions = Game_Flag_Query(kFlagAR02DektoraBoughtScorpions)
+					&& ((Actor_Clue_Query(kActorMcCoy, kClueWomanInAnimoidRow) && Actor_Clue_Query(kActorMcCoy, kClueScorpions))
+						|| Actor_Clue_Query(kActorMcCoy, kClueScorpionbox));
+			} else {
+				// This flag is never set.
+				canAskAboutScorpions = Game_Flag_Query(kFlagNotUsed510);
+			}
+			if (canAskAboutScorpions) {
 				DM_Add_To_List_Never_Repeat_Once_Selected(1140, 1, 4, 7); // SCORPIONS
 			}
 		} else {
@@ -458,8 +474,8 @@ void SceneScriptNR07::talkAboutSteele() {
 }
 
 void SceneScriptNR07::talkAboutMoonbus() {
-	Actor_Says(kActorMcCoy, 3705, 19); // "I heard something about an act of Off-World terrorism."
-	Actor_Says(kActorDektora, 760, kAnimationModeSit); // "Excuse me?"
+	Actor_Says(kActorMcCoy, 3705, 19);
+	Actor_Says(kActorDektora, 760, kAnimationModeSit); // Excuse me?
 
 	if (Game_Flag_Query(kFlagDektoraIsReplicant)) {
 		Actor_Modify_Friendliness_To_Other(kActorDektora, kActorMcCoy, -5);
@@ -499,21 +515,23 @@ void SceneScriptNR07::talkAboutBlackSedan() {
 }
 
 void SceneScriptNR07::talkAboutScorpions() {
-	Actor_Says(kActorMcCoy, 3620, 19); // "You like scorpions, huh?"
-	Actor_Says(kActorDektora, 840, 30); // "Scorpions?"
-	Actor_Says(kActorMcCoy, 3745, 9); // "Insects. Fakes. From Animoid Row. You buy a box of them?"
+	Actor_Says(kActorMcCoy, 3620, 19);
+	Actor_Says(kActorDektora, 840, 30);
+	Actor_Says(kActorMcCoy, 3745, 9);
 #if BLADERUNNER_ORIGINAL_BUGS
 	Actor_Says_With_Pause(kActorDektora, 850, 1.0f, 30);
 	Actor_Says(kActorDektora, 860, 30);
 	Actor_Says(kActorDektora, 870, kAnimationModeSit);
 #else
 	if (Game_Flag_Query(kFlagDektoraIsReplicant)) {
-		Actor_Says_With_Pause(kActorDektora, 850, 1.0f, 30); // "Oh, those. I didn't know what they were called."
-		
-		// Not using 870 because its tone is so off, it makes the whole dialog sound broken.
-		// Actor_Says(kActorDektora, 870, 31); // "I just had to have the whole set."
+		Actor_Says_With_Pause(kActorDektora, 850, 1.0f, 30); // Oh, those. I didn't know what they were called.
 	} else {
-		Actor_Says(kActorDektora, 860, 31); // "Insects make excellent pets. And they were so beautiful I just had to have the whole set."
+		Actor_Says(kActorDektora, 860, 31);
+		if (_vm->_language == Common::ES_ESP || _vm->_language == Common::FR_FRA || _vm->_language == Common::IT_ITA) {
+			// These localizations have the ending of 860 in a separate voice line. The Italian version,
+			// unlike the others, uses the present tense (a feedback from an Italian speaker is welcome).
+			Actor_Says(kActorDektora, 870, 31);
+		}
 	}
 #endif // BLADERUNNER_ORIGINAL_BUGS
 	Actor_Says(kActorMcCoy, 3750, 11); // "Did you know they were poisonous?"

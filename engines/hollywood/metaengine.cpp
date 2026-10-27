@@ -21,30 +21,14 @@
 
 #include "base/plugins.h"
 #include "common/config-manager.h"
-#include "common/translation.h"
 #include "engines/advancedDetector.h"
 #include "graphics/thumbnail.h"
 
-#include "hollywood/hollywood.h"
-#include "hollywood/detection.h"
+#include "hollywood/monsters/hollywood.h"
+#include "hollywood/monsters/metaengine.h"
+#include "hollywood/runaway/engine.h"
 
 namespace Hollywood {
-
-const ADExtraGuiOptionsMap optionsList[] = {
-	{
-		GAMEOPTION_RESTORED_CONTENT,
-		{
-			_s("Enable restored content"),
-			_s("Play optional content present in the game data but unused by the original release"),
-			"restored_content",
-			true,
-			0,
-			0
-		}
-	},
-
-	AD_EXTRA_GUI_OPTIONS_TERMINATOR
-};
 
 class HollywoodMetaEngine : public AdvancedMetaEngine<ADGameDescription> {
 public:
@@ -53,19 +37,23 @@ public:
 	}
 
 	const ADExtraGuiOptionsMap *getAdvancedExtraGuiOptions() const override {
-		return optionsList;
+		return getMonstersExtraGuiOptions();
 	}
 
 	Common::Error createInstance(OSystem *syst, Engine **engine, const ADGameDescription *desc) const override;
 	bool hasFeature(MetaEngineFeature f) const override;
 	void registerDefaultSettings(const Common::String &target) const override;
+	Common::Array<Common::Keymap *> initKeymaps(const char *target) const override;
 
 protected:
 	void getSavegameThumbnail(Graphics::Surface &thumb) override;
 };
 
 Common::Error HollywoodMetaEngine::createInstance(OSystem *syst, Engine **engine, const ADGameDescription *desc) const {
-	*engine = new HollywoodEngine(syst, desc);
+	if (!strcmp(desc->gameId, "runaway"))
+		*engine = new RunawayEngine(syst, desc->language);
+	else
+		*engine = new HollywoodEngine(syst, desc);
 	return Common::kNoError;
 }
 
@@ -76,17 +64,26 @@ bool HollywoodMetaEngine::hasFeature(MetaEngineFeature f) const {
 
 void HollywoodMetaEngine::registerDefaultSettings(const Common::String &) const {
 	ConfMan.registerDefault("subtitles", true);
-	ConfMan.registerDefault("restored_content", true);
+	registerMonstersDefaultSettings();
+	RunawayEngine::registerDefaultSettings();
 }
 
 void HollywoodMetaEngine::getSavegameThumbnail(Graphics::Surface &thumb) {
-	if (g_engine) {
-		HollywoodEngine *engine = (HollywoodEngine *)g_engine;
-		if (engine->copyLastGameplayThumbnail(thumb))
-			return;
+	if (g_engine && ConfMan.get("gameid") == "hollywood") {
+		getMonstersSavegameThumbnail(thumb);
+		return;
 	}
+	if (g_engine && ConfMan.get("gameid") == "runaway" &&
+			static_cast<RunawayEngine *>(g_engine)->copySaveThumbnail(thumb))
+		return;
 
 	Graphics::createThumbnail(thumb);
+}
+
+Common::Array<Common::Keymap *> HollywoodMetaEngine::initKeymaps(const char *target) const {
+	if (getGameId(target) == "runaway")
+		return RunawayEngine::initKeymaps();
+	return MetaEngine::initKeymaps(target);
 }
 
 } // End of namespace Hollywood

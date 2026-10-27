@@ -25,37 +25,61 @@
 #include "graphics/managed_surface.h"
 
 #include "hollywood/debug.h"
-#include "hollywood/graphics.h"
 #include "hollywood/resource.h"
 
 namespace Hollywood {
 
+uint16 readUint16LE(const Common::Array<byte> &source, uint offset) {
+	if (offset + 2 > source.size())
+		return 0;
+
+	return source[offset] | (source[offset + 1] << 8);
+}
+
+int16 readSint16LE(const Common::Array<byte> &source, uint offset) {
+	return (int16)readUint16LE(source, offset);
+}
+
+uint32 readUint32LE(const Common::Array<byte> &source, uint offset) {
+	if (offset + 4 > source.size())
+		return 0;
+
+	return source[offset] |
+		(source[offset + 1] << 8) |
+		(source[offset + 2] << 16) |
+		(source[offset + 3] << 24);
+}
+
 void ResourceChunkTable::clear() {
-	for (int i = 0; i < kResourceChunkCount; ++i) {
+	count = 0;
+	for (int i = 0; i < kMaxResourceChunkCount; ++i) {
 		offsets[i] = 0;
 		sizes[i] = 0;
 	}
 }
 
-bool ResourceChunkTable::load(Common::SeekableReadStream &stream) {
+bool ResourceChunkTable::load(Common::SeekableReadStream &stream, uint chunkCount) {
 	clear();
 
-	if (stream.size() < kResourceChunkCount * 8)
+	if (chunkCount == 0 || chunkCount > kMaxResourceChunkCount || stream.size() < chunkCount * 8)
 		return false;
 
 	if (!stream.seek(0))
 		return false;
-	for (int i = 0; i < kResourceChunkCount; ++i)
+	for (uint i = 0; i < chunkCount; ++i)
 		offsets[i] = stream.readUint32LE();
 
-	for (int i = 0; i < kResourceChunkCount; ++i)
+	for (uint i = 0; i < chunkCount; ++i)
 		sizes[i] = stream.readUint32LE();
 
-	return !stream.err();
+	if (stream.err() || stream.eos())
+		return false;
+	count = chunkCount;
+	return true;
 }
 
 bool ResourceChunkTable::isValidChunk(uint index) const {
-	return index < kResourceChunkCount && sizes[index] != 0;
+	return index < count && sizes[index] != 0;
 }
 
 Common::SeekableReadStream *createResourceChunkReadStream(const Common::Path &fileName, uint index) {
@@ -93,7 +117,7 @@ ChunkArchive::ChunkArchive() :
 	_chunkTable.clear();
 }
 
-bool ChunkArchive::open(const Common::Path &fileName) {
+bool ChunkArchive::open(const Common::Path &fileName, uint chunkCount) {
 	close();
 
 	_fileName = fileName;
@@ -102,7 +126,7 @@ bool ChunkArchive::open(const Common::Path &fileName) {
 		return false;
 	}
 
-	if (!_chunkTable.load(_file)) {
+	if (!_chunkTable.load(_file, chunkCount)) {
 		close();
 		return false;
 	}
@@ -127,40 +151,24 @@ uint32 ChunkArchive::chunkSize(uint index) const {
 
 uint32 ChunkArchive::totalChunkSize(uint firstChunk, uint lastChunk) const {
 	uint32 byteCount = 0;
-	for (uint i = firstChunk; i <= lastChunk && i < kResourceChunkCount; ++i)
+	for (uint i = firstChunk; i <= lastChunk && i < _chunkTable.count; ++i)
 		byteCount += _chunkTable.sizes[i];
 	return byteCount;
 }
 
 bool ChunkArchive::readFixedChunk(uint index, Common::Array<byte> &destination, uint fixedSize,
 		const char *debugName) {
-	uint32 chunkOffset = 0;
-	uint32 byteCount = 0;
-	const Common::String archiveName = _fileName.toString();
-	if (!chunkBounds(index, chunkOffset, byteCount)) {
-		warning("Failed to open %s chunk %u", archiveName.c_str(), index);
-		return false;
-	}
-
-	if (byteCount > fixedSize || destination.size() < fixedSize) {
-		warning("%s chunk %u does not fit its fixed %s destination",
-			archiveName.c_str(), index, debugName);
-		return false;
-	}
-
-	memset(destination.data(), 0, destination.size());
-	if (!readChunkBytes(index, destination.data(), destination.size())) {
-		warning("Failed to read %s chunk %u", archiveName.c_str(), index);
-		return false;
-	}
-
-	debugC(1, kDebugResources, "Loaded %s fixed chunk %u: offset=%u size=%u",
-		archiveName.c_str(), index, chunkOffset, (uint)byteCount);
-	return true;
+	return readFixedChunk(index, destination.data(), destination.size(), fixedSize, debugName);
 }
 
 bool ChunkArchive::readFixedChunk(uint index, Graphics::ManagedSurface &destination, uint fixedSize,
 		const char *debugName) {
+	return readFixedChunk(index, (byte *)destination.getPixels(), destination.pitch * destination.h,
+		fixedSize, debugName);
+}
+
+bool ChunkArchive::readFixedChunk(uint index, byte *destination, uint destinationSize,
+		uint fixedSize, const char *debugName) {
 	uint32 chunkOffset = 0;
 	uint32 byteCount = 0;
 	const Common::String archiveName = _fileName.toString();
@@ -169,42 +177,14 @@ bool ChunkArchive::readFixedChunk(uint index, Graphics::ManagedSurface &destinat
 		return false;
 	}
 
-	const uint destinationSize = destination.pitch * destination.h;
 	if (byteCount > fixedSize || destinationSize < fixedSize) {
 		warning("%s chunk %u does not fit its fixed %s destination",
 			archiveName.c_str(), index, debugName);
 		return false;
 	}
 
-	memset(destination.getPixels(), 0, destinationSize);
-	if (!readChunkBytes(index, (byte *)destination.getPixels(), destinationSize)) {
-		warning("Failed to read %s chunk %u", archiveName.c_str(), index);
-		return false;
-	}
-
-	debugC(1, kDebugResources, "Loaded %s fixed chunk %u: offset=%u size=%u",
-		archiveName.c_str(), index, chunkOffset, (uint)byteCount);
-	return true;
-}
-
-bool ChunkArchive::readFixedChunk(uint index, IndexedSurfaceBuffer &destination, uint fixedSize,
-		const char *debugName) {
-	uint32 chunkOffset = 0;
-	uint32 byteCount = 0;
-	const Common::String archiveName = _fileName.toString();
-	if (!chunkBounds(index, chunkOffset, byteCount)) {
-		warning("Failed to open %s chunk %u", archiveName.c_str(), index);
-		return false;
-	}
-
-	if (byteCount > fixedSize || destination.size() < fixedSize) {
-		warning("%s chunk %u does not fit its fixed %s destination",
-			archiveName.c_str(), index, debugName);
-		return false;
-	}
-
-	memset(destination.data(), 0, destination.size());
-	if (!readChunkBytes(index, destination.data(), destination.size())) {
+	memset(destination, 0, destinationSize);
+	if (!readChunkBytes(index, destination, destinationSize)) {
 		warning("Failed to read %s chunk %u", archiveName.c_str(), index);
 		return false;
 	}
