@@ -76,6 +76,7 @@ void IgorEngine::partCreditsDrawText(int x, int y, uint8 color, bool underline, 
 void IgorEngine::partCredits() {
 	const bool savingWasAllowed = _canSaveGame;
 	_canSaveGame = false;
+	_optionsMenuReachable = true;
 	const CreditsPage &page = kCreditsPages[(_currentPart - 910) / 10];
 
 	if (isCDVersion())
@@ -89,7 +90,7 @@ void IgorEngine::partCredits() {
 
 	loadData(page.imgId, _screenVGA);
 	loadData(page.palId, _paletteBuffer);
-	SET_PAL_240_48_1();
+	setVerbPanelColors();
 	// The Spanish floppy pictures already contain the credits text
 	const bool bakedText = _game.version == kIdSpaFloppy;
 	if (!bakedText) {
@@ -144,8 +145,9 @@ void IgorEngine::partCredits() {
 	if (_gameStateLoaded || _currentPart == kInvalidPart) {
 		// a game was loaded or the game is quit: the state is not changed
 		fadeOut(768);
-		SET_PAL_208_96_1();
+		setInventoryPanelColors();
 		_canSaveGame = savingWasAllowed;
+	_optionsMenuReachable = false;
 		return;
 	}
 
@@ -157,6 +159,7 @@ void IgorEngine::partCredits() {
 		_currentPart += 10;
 	}
 	_canSaveGame = savingWasAllowed;
+	_optionsMenuReachable = false;
 }
 
 } // End of namespace Igor
