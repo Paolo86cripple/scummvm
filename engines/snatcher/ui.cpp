@@ -36,7 +36,7 @@ UI::UI(GraphicsEngine *gfx, CmdQueue *que, ResourcePointer *scd) : _gfx(gfx), _q
 	_scriptTextResource(nullptr),/*_makestrbt1(0),*/ _textY(0), _headLineYOffset(0), _sceneTextOffsCur(0), _textLineEnd(0), _sceneInfo(0), _sceneTextOffset(0), _flashLight(),
 		_sceneTextOffsStart(0), _waitCursorFrame(0), _waitCursorAnimDelay(0), _progress(-1), _progress2(-1), _controllerCfg(0), _verbInterfaceMode(0), _verbsInterpreterMode(0),
 			_lastVerbFirstPage(0), _numVerbsFirstPage(0), _numVerbsLastPage(0), _lastVerbLastPage(0), _numVerbsMax(0), _verbsTabCurPage(0), _lastVerbDrawn(0), _verbTextBuffer(nullptr), _scriptVerbsArray(nullptr),
-				_scriptSentenceArray(nullptr), _prevSelectedVerb(0), _selectedVerb(0), _lastHiliteVerb(0), _hiliteVerb(0), _textInputMarginLeft(0), _videoPhoneMode(0),
+				_scriptSentenceArray(nullptr), _prevSelectedVerb(0), _selectedVerb(0), _lastHiliteVerb(0), _hiliteVerb(0), _savedHiliteVerb(0), _textInputMarginLeft(0), _videoPhoneMode(0),
 					_textInputColumnCur(0), _textInputColumnMax(0), _textInputCursorState(0), _textInputCursorBlinkCnt(0), _underscoreStr(nullptr), _textInputStr(nullptr), _vkeybPosTotal(0),
 						_vkeybColumnWidth(0), _verbsTabLayoutMap(nullptr), _verbsTabOffsX(0), _verbsTabOffsY(0), _hilitePosX(0), _hilitePosY(0), _vkeybVisible(false) {
 
@@ -255,12 +255,16 @@ bool UI::drawVerbs() {
 				_lastVerbDrawn = _numVerbsMax;
 
 			_selectedVerb = 0;
-			uint8 v = 0;
-			if (_scriptSentenceArray->pos() == 0) {
-				if (_prevSelectedVerb <= _lastVerbDrawn - 1)
-					v = _prevSelectedVerb;
+			uint8 v = _savedHiliteVerb;
+			_savedHiliteVerb = 0;
+
+			if (v == 0) {
+				if (_scriptSentenceArray->pos() == 0) {
+					if (_prevSelectedVerb <= _lastVerbDrawn - 1)
+						v = _prevSelectedVerb;
+				}
 			}
-			_selectedVerb = 0;
+
 			_hiliteVerb = _lastHiliteVerb = v;
 			++_progress2;
 		}
@@ -281,7 +285,7 @@ bool UI::drawVerbs() {
 		if (_progress2 == 2) {
 			if (_verbInterfaceMode == 2) {
 				_que->writeUInt16(0x05);
-				_que->writeUInt32(0x11454);
+				_que->writeUInt32(MemMapping::MEM_VERBDATA_03);
 				_que->start();
 			}
 			++_progress2;
@@ -501,12 +505,11 @@ void UI::loadState(Common::SeekableReadStream *in, SaveFlags flags) {
 	_videoPhoneMode = in->readSint16BE();
 	_textInputColumnMax = in->readSint16BE();
 	_prevSelectedVerb = in->readByte();
-	_selectedVerb = in->readByte();
-	_prevSelectedVerb = _selectedVerb;
-	if (flags & kSaveFlagsScriptedSave)
+	_savedHiliteVerb = in->readByte();
+	if (flags & kSaveFlagsScriptedSave) {
 		resetVerbSelection();
-	else
-		_prevSelectedVerb = _selectedVerb;
+		_savedHiliteVerb = 0;
+	}
 	_vkeybVisible = in->readByte();
 
 	_flashLight.inputFlags= in->readByte();
@@ -526,7 +529,7 @@ void UI::saveState(Common::SeekableWriteStream *out, SaveFlags flags) {
 	out->writeSint16BE(_videoPhoneMode);
 	out->writeSint16BE(_textInputColumnMax);
 	out->writeByte(_prevSelectedVerb);
-	out->writeByte(_selectedVerb);
+	out->writeByte(_lastHiliteVerb);
 	out->writeByte(_vkeybVisible ? 1 : 0);
 
 	out->writeByte(_flashLight.inputFlags);
@@ -652,12 +655,12 @@ uint8 UI::drawVerb(uint8 id) {
 	uint8 cid = id;
 	if (_verbsTabCurPage == 1 && _lastVerbFirstPage == id) {
 		_que->writeUInt16(0x05);
-		_que->writeUInt32(_gfx->getVerbAreaType() ? 0x10F26 : 0x10F10);
+		_que->writeUInt32(_gfx->getVerbAreaType() ? MemMapping::MEM_VERBDATA_02 : MemMapping::MEM_VERBDATA_01);
 		return 0x80;
 	} else if (_verbsTabCurPage > 1) {
 		if (id == 0) {
 			_que->writeUInt16(0x05);
-			_que->writeUInt32(0x10EFA);
+			_que->writeUInt32(MemMapping::MEM_VERBDATA_00);
 			return 0x80;
 		} else {
 			id += _numVerbsFirstPage;
@@ -669,6 +672,7 @@ uint8 UI::drawVerb(uint8 id) {
 
 	uint16 offs = _scriptVerbsArray->read(id);
 	const uint8 *s = _scriptTextResource + offs;
+
 	uint8 *d = _verbTextBuffer + 9;
 	for (int i = 0; i < 33; ++i) {
 		*d = *s++;
@@ -1143,7 +1147,7 @@ void UI::virtKeybPrint() {
 		*d++ = 0xFF;
 
 		_que->writeUInt16(0x05);
-		_que->writeUInt32(0x11946);
+		_que->writeUInt32(MemMapping::MEM_VERBDATA_05);
 		_que->start();
 		++_progress2;
 		return;
@@ -1155,7 +1159,7 @@ void UI::virtKeybPrint() {
 	}
 	if (pr == 0x203) {
 		_que->writeUInt16(0x05);
-		_que->writeUInt32(0x11942);
+		_que->writeUInt32(MemMapping::MEM_VERBDATA_04);
 		_que->start();
 		++_progress2;
 			return;
