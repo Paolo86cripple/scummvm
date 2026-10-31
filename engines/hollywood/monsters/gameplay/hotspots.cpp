@@ -43,11 +43,11 @@ const uint kBottomCaptionPaletteOffset = kBottomCaptionColorIndex * 3;
 const int kBottomCaptionTopY = 0x1ca;
 const uint32 kHoverCaptionRefreshMillis = 100;
 
-Common::String inventoryActionCaption(Common::Language language, byte stripIndex) {
+Common::String inventoryActionCaption(const HollywoodGameStrings &strings, byte stripIndex) {
 	if (stripIndex >= kInventoryActionCaptionCount)
 		return Common::String();
 
-	return Common::String(getGameStrings(language).actionCaptions[stripIndex]);
+	return Common::String(strings.actionCaptions[stripIndex]);
 }
 
 bool SceneHotspotTable::load(const Common::Array<byte> &paletteMapBlock, const Common::Array<byte> &metadata,
@@ -119,7 +119,7 @@ bool SceneHotspotTable::load(const Common::Array<byte> &paletteMapBlock, const C
 		}
 	}
 
-	_stageSmallRows = stageSmallRows;
+	setItemNames(stageSmallRows);
 	return true;
 }
 
@@ -220,6 +220,10 @@ void SceneHotspotTable::setItemDefaultStrip(byte itemId, byte stripIndex) {
 void SceneHotspotTable::setItemName(byte itemId, const Common::String &name) {
 	if (itemId < _itemNameOverrides.size())
 		_itemNameOverrides[itemId] = name;
+}
+
+void SceneHotspotTable::setItemNames(const Common::Array<byte> &stageSmallRows) {
+	_stageSmallRows = stageSmallRows;
 }
 
 void SceneHotspotTable::setActionTarget(byte itemId, const ScenePoint &interactionPoint, const ScenePoint &approachPoint) {
@@ -323,9 +327,9 @@ Common::String SceneHotspotTable::itemName(byte itemId) const {
 	return Common::String((const char *)row, length);
 }
 
-SceneHoverCaption::SceneHoverCaption(Common::Language language) :
+SceneHoverCaption::SceneHoverCaption(const HollywoodGameStrings &strings) :
 		_timer(0),
-		_language(language),
+		_strings(strings),
 		_currentStrip(1),
 		_relationMode(0),
 		_primaryInventoryItem(0),
@@ -469,8 +473,7 @@ Common::String SceneHoverCaption::buildCaption(const SceneHotspotTable &hotspots
 	Common::String caption = actionCaption(descriptor.verbTextIndex);
 	if (descriptor.relationTextIndex != 0) {
 		caption += _primaryItemName;
-		const HollywoodGameStrings &strings = getGameStrings(_language);
-		caption += descriptor.relationTextIndex == 2 ? strings.relationTo : strings.relationWith;
+		caption += descriptor.relationTextIndex == 2 ? _strings.relationTo : _strings.relationWith;
 		if (descriptor.secondItemId != 0 && descriptor.secondItemSourceKind == kSceneItemSourceKind)
 			caption += hotspots.itemName(descriptor.secondItemId);
 		return caption;
@@ -483,7 +486,7 @@ Common::String SceneHoverCaption::buildCaption(const SceneHotspotTable &hotspots
 }
 
 Common::String SceneHoverCaption::actionCaption(byte stripIndex) const {
-	return inventoryActionCaption(_language, stripIndex);
+	return inventoryActionCaption(_strings, stripIndex);
 }
 
 } // End of namespace Hollywood
