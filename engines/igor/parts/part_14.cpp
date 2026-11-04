@@ -26,9 +26,6 @@ namespace Igor {
 
 static const uint8 PART_14_ANIM_DATA_1[6] = { 0, 2, 5, 1, 8, 3 };
 
-static int VAR_NEW_CHURCH_MOSAIC_STONE;
-static int VAR_CURRENT_CHURCH_MOSAIC_STONE;
-
 void IgorEngine::part14ExecuteAction(int action) {
 	debugC(9, kDebugGame, "part14ExecuteAction %d", action);
 	switch (action) {
@@ -90,7 +87,7 @@ void IgorEngine::part14LookAtPuzzle() {
 	fadeOut(768);
 	part14ShowPuzzle();
 	part14LoadRoom();
-	memset(_screenVGA + 46080, 0, 17920);
+	fillScreenRows(144, 56, 0);
 	drawVerbsPanel();
 	drawInventory(_inventoryInfo[kInventoryFirstVisible], 0);
 	fadeIn(768);
@@ -391,9 +388,9 @@ void IgorEngine::part14BrotherReveal(int start, int end) {
 void IgorEngine::part14ShowPuzzle() {
 	part14LoadChurchMosaicData();
 	memcpy(_screenTextLayer, _screenVGA, 46080);
-	memcpy(_screenVGA, _screenLayer1, 46080);
+	copyLayerToScreen(_screenLayer1Surface);
 	memcpy(_screenLayer1, _screenTextLayer, 46080);
-	memset(_screenVGA + 46080, 0, 17920);
+	fillScreenRows(144, 56, 0);
 	fadeIn(768);
 	_inputVars[kInputCursorXPos] = 160;
 	_inputVars[kInputCursorYPos] = 72;
@@ -401,19 +398,19 @@ void IgorEngine::part14ShowPuzzle() {
 	_gameState.counter[4] = 0;
 	_currentPart = 145;
 	_dialogueEnded = false;
-	VAR_CURRENT_CHURCH_MOSAIC_STONE = 255;
+	_part14CurrentChurchMosaicStone = 255;
 	do {
 		// the region mask only covers the room area; below it (verbs panel) there is no region
 		int area = _inputVars[kInputCursorYPos] < 144 ? _screenLayer2[_inputVars[kInputCursorYPos] * 320 + _inputVars[kInputCursorXPos]] : 0;
 		if (area == 0) {
-			VAR_NEW_CHURCH_MOSAIC_STONE = 1;
+			_part14NewChurchMosaicStone = 1;
 		} else if (area >= 1 && area <= 8) {
-			VAR_NEW_CHURCH_MOSAIC_STONE = 2;
+			_part14NewChurchMosaicStone = 2;
 		} else if (area == 9) {
-			VAR_NEW_CHURCH_MOSAIC_STONE = 3;
+			_part14NewChurchMosaicStone = 3;
 		}
-		if (VAR_NEW_CHURCH_MOSAIC_STONE != VAR_CURRENT_CHURCH_MOSAIC_STONE) {
-			switch (VAR_NEW_CHURCH_MOSAIC_STONE) {
+		if (_part14NewChurchMosaicStone != _part14CurrentChurchMosaicStone) {
+			switch (_part14NewChurchMosaicStone) {
 			case 1:
 				drawActionSentence("", mosaicSentenceColor(0));
 				break;
@@ -424,7 +421,7 @@ void IgorEngine::part14ShowPuzzle() {
 				drawActionSentence(getString(STR_Exit), mosaicSentenceColor(0));
 				break;
 			}
-			VAR_CURRENT_CHURCH_MOSAIC_STONE = VAR_NEW_CHURCH_MOSAIC_STONE;
+			_part14CurrentChurchMosaicStone = _part14NewChurchMosaicStone;
 		}
 		if (_inputVars[kInputClick]) {
 			_inputVars[kInputClick] = 0;
@@ -501,7 +498,7 @@ void IgorEngine::part14ShowPuzzle() {
 		playRoomSound(35, kSpaFloppySoundPart14Solved);
 	}
 	fadeOut(768);
-	memcpy(_screenVGA, _screenLayer1, 46080);
+	copyLayerToScreen(_screenLayer1Surface);
 	setInventoryPanelColors();
 }
 
@@ -540,7 +537,7 @@ void IgorEngine::part14() {
 	partMainSetExecuteAction(1, &IgorEngine::part14ExecuteAction);
 	part14ApplyObjectState(255);
 	if (!restoreRoomAfterLoad()) {
-		memcpy(_screenVGA, _screenLayer1, 46080);
+		copyLayerToScreen(_screenLayer1Surface);
 		_currentAction.verb = kVerbWalk;
 		fadeIn(768);
 		if (_currentPart == 140) {

@@ -28,32 +28,32 @@
 namespace Igor {
 
 // Copy protection screen of the floppy version
-static const int kFloppyProtectionTries = 3;
-static const int kFloppyProtectionWordCount = 100;
-static const int kFloppyProtectionEntrySize = 14;
-static const int kFloppyProtectionWordLength = 10;
-static const int kFloppyProtectionCodeOffset = 0x45;
-static const int kFloppyProtectionInputX = 122;
-static const int kFloppyProtectionInputY = 75;
-static const int kFloppyProtectionInputFullX = 197;
-static const int kFloppyProtectionTitleX = 136;
-static const int kFloppyProtectionPromptX = 93;
-static const int kFloppyProtectionPromptY = 42;
-static const int kFloppyProtectionQuestionX = 81;
-static const int kFloppyProtectionQuestionY = 52;
-static const int kFloppyProtectionReplyX = 100;
-static const int kFloppyProtectionReplyY = 86;
-static const int kFloppyProtectionReplyTicks = 2 * 200;
-static const int kFloppyProtectionBlinkTick = 61;
-static const int kFloppyProtectionBlinkPeriod = 64;
-static const int kFloppyProtectionBoxX = 120;
-static const int kFloppyProtectionBoxY = 56;
-static const int kFloppyProtectionBoxWidth = 80;
-static const int kFloppyProtectionBoxHeight = 11;
-static const int kFloppyProtectionCaretRow = 8;
-static const int kFloppyProtectionCaretWidth = 7;
-static const int kFloppyProtectionGlyphRows = 9;
-static const int kFloppyProtectionMaxInput = 32;
+const int kFloppyProtectionTries = 3;
+const int kFloppyProtectionWordCount = 100;
+const int kFloppyProtectionEntrySize = 14;
+const int kFloppyProtectionWordLength = 10;
+const int kFloppyProtectionCodeOffset = 0x45;
+const int kFloppyProtectionInputX = 122;
+const int kFloppyProtectionInputY = 75;
+const int kFloppyProtectionInputFullX = 197;
+const int kFloppyProtectionTitleX = 136;
+const int kFloppyProtectionPromptX = 93;
+const int kFloppyProtectionPromptY = 42;
+const int kFloppyProtectionQuestionX = 81;
+const int kFloppyProtectionQuestionY = 52;
+const int kFloppyProtectionReplyX = 100;
+const int kFloppyProtectionReplyY = 86;
+const int kFloppyProtectionReplyTicks = 2 * 200;
+const int kFloppyProtectionBlinkTick = 61;
+const int kFloppyProtectionBlinkPeriod = 64;
+const int kFloppyProtectionBoxX = 120;
+const int kFloppyProtectionBoxY = 56;
+const int kFloppyProtectionBoxWidth = 80;
+const int kFloppyProtectionBoxHeight = 11;
+const int kFloppyProtectionCaretRow = 8;
+const int kFloppyProtectionCaretWidth = 7;
+const int kFloppyProtectionGlyphRows = 9;
+const int kFloppyProtectionMaxInput = 32;
 
 enum {
 	kFloppyColorInputFill = 0xFB
@@ -71,7 +71,7 @@ enum FloppyProtectionText {
 };
 
 // Pascal strings stored one after the other in a resource.
-static void readProtectionStrings(Common::Array<Common::String> &texts, const uint8 *data, int size, int count) {
+void readProtectionStrings(Common::Array<Common::String> &texts, const uint8 *data, int size, int count) {
 	int offset = 0;
 	for (int i = 0; i < count; ++i) {
 		if (offset >= size || data[offset] > size - offset - 1)
@@ -84,7 +84,7 @@ static void readProtectionStrings(Common::Array<Common::String> &texts, const ui
 		error("Unexpected data in copy protection text resource");
 }
 
-static int protectionInputChar(const Common::KeyState &kbd) {
+int protectionInputChar(const Common::KeyState &kbd) {
 	const uint32 chr = kbd.ascii;
 	if (chr >= 0x20 && chr < 0x7F)
 		return chr;
@@ -102,8 +102,8 @@ static int protectionInputChar(const Common::KeyState &kbd) {
 	}
 }
 // only ASCII + characters handled in protectionInputChar()
-static bool protectionCharAllowed(int chr) {
-	static const uint8 allowed[32] = {
+bool protectionCharAllowed(int chr) {
+	const uint8 allowed[32] = {
 		0, 0, 0, 0, 0x07, 0xF3, 0xFF, 0xDF, 0xFE, 0xFF, 0xFF, 0x07, 0xFE, 0xFF, 0xFF, 0x07,
 		0x04, 0, 0, 0, 0x3F, 0x21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 	};
@@ -148,6 +148,7 @@ void IgorEngine::drawProtectionScreen(const Common::Array<Common::String> &texts
 }
 
 bool IgorEngine::readProtectionWord(uint8 *typed) {
+	setKeymapperEnabled(false);
 	memset(typed, ' ', kFloppyProtectionMaxInput + 1);
 	int position = 1;
 	int x = kFloppyProtectionInputX;
@@ -161,7 +162,7 @@ bool IgorEngine::readProtectionWord(uint8 *typed) {
 		Common::Event ev;
 		bool changed = false;
 		while (!done && _eventMan->pollEvent(ev)) {
-			if (ev.type == Common::EVENT_QUIT) {
+			if (ev.type == Common::EVENT_QUIT || ev.type == Common::EVENT_RETURN_TO_LAUNCHER) {
 				_currentPart = kInvalidPart;
 				_eventQuitGame = true;
 				break;
@@ -211,6 +212,7 @@ bool IgorEngine::readProtectionWord(uint8 *typed) {
 		lastTick = ticksSince(startMillis);
 		blinkCounter = (blinkCounter == kFloppyProtectionBlinkPeriod - 1) ? 0 : blinkCounter + 1;
 	}
+	setKeymapperEnabled(true);
 	return !isGameEnding();
 }
 

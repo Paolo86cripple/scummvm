@@ -52,8 +52,6 @@ const int kWritingFrames = 0x3B1D;
 const uint8 kWritingEndFrames[5] = { 0, 1, 2, 6, 1 };
 const int kPhysicsDoorCell = 114 * 320 + 181;
 
-bool IN_ACTION_111;
-
 void IgorEngine::part21FloppyExecuteAction(int action) {
 	switch (action) {
 	case 101:
@@ -171,11 +169,11 @@ void IgorEngine::part21FloppyUseNoteWithSandwiches() {
 		igorSay({ { 223, 2, 0 }, { 225, 1, 0 } });
 		return;
 	}
-	IN_ACTION_111 = true;
+	_part21FloppyInAction111 = true;
 	igorSay({ { 208, 1, 0 }, { 209, 1, 0 } });
 	// Igor's talking head is not animated here
 	waitForEndOfIgorDialogue(false);
-	IN_ACTION_111 = false;
+	_part21FloppyInAction111 = false;
 	int k = 1;
 	do {
 		if (compareGameTick(61) && k <= 4) {
@@ -320,7 +318,7 @@ void IgorEngine::part21FloppyDrawMargaretNoteHead(int frame) {
 
 void IgorEngine::part21FloppyMargaretTakesNote() {
 	part21FloppyDrawMargaretFrameComposited(1);
-	memset(_screenVGA + 46080, 0, 17920);
+	fillScreenRows(144, 56, 0);
 	drawAnimRect(kMargaretBodyOffset, kMargaretBodyFrame, 48, 40);
 	waitForTimer(121);
 	for (int i = 1; i <= 6; ++i) {
@@ -352,7 +350,7 @@ void IgorEngine::part21FloppyMargaretTakesNote() {
 }
 
 void IgorEngine::part21FloppyUpdateBackground() {
-	if (IN_ACTION_111 && compareGameTick(61)) {
+	if (_part21FloppyInAction111 && compareGameTick(61)) {
 		const int i = getRandomNumber(2) + 3;
 		drawAnimRect(kWritingOffset, kWritingFrames + i * 720, 24, 30);
 	}
@@ -395,7 +393,7 @@ void IgorEngine::part21Floppy() {
 	partMainSetExecuteAction(1, &IgorEngine::part21FloppyExecuteAction);
 	_updateRoomBackground = &IgorEngine::part21FloppyUpdateBackground;
 	part21FloppyApplyObjectState(255);
-	memcpy(_screenVGA, _screenLayer1, 46080);
+	copyLayerToScreen(_screenLayer1Surface);
 	setVerbPanelColors();
 	setInventoryPanelColors();
 	if (!restoreRoomAfterLoad()) {
