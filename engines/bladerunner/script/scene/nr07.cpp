@@ -480,17 +480,17 @@ void SceneScriptNR07::talkAboutMoonbus() {
 	if (Game_Flag_Query(kFlagDektoraIsReplicant)) {
 		Actor_Modify_Friendliness_To_Other(kActorDektora, kActorMcCoy, -5);
 #if BLADERUNNER_ORIGINAL_BUGS
-		Actor_Says(kActorMcCoy, 3710, 18); // "Somebody told me about this moonbus that got hijacked."
+		Actor_Says(kActorMcCoy, 3710, 18);
 #else
-		Actor_Says(kActorMcCoy, 3710, kAnimationModeTalk); // "Somebody told me about this moonbus that got hijacked."
+		Actor_Says(kActorMcCoy, 3710, kAnimationModeTalk); // Somebody told me about this moonbus that got hijacked.
 #endif // BLADERUNNER_ORIGINAL_BUGS
 		if (_vm->_cutContent) {
-			Actor_Says(kActorMcCoy, 3715, 15); // "You know, the one where all those humans got killed?"
+			Actor_Says(kActorMcCoy, 3715, 15); // You know, the one where all those humans got killed?
 		}
 		callHolloway();
 	} else {
 		Actor_Modify_Friendliness_To_Other(kActorDektora, kActorMcCoy, -3);
-		Actor_Start_Speech_Sample(kActorMcCoy, 3710); // "Somebody told me about this moonbus that got hijacked."
+		Actor_Start_Speech_Sample(kActorMcCoy, 3710);
 		Loop_Actor_Walk_To_XYZ(kActorMcCoy, -109.0f, -73.0f, -89.0f, 0, false, false, false);
 		Actor_Face_Actor(kActorMcCoy, kActorDektora, true);
 		dektoraRunAway();
@@ -534,12 +534,12 @@ void SceneScriptNR07::talkAboutScorpions() {
 		}
 	}
 #endif // BLADERUNNER_ORIGINAL_BUGS
-	Actor_Says(kActorMcCoy, 3750, 11); // "Did you know they were poisonous?"
-	Actor_Says(kActorDektora, 880, 30); // "The woman who sold them said something about that, yes."
-	Actor_Says(kActorMcCoy, 3755, 16); // "And that doesn't scare you?"
-	Actor_Says(kActorDektora, 890, 31); // "There are plenty of things in this world that are truly frightening."
+	Actor_Says(kActorMcCoy, 3750, 11);
+	Actor_Says(kActorDektora, 880, 30);
+	Actor_Says(kActorMcCoy, 3755, 16);
+	Actor_Says(kActorDektora, 890, 31);
 	if (_vm->_cutContent) {
-		Actor_Says(kActorDektora, 900, 30); // "Who would need to add insects to the list?"
+		Actor_Says(kActorDektora, 900, 30); // Who would need to add insects to the list?
 	}
 }
 
