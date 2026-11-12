@@ -1144,7 +1144,7 @@ Math::Angle Actor::getYawTo(const Math::Vector3d &p) const {
 		return Math::Angle::arcTangent2(-dpos.x(), dpos.y());
 }
 
-void Actor::sayLine(const char *msgId, bool background, float x, float y) {
+void Actor::sayLine(const char *msgId, bool background, float x, float y, int volume, int pan) {
 	assert(msgId);
 
 	if (msgId[0] == 0) {
@@ -1193,7 +1193,7 @@ void Actor::sayLine(const char *msgId, bool background, float x, float y) {
 	_talkSoundId = 0;
 
 	if (g_grim->getSpeechMode() != GrimEngine::TextOnly)
-		started = g_sound->startVoice(_talkSoundName.c_str(), 127, 64, background, &_talkSoundId);
+		started = g_sound->startVoice(_talkSoundName.c_str(), volume, pan, background, &_talkSoundId);
 
 	// If the actor is clearly not visible then don't try to play the lip sync
 	if (_visible && (!g_movie->isPlaying() || g_grim->getMode() == GrimEngine::NormalMode)) {
@@ -1286,8 +1286,9 @@ void Actor::sayLine(const char *msgId, bool background, float x, float y) {
 				_mustPlaceText = true;
 			} else {
 				_mustPlaceText = false;
-				textObject->setX(640 / 2);
-				textObject->setY(463);
+				const Common::Point &pos = g_grim->getOffscreenTextPos();
+				textObject->setX(pos.x);
+				textObject->setY(pos.y);
 			}
 		}
 		textObject->setText(msgId, _mustPlaceText);
@@ -1535,6 +1536,15 @@ void Actor::updateWalk() {
 	}
 
 	turnTo(destPos, true);
+
+	// In EMI, if the actor faces more than 80 degrees away from where it's
+	// walking, it turns in place before moving.
+	if (g_grim->getGameType() == GType_MONKEY4) {
+		Math::Angle remaining = _moveYaw - _yaw;
+		remaining.normalize(-180);
+		if (ABS(remaining.getDegrees()) >= 80.f)
+			return;
+	}
 
 	dir = destPos - _pos;
 	dir.normalize();
@@ -1819,8 +1829,9 @@ void Actor::draw() {
 		TextObject *textObject = TextObject::getPool().getObject(_sayLineText);
 		if (textObject) {
 			if (p1.x == 1000 || p2.x == -1000 || p2.x == -1000) {
-				textObject->setX(640 / 2);
-				textObject->setY(463);
+				const Common::Point &pos = g_grim->getOffscreenTextPos();
+				textObject->setX(pos.x);
+				textObject->setY(pos.y);
 			} else {
 				textObject->setX((p1.x + p2.x) / 2);
 				textObject->setY(p1.y);

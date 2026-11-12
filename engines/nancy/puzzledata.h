@@ -743,6 +743,16 @@ struct ScriptSavedData : public PuzzleData {
 	Common::HashMap<Common::String, Common::Array<byte>, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> values;
 };
 
+// Nancy27. The results of the conditions of the Brain that are only worked out
+// again when the scripts ask for it, and from Nancy28 on the flags of the Brain
+// the scripts set
+struct BrainData : public PuzzleData {
+	static constexpr uint32 getTag() { return MKTAG('B', 'R', 'N', 'S'); }
+	virtual void synchronize(Common::Serializer &ser);
+
+	Common::HashMap<Common::String, bool, Common::IgnoreCase_Hash, Common::IgnoreCase_EqualTo> results;
+};
+
 // Nancy21. The pictures the camera of the cell phone took, as PNG files, which
 // the scripts show from the "LOADSAVE" tree
 struct ScriptPictureData : public PuzzleData {

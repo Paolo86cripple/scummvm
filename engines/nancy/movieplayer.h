@@ -110,6 +110,12 @@ public:
 	void goToFrame(int frameNr);				// show a single still frame
 	void playRange(int first, int last);		// begin timed playback (reverse if last < first)
 	bool update();								// advance; true if the shown frame changed
+	// Advances by the time that went by in the game, which stops while the
+	// movie isn't run. A movie that falls behind skips frames to catch up.
+	bool advance(double elapsedMillis);
+	// The frames per second the frame-range player plays at, instead of the
+	// movie's own; 0 for the movie's own
+	void setFrameRate(double framesPerSecond);
 	bool isRangePlaying() const { return _rangePlaying; }
 	int getCurrentFrame() const { return getCurFrame(); }
 	void drawFrame(Graphics::ManagedSurface &dst, const Common::Point &pos) const;
@@ -117,6 +123,10 @@ public:
 
 private:
 	friend class BinkCacheLoader;
+
+	// How far ahead decodeNextFrame() decodes to a frame instead of seeking: a
+	// second of a 15 frames per second movie
+	static const int kMaxFramesDecodedAhead = 15;
 
 	static byte resolvePlaytype(byte videoPlaytype);	// resolves kVideoPlaytypeAuto
 
@@ -142,6 +152,7 @@ private:
 	uint _cacheFillNext = 0;
 
 	double getFrameMillis() const;
+	bool showNextFrame();
 
 	// Simple frame-range player state. _currentSurface points at the decoder's
 	// last-decoded frame (owned by it, valid until the next decode).
@@ -150,7 +161,10 @@ private:
 	int _step = 1;
 	bool _rangePlaying = false;
 	double _nextFrameTime = 0.0;	// when the next frame is due, in milliseconds
+	double _playedMillis = 0.0;		// how long advance() has played the range
+	double _nextPlayedFrame = 0.0;	// when advance() shows the next frame
 	double _frameMillis = 1000.0 / 15.0;
+	double _frameRate = 0.0;
 };
 
 } // End of namespace Nancy

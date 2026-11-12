@@ -43,13 +43,13 @@ static const uint32 kDoubleClickTime = 500;	// milliseconds
 static const int kDoubleClickDistance = 4;
 
 struct InputState {
-	ScriptPoint mouse;
+	Common::Point32 mouse;
 	bool hasMouse = false;
 	Record *hovered = nullptr;
 	Record *pressed[2] = { nullptr, nullptr };
 
 	uint32 lastClickTime[2] = { 0, 0 };
-	ScriptPoint lastClickPoint[2];
+	Common::Point32 lastClickPoint[2];
 	bool isDoubleClick[2] = { false, false };
 
 	uint16 heldMoveKeys = 0;
@@ -62,7 +62,7 @@ static InputState &getState() {
 	return s_state;
 }
 
-const ScriptPoint &getScriptMousePoint() {
+const Common::Point32 &getScriptMousePoint() {
 	return getState().mouse;
 }
 
@@ -85,6 +85,20 @@ void forgetInputRecord(Record *record) {
 
 static bool isFrontmost(const Record *a, const Record *b) {
 	return a->getZ() > b->getZ();
+}
+
+// Sorts the records, keeping equal ones in the order they were added
+static void sortStable(Common::Array<Record *> &records, bool (*isBefore)(const Record *, const Record *)) {
+	for (uint i = 1; i < records.size(); ++i) {
+		Record *record = records[i];
+		uint j = i;
+		while (j > 0 && isBefore(record, records[j - 1])) {
+			records[j] = records[j - 1];
+			--j;
+		}
+
+		records[j] = record;
+	}
 }
 
 // The enabled records of every stream that gets input, the frontmost first
@@ -116,7 +130,7 @@ static void collectRecords(Common::Array<Record *> &records) {
 				}
 			}
 
-			Common::sort(streamRecords.begin(), streamRecords.end(), isFrontmost);
+			sortStable(streamRecords, isFrontmost);
 			for (Record *record : streamRecords) {
 				records.push_back(record);
 			}
@@ -333,7 +347,7 @@ static bool isMoveKey(Common::KeyCode key) {
 // the mouse goes by
 static void sendKey(const Common::Array<Record *> &records, Common::KeyCode key, bool isDown, uint16 ascii) {
 	Common::Array<Record *> keyOrder = records;
-	Common::sort(keyOrder.begin(), keyOrder.end(), isKeyFrontmost);
+	sortStable(keyOrder, isKeyFrontmost);
 
 	for (Record *record : keyOrder) {
 		if (record->capturesKeys() || (isDown && record->handleKey(key, ascii))) {
@@ -386,10 +400,10 @@ static const MoveKey kMoveKeys[] = {
 void handleNancy26Input(NancyInput &input) {
 	InputState &state = getState();
 
-	const ScriptPoint oldMouse = state.mouse;
+	const Common::Point32 oldMouse = state.mouse;
 	state.hasMouse = input.mousePos.x >= 0;
 	if (state.hasMouse) {
-		state.mouse = ScriptPoint(input.mousePos);
+		state.mouse = Common::Point32(input.mousePos);
 	}
 
 	state.isDoubleClick[0] = state.isDoubleClick[1] = false;
@@ -473,7 +487,7 @@ namespace State {
 
 // Nancy26's records take care of all the input themselves. Esc opens the menu
 // through them, unless it skips the movies that play or what the characters
-// say; that press then stays away from them until it is let go.
+// say; that press is then taken away from everything.
 void Scene::handleNancy26Input(NancyInput &input) {
 	const bool escPressed = (input.input & NancyInput::kOpenMainMenu) != 0;
 	if (escPressed && !_escHeld && _scriptScene) {
@@ -484,15 +498,13 @@ void Scene::handleNancy26Input(NancyInput &input) {
 			hasSkipped |= _streams.skipSpeech();
 		}
 
-		_isEscSkipping = hasSkipped;
-	} else if (!escPressed) {
-		_isEscSkipping = false;
+		if (hasSkipped) {
+			g_nancy->_input->eatMainMenuKey();
+			input.eatMainMenuKey();
+		}
 	}
 
-	_escHeld = escPressed;
-	if (_isEscSkipping) {
-		input.input &= ~NancyInput::kOpenMainMenu;
-	}
+	_escHeld = (input.input & NancyInput::kOpenMainMenu) != 0;
 
 	Script::handleNancy26Input(input);
 }

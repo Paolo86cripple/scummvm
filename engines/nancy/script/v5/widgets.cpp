@@ -34,6 +34,7 @@
 #include "engines/nancy/script/ref.h"
 #include "engines/nancy/script/scenecontext.h"
 
+#include "engines/nancy/script/v5/messaging.h"
 #include "engines/nancy/script/v5/scriptinput.h"
 #include "engines/nancy/script/v5/widgets.h"
 
@@ -101,6 +102,12 @@ void HotspotRecord::readTable(int tableIndex) {
 	readField(L, tableIndex, "stream", _streamName);
 	readField(L, tableIndex, "watchLeft", _watchesLeft);
 	readField(L, tableIndex, "watchRight", _watchesRight);
+	readField(L, tableIndex, "tooltip", _tooltip);
+
+	Common::String tooltipManager;
+	if (readField(L, tableIndex, "tooltipManager", tooltipManager) && !tooltipManager.empty()) {
+		_tooltipManager = tooltipManager;
+	}
 
 	static const char *const kCursorNames[] = { "cursor", "startCursor", "downCursor", "dragOnCursor", "dragOffCursor" };
 	Cursor *const cursors[] = { &_cursor, &_startCursor, &_downCursor, &_dragOnCursor, &_dragOffCursor };
@@ -128,7 +135,7 @@ void HotspotRecord::readTable(int tableIndex) {
 	}
 }
 
-bool HotspotRecord::hitTest(const ScriptPoint &point) const {
+bool HotspotRecord::hitTest(const Common::Point32 &point) const {
 	double x = point.x;
 	double y = point.y;
 	getTransform().inverse().transformPoint(x, y);
@@ -162,9 +169,38 @@ void HotspotRecord::setMouseOver(bool isOver) {
 	}
 
 	_isMouseOver = isOver;
+	sendTooltip(isOver);
 	callFunction(isOver ? "OnMouseOver" : "OnMouseLeave");
 	if (_widget) {
 		_widget->onHotspotOver(isOver);
+	}
+}
+
+// Nancy28. A hotspot with a tooltip has its manager show it while the mouse is
+// over it: Receive(manager, sender, "Show", tooltip, onScreen, transform), and
+// Receive(manager, sender, "Hide") when the mouse leaves
+void HotspotRecord::sendTooltip(bool isShown) {
+	if (_tooltip.empty() || _tooltipManager.empty()) {
+		return;
+	}
+
+	lua_State *L = getLua();
+	const int top = lua_gettop(L);
+	if (isShown) {
+		lua_pushstring(L, _tooltip.c_str());
+		pushRect(L, _onScreen);
+		pushMatrix(L, getTransform());
+		sendMessage(L, getUniqueAlias(), _tooltipManager, "Show", top + 1, 3);
+	} else {
+		sendMessage(L, getUniqueAlias(), _tooltipManager, "Hide", top + 1, 0);
+	}
+
+	lua_settop(L, top);
+}
+
+void HotspotRecord::onDie() {
+	if (_isMouseOver) {
+		sendTooltip(false);
 	}
 }
 
@@ -275,6 +311,10 @@ bool HotspotRecord::getField(const Common::String &key) {
 		pushColor(L, _refColor);
 	} else if (key == "source") {
 		pushRect(L, _source);
+	} else if (key == "tooltip") {
+		lua_pushstring(L, _tooltip.c_str());
+	} else if (key == "tooltipManager") {
+		lua_pushstring(L, _tooltipManager.c_str());
 	} else {
 		return false;
 	}
@@ -316,6 +356,16 @@ bool HotspotRecord::setField(const Common::String &key) {
 		}
 	} else if (key == "source") {
 		_source = checkRect(L, 3);
+	} else if (key == "tooltip" || key == "tooltipManager") {
+		// A tooltip that is shown goes away, and the new one shows
+		if (_isMouseOver) {
+			sendTooltip(false);
+		}
+
+		(key == "tooltip" ? _tooltip : _tooltipManager) = luaL_checkstring(L, 3);
+		if (_isMouseOver) {
+			sendTooltip(true);
+		}
 	} else {
 		return false;
 	}
@@ -348,7 +398,7 @@ void SinkRecord::readTable(int tableIndex) {
 	}
 }
 
-bool SinkRecord::hitTest(const ScriptPoint &point) const {
+bool SinkRecord::hitTest(const Common::Point32 &point) const {
 	double x = point.x;
 	double y = point.y;
 	getTransform().inverse().transformPoint(x, y);
@@ -665,8 +715,8 @@ void SliderRecord::readTable(int tableIndex) {
 }
 
 // The knob is as large as the part of the picture it shows
-static ScriptPoint getOverlaySize(Record *overlay) {
-	ScriptPoint size;
+static Common::Point32 getOverlaySize(Record *overlay) {
+	Common::Point32 size;
 	if (!overlay) {
 		return size;
 	}
@@ -676,21 +726,21 @@ static ScriptPoint getOverlaySize(Record *overlay) {
 	lua_getfield(L, -1, "source");
 	const ScriptRect *source = testRect(L, -1);
 	if (source) {
-		size = ScriptPoint(source->width(), source->height());
+		size = Common::Point32(source->width(), source->height());
 	}
 
 	lua_pop(L, 2);
 	return size;
 }
 
-ScriptPoint SliderRecord::getKnobMax() const {
-	const ScriptPoint knobSize = getOverlaySize(_knobOverlay);
-	return ScriptPoint(MAX<int>(0, _knobArea.width() - knobSize.x), MAX<int>(0, _knobArea.height() - knobSize.y));
+Common::Point32 SliderRecord::getKnobMax() const {
+	const Common::Point32 knobSize = getOverlaySize(_knobOverlay);
+	return Common::Point32(MAX<int>(0, _knobArea.width() - knobSize.x), MAX<int>(0, _knobArea.height() - knobSize.y));
 }
 
-void SliderRecord::setKnobPos(const ScriptPoint &pos, bool callsScripts) {
-	const ScriptPoint knobMax = getKnobMax();
-	const ScriptPoint newPos(CLIP<int>(pos.x, 0, knobMax.x), CLIP<int>(pos.y, 0, knobMax.y));
+void SliderRecord::setKnobPos(const Common::Point32 &pos, bool callsScripts) {
+	const Common::Point32 knobMax = getKnobMax();
+	const Common::Point32 newPos(CLIP<int>(pos.x, 0, knobMax.x), CLIP<int>(pos.y, 0, knobMax.y));
 
 	const bool hasMoved = newPos.x != _knobPos.x || newPos.y != _knobPos.y;
 	_knobPos = newPos;
@@ -706,7 +756,7 @@ void SliderRecord::placeKnob() {
 		return;
 	}
 
-	const ScriptPoint knobSize = getOverlaySize(_knobOverlay);
+	const Common::Point32 knobSize = getOverlaySize(_knobOverlay);
 	ScriptRect dest(0, 0, knobSize.x, knobSize.y);
 	dest.translate(_knobArea.left + _knobPos.x, _knobArea.top + _knobPos.y);
 
@@ -721,16 +771,16 @@ void SliderRecord::onHotspotDown(int button) {
 		return;
 	}
 
-	const ScriptPoint mouse = getScriptMousePoint();
-	const ScriptPoint knobSize = getOverlaySize(_knobOverlay);
+	const Common::Point32 mouse = getScriptMousePoint();
+	const Common::Point32 knobSize = getOverlaySize(_knobOverlay);
 	const ScriptRect knob(_knobArea.left + _knobPos.x, _knobArea.top + _knobPos.y,
 		_knobArea.left + _knobPos.x + knobSize.x, _knobArea.top + _knobPos.y + knobSize.y);
 
 	if (knob.contains(mouse.x, mouse.y)) {
-		_dragOffset = ScriptPoint(mouse.x - knob.left, mouse.y - knob.top);
+		_dragOffset = Common::Point32(mouse.x - knob.left, mouse.y - knob.top);
 	} else {
-		_dragOffset = ScriptPoint(knobSize.x / 2, knobSize.y / 2);
-		setKnobPos(ScriptPoint(mouse.x - _knobArea.left - _dragOffset.x, mouse.y - _knobArea.top - _dragOffset.y), true);
+		_dragOffset = Common::Point32(knobSize.x / 2, knobSize.y / 2);
+		setKnobPos(Common::Point32(mouse.x - _knobArea.left - _dragOffset.x, mouse.y - _knobArea.top - _dragOffset.y), true);
 	}
 
 	_isDragging = true;
@@ -749,12 +799,12 @@ void SliderRecord::run(double sceneTime, double elapsedTime) {
 	ClipTransformerRecord::run(sceneTime, elapsedTime);
 
 	if (_isDragging) {
-		const ScriptPoint mouse = getScriptMousePoint();
-		setKnobPos(ScriptPoint(mouse.x - _knobArea.left - _dragOffset.x, mouse.y - _knobArea.top - _dragOffset.y), true);
+		const Common::Point32 mouse = getScriptMousePoint();
+		setKnobPos(Common::Point32(mouse.x - _knobArea.left - _dragOffset.x, mouse.y - _knobArea.top - _dragOffset.y), true);
 	}
 }
 
-bool SliderRecord::scrollRegion(const ScriptPoint &point, int notches) {
+bool SliderRecord::scrollRegion(const Common::Point32 &point, int notches) {
 	if (!isNodeEnabled() || (_scrollAmount.x == 0 && _scrollAmount.y == 0)) {
 		return false;
 	}
@@ -763,7 +813,7 @@ bool SliderRecord::scrollRegion(const ScriptPoint &point, int notches) {
 		return false;
 	}
 
-	setKnobPos(ScriptPoint(_knobPos.x - notches * _scrollAmount.x, _knobPos.y - notches * _scrollAmount.y), true);
+	setKnobPos(Common::Point32(_knobPos.x - notches * _scrollAmount.x, _knobPos.y - notches * _scrollAmount.y), true);
 	return true;
 }
 
@@ -795,7 +845,7 @@ bool SliderRecord::getField(const Common::String &key) {
 	} else if (key == "knobMax") {
 		pushPoint(L, getKnobMax());
 	} else if (key == "percent") {
-		const ScriptPoint knobMax = getKnobMax();
+		const Common::Point32 knobMax = getKnobMax();
 		pushVector(L, ScriptVector(knobMax.x > 0 ? (double)_knobPos.x / knobMax.x : 0.0,
 			knobMax.y > 0 ? (double)_knobPos.y / knobMax.y : 0.0, 0.0));
 	} else {
@@ -809,7 +859,7 @@ bool SliderRecord::setField(const Common::String &key) {
 	lua_State *L = getLua();
 
 	if (key == "knobPos") {
-		ScriptPoint pos;
+		Common::Point32 pos;
 		readPoint(L, 3, pos);
 		setKnobPos(pos, false);
 	} else if (key == "scrollArea") {
@@ -911,7 +961,7 @@ void EditBoxRecord::registerGraphics() {
 	_graphic.registerGraphics();
 }
 
-bool EditBoxRecord::hitTest(const ScriptPoint &point) const {
+bool EditBoxRecord::hitTest(const Common::Point32 &point) const {
 	double x = point.x;
 	double y = point.y;
 	getTransform().inverse().transformPoint(x, y);
@@ -1019,7 +1069,7 @@ static uint32 toSurfaceColor(const Graphics::ManagedSurface &surface, uint32 arg
 
 void EditBoxRecord::updateGraphics() {
 	_graphic.setClipRect(getScreenClip());
-	_graphic.setVisible(isShown());
+	_graphic.setVisible(isShown(), false);
 
 	const bool isFocused = hasFocus();
 	if (isFocused != _hadFocus) {

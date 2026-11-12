@@ -97,8 +97,6 @@ public:
 
 	void enableLights() override;
 	void disableLights() override;
-	void setupLight(Light *light, int lightId) override;
-	void turnOffLight(int lightId) override;
 
 	void createTexture(Texture *texture, const uint8 *data, const CMap *cmap, bool clamp) override;
 	void selectTexture(const Texture *texture) override;
@@ -217,11 +215,12 @@ protected:
 	GLuint compileShader(const char *vertex, const char *fragment);
 	GLuint compileShader(const char *shader) { return compileShader(shader, shader); }
 	void createSpecialtyTextureFromScreen(uint id, uint8 *data, int x, int y, int width, int height) override;
+	void setupLight(Light *light, int lightId) override;
+	void turnOffLight(int lightId) override;
 
 private:
 	const Actor *_currentActor;
 	float _alpha;
-	int _maxLights;
 	GLuint _emergTexture;
 	OpenGL::Shader* _emergProgram;
 
@@ -286,6 +285,7 @@ private:
 	GLuint _dimVBO;
 	GLuint _dimRegionVBO;
 	GLuint _blastVBO;
+	int _blastVBOCapacity;
 	GLuint _storedDisplay;
 };
 

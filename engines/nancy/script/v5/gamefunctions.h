@@ -22,10 +22,46 @@
 #ifndef NANCY_SCRIPT_V5_GAMEFUNCTIONS_H
 #define NANCY_SCRIPT_V5_GAMEFUNCTIONS_H
 
+#include "common/array.h"
+
+#include "engines/nancy/enginedata.h"
+
 struct lua_State;
 
 namespace Nancy {
 namespace Script {
+
+// Nancy26. What the Game and Sound objects of the scripts keep while the game
+// runs, across new games
+struct ScriptGameState : public EngineData {
+	// What the cheat tools switch on
+	bool isCheatMode = false;
+	bool isFastConvo = false;
+	bool showsDiagnostics = false;	// Nancy27
+
+	// How many times a new game began since the game was started
+	uint numRestarts = 0;
+
+	// Nancy27. The channels Sound:PauseAbandoned() paused, and the sounds on them
+	struct PausedChannel {
+		uint16 channel;
+		uint32 serial;
+	};
+
+	Common::Array<PausedChannel> pausedAbandonedChannels;
+
+	// Nancy28. The scripts of the game, in alphabetical order, the ones the
+	// filter of the cheat menu let through, and the index of the first one of
+	// those that comes after the filter
+	Common::Array<Common::String> scriptNames;
+	Common::Array<Common::String> filteredScriptNames;
+	uint closestFilteredMatch = 0;
+
+	// Nancy28. The achievements the game knows of, which Achievements:InitIDs()
+	// gives once
+	Common::Array<Common::String> achievementIds;
+	bool hasAchievementIds = false;
+};
 
 // What Nancy26 adds to the objects of the earlier games: the saved games and
 // settings in Game, the inventory by the names of the items, Flags:All(),

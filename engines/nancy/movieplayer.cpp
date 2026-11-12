@@ -255,9 +255,17 @@ const Graphics::Surface *MoviePlayer::decodeNextFrame(int frameNr) {
 		return &_frameCache[frameNr];
 	}
 
-	// seekToFrame() re-decodes from the previous keyframe, so only seek when the
-	// frame can't be reached by decoding forward one step.
-	if (_decoder->getCurFrame() + 1 != frameNr) {
+	// seekToFrame() decodes again from the keyframe before the frame, which can
+	// be far back: the movies of the conversations have few of them. A frame a
+	// little ahead is reached by decoding the ones in between instead, so a
+	// frame rate that drops for a moment, e.g. during a fade, doesn't make every
+	// later frame slower to get to.
+	const int framesAhead = frameNr - _decoder->getCurFrame();
+	if (framesAhead > 1 && framesAhead <= kMaxFramesDecodedAhead) {
+		while (_decoder->getCurFrame() + 1 < frameNr) {
+			_decoder->decodeNextFrame();
+		}
+	} else if (framesAhead != 1) {
 		_decoder->seekToFrame(frameNr);
 	}
 
@@ -292,11 +300,23 @@ void MoviePlayer::goToFrame(int frameNr) {
 	storeCurrentFrame();
 }
 
-// How long a frame shows, from the length of the movie
+// How long a frame shows, from the length of the movie unless another frame
+// rate was set
 double MoviePlayer::getFrameMillis() const {
+	if (_frameRate > 0.0) {
+		return 1000.0 / _frameRate;
+	}
+
 	const int frameCount = _decoder->getFrameCount();
 	const uint32 durationMs = _decoder->getDuration().msecs();
 	return (frameCount > 0 && durationMs > 0) ? (double)durationMs / frameCount : 1000.0 / 15.0;
+}
+
+void MoviePlayer::setFrameRate(double framesPerSecond) {
+	_frameRate = MAX(framesPerSecond, 0.0);
+	if (_decoder) {
+		_frameMillis = getFrameMillis();
+	}
 }
 
 void MoviePlayer::playRange(int first, int last) {
@@ -315,6 +335,8 @@ void MoviePlayer::playRange(int first, int last) {
 	_rangePlaying = (first != last);
 	_frameMillis = getFrameMillis();
 	_nextFrameTime = g_system->getMillis() + _frameMillis;
+	_playedMillis = 0.0;
+	_nextPlayedFrame = _frameMillis;
 }
 
 bool MoviePlayer::update() {
@@ -339,6 +361,32 @@ bool MoviePlayer::update() {
 		_nextFrameTime = now + _frameMillis;
 	}
 
+	return showNextFrame();
+}
+
+// Every frame is due at its own time from the start. A movie that is late
+// decodes a frame it missed without showing it, so it stays in time with its
+// sound even when the game draws fewer frames than the movie has. It doesn't
+// catch up on more than that at once: when decoding takes longer than the
+// frames last, each update would have more of them to decode than the last.
+bool MoviePlayer::advance(double elapsedMillis) {
+	if (!_rangePlaying || !_decoder) {
+		return false;
+	}
+
+	_playedMillis += elapsedMillis;
+
+	static const int kMaxFramesPerAdvance = 2;
+	int numShown = 0;
+	while (numShown < kMaxFramesPerAdvance && _playedMillis >= _nextPlayedFrame && showNextFrame()) {
+		_nextPlayedFrame += _frameMillis;
+		++numShown;
+	}
+
+	return numShown > 0;
+}
+
+bool MoviePlayer::showNextFrame() {
 	if (_decoder->endOfVideo() ||
 			(_step > 0 && _decoder->getCurFrame() >= _rangeLast) ||
 			(_step < 0 && _decoder->getCurFrame() <= _rangeLast)) {
