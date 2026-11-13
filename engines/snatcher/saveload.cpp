@@ -226,6 +226,8 @@ void SaveLoadManager::loadState(int slot, GameState &state) {
 		uint8 *tmp = new uint8[tsize];
 		in->read(tmp, tsize);
 		_tempState = Common::SharedPtr<Common::MemoryReadStream>(new Common::MemoryReadStream(tmp, tsize, DisposeAfterUse::YES));
+	} else {
+		_tempState.reset();
 	}
 
 	_vm->_scriptEngine->loadState(in, state.script, flags);
@@ -325,6 +327,7 @@ Common::OutSaveFile *SaveLoadManager::openFileForSaving(int slot, const Common::
 		error("%s(): Unable to create thumbnail", __FUNCTION__);
 
 	Graphics::saveThumbnail(*out, tn);
+	tn.free();
 
 	TimeDate td;
 	_vm->_system->getTimeAndDate(td);

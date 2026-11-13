@@ -84,6 +84,7 @@ SegaRenderer::~SegaRenderer() {
 	delete[] _tempBufferSpritesPrio;
 	delete[] _tempBufferPlanes;
 	delete[] _tempBufferPlanesPrio;
+	delete[] _renderColorTable;
 }
 
 void SegaRenderer::setResolution(int w, int h) {
@@ -164,7 +165,8 @@ void SegaRenderer::setupPlaneAB(int pixelWidth, int pixelHeigth) {
 		_planes[i].mod = _planes[i].h;
 		_planes[i].nameTableSize = _planes[i].w * _planes[i].h;
 	}
-	_pitch = pixelWidth >> 3;
+	if (pixelWidth != -1)
+		_pitch = pixelWidth >> 3;
 }
 
 void SegaRenderer::setupWindowPlane(int baseX, int baseY, int horizontalMode, int verticalMode) {
