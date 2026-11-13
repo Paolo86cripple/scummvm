@@ -112,6 +112,8 @@ void Title::showState(State state) {
 		// No timeout; this state waits indefinitely for a keypress
 		_cursor.show();
 		break;
+	default:
+		break;
 	}
 
 	redraw();
@@ -196,6 +198,8 @@ void Title::draw() {
 			Data::RENDER_MODE_NAMES[g_engine->getRenderMode()]));
 		s.writeString(Common::Point(5, 19), "Choice:");
 		break;
+	default:
+		break;
 	}
 }
 
@@ -232,6 +236,8 @@ void Title::timeout() {
 		break;
 	case MENU:
 		break;
+	default:
+		break;
 	}
 }
 
@@ -264,7 +270,7 @@ bool Title::msgKeypress(const KeypressMessage &msg) {
 	return true;
 }
 
-bool Title::msgAction(const ActionMessage &msg) {
+bool Title::msgAction(const ActionMessage &) {
 	if (_state != MENU)
 		showMenu();
 

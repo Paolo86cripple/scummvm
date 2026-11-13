@@ -103,6 +103,8 @@ void DungeonLogic::turnLeft() {
 	case Data::DIR_DOWN:
 		_G(savegame)._dungeonDirection = Data::DIR_RIGHT;
 		break;
+	default:
+		break;
 	}
 }
 
@@ -122,6 +124,8 @@ void DungeonLogic::turnRight() {
 	case Data::DIR_DOWN:
 		_G(savegame)._dungeonDirection = Data::DIR_LEFT;
 		break;
+	default:
+		break;
 	}
 }
 
@@ -140,6 +144,8 @@ void DungeonLogic::turnAround() {
 		break;
 	case Data::DIR_DOWN:
 		_G(savegame)._dungeonDirection = Data::DIR_UP;
+		break;
+	default:
 		break;
 	}
 }
@@ -208,12 +214,14 @@ bool DungeonLogic::move(Data::Direction dir) {
 	case Data::DIR_DOWN:
 		turnAround();
 		break;
+	default:
+		break;
 	}
 
 	return true;
 }
 
-bool DungeonLogic::attack(Data::Direction dir) {
+bool DungeonLogic::attack(Data::Direction) {
 	writeString("Attack with %s", Data::WEAPON_NAMES_LOWER[_G(savegame)._equippedWeapon]);
 
 	int maxDistance = Data::WEAPONS_DISTANCE[_G(savegame)._equippedWeapon];

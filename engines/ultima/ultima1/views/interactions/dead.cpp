@@ -40,7 +40,6 @@ constexpr int RESURRECTED_AMOUNT = 99;
 // The skull glyph shown while the player is dead - a 64x95 1-bit-per-pixel
 // bitmap, stored as 95 rows of 4 big-endian 16-bit words (bit 15 = leftmost
 // pixel of the word), matching the original's drawDeathGraphic byte table
-constexpr int DEATH_GRAPHIC_WIDTH = 64;
 constexpr int DEATH_GRAPHIC_HEIGHT = 95;
 
 // Absolute screen position the original centers the glyph at within the
@@ -123,7 +122,7 @@ static void drawSkullGraphic(Graphics::Views::GfxSurface &s) {
 	}
 }
 
-bool Dead::msgFocus(const FocusMessage &msg) {
+bool Dead::msgFocus(const FocusMessage &) {
 	// Claim the map viewport area (inside the game border, which is left
 	// drawn by whatever view was showing underneath)
 	setBounds(Common::Rect(8, 8, 312, 152));
@@ -189,6 +188,8 @@ bool Dead::tick() {
 				finish();
 			else
 				_delayCtr = COUNT_DELAY;
+			break;
+		default:
 			break;
 		}
 	}
@@ -261,7 +262,7 @@ void Dead::finish() {
 	_G(map).load(Data::MAP_OVERWORLD);
 }
 
-bool SpaceDead::msgFocus(const FocusMessage &msg) {
+bool SpaceDead::msgFocus(const FocusMessage &) {
 	setBounds(Common::Rect(8, 8, 312, 152));
 	return true;
 }

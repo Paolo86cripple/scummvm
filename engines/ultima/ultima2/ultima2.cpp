@@ -147,7 +147,7 @@ byte Ultima2Engine::randByte() {
 	return newVal;
 }
 
-bool Ultima2Engine::canSaveGameStateCurrently(Common::U32String *msg) {
+bool Ultima2Engine::canSaveGameStateCurrently(Common::U32String *) {
 	// Only allow saving when any of the different map views are active, or
 	// flying in space and not in the middle of a hyperwarp animation
 	if (dynamic_cast<Views::Map *>(focusedView()) != nullptr)
@@ -157,7 +157,7 @@ bool Ultima2Engine::canSaveGameStateCurrently(Common::U32String *msg) {
 	return spaceMap != nullptr && !spaceMap->busy();
 }
 
-bool Ultima2Engine::canLoadGameStateCurrently(Common::U32String *msg) {
+bool Ultima2Engine::canLoadGameStateCurrently(Common::U32String *) {
 	Views::UIElement *view = focusedView();
 	return canSaveGameStateCurrently() ||
 		dynamic_cast<Views::Interactions::Dead *>(view) != nullptr ||
@@ -281,6 +281,8 @@ void Ultima2Engine::playFX(Data::SoundEffect fx) {
 		queueTone(1170, 60);
 		queueTone(1216, 60);
 		queueTone(1170, 60);
+		break;
+	default:
 		break;
 	}
 }

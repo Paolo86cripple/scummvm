@@ -103,7 +103,7 @@ static const ShopName &shopNameFor(int shopType, int variant) {
 Merchant::Merchant() : Interaction("Merchant") {
 }
 
-bool Merchant::msgFocus(const FocusMessage &msg) {
+bool Merchant::msgFocus(const FocusMessage &) {
 	_mode = SHOP_PROMPT;
 	setBounds(Common::Rect(0, 0, 0, 0));
 
@@ -137,7 +137,7 @@ bool Merchant::msgFocus(const FocusMessage &msg) {
 	return true;
 }
 
-bool Merchant::msgAction(const ActionMessage &msg) {
+bool Merchant::msgAction(const ActionMessage &) {
 	if (_mode == SHOP_MESSAGE)
 		nextScreen();
 	else
@@ -194,6 +194,8 @@ bool Merchant::msgKeypress(const KeypressMessage &msg) {
 
 	case SHOP_QTY:
 		groceryKeypress(msg);
+		break;
+	default:
 		break;
 	}
 
@@ -507,6 +509,8 @@ void Merchant::chooseSell() {
 
 	case SHOP_TRANSPORT:
 		showText(true, false, { { 9, listY() + 2, "Sorry, we don't deal in" }, { 15, listY() + 3, "used stuff." } });
+		break;
+	default:
 		break;
 	}
 }
