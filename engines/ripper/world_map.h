@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_WORLD_MAP_H
@@ -25,6 +26,7 @@
 #include "common/rect.h"
 #include "common/str.h"
 
+#include "ripper/display.h"
 #include "ripper/resources.h"
 
 namespace Ripper {
@@ -39,7 +41,6 @@ public:
 	bool initialize(ResourceManager &resources);
 	bool run(Common::String &targetScript, uint &chapter);
 	uint locationCount() const { return _locations.size(); }
-	bool isLocationAvailable(uint locationIndex) const;
 	const Common::String &locationName(uint locationIndex) const;
 
 private:
@@ -52,7 +53,6 @@ private:
 		TravelLocation() : available(false) {}
 	};
 
-	bool captureDisplay();
 	void restoreDisplay();
 	void refreshLocations();
 	void draw() const;
@@ -66,7 +66,6 @@ private:
 	bool pageSelection(int direction);
 	bool selectViewportEdge(bool last);
 	void updateFirstVisible();
-	uint resolveChapter() const;
 	Common::String resolveTargetScript(uint locationIndex, uint chapter) const;
 	const Common::String &resourceString(uint resourceId) const;
 
@@ -76,8 +75,7 @@ private:
 	Common::Array<Common::String> _gameText;
 	Common::Array<TravelLocation> _locations;
 	Common::Array<uint> _visibleLocations;
-	Common::Array<byte> _savedPixels;
-	Common::Array<byte> _savedPalette;
+	IndexedDisplaySnapshot _savedDisplay;
 	uint _selectedVisible;
 	uint _firstVisible;
 	int _pressedVisible;

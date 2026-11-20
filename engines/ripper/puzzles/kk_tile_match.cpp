@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/kk_tile_match.h"
@@ -25,25 +26,25 @@
 #include "common/ptr.h"
 #include "common/stream.h"
 #include "common/system.h"
-#include "graphics/paletteman.h"
 #include "graphics/surface.h"
-#include "video/smk_decoder.h"
 
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
+#include "ripper/display.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
+#include "ripper/media/smacker_decoder.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
 #include "ripper/settings.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
 namespace {
 
-static const uint kTileCount = 16;
+static const uint kTileCount = KkTileMatchModel::kTileCount;
 static const uint kMaximumState = 13;
 static const uint kCueCount = 3;
 static const uint kDefaultCursor = 14;
@@ -58,16 +59,13 @@ static const uint kPuzzleHelpSearchDepth = 6;
 static const uint kPuzzleHelpSearchNodeLimit = 100000;
 static const byte kPuzzleHelpRecommendedColor = 255;
 static const uint kPuzzleHelpDitherMask = 3;
-static const int kPuzzleHelpBorderWidth = 2;
 static const byte kAnimationTransparentColor = 0xff;
 static const char *const kLibraryName = "kk.pl";
 static const char *const kBackgroundName = "base";
 static const char *const kClosedTileName = "big_s";
 static const char kCompletionKeyword[] = "asparagus";
 
-// g_kkPuzzleTilePositionPairs at 0x84474 contains scene Y followed by X.
-// RunKkTileMatchPuzzleScene at 0x2fa31 cancels the active 50-pixel scene
-// origin before it creates the 16 controls, so these are physical points.
+// Physical screen coordinates; the background fills the 640-by-400 screen.
 static const Common::Point kTilePositions[kTileCount] = {
 	Common::Point(49, 34), Common::Point(185, 34),
 	Common::Point(321, 34), Common::Point(457, 34),
@@ -129,93 +127,39 @@ void KkTileMatchPuzzle::DebugHelper::stateChanged(
 }
 
 uint KkTileMatchPuzzle::DebugHelper::SearchStateHash::operator()(
-		const SearchState &state) const {
+		const KkTileMatchModel &state) const {
 	uint hash = 2166136261U;
 	for (uint tile = 0; tile < kTileCount; ++tile) {
-		hash ^= state.states[tile];
+		hash ^= state.tileState(tile);
 		hash *= 16777619U;
 	}
-	hash ^= state.activeMask & 0xff;
+	hash ^= state.activeMask() & 0xff;
 	hash *= 16777619U;
-	hash ^= state.activeMask >> 8;
+	hash ^= state.activeMask() >> 8;
 	hash *= 16777619U;
 	return hash;
 }
 
 bool KkTileMatchPuzzle::DebugHelper::SearchStateEqual::operator()(
-		const SearchState &left, const SearchState &right) const {
-	if (left.activeMask != right.activeMask)
+		const KkTileMatchModel &left, const KkTileMatchModel &right) const {
+	if (left.activeMask() != right.activeMask())
 		return false;
 	for (uint tile = 0; tile < kTileCount; ++tile) {
-		if (left.states[tile] != right.states[tile])
+		if (left.tileState(tile) != right.tileState(tile))
 			return false;
 	}
 	return true;
 }
 
-KkTileMatchPuzzle::DebugHelper::SearchState
-KkTileMatchPuzzle::DebugHelper::capture(
-		const KkTileMatchPuzzle &puzzle) const {
-	SearchState state;
-	state.activeMask = 0;
-	for (uint tile = 0; tile < kTileCount; ++tile) {
-		state.states[tile] = puzzle._slots[tile].state;
-		if (puzzle._slots[tile].active)
-			state.activeMask |= 1U << tile;
-	}
-	return state;
-}
-
-KkTileMatchPuzzle::DebugHelper::SearchState
-KkTileMatchPuzzle::DebugHelper::simulateClick(
-		const KkTileMatchPuzzle &puzzle, const SearchState &state,
-		uint selectedTile, bool &solved) const {
-	SearchState result = state;
-	solved = false;
-	for (uint destination = 0; destination < kTileCount; ++destination) {
-		const int source = puzzle._moveTable[selectedTile][destination];
-		if (source < 0)
-			continue;
-		result.states[destination] = state.states[source];
-		result.activeMask &= ~(1U << destination);
-		if ((state.activeMask & (1U << source)) != 0)
-			result.activeMask |= 1U << destination;
-	}
-	result.activeMask |= 1U << selectedTile;
-
-	uint activeCount = 0;
-	uint matchingCount = 0;
-	byte referenceState = 0;
-	bool haveReference = false;
-	for (uint tile = 0; tile < kTileCount; ++tile) {
-		if ((result.activeMask & (1U << tile)) == 0)
-			continue;
-		++activeCount;
-		if (!haveReference) {
-			referenceState = result.states[tile];
-			haveReference = true;
-		}
-		if (result.states[tile] == referenceState)
-			++matchingCount;
-	}
-	if (activeCount >= 3) {
-		if (matchingCount == 3)
-			solved = true;
-		else
-			result.activeMask = 0;
-	}
-	return result;
-}
-
 int KkTileMatchPuzzle::DebugHelper::findRecommendedTile(
 		const KkTileMatchPuzzle &puzzle, uint &solutionDepth,
 		uint &visitedStates) const {
-	typedef Common::HashMap<SearchState, bool,
+	typedef Common::HashMap<KkTileMatchModel, bool,
 		SearchStateHash, SearchStateEqual> VisitedStateMap;
 	Common::Array<SearchNode> nodes;
 	VisitedStateMap visited;
 	SearchNode root;
-	root.state = capture(puzzle);
+	root.state = puzzle._model;
 	root.depth = 0;
 	root.firstTile = -1;
 	nodes.push_back(root);
@@ -226,12 +170,12 @@ int KkTileMatchPuzzle::DebugHelper::findRecommendedTile(
 		if (node.depth >= kPuzzleHelpSearchDepth)
 			continue;
 		for (uint tile = 0; tile < kTileCount; ++tile) {
-			bool solved = false;
-			SearchNode next;
-			next.state = simulateClick(puzzle, node.state, tile, solved);
+			SearchNode next = node;
+			const KkTileMatchModel::MatchResult result =
+				next.state.applyClick(tile, puzzle._moveTable[tile]);
 			next.depth = node.depth + 1;
 			next.firstTile = node.depth == 0 ? tile : node.firstTile;
-			if (solved) {
+			if (result == KkTileMatchModel::kMatch) {
 				solutionDepth = next.depth;
 				visitedStates = nodes.size();
 				return next.firstTile;
@@ -258,22 +202,11 @@ void KkTileMatchPuzzle::DebugHelper::draw(
 		return;
 
 	const Common::Point &position = kTilePositions[_recommendedTile];
-	const int left = MAX<int>(position.x, 0);
-	const int top = MAX<int>(position.y, 0);
-	const int right = MIN<int>(position.x + puzzle._closedTile.width,
-		kRipperScreenWidth);
-	const int bottom = MIN<int>(position.y + puzzle._closedTile.height,
-		kRipperScreenHeight);
-	for (int y = top; y < bottom; ++y) {
-		for (int x = left; x < right; ++x) {
-			const bool border = x - left < kPuzzleHelpBorderWidth ||
-				right - x <= kPuzzleHelpBorderWidth ||
-				y - top < kPuzzleHelpBorderWidth ||
-				bottom - y <= kPuzzleHelpBorderWidth;
-			if (border || ((x + y) & kPuzzleHelpDitherMask) == 0)
-				screen[y * pitch + x] = kPuzzleHelpRecommendedColor;
-		}
-	}
+	IndexedBitmapRenderer::drawHintRect(screen, pitch,
+		Common::Rect(position.x, position.y, position.x + puzzle._closedTile.width,
+			position.y + puzzle._closedTile.height),
+		Common::Rect(0, 0, kRipperScreenWidth, kRipperScreenHeight),
+		kPuzzleHelpRecommendedColor, kPuzzleHelpDitherMask);
 }
 
 KkTileMatchPuzzle::KkTileMatchPuzzle(RipperEngine *engine) :
@@ -281,6 +214,7 @@ KkTileMatchPuzzle::KkTileMatchPuzzle(RipperEngine *engine) :
 		_hoveredTile(-1), _keywordIndex(0) {
 	for (uint row = 0; row < kTileCount; ++row) {
 		_visibleTiles[row] = false;
+		_frames[row] = 0;
 		for (uint column = 0; column < kTileCount; ++column)
 			_moveTable[row][column] = -1;
 	}
@@ -291,17 +225,8 @@ bool KkTileMatchPuzzle::loadConfiguration() {
 		_engine->getSettings()->getPuzzleLevel(), 1, 3);
 	const Common::String name = Common::String::format(
 		"kk%u.ini", puzzleLevel);
-	Common::SeekableReadStream *configStream =
-		_engine->getResources()->createReadStreamForPath(name);
-	if (!configStream) {
-		configStream = _engine->getResources()->scripts().createReadStreamForMember(name);
-		if (configStream) {
-			debugC(2, kDebugResources,
-				"Ripper: resolved KK tile-match configuration '%s' through SCRIPT.PL",
-				name.c_str());
-		}
-	}
-	Common::ScopedPtr<Common::SeekableReadStream> stream(configStream);
+	Common::ScopedPtr<Common::SeekableReadStream> stream(
+		_engine->getResources()->createReadStream(name, ResourceManager::kSourceScriptConfiguration));
 	Common::INIFile ini;
 	if (!stream || !ini.loadFromStream(*stream)) {
 		warning("Ripper: could not load KK tile-match configuration '%s'",
@@ -345,31 +270,19 @@ bool KkTileMatchPuzzle::loadConfiguration() {
 				name.c_str(), key.c_str(), value.c_str());
 			return false;
 		}
-		_slots[tile].state = (uint)state;
+		_model.setTileState(tile, (byte)state);
 		if (state != 0)
 			++configuredStates;
 	}
 	if (configuredStates == 0) {
 		for (uint tile = 0; tile < kTileCount; ++tile)
-			_slots[tile].state = 1;
+			_model.setTileState(tile, 1);
 	}
 
 	debugC(2, kDebugPuzzles,
 		"Ripper: loaded KK tile-match configuration path='%s' difficulty=%u "
 		"moveRows=%u start=[%s]",
 		name.c_str(), puzzleLevel, activeMoveRows, slotStateString().c_str());
-	return true;
-}
-
-bool KkTileMatchPuzzle::loadBitmap(const Common::String &name,
-		BitmapAssetFrame &frame) {
-	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		_library.createReadStreamForMember(name));
-	if (!stream || !decodeBitmapAsset(*stream, frame)) {
-		warning("Ripper: could not decode KK tile-match bitmap '%s'",
-			name.c_str());
-		return false;
-	}
 	return true;
 }
 
@@ -381,8 +294,8 @@ bool KkTileMatchPuzzle::loadAssets() {
 			kLibraryName);
 		return false;
 	}
-	if (!loadBitmap(kBackgroundName, _background) ||
-			!loadBitmap(kClosedTileName, _closedTile))
+	if (!_library.loadBitmap(kBackgroundName, _background) ||
+			!_library.loadBitmap(kClosedTileName, _closedTile))
 		return false;
 	if (_background.width != kRipperScreenWidth ||
 			_background.height != kRipperScreenHeight ||
@@ -427,21 +340,7 @@ bool KkTileMatchPuzzle::loadFlipAnimation(uint state) {
 		return false;
 	}
 
-	animation.frames.reserve(decoder.getFrameCount());
-	while (!decoder.endOfVideo()) {
-		const Graphics::Surface *surface = decoder.decodeNextFrame();
-		if (!surface)
-			break;
-		AnimationFrame frame;
-		frame.width = surface->w;
-		frame.height = surface->h;
-		frame.pixels.resize((uint32)frame.width * frame.height);
-		for (uint y = 0; y < frame.height; ++y) {
-			memcpy(frame.pixels.data() + y * frame.width,
-				surface->getBasePtr(0, y), frame.width);
-		}
-		animation.frames.push_back(Common::move(frame));
-	}
+	cacheSmackerFrames(decoder, animation.frames);
 	if (animation.frames.size() < 2) {
 		warning("Ripper: KK tile-match animation '%s' has only %u frames",
 			name.c_str(), animation.frames.size());
@@ -458,62 +357,23 @@ bool KkTileMatchPuzzle::loadFlipAnimation(uint state) {
 	return true;
 }
 
-void KkTileMatchPuzzle::applyPalette() const {
-	Common::Array<byte> palette = _background.palette;
-	_engine->applySharedPalettePatch(palette.data(),
-		kRipperPaletteColorCount);
-	_engine->getSettings()->applyVideoPalette(palette.data(),
-		kRipperPaletteColorCount, true);
-	g_system->getPaletteManager()->setPalette(palette.data(), 0,
-		kRipperPaletteColorCount);
-}
-
-void KkTileMatchPuzzle::drawBitmap(byte *screen, uint pitch,
-		const BitmapAssetFrame &frame, int x, int y) const {
-	for (uint sourceY = 0; sourceY < frame.height; ++sourceY) {
-		const int destinationY = y + sourceY;
-		if (destinationY < 0 || destinationY >= kRipperScreenHeight)
-			continue;
-		for (uint sourceX = 0; sourceX < frame.width; ++sourceX) {
-			const int destinationX = x + sourceX;
-			if (destinationX < 0 || destinationX >= kRipperScreenWidth)
-				continue;
-			const byte pixel = frame.pixels[sourceY * frame.width + sourceX];
-			if (pixel != frame.transparentColor)
-				screen[destinationY * pitch + destinationX] = pixel;
-		}
-	}
-}
-
-void KkTileMatchPuzzle::drawAnimationFrame(byte *screen, uint pitch,
-		const AnimationFrame &frame, int x, int y) const {
-	for (uint sourceY = 0; sourceY < frame.height; ++sourceY) {
-		const int destinationY = y + sourceY;
-		if (destinationY < 0 || destinationY >= kRipperScreenHeight)
-			continue;
-		for (uint sourceX = 0; sourceX < frame.width; ++sourceX) {
-			const int destinationX = x + sourceX;
-			if (destinationX < 0 || destinationX >= kRipperScreenWidth)
-				continue;
-			const byte pixel = frame.pixels[sourceY * frame.width + sourceX];
-			if (pixel != kAnimationTransparentColor)
-				screen[destinationY * pitch + destinationX] = pixel;
-		}
-	}
-}
-
-void KkTileMatchPuzzle::drawSlot(byte *screen, uint pitch, const Slot &slot,
-		const Common::Point &position) const {
-	if (!slot.active) {
-		drawBitmap(screen, pitch, _closedTile, position.x, position.y);
+void KkTileMatchPuzzle::drawSlot(byte *screen, uint pitch, const KkTileMatchModel &model,
+		uint tile, uint frame, const Common::Point &position) const {
+	if (!model.isActive(tile)) {
+		IndexedBitmapRenderer::drawBitmap(screen, pitch, _closedTile,
+			position.x, position.y,
+			Common::Rect(0, 0, kRipperScreenWidth, kRipperScreenHeight));
 		return;
 	}
-	if (slot.state == 0 || slot.state > kMaximumState)
+	const uint state = model.tileState(tile);
+	if (state == 0 || state > kMaximumState)
 		return;
-	const FlipAnimation &animation = _flipAnimations[slot.state - 1];
-	if (slot.frame < animation.frames.size()) {
-		drawAnimationFrame(screen, pitch, animation.frames[slot.frame],
-			position.x, position.y);
+	const FlipAnimation &animation = _flipAnimations[state - 1];
+	if (frame < animation.frames.size()) {
+		IndexedBitmapRenderer::drawBitmap(screen, pitch, animation.frames[frame],
+			position.x, position.y,
+			Common::Rect(0, 0, kRipperScreenWidth, kRipperScreenHeight),
+			kAnimationTransparentColor);
 	}
 }
 
@@ -534,14 +394,14 @@ void KkTileMatchPuzzle::renderBoard() const {
 	byte *screen = (byte *)surface->getPixels();
 	for (uint tile = 0; tile < kTileCount; ++tile) {
 		if (_visibleTiles[tile])
-			drawSlot(screen, surface->pitch, _slots[tile], kTilePositions[tile]);
+			drawSlot(screen, surface->pitch, _model, tile, _frames[tile], kTilePositions[tile]);
 	}
 	_debugHelper.draw(*this, screen, surface->pitch);
 	g_system->unlockScreen();
 	presentScreen();
 }
 
-void KkTileMatchPuzzle::renderMove(const Slot *snapshot,
+void KkTileMatchPuzzle::renderMove(const KkTileMatchModel &snapshot, const uint *frames,
 		uint selectedTile, uint step) const {
 	Graphics::Surface *surface = g_system->lockScreen();
 	if (!surface || surface->format.bytesPerPixel != 1 ||
@@ -561,7 +421,7 @@ void KkTileMatchPuzzle::renderMove(const Slot *snapshot,
 	for (uint destination = 0; destination < kTileCount; ++destination) {
 		if (_moveTable[selectedTile][destination] < 0 &&
 				_visibleTiles[destination]) {
-			drawSlot(screen, surface->pitch, snapshot[destination],
+			drawSlot(screen, surface->pitch, snapshot, destination, frames[destination],
 				kTilePositions[destination]);
 		}
 	}
@@ -574,7 +434,7 @@ void KkTileMatchPuzzle::renderMove(const Slot *snapshot,
 			 kTilePositions[destination].x * (int)step) / (int)kMoveSteps,
 			(kTilePositions[source].y * (int)(kMoveSteps - step) +
 			 kTilePositions[destination].y * (int)step) / (int)kMoveSteps);
-		drawSlot(screen, surface->pitch, snapshot[source], position);
+		drawSlot(screen, surface->pitch, snapshot, source, frames[source], position);
 	}
 	g_system->unlockScreen();
 	presentScreen();
@@ -625,25 +485,15 @@ bool KkTileMatchPuzzle::flashTiles() {
 }
 
 bool KkTileMatchPuzzle::applyMove(uint selectedTile) {
-	bool moved = false;
-	Slot snapshot[kTileCount];
-	Slot target[kTileCount];
-	for (uint tile = 0; tile < kTileCount; ++tile) {
-		snapshot[tile] = _slots[tile];
-		target[tile] = _slots[tile];
-	}
-	// ApplyKkPuzzleMoveTableAndAnimateSlots at 0x2ef09 snapshots all 16
-	// records before it walks the selected row. Keep this as a separate pass
-	// so a destination can safely name a later source slot.
+	const KkTileMatchModel snapshot = _model;
+	KkTileMatchModel target = snapshot;
+	if (!target.applyMove(_moveTable[selectedTile]))
+		return true;
+	uint targetFrames[kTileCount];
 	for (uint tile = 0; tile < kTileCount; ++tile) {
 		const int source = _moveTable[selectedTile][tile];
-		if (source >= 0) {
-			target[tile] = snapshot[source];
-			moved = true;
-		}
+		targetFrames[tile] = source >= 0 ? _frames[source] : _frames[tile];
 	}
-	if (!moved)
-		return true;
 
 	playCue(0, true);
 	_engine->getCursor()->setVisible(false);
@@ -652,14 +502,15 @@ bool KkTileMatchPuzzle::applyMove(uint selectedTile) {
 		"before=[%s]",
 		selectedTile + 1, kMoveSteps, slotStateString().c_str());
 	for (uint step = 1; step <= kMoveSteps; ++step) {
-		renderMove(snapshot, selectedTile, step);
+		renderMove(snapshot, _frames, selectedTile, step);
 		if (!waitMillis(kPlaybackStepMillis, false)) {
 			stopCue(0);
 			return false;
 		}
 	}
+	_model = target;
 	for (uint tile = 0; tile < kTileCount; ++tile)
-		_slots[tile] = target[tile];
+		_frames[tile] = targetFrames[tile];
 	stopCue(0);
 	playCue(1);
 	_engine->getCursor()->setVisible(true);
@@ -671,23 +522,23 @@ bool KkTileMatchPuzzle::applyMove(uint selectedTile) {
 }
 
 bool KkTileMatchPuzzle::openTile(uint tile) {
-	if (_slots[tile].active)
+	if (_model.isActive(tile))
 		return true;
-	if (!loadFlipAnimation(_slots[tile].state)) {
+	if (!loadFlipAnimation(_model.tileState(tile))) {
 		warning("Ripper: KK tile-match tile=%u has invalid state=%u",
-			tile + 1, _slots[tile].state);
+			tile + 1, _model.tileState(tile));
 		return false;
 	}
-	FlipAnimation &animation = _flipAnimations[_slots[tile].state - 1];
+	FlipAnimation &animation = _flipAnimations[_model.tileState(tile) - 1];
 	const uint midpoint = animation.frames.size() / 2;
 	playCue(2);
-	_slots[tile].active = true;
+	_model.reveal(tile);
 	_engine->getCursor()->setVisible(false);
 	debugC(2, kDebugPuzzles,
 		"Ripper: KK tile-match opening tile=%u state=%u frames=0..%u",
-		tile + 1, _slots[tile].state, midpoint - 1);
+		tile + 1, _model.tileState(tile), midpoint - 1);
 	for (uint frame = 0; frame < midpoint; ++frame) {
-		_slots[tile].frame = frame;
+		_frames[tile] = frame;
 		renderBoard();
 		if (!waitMillis(kPlaybackStepMillis, false))
 			return false;
@@ -697,30 +548,30 @@ bool KkTileMatchPuzzle::openTile(uint tile) {
 	_engine->getInput()->discardMouseTransitions();
 	debugC(2, kDebugPuzzles,
 		"Ripper: KK tile-match opened tile=%u state=%u active=%u",
-		tile + 1, _slots[tile].state, activeTileCount());
+		tile + 1, _model.tileState(tile), _model.activeTileCount());
 	return true;
 }
 
 bool KkTileMatchPuzzle::closeActiveTiles() {
 	for (uint tile = 0; tile < kTileCount; ++tile) {
-		if (!_slots[tile].active)
+		if (!_model.isActive(tile))
 			continue;
-		FlipAnimation &animation = _flipAnimations[_slots[tile].state - 1];
+		FlipAnimation &animation = _flipAnimations[_model.tileState(tile) - 1];
 		playCue(2);
 		_engine->getCursor()->setVisible(false);
 		debugC(3, kDebugPuzzles,
 			"Ripper: KK tile-match closing tile=%u state=%u frame=%u..%u",
-			tile + 1, _slots[tile].state, _slots[tile].frame + 1,
+			tile + 1, _model.tileState(tile), _frames[tile] + 1,
 			animation.frames.size() - 1);
-		for (uint frame = _slots[tile].frame + 1;
+		for (uint frame = _frames[tile] + 1;
 				frame < animation.frames.size(); ++frame) {
-			_slots[tile].frame = frame;
+			_frames[tile] = frame;
 			renderBoard();
 			if (!waitMillis(kPlaybackStepMillis, false))
 				return false;
 		}
-		_slots[tile].active = false;
-		_slots[tile].frame = 0;
+		_model.hide(tile);
+		_frames[tile] = 0;
 		playCue(1);
 		renderBoard();
 	}
@@ -728,7 +579,7 @@ bool KkTileMatchPuzzle::closeActiveTiles() {
 	_engine->getInput()->discardMouseTransitions();
 	debugC(2, kDebugPuzzles,
 		"Ripper: KK tile-match mismatch reset completed active=%u states=[%s]",
-		activeTileCount(), slotStateString().c_str());
+		_model.activeTileCount(), slotStateString().c_str());
 	return true;
 }
 
@@ -761,14 +612,7 @@ void KkTileMatchPuzzle::updateCursor(const Common::Point &point) {
 bool KkTileMatchPuzzle::serviceKeyword(uint16 command) {
 	if (command > 0xff)
 		return false;
-	char character = (char)command;
-	if (character >= 'A' && character <= 'Z')
-		character += 'a' - 'A';
-	if (character == kCompletionKeyword[_keywordIndex])
-		++_keywordIndex;
-	else
-		_keywordIndex = character == kCompletionKeyword[0] ? 1 : 0;
-	if (_keywordIndex + 1 == ARRAYSIZE(kCompletionKeyword)) {
+	if (advanceKeyword(command, kCompletionKeyword, _keywordIndex, true)) {
 		_keywordIndex = 0;
 		debugC(1, kDebugPuzzles,
 			"Ripper: KK tile-match completion keyword matched keyword='%s'",
@@ -804,44 +648,18 @@ void KkTileMatchPuzzle::stopAudio() {
 	stopAudioHandles(_audioHandles, ARRAYSIZE(_audioHandles));
 }
 
-uint KkTileMatchPuzzle::activeTileCount() const {
-	uint count = 0;
-	for (uint tile = 0; tile < kTileCount; ++tile) {
-		if (_slots[tile].active)
-			++count;
-	}
-	return count;
-}
-
-uint KkTileMatchPuzzle::matchingActiveTileCount() const {
-	uint referenceState = 0;
-	uint count = 0;
-	for (uint tile = 0; tile < kTileCount; ++tile) {
-		if (!_slots[tile].active)
-			continue;
-		if (referenceState == 0)
-			referenceState = _slots[tile].state;
-		if (_slots[tile].state == referenceState)
-			++count;
-	}
-	return count;
-}
-
 Common::String KkTileMatchPuzzle::slotStateString() const {
 	Common::String result;
 	for (uint tile = 0; tile < kTileCount; ++tile) {
 		if (tile != 0)
 			result += ',';
-		result += Common::String::format("%u%s", _slots[tile].state,
-			_slots[tile].active ? "*" : "");
+		result += Common::String::format("%u%s", _model.tileState(tile),
+			_model.isActive(tile) ? "*" : "");
 	}
 	return result;
 }
 
 KkTileMatchPuzzle::Result KkTileMatchPuzzle::run(uint completionFlag) {
-	// DispatchSceneEntryAction at 0x36892 routes action 25 to
-	// RunKkTileMatchPuzzleScene at 0x2fa31. RIPPER.LE owns KK.PL,
-	// reads KK%d.INI, and creates controls 0x672..0x681 over this 4x4 grid.
 	if (!_incomingDisplay.capture() || !loadConfiguration() || !loadAssets()) {
 		_incomingDisplay.restore();
 		return kLoadFailed;
@@ -855,12 +673,12 @@ KkTileMatchPuzzle::Result KkTileMatchPuzzle::run(uint completionFlag) {
 	_engine->getCursor()->setSelectionIndex(kDefaultCursor);
 	_engine->getCursor()->dispatchSelectionIndexChange(kDefaultCursor);
 	_engine->getCursor()->setVisible(true);
-	applyPalette();
+	_engine->installScenePalette(_background.palette);
 	debugC(1, kDebugPuzzles,
-		"Ripper: entered KK tile-match puzzle function=RunKkTileMatchPuzzleScene@0x2fa31 "
-		"completionFlag=%u controls=%u help=0x%x keyword='%s' states=[%s] puzzleHelp=%d",
+		"Ripper: entered KK tile-match puzzle "
+		"completionFlag=%u controls=%u help=0x%x states=[%s] puzzleHelp=%d",
 		completionFlag, kTileCount, kHelpSelectionTable,
-		kCompletionKeyword, slotStateString().c_str(),
+		slotStateString().c_str(),
 		_engine->isPuzzleHelpEnabled());
 
 	Result result = kExited;
@@ -891,7 +709,7 @@ KkTileMatchPuzzle::Result KkTileMatchPuzzle::run(uint completionFlag) {
 					kHelpSelectionTable);
 				if (!_engine->getModalDialog()->run(kHelpSelectionTable))
 					warning("Ripper: KK tile-match modal help failed");
-				applyPalette();
+				_engine->installScenePalette(_background.palette);
 				renderBoard();
 				continue;
 			}
@@ -918,26 +736,28 @@ KkTileMatchPuzzle::Result KkTileMatchPuzzle::run(uint completionFlag) {
 					if (!_engine->shouldQuit())
 						result = kLoadFailed;
 					active = false;
-				} else if (activeTileCount() >= 3) {
-					const uint matching = matchingActiveTileCount();
-					debugC(2, kDebugPuzzles,
-						"Ripper: KK tile-match evaluated active=%u matchingFirst=%u states=[%s]",
-						activeTileCount(), matching, slotStateString().c_str());
-					if (matching == 3) {
-						if (!markSolved(completionFlag, "kk-tile-match-puzzle")) {
-							result = kLoadFailed;
-						} else {
-							result = kSolved;
+				} else {
+					const KkTileMatchModel::MatchResult match = _model.evaluate();
+					if (match != KkTileMatchModel::kPending) {
+						debugC(2, kDebugPuzzles,
+							"Ripper: KK tile-match evaluated active=%u matchingFirst=%u states=[%s]",
+							_model.activeTileCount(), _model.matchingActiveTileCount(), slotStateString().c_str());
+						if (match == KkTileMatchModel::kMatch) {
+							if (!markSolved(completionFlag, "kk-tile-match-puzzle")) {
+								result = kLoadFailed;
+							} else {
+								result = kSolved;
+							}
+							debugC(1, kDebugPuzzles,
+								"Ripper: solved KK tile-match puzzle milestone=%u states=[%s]",
+								completionFlag, slotStateString().c_str());
+							active = false;
+						} else if (!waitMillis(kMismatchDelayMillis, true) ||
+								!closeActiveTiles()) {
+							if (!_engine->shouldQuit())
+								result = kLoadFailed;
+							active = false;
 						}
-						debugC(1, kDebugPuzzles,
-							"Ripper: solved KK tile-match puzzle milestone=%u states=[%s]",
-							completionFlag, slotStateString().c_str());
-						active = false;
-					} else if (!waitMillis(kMismatchDelayMillis, true) ||
-							!closeActiveTiles()) {
-						if (!_engine->shouldQuit())
-							result = kLoadFailed;
-						active = false;
 					}
 				}
 				if (active) {
@@ -946,9 +766,7 @@ KkTileMatchPuzzle::Result KkTileMatchPuzzle::run(uint completionFlag) {
 				}
 			}
 		}
-		// RunKkTileMatchPuzzleScene at 0x2fa31 services the active UI selection
-		// presentation on every idle pass. Submit unchanged frames too so
-		// ScummVM's software cursor remains visible and follows mouse motion.
+		// Present unchanged frames too so the software cursor follows idle input ticks.
 		presentScreen();
 		g_system->delayMillis(10);
 	}
@@ -960,7 +778,7 @@ KkTileMatchPuzzle::Result KkTileMatchPuzzle::run(uint completionFlag) {
 	_engine->getCursor()->setVisible(true);
 	_engine->getInput()->drainKeys();
 	_engine->getInput()->discardMouseTransitions();
-	debugC(result == kLoadFailed ? 2 : 1, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: left KK tile-match puzzle result=%d milestone=%u "
 		"milestoneSet=%d states=[%s] quit=%d",
 		result, completionFlag,

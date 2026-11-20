@@ -8,6 +8,15 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/scenes/tube_scene.h"
@@ -21,9 +30,9 @@
 #include "ripper/input.h"
 #include "ripper/inventory.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -58,12 +67,12 @@ static const uint16 kReloadCommand = 0x7ff0;
 static const uint16 kFailureCommand = 0x7ffd;
 
 static bool isSwitchPoint(const Common::Point &point) {
-	return point.x >= kSwitchLeft && point.x < kSwitchLeft + kSwitchWidth &&
-		point.y >= kSwitchTop && point.y < kSwitchTop + kSwitchHeight;
+	return Common::Rect(kSwitchLeft, kSwitchTop,
+		kSwitchLeft + kSwitchWidth, kSwitchTop + kSwitchHeight).contains(point);
 }
 
 static bool isExitPoint(const Common::Point &point) {
-	return point.x >= 115 && point.x < 515 && point.y >= 115 && point.y < 325;
+	return Common::Rect(115, 115, 515, 325).contains(point);
 }
 
 } // End of anonymous namespace
@@ -180,8 +189,7 @@ void TubeScene::updateCursor(const Common::Point &point) {
 
 uint16 TubeScene::serviceInventory() {
 	uint usedUnlockFlag = 0;
-	// ExecuteUnlockSelectionChoice compares items 2..4 with the GAZ2 frame
-	// label. Those are the three tubes consumed by RunTubeSwitchScene.
+	// The GAZ2 use label accepts the three tubes in inventory slots 2..4.
 	const Inventory::Result inventoryResult =
 		_engine->getInventory()->run("GAZ2", -1, &usedUnlockFlag);
 	if (inventoryResult == Inventory::kLoadFailed)
@@ -359,7 +367,6 @@ TubeScene::Result TubeScene::run(uint completionFlag) {
 			}
 		} else {
 			if (_engine->getInput()->pollEvents()) {
-				_engine->quitGame();
 				break;
 			}
 			command = serviceInput();
@@ -371,7 +378,7 @@ TubeScene::Result TubeScene::run(uint completionFlag) {
 
 	stopAudio();
 	finish("tube-exit", 0, false);
-	debugC(result == kLoadFailed ? 2 : 1, kDebugScene,
+	debugC(1, kDebugScene,
 		"Ripper: left tube switch scene result=%d installed=%u milestone=%u quit=%d",
 		result, _tubeCount, completionFlag, _engine->shouldQuit());
 	return result;

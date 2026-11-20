@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_PUZZLES_DATE_SELECTION_H
@@ -24,7 +25,7 @@
 #include "audio/mixer.h"
 #include "common/str.h"
 
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/puzzles/puzzle.h"
 #include "ripper/resources.h"
 
@@ -54,7 +55,6 @@ private:
 	DateGroup matchDate(const Common::String &text, uint &day) const;
 	bool processSubmission();
 	bool drawFeedback();
-	bool waitTicks(uint ticks);
 
 	BitmapAssetFrame _waitFrame;
 	Audio::SoundHandle _audioHandles[5];

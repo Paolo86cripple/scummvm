@@ -11,17 +11,19 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/input.h"
 
 #include "common/debug.h"
 #include "common/system.h"
+#include "common/util.h"
 
 #include "ripper/detection.h"
 
@@ -84,19 +86,59 @@ uint16 functionKeyCommand(Common::KeyCode keycode, byte flags) {
 
 } // End of anonymous namespace
 
+bool advanceKeyword(byte character, const char *keyword, uint &progress,
+		bool restartOnFirstCharacter) {
+	if (character >= 'A' && character <= 'Z')
+		character += 'a' - 'A';
+	if (character == keyword[progress])
+		++progress;
+	else
+		progress = restartOnFirstCharacter && character == keyword[0] ? 1 : 0;
+	return keyword[progress] == '\0';
+}
+
+bool textAnswersMatch(const Common::String &entered,
+		const Common::String &expected) {
+	uint enteredIndex = 0;
+	uint expectedIndex = 0;
+	while (true) {
+		while (enteredIndex < entered.size() &&
+				!Common::isAlnum((byte)entered[enteredIndex]))
+			++enteredIndex;
+		while (expectedIndex < expected.size() &&
+				!Common::isAlnum((byte)expected[expectedIndex]))
+			++expectedIndex;
+		if (enteredIndex == entered.size() || expectedIndex == expected.size())
+			break;
+		byte enteredCharacter = (byte)entered[enteredIndex++];
+		byte expectedCharacter = (byte)expected[expectedIndex++];
+		if (enteredCharacter >= 'A' && enteredCharacter <= 'Z')
+			enteredCharacter += 'a' - 'A';
+		if (expectedCharacter >= 'A' && expectedCharacter <= 'Z')
+			expectedCharacter += 'a' - 'A';
+		if (enteredCharacter != expectedCharacter)
+			return false;
+	}
+	while (enteredIndex < entered.size() &&
+			!Common::isAlnum((byte)entered[enteredIndex]))
+		++enteredIndex;
+	while (expectedIndex < expected.size() &&
+			!Common::isAlnum((byte)expected[expectedIndex]))
+		++expectedIndex;
+	return enteredIndex == entered.size() && expectedIndex == expected.size();
+}
+
 InputManager::InputManager(Common::EventManager *eventManager) : _eventManager(eventManager) {
 }
 
 uint16 translateKeyToCommand(const Common::KeyState &key) {
-	// PollInteractionAndResolveSelection at 0x13fc7 and
-	// ServiceMediaPresentationTextControl at 0x17014 consume the DOS control
-	// character values for the v1.05 replay, text, and auto-scroll shortcuts.
+	// Replay, text, and auto-scroll shortcuts use DOS control characters.
 	if ((key.flags & Common::KBD_CTRL) != 0 &&
 			key.keycode >= Common::KEYCODE_a && key.keycode <= Common::KEYCODE_z)
 		return key.keycode - Common::KEYCODE_a + 1;
 
-	// RIPPER.LE uses BIOS AX commands: Alt letters carry the Set 1 scan code in
-	// the high byte. Toolbar shortcuts and the web puzzle depend on this form.
+	// Alt letters carry the Set 1 scan code in the high byte of a BIOS command.
+	// Toolbar shortcuts and the web puzzle depend on this form.
 	if ((key.flags & Common::KBD_ALT) != 0) {
 		const uint16 letterScanCode = altLetterScanCode(key.keycode);
 		if (letterScanCode != 0)
@@ -223,13 +265,13 @@ void InputManager::updateMouseButton(const Common::Event &event, uint16 button, 
 
 bool InputManager::pollEvents() {
 	Common::Event event;
-	bool quitRequested = false;
+	bool exitRequested = false;
 
 	while (_eventManager->pollEvent(event)) {
 		switch (event.type) {
 		case Common::EVENT_QUIT:
 		case Common::EVENT_RETURN_TO_LAUNCHER:
-			quitRequested = true;
+			exitRequested = true;
 			break;
 
 		case Common::EVENT_KEYDOWN: {
@@ -277,7 +319,7 @@ bool InputManager::pollEvents() {
 		}
 	}
 
-	return quitRequested;
+	return exitRequested;
 }
 
 bool InputManager::hasPendingKey() const {
@@ -300,17 +342,16 @@ uint16 InputManager::consumeKey() {
 void InputManager::drainKeys() {
 	const int count = _pendingKeys.size();
 	_pendingKeys.clear();
-	// RIPPER.LE blocking loops drain after every empty poll. Log empty drains at
-	// level 3 so mouse-only waits do not flood normal diagnostics.
-	debugC(count == 0 ? 3 : 2, kDebugInput,
-		"Ripper: drained %d pending keyboard commands", count);
+	if (count != 0)
+		debugC(2, kDebugInput, "Ripper: drained %d pending keyboard commands", count);
 }
 
 void InputManager::discardMouseTransitions() {
-	debugC(2, kDebugInput,
-		"Ripper: discarded mouse transitions pressed=0x%02x released=0x%02x "
-		"buttons=0x%02x wheel=%d",
-		_mouseState.pressed, _mouseState.released, _mouseState.buttons, _mouseState.wheel);
+	if (_mouseState.pressed != 0 || _mouseState.released != 0 || _mouseState.wheel != 0)
+		debugC(3, kDebugInput,
+			"Ripper: discarded mouse transitions pressed=0x%02x released=0x%02x "
+			"buttons=0x%02x wheel=%d",
+			_mouseState.pressed, _mouseState.released, _mouseState.buttons, _mouseState.wheel);
 	_mouseState.pressed = 0;
 	_mouseState.released = 0;
 	_mouseState.wheel = 0;

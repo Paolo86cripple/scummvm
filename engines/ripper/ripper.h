@@ -11,16 +11,19 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_RIPPER_H
 #define RIPPER_RIPPER_H
 
+#include "common/array.h"
+#include "common/noncopyable.h"
 #include "common/ptr.h"
 #include "common/random.h"
 #include "engines/engine.h"
@@ -39,6 +42,7 @@ class MediaPlayer;
 class MilestoneOverlay;
 class Milestones;
 class ModalDialogManager;
+struct PuzzleState;
 class ResourceManager;
 class SceneAudioManager;
 class ScriptManager;
@@ -49,11 +53,22 @@ class WorldMap;
 
 class RipperEngine : public Engine {
 public:
+	class SaveLoadScope : private Common::NonCopyable {
+	public:
+		explicit SaveLoadScope(RipperEngine &engine, bool allowed = false);
+		~SaveLoadScope();
+
+	private:
+		RipperEngine &_engine;
+		const bool _wasAllowed;
+	};
+
 	RipperEngine(OSystem *system, const ADGameDescription *gameDescription);
 	~RipperEngine() override;
 
 	Common::Error run() override;
 	bool hasFeature(EngineFeature feature) const override;
+	void syncSoundSettings() override;
 	Common::Error saveGameState(int slot, const Common::String &desc, bool isAutosave = false) override;
 	Common::Error loadGameState(int slot) override;
 	Common::Error saveGameStream(Common::WriteStream *stream, bool isAutosave = false) override;
@@ -70,6 +85,7 @@ public:
 	MilestoneOverlay *getMilestoneOverlay() const { return _milestoneOverlay.get(); }
 	Milestones *getMilestones() const { return _milestones.get(); }
 	ModalDialogManager *getModalDialog() const { return _modalDialog.get(); }
+	PuzzleState *getPuzzleState() const { return _puzzleState.get(); }
 	ResourceManager *getResources() const { return _resources.get(); }
 	SceneAudioManager *getSceneAudio() const { return _sceneAudio.get(); }
 	ScriptManager *getScripts() const { return _scripts.get(); }
@@ -78,6 +94,7 @@ public:
 	WacManager *getWac() const { return _wac.get(); }
 	WorldMap *getWorldMap() const { return _worldMap.get(); }
 	void applySharedPalettePatch(byte *palette, uint colorCount) const;
+	void installScenePalette(const Common::Array<byte> &sourcePalette);
 	bool isDemo() const;
 	bool isPuzzleHelpEnabled() const { return _puzzleHelpEnabled; }
 	void setPuzzleHelpEnabled(bool enabled) { _puzzleHelpEnabled = enabled; }
@@ -93,6 +110,7 @@ private:
 
 	const ADGameDescription *const _gameDescription;
 	Common::RandomSource _randomSource;
+	Common::ScopedPtr<PuzzleState> _puzzleState;
 	Common::ScopedPtr<CursorManager> _cursor;
 	Common::ScopedPtr<CyberManager> _cyber;
 	Common::ScopedPtr<InputManager> _input;
@@ -110,6 +128,7 @@ private:
 	Common::ScopedPtr<WacManager> _wac;
 	Common::ScopedPtr<WorldMap> _worldMap;
 	bool _gameplayStarted;
+	bool _saveLoadAllowed;
 	bool _puzzleHelpEnabled;
 };
 

@@ -11,14 +11,15 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 
 #include "ripper/modal/constants.h"
 
@@ -43,8 +44,6 @@ byte findNearestPaletteIndex(const byte *palette, byte red, byte green,
 		const int redDistance = palette[index * 3] - red;
 		const int greenDistance = palette[index * 3 + 1] - green;
 		const int blueDistance = palette[index * 3 + 2] - blue;
-		// FindNearestPaletteColorIndex at 0x56af1 minimizes the sum of the
-		// absolute channel differences rather than squared RGB distance.
 		const uint distance = ABS<int>(redDistance) +
 			ABS<int>(greenDistance) + ABS<int>(blueDistance);
 		if (distance < bestDistance) {
@@ -71,8 +70,6 @@ const char *presentationStyleName(ModalDialogManager::PresentationStyle style) {
 } // End of anonymous namespace
 
 void ModalDialogManager::resolveSceneEntryTextColor() {
-	// ServiceMediaPresentationTextControl at 0x17014 writes the palette entry
-	// nearest RGB white into the normal NF2T glyph template byte at 0x94338.
 	byte palette[256 * 3];
 	g_system->getPaletteManager()->grabPalette(palette, 0, 256);
 	_sceneEntryTextColor = findNearestPaletteIndex(palette, 0xff, 0xff, 0xff);
@@ -91,35 +88,8 @@ uint ModalDialogManager::measureText(const Common::String &text,
 
 void ModalDialogManager::wrapText(const Common::String &text, uint maxWidth,
 		Common::Array<Common::String> &lines, PresentationStyle style) const {
-	lines.clear();
-	Common::String line;
-	Common::String word;
-	for (uint i = 0; i <= text.size(); ++i) {
-		const char character = i < text.size() ? text[i] : '\n';
-		if (character == '\r')
-			continue;
-		if (character != ' ' && character != '\n') {
-			word += character;
-			continue;
-		}
-
-		if (!word.empty()) {
-			const Common::String candidate = line.empty() ? word : line + " " + word;
-			if (!line.empty() && measureText(candidate, style) > maxWidth) {
-				lines.push_back(line);
-				line = word;
-			} else {
-				line = candidate;
-			}
-			word.clear();
-		}
-		if (character == '\n') {
-			lines.push_back(line);
-			line.clear();
-		}
-	}
-	if (lines.empty())
-		lines.push_back(Common::String());
+	BitmapFontRenderer::wrapText(
+		style == kPrimaryPresentation ? _primaryFont : _font, text, maxWidth, lines);
 }
 
 void ModalDialogManager::drawText(byte *screen, uint pitch, int x, int y,
@@ -136,9 +106,6 @@ void ModalDialogManager::drawFrame(byte *screen, uint pitch,
 		return;
 	const Common::Array<BitmapAssetFrame> &skin =
 		style == kWacPresentation ? _wacSkin : _skin;
-	// RIPPER stores bitmap dimensions and presentation coordinates in
-	// vertical/horizontal order. Translating ResolveChooserFrameTileIndex at
-	// 0x55250 to screen x/y makes MENUB0..8 row-major.
 	IndexedBitmapRenderer::drawNineSlice(screen, pitch, skin, bounds,
 		Common::Rect(0, 0, kRipperScreenWidth, kRipperScreenHeight));
 }
@@ -317,10 +284,8 @@ void ModalDialogManager::drawDialog(const Common::String &title,
 	const bool wacStyle = style == kWacPresentation;
 	const bool primaryStyle = style == kPrimaryPresentation;
 	const bool sceneEntryStyle = style == kSceneEntryPresentation;
-	// ComputeChooserControlLayout at 0x54a74 selects the tertiary template's
-	// 20-pixel alternate top padding even without an optional title because
-	// layout56 bit 0 is set. The WAC database's circuit-manual view embeds its
-	// heading in resource 0xb6, but still receives that forced inset.
+	// WAC reserves heading space even when the title is embedded in the body,
+	// as in the circuit manual resource 0xb6.
 	const int headingHeight = primaryStyle ? 0 :
 		(wacStyle ? kWacModalHeadingTopPadding :
 		(title.empty() ? kModalBottomPadding : kModalHeadingTopPadding));
@@ -340,33 +305,25 @@ void ModalDialogManager::drawDialog(const Common::String &title,
 		(wacStyle ? kWacModalTextColor :
 		(sceneEntryStyle ? _sceneEntryTextColor : kModalTextColor));
 	if (primaryStyle) {
-		// ED_WAC.SMK supplies the backing; the primary chooser has no frame or
-		// client fill. Template +0xc selects the red active-text style.
+		// ED_WAC.SMK supplies the backing; the primary chooser has no frame or fill.
 	} else if (sceneEntryStyle) {
 		// v1.05 media text has no MENUB descriptors. Its client uses palette
 		// index zero and resolves the glyph color to nearest white per branch.
-		for (int y = bounds.top; y < bounds.bottom; ++y)
-			memset(screen->getBasePtr(bounds.left, y),
-				kSceneEntryBackgroundColor, bounds.width());
+		screen->fillRect(bounds, kSceneEntryBackgroundColor);
 	} else if (wacStyle) {
-		// ServiceWacSceneInputAction at 0x21eef uses the tertiary WACMNU
-		// chooser template. Its bitmap tiles retain the textured heading and
-		// frame over the black client field.
-		for (int y = bounds.top; y < bounds.bottom; ++y)
-			memset(screen->getBasePtr(bounds.left, y), kWacModalBackgroundColor,
-				bounds.width());
+		// WACMNU tiles retain the textured heading and frame over the black client.
+		screen->fillRect(bounds, kWacModalBackgroundColor);
 		drawFrame(pixels, screen->pitch, bounds, style);
 	} else {
 		drawFrame(pixels, screen->pitch, bounds, style);
-		// RebuildChooserControlVisual draws the tiled frame before the row renderer
-		// and DrawPromptChooserTemplateLabelCallback repaint the framed interior.
-		for (int y = bounds.top + 2; y < bounds.bottom - 2; ++y)
-			memset(screen->getBasePtr(bounds.left + leftPadding, y),
-				kModalBackgroundColor, bounds.width() - leftPadding - rightPadding);
+		if (bounds.height() > 4)
+			screen->fillRect(Common::Rect(bounds.left + leftPadding, bounds.top + 2,
+				bounds.right - rightPadding, bounds.bottom - 2),
+				kModalBackgroundColor);
 		if (!title.empty()) {
-			for (int y = bounds.top + 2; y < bounds.top + headingHeight; ++y)
-				memset(screen->getBasePtr(bounds.left + leftPadding, y),
-					kModalHeadingColor, bounds.width() - leftPadding - rightPadding);
+			screen->fillRect(Common::Rect(bounds.left + leftPadding, bounds.top + 2,
+				bounds.right - rightPadding, bounds.top + headingHeight),
+				kModalHeadingColor);
 		}
 	}
 	if (!title.empty()) {
@@ -375,9 +332,6 @@ void ModalDialogManager::drawDialog(const Common::String &title,
 			_primaryFont.lineHeight : _font.lineHeight;
 		const int titleX = bounds.left + leftPadding +
 			(contentWidth - measureText(title)) / 2;
-		// DrawPromptChooserTemplateLabelCallback at 0x16def reads the
-		// WAC template's +0x19 byte as an absolute top inset rather than
-		// vertically centering the label in its 20-pixel heading.
 		const int titleY = wacStyle ?
 			bounds.top + kWacModalTitleTopInset :
 			bounds.top + (headingHeight - fontHeight) / 2;
@@ -454,17 +408,6 @@ bool ModalDialogManager::drawRetainedTextPanelText(const Common::String &body,
 		present);
 }
 
-bool ModalDialogManager::drawRetainedTitlePanel(uint titleResourceId,
-		const Common::Rect &bounds, PresentationStyle style, bool present) {
-	const Common::String &title = resourceString(titleResourceId);
-	if (title.empty()) {
-		warning("Ripper: could not draw retained title panel resource=%u",
-			titleResourceId);
-		return false;
-	}
-	return drawRetainedTitlePanelText(title, bounds, style, present);
-}
-
 bool ModalDialogManager::drawRetainedTitlePanelText(
 		const Common::String &title, const Common::Rect &bounds,
 		PresentationStyle style, bool present) {
@@ -503,9 +446,7 @@ bool ModalDialogManager::drawRetainedPlainTextButton(uint titleResourceId,
 			g_system->unlockScreen();
 		return false;
 	}
-	for (int y = bounds.top; y < bounds.bottom; ++y)
-		memset(screen->getBasePtr(bounds.left, y), backgroundColor,
-			bounds.width());
+	screen->fillRect(bounds, backgroundColor);
 	drawText((byte *)screen->getPixels(), screen->pitch,
 		bounds.left + (bounds.width() - measureText(title)) / 2,
 		bounds.top + (bounds.height() - _font.lineHeight) / 2,
@@ -622,9 +563,10 @@ bool ModalDialogManager::drawRetainedTextPanelLine(
 		const byte backgroundColor = wacStyle ?
 			kWacModalBackgroundColor : (sceneEntryStyle ?
 				kSceneEntryBackgroundColor : kModalBackgroundColor);
-		for (int y = rowTop; y < rowBottom; ++y)
-			memset(screen->getBasePtr(clientLeft, y),
-				backgroundColor, clientWidth);
+		if (rowTop < rowBottom)
+			screen->fillRect(Common::Rect(clientLeft, rowTop,
+				clientLeft + clientWidth, rowBottom),
+				backgroundColor);
 	}
 	drawText((byte *)screen->getPixels(), screen->pitch,
 		clientLeft + horizontalInset,
@@ -635,12 +577,6 @@ bool ModalDialogManager::drawRetainedTextPanelLine(
 		applyModalPalette();
 	_engine->getCursor()->refresh();
 	presentScreen();
-	debugC(3, kDebugScene,
-		"Ripper: redrew retained text panel line style=%s line=%u "
-		"firstLine=%u visibleRow=%u bounds=%d,%d,%d,%d",
-		presentationStyleName(style),
-		lineIndex, firstVisible, visibleRow,
-		bounds.left, bounds.top, bounds.width(), bounds.height());
 	return true;
 }
 

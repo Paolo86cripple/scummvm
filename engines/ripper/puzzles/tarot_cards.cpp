@@ -2,7 +2,7 @@
  *
  * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this program.
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/tarot_cards.h"
@@ -25,7 +26,6 @@
 #include "common/ptr.h"
 #include "common/stream.h"
 #include "common/system.h"
-#include "graphics/paletteman.h"
 #include "graphics/surface.h"
 
 #include "ripper/cursor.h"
@@ -33,13 +33,13 @@
 #include "ripper/diagnostics/screen_presenter.h"
 #include "ripper/input.h"
 #include "ripper/ini.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
 #include "ripper/resources.h"
 #include "ripper/ripper.h"
 #include "ripper/scenes/ending_sequence.h"
 #include "ripper/settings.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -59,9 +59,7 @@ static const char *const kBackgroundName = "bkgrnd2";
 static const char *const kMusicName = "reapsong";
 static const char *const kSceneCueNames[2] = { "tarot0", "tarot2" };
 
-// g_tarotCardSlotLayoutRows at 0x3e78d stores X/Y/card rows. RIPPER.LE
-// controller subtracts 90 from every Y coordinate before constructing
-// controls 0x672 through 0x680.
+// Logical scene coordinates; presentation adds the 50-pixel scene origin.
 static const Common::Point kSlotPositions[TarotCardsModel::kSlotCount] = {
 	Common::Point(73, 158), Common::Point(162, 158),
 	Common::Point(251, 158), Common::Point(337, 158),
@@ -86,17 +84,8 @@ bool TarotCardsPuzzle::loadConfiguration() {
 		_engine->getSettings()->getPuzzleLevel(), 1, 3);
 	const Common::String name = Common::String::format("card%u.ini",
 		puzzleLevel);
-	Common::SeekableReadStream *configStream =
-		_engine->getResources()->createReadStreamForPath(name);
-	if (!configStream) {
-		configStream = _engine->getResources()->scripts().createReadStreamForMember(name);
-		if (configStream) {
-			debugC(2, kDebugResources,
-				"Ripper: resolved tarot configuration '%s' through SCRIPT.PL",
-				name.c_str());
-		}
-	}
-	Common::ScopedPtr<Common::SeekableReadStream> stream(configStream);
+	Common::ScopedPtr<Common::SeekableReadStream> stream(
+		_engine->getResources()->createReadStream(name, ResourceManager::kSourceScriptConfiguration));
 	Common::INIFile ini;
 	if (!stream || !ini.loadFromStream(*stream)) {
 		warning("Ripper: could not load tarot configuration '%s'",
@@ -111,28 +100,6 @@ bool TarotCardsPuzzle::loadConfiguration() {
 	return true;
 }
 
-bool TarotCardsPuzzle::loadBitmap(const Common::String &name,
-		BitmapAssetFrame &frame) {
-	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		_library.createReadStreamForMember(name));
-	if (!stream || !decodeBitmapAsset(*stream, frame)) {
-		warning("Ripper: could not decode tarot bitmap '%s'", name.c_str());
-		return false;
-	}
-	return true;
-}
-
-bool TarotCardsPuzzle::loadPcx(const Common::String &name,
-		BitmapAssetFrame &frame) {
-	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		_library.createReadStreamForMember(name));
-	if (!stream || !decodePcxAsset(*stream, frame)) {
-		warning("Ripper: could not decode tarot PCX '%s'", name.c_str());
-		return false;
-	}
-	return true;
-}
-
 bool TarotCardsPuzzle::loadAssets() {
 	Common::ScopedPtr<Common::SeekableReadStream> stream(
 		_engine->getResources()->createReadStreamForPath(kLibraryName));
@@ -140,7 +107,7 @@ bool TarotCardsPuzzle::loadAssets() {
 		warning("Ripper: could not open tarot library '%s'", kLibraryName);
 		return false;
 	}
-	if (!loadPcx(kBackgroundName, _background))
+	if (!_library.loadPcx(kBackgroundName, _background))
 		return false;
 	if (_background.width != kRipperScreenWidth ||
 			_background.height != kSceneHeight ||
@@ -152,9 +119,9 @@ bool TarotCardsPuzzle::loadAssets() {
 	}
 
 	for (uint card = 0; card < TarotCardsModel::kCardCount; ++card) {
-		if (!loadBitmap(Common::String::format("si%u", card + 1),
+		if (!_library.loadBitmap(Common::String::format("si%u", card + 1),
 				_smallCards[card]) ||
-				!loadBitmap(Common::String::format("bi%u", card + 1),
+				!_library.loadBitmap(Common::String::format("bi%u", card + 1),
 					_largeCards[card]))
 			return false;
 	}
@@ -193,36 +160,11 @@ bool TarotCardsPuzzle::loadAssets() {
 	return true;
 }
 
-void TarotCardsPuzzle::applyPalette() const {
-	Common::Array<byte> palette = _background.palette;
-	_engine->applySharedPalettePatch(palette.data(),
-		kRipperPaletteColorCount);
-	_engine->getSettings()->applyVideoPalette(palette.data(),
-		kRipperPaletteColorCount, true);
-	g_system->getPaletteManager()->setPalette(palette.data(), 0,
-		kRipperPaletteColorCount);
-}
-
 void TarotCardsPuzzle::drawFrame(byte *screen, uint pitch,
 		const BitmapAssetFrame &frame, int x, int y) const {
-	for (uint sourceY = 0; sourceY < frame.height; ++sourceY) {
-		const int destinationY = y + sourceY;
-		// InitializeTransientPresentationOverlay in
-		// RunTarotCardPuzzleScene at 0x3eece clips the held card to logical
-		// y=0..299. Keep every tarot bitmap inside the corresponding physical
-		// scene page so dragging cannot dirty the retained interface bands.
-		if (destinationY < kSceneOriginY ||
-				destinationY >= kSceneOriginY + kSceneHeight)
-			continue;
-		for (uint sourceX = 0; sourceX < frame.width; ++sourceX) {
-			const int destinationX = x + sourceX;
-			if (destinationX < 0 || destinationX >= kRipperScreenWidth)
-				continue;
-			const byte pixel = frame.pixels[sourceY * frame.width + sourceX];
-			if (pixel != frame.transparentColor)
-				screen[destinationY * pitch + destinationX] = pixel;
-		}
-	}
+	IndexedBitmapRenderer::drawBitmap(screen, pitch, frame, x, y,
+		Common::Rect(0, kSceneOriginY, kRipperScreenWidth,
+			kSceneOriginY + kSceneHeight));
 }
 
 void TarotCardsPuzzle::drawScaledFrame(byte *screen, uint pitch,
@@ -397,8 +339,6 @@ Common::String TarotCardsPuzzle::stateString() const {
 }
 
 TarotCardsPuzzle::Result TarotCardsPuzzle::run(uint completionFlag) {
-	// DispatchSceneEntryAction at 0x36892 routes action 23 to
-	// RunTarotCardPuzzleScene at 0x3eece with the completion flag in EAX.
 	if (!_incomingDisplay.capture())
 		return kLoadFailed;
 
@@ -414,7 +354,7 @@ TarotCardsPuzzle::Result TarotCardsPuzzle::run(uint completionFlag) {
 		return kLoadFailed;
 	}
 
-	applyPalette();
+	_engine->installScenePalette(_background.palette);
 	_engine->getCursor()->setSelectionIndex(kDefaultCursor);
 	_engine->getCursor()->dispatchSelectionIndexChange(kDefaultCursor);
 	_engine->getCursor()->setVisible(true);
@@ -428,7 +368,7 @@ TarotCardsPuzzle::Result TarotCardsPuzzle::run(uint completionFlag) {
 	const uint32 timeLimitMillis =
 		_timeLimitSeconds * 18 * kDosTickMillis;
 	debugC(1, kDebugPuzzles,
-		"Ripper: entered tarot puzzle function=RunTarotCardPuzzleScene@0x3eece milestone=%u library='%s' controls=0x672..0x680 target=[8,3,9,7,2,1] timeLimitSeconds=%u music=%d",
+		"Ripper: entered tarot puzzle milestone=%u library='%s' controls=0x672..0x680 timeLimitSeconds=%u music=%d",
 		completionFlag, kLibraryName, _timeLimitSeconds, musicStarted);
 
 	Result result = kExited;
@@ -508,7 +448,7 @@ TarotCardsPuzzle::Result TarotCardsPuzzle::run(uint completionFlag) {
 	_engine->getCursor()->setVisible(false);
 	_engine->getInput()->drainKeys();
 	_engine->getInput()->discardMouseTransitions();
-	debugC(result == kLoadFailed ? 2 : 1, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: left tarot puzzle result=%d milestone=%u milestoneSet=%d held=%u state=[%s] quit=%d",
 		result, completionFlag,
 		_engine->getMilestones()->isSet(completionFlag),

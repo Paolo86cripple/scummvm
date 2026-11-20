@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/six_digit_code.h"
@@ -29,11 +30,11 @@
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -52,15 +53,11 @@ static const uint kHelpSelectionTable = 0x1b7;
 static const uint16 kEscapeCommand = 0x1b;
 static const uint16 kHelpCommand = 0x3b00;
 static const uint16 kClearCommand = 0x1300;
-static const uint kDosTickMillis = 55;
 static const int kSceneOriginY = 50;
 static const int kSceneHeight = 300;
 
 static const byte kSolution[kDigitCount] = {1, 8, 5, 6, 2, 1};
 
-// g_astSixDigitControlLayouts at 0x84d5c stores scene-space Y/X/control-id
-// triples. Entries 0..9 are the matching digit controls; 10 and 11 are Enter
-// and clear.
 static const Common::Point kControlPositions[kControlCount] = {
 	Common::Point(346, 242 + kSceneOriginY),
 	Common::Point(232, 217 + kSceneOriginY),
@@ -76,7 +73,6 @@ static const Common::Point kControlPositions[kControlCount] = {
 	Common::Point(306, 181 + kSceneOriginY)
 };
 
-// g_astSixDigitDirtyRegions at 0x84da4 stores the six scene-space Y/X pairs.
 static const Common::Point kDigitPositions[kDigitCount] = {
 	Common::Point(261, 148 + kSceneOriginY),
 	Common::Point(275, 148 + kSceneOriginY),
@@ -99,14 +95,11 @@ SixDigitCodePuzzle::SixDigitCodePuzzle(RipperEngine *engine) :
 
 bool SixDigitCodePuzzle::loadFrame(const Common::String &path,
 		BitmapAssetFrame &frame) {
-	BitmapAssetSequence sequence;
-	if (!_engine->getResources()->loadBitmapSequence(path, sequence) ||
-			sequence.frames.empty()) {
+	if (!_engine->getResources()->loadBitmapSequenceFirstFrame(path, frame)) {
 		warning("Ripper: could not decode six-digit code bitmap '%s'",
 			path.c_str());
 		return false;
 	}
-	frame = Common::move(sequence.frames.front());
 	return true;
 }
 
@@ -145,19 +138,8 @@ bool SixDigitCodePuzzle::loadAssets() {
 
 void SixDigitCodePuzzle::drawFrame(byte *screen, uint pitch,
 		const BitmapAssetFrame &frame, int x, int y) const {
-	for (uint sourceY = 0; sourceY < frame.height; ++sourceY) {
-		const int destinationY = y + sourceY;
-		if (destinationY < 0 || destinationY >= kRipperScreenHeight)
-			continue;
-		for (uint sourceX = 0; sourceX < frame.width; ++sourceX) {
-			const int destinationX = x + sourceX;
-			if (destinationX < 0 || destinationX >= kRipperScreenWidth)
-				continue;
-			const byte pixel = frame.pixels[sourceY * frame.width + sourceX];
-			if (pixel != frame.transparentColor)
-				screen[destinationY * pitch + destinationX] = pixel;
-		}
-	}
+	IndexedBitmapRenderer::drawBitmap(screen, pitch, frame, x, y,
+		Common::Rect(0, 0, kRipperScreenWidth, kRipperScreenHeight));
 }
 
 void SixDigitCodePuzzle::render(bool showDigits) const {
@@ -231,21 +213,10 @@ bool SixDigitCodePuzzle::playCue(uint cue) {
 	const Common::String path = Common::String::format("bnkwav%u.wav", cue);
 	const bool result = _engine->getMedia()->playSoundEffect(
 		path, _audioHandles[cue]);
-	debugC(result ? 3 : 2, kDebugPuzzles,
+	debugC(result ? 3 : 1, kDebugPuzzles,
 		"Ripper: six-digit code audio cue=%u path='%s' success=%d",
 		cue, path.c_str(), result);
 	return result;
-}
-
-bool SixDigitCodePuzzle::waitTicks(uint ticks) {
-	const uint32 target = g_system->getMillis() + ticks * kDosTickMillis;
-	while (!_engine->shouldQuit() &&
-			(int32)(target - g_system->getMillis()) > 0) {
-		if (!serviceEngineEvents())
-			return false;
-		g_system->delayMillis(10);
-	}
-	return !_engine->shouldQuit();
 }
 
 Common::String SixDigitCodePuzzle::enteredCode() const {
@@ -320,8 +291,6 @@ void SixDigitCodePuzzle::stopAudio() {
 }
 
 SixDigitCodePuzzle::Result SixDigitCodePuzzle::run(uint completionFlag) {
-	// DispatchSceneEntryAction at 0x36892 maps action 21 to
-	// RunSixDigitCodePuzzleScene at 0x3e913.
 	if (!loadAssets() || !_baseDisplay.capture())
 		return kLoadFailed;
 
@@ -335,12 +304,7 @@ SixDigitCodePuzzle::Result SixDigitCodePuzzle::run(uint completionFlag) {
 	_hoveredControl = -1;
 	render();
 	debugC(1, kDebugPuzzles,
-		"Ripper: entered six-digit code puzzle function="
-		"RunSixDigitCodePuzzleScene@0x3e913 milestone=%u help=0x%x "
-		"controls=%u digits=%u",
-		completionFlag, kHelpSelectionTable, kControlCount, kDigitCount);
-	debugC(3, kDebugPuzzles,
-		"Ripper: six-digit code retail solution=185621");
+		"Ripper: entered six-digit code puzzle milestone=%u", completionFlag);
 
 	Result result = kExited;
 	bool active = true;
@@ -399,7 +363,7 @@ SixDigitCodePuzzle::Result SixDigitCodePuzzle::run(uint completionFlag) {
 	_engine->getCursor()->setVisible(true);
 	_engine->getInput()->drainKeys();
 	_engine->getInput()->discardMouseTransitions();
-	debugC(result == kLoadFailed ? 2 : 1, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: left six-digit code puzzle result=%d milestone=%u "
 		"milestoneSet=%d entered='%s' quit=%d",
 		result, completionFlag,

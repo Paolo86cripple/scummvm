@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/kd_shooting_gallery.h"
@@ -29,11 +30,12 @@
 
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
+#include "ripper/display.h"
 #include "ripper/input.h"
 #include "ripper/ini.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
 #include "ripper/settings.h"
 
@@ -120,7 +122,7 @@ KdShootingGallery::KdShootingGallery(RipperEngine *engine) : Puzzle(engine),
 		_activeTargetGroup(0), _targetGroupSerial(0),
 		_lastHitTargetGroupSerial(-1), _hitsInCurrentTargetGroup(0),
 		_weaponEnergyPercent(100), _visibleTargetMask(0),
-		_targetGroupTypeMask(0), _keywordIndex(0), _completionFlag(0),
+		_targetGroupTypeMask(0), _keywordIndex(0),
 		_lastShotMillis(0), _lastRechargeMillis(0), _shotArmed(true),
 		_result(kExited) {
 	for (uint i = 0; i < kTargetClassCount; ++i) {
@@ -128,11 +130,6 @@ KdShootingGallery::KdShootingGallery(RipperEngine *engine) : Puzzle(engine),
 		_distinctTargetsHit[i] = 0;
 		_completedTargets[i] = 0;
 	}
-}
-
-int KdShootingGallery::configInt(const Common::INIFile &ini,
-		const char *section, const char *key, int fallback) const {
-	return getIniInt(ini, section, key, fallback);
 }
 
 bool KdShootingGallery::loadConfig(uint difficulty) {
@@ -149,18 +146,18 @@ bool KdShootingGallery::loadConfig(uint difficulty) {
 		return false;
 
 	_config = Config();
-	_config.frameRate = configInt(ini, "SCENE", "frame rate");
-	_config.requiredHits[0] = configInt(ini, "SCORE", "shots1");
-	_config.requiredHits[1] = configInt(ini, "SCORE", "shots2");
-	_config.points[0] = configInt(ini, "SCORE", "points1");
-	_config.points[1] = configInt(ini, "SCORE", "points2");
-	_config.goal = configInt(ini, "SCORE", "goal");
-	// RunKdShootingGalleryScene reads penalty but never uses it in the score.
-	_config.unusedPenalty = configInt(ini, "SCORE", "penalty");
-	_config.rapidFireTicks = configInt(ini, "WEAPON", "rapid fire");
-	_config.weaponDischarge = configInt(ini, "WEAPON", "discharge");
-	_config.weaponCharge = configInt(ini, "WEAPON", "charge");
-	_config.weaponChargeTicks = configInt(ini, "WEAPON", "charge time");
+	_config.frameRate = getIniInt(ini, "SCENE", "frame rate");
+	_config.requiredHits[0] = getIniInt(ini, "SCORE", "shots1");
+	_config.requiredHits[1] = getIniInt(ini, "SCORE", "shots2");
+	_config.points[0] = getIniInt(ini, "SCORE", "points1");
+	_config.points[1] = getIniInt(ini, "SCORE", "points2");
+	_config.goal = getIniInt(ini, "SCORE", "goal");
+	// The configured penalty does not affect the score.
+	_config.unusedPenalty = getIniInt(ini, "SCORE", "penalty");
+	_config.rapidFireTicks = getIniInt(ini, "WEAPON", "rapid fire");
+	_config.weaponDischarge = getIniInt(ini, "WEAPON", "discharge");
+	_config.weaponCharge = getIniInt(ini, "WEAPON", "charge");
+	_config.weaponChargeTicks = getIniInt(ini, "WEAPON", "charge time");
 	if (_config.frameRate < 0 ||
 			_config.requiredHits[0] < 0 || _config.requiredHits[1] < 0 ||
 			_config.points[0] < 0 || _config.points[1] < 0 ||
@@ -221,18 +218,16 @@ bool KdShootingGallery::loadFrameData() {
 
 bool KdShootingGallery::loadVisualAssets() {
 	ResourceManager *resources = _engine->getResources();
-	BitmapAssetSequence cursor;
-	BitmapAssetSequence checkmark;
-	if (!resources->loadBitmapSequence("kd_mouse.bbm", cursor) ||
-			cursor.frames.empty() ||
-			!resources->loadBitmapSequence("kd_check.bbm", checkmark) ||
-			checkmark.frames.empty() ||
+	BitmapAssetFrame cursor;
+	BitmapAssetFrame checkmark;
+	if (!resources->loadBitmapSequenceFirstFrame("kd_mouse.bbm", cursor) ||
+			!resources->loadBitmapSequenceFirstFrame("kd_check.bbm", checkmark) ||
 			!resources->loadBitmapLibrary("kd_flame.pl", _flameFrames) ||
 			!resources->loadInterfaceBitmapFont("small.fnt", _font))
 		return false;
 
-	_cursorFrame = Common::move(cursor.frames.front());
-	_checkmarkFrame = Common::move(checkmark.frames.front());
+	_cursorFrame = Common::move(cursor);
+	_checkmarkFrame = Common::move(checkmark);
 	debugC(2, kDebugPuzzles,
 		"Ripper: loaded KD shooting-gallery visual assets cursor=%ux%u checkmark=%ux%u flameFrames=%u fontGlyphs=%u",
 		_cursorFrame.width, _cursorFrame.height,
@@ -257,12 +252,8 @@ bool KdShootingGallery::loadResources(uint difficulty) {
 }
 
 Common::String KdShootingGallery::basenameFromPath(const Common::String &path) {
-	uint start = 0;
-	for (uint i = 0; i < path.size(); ++i) {
-		if (path[i] == '/' || path[i] == '\\' || path[i] == ':')
-			start = i + 1;
-	}
-	return path.substr(start);
+	const size_t separator = path.findLastOf("/\\:");
+	return path.substr(separator == Common::String::npos ? 0 : separator + 1);
 }
 
 Common::String KdShootingGallery::formatScore(int score) {
@@ -284,9 +275,7 @@ const PresentationRegion *KdShootingGallery::findHitRegion(
 		const PresentationFrameRegion &frame, const Common::Point &point) const {
 	for (uint i = 0; i < frame.regions.size(); ++i) {
 		const PresentationRegion &region = frame.regions[i];
-		// The KD.DAT values and the hit-test in RunKdShootingGalleryScene at
-		// 0x3288e use the same vertical/horizontal record order as combat:
-		// type, y, x, height, width.
+		// KD.DAT region fields are type, y, x, height, width.
 		const Common::Rect bounds(region.coordinate2, region.coordinate1,
 			region.coordinate2 + region.extent2,
 			region.coordinate1 + region.extent1);
@@ -470,15 +459,8 @@ uint16 KdShootingGallery::serviceKeyboard(uint frameIndex) {
 		if (command > 0xff)
 			continue;
 
-		byte character = command;
-		if (character >= 'A' && character <= 'Z')
-			character += 'a' - 'A';
 		static const char keyword[] = "paradise";
-		if (character == keyword[_keywordIndex])
-			++_keywordIndex;
-		else
-			_keywordIndex = 0;
-		if (_keywordIndex == sizeof(keyword) - 1) {
+		if (advanceKeyword(command, keyword, _keywordIndex)) {
 			_result = kSolved;
 			debugC(1, kDebugPuzzles,
 				"Ripper: KD shooting-gallery completed by paradise keyword frame=%u",
@@ -628,26 +610,8 @@ uint16 KdShootingGallery::service(uint frame) {
 
 void KdShootingGallery::drawBitmapScaled(byte *screen, uint pitch,
 		const BitmapAssetFrame &frame, int x, int y) const {
-	for (uint sourceY = 0; sourceY < frame.height; ++sourceY) {
-		for (uint sourceX = 0; sourceX < frame.width; ++sourceX) {
-			const byte pixel = frame.pixels[sourceY * frame.width + sourceX];
-			if (pixel == frame.transparentColor)
-				continue;
-			const int targetX = (x + sourceX) * kDisplayScale;
-			const int targetY = (y + sourceY) * kDisplayScale;
-			for (uint scaleY = 0; scaleY < kDisplayScale; ++scaleY) {
-				if (targetY + (int)scaleY < 0 ||
-						targetY + (int)scaleY >= g_system->getHeight())
-					continue;
-				for (uint scaleX = 0; scaleX < kDisplayScale; ++scaleX) {
-					if (targetX + (int)scaleX >= 0 &&
-							targetX + (int)scaleX < g_system->getWidth()) {
-						screen[(targetY + scaleY) * pitch + targetX + scaleX] = pixel;
-					}
-				}
-			}
-		}
-	}
+	IndexedBitmapRenderer::drawBitmap2x(screen, pitch, frame, x, y,
+		Common::Rect(0, 0, g_system->getWidth(), g_system->getHeight()));
 }
 
 void KdShootingGallery::drawTextScaled(byte *screen, uint pitch,
@@ -810,7 +774,6 @@ bool KdShootingGallery::presentResults() {
 
 Scene::Result KdShootingGallery::run(uint completionFlag) {
 	prepare("kd-shooting-gallery-entry", 19, false);
-	_completionFlag = completionFlag;
 	_result = kExited;
 	_config = Config();
 	_regionTable.frames.clear();
@@ -863,7 +826,7 @@ Scene::Result KdShootingGallery::run(uint completionFlag) {
 			!markSolved(completionFlag, "kd-shooting-gallery"))
 		_result = kLoadFailed;
 	finish("kd-shooting-gallery-exit", 0, true);
-	debugC(_result == kLoadFailed ? 1 : 2, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: left KD shooting-gallery result=%d difficulty=%u completionFlag=%u score=%d",
 		_result, difficulty, completionFlag, currentScore());
 	return _result;

@@ -8,6 +8,15 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/clock.h"
@@ -22,12 +31,13 @@
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
+#include "ripper/puzzles/state.h"
 #include "ripper/ripper.h"
 #include "ripper/settings.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -53,8 +63,6 @@ static const uint16 kExitCommand = 0x1b;
 static const uint16 kHelpCommand = 0x3b00;
 static const uint kHelpSelectionTable = 0x1a2;
 
-// g_clockPuzzleUiControlRecords at 0x846a6 stores these seven
-// x/y/width/height/control-id records. Y is relative to the scene viewport.
 static const ClockControlLayout kControls[] = {
 	{290, 82, 94, 91, 0x672},
 	{490, 236, 18, 18, 0x673},
@@ -65,8 +73,6 @@ static const ClockControlLayout kControls[] = {
 	{144, 246, 35, 30, 0x678}
 };
 
-// g_clockPuzzleOverlayFrameTable at 0x8463a. Entries 0..11 anchor the
-// two analog hands; entries 12..17 anchor Egyptian digits and markers.
 static const Common::Point kDialPositions[kDialCount] = {
 	Common::Point(330, 91), Common::Point(331, 97),
 	Common::Point(330, 110), Common::Point(331, 123),
@@ -93,20 +99,15 @@ static const int kTargetFirstClock[4] = {1, 4, 3, 5};
 static const int kTargetSecondClock[4] = {0, 9, 3, 5};
 static const bool kTargetHalfDay = true;
 
-static RipperEngine *sClockStateOwner = nullptr;
-static int sDialIndices[2] = {0, 0};
-static int sFirstClockDigits[4] = {0, 0, 0, 0};
-static int sSecondClockDigits[4] = {0, 0, 0, 0};
-static bool sHalfDay = false;
-
 } // End of anonymous namespace
 
 ClockPuzzle::ClockPuzzle(RipperEngine *engine) : Puzzle(engine),
-		_hoveredControl(-1), _dragDial(-1), _lastDragIndex(-1),
-		_halfDay(false) {
-	memset(_dialIndices, 0, sizeof(_dialIndices));
-	memset(_firstClockDigits, 0, sizeof(_firstClockDigits));
-	memset(_secondClockDigits, 0, sizeof(_secondClockDigits));
+		_hoveredControl(-1), _dragDial(-1), _lastDragIndex(-1) {
+	const ClockPuzzleState defaults;
+	memcpy(_dialIndices, defaults.dialIndices, sizeof(_dialIndices));
+	memcpy(_firstClockDigits, defaults.firstClockDigits, sizeof(_firstClockDigits));
+	memcpy(_secondClockDigits, defaults.secondClockDigits, sizeof(_secondClockDigits));
+	_halfDay = defaults.halfDay;
 }
 
 bool ClockPuzzle::captureBackground() {
@@ -118,12 +119,10 @@ void ClockPuzzle::restoreBackground() const {
 }
 
 bool ClockPuzzle::loadFrame(const Common::String &name, BitmapAssetFrame &frame) {
-	BitmapAssetSequence sequence;
-	if (!_engine->getResources()->loadBitmapSequence(name, sequence) || sequence.frames.empty()) {
+	if (!_engine->getResources()->loadBitmapSequenceFirstFrame(name, frame)) {
 		warning("Ripper: could not load clock puzzle bitmap '%s'", name.c_str());
 		return false;
 	}
-	frame = Common::move(sequence.frames.front());
 	return true;
 }
 
@@ -152,9 +151,6 @@ bool ClockPuzzle::loadAssets() {
 
 	const Common::String maskName = SearchMan.hasFile(Common::Path("clock_tmp.mcg")) ?
 		"clock_tmp.mcg" : "clock_tm.mcg";
-	// RunClockPuzzleScene at 0x374c5 loads CLOCK_TMP.MCG through
-	// DecodeCustomBitmapAsset at 0x53fdf. It is one compressed 640x300 bitmap,
-	// not a bitmap-set container like the numbered hand and digit resources.
 	if (!_engine->getResources()->loadBitmap(maskName, _dialHitMask) ||
 			_dialHitMask.width != 640 ||
 			_dialHitMask.height != 300) {
@@ -380,31 +376,26 @@ bool ClockPuzzle::isSolved() const {
 }
 
 void ClockPuzzle::loadPersistentState() {
-	if (sClockStateOwner != _engine) {
-		sClockStateOwner = _engine;
-		memset(sDialIndices, 0, sizeof(sDialIndices));
-		memset(sFirstClockDigits, 0, sizeof(sFirstClockDigits));
-		memset(sSecondClockDigits, 0, sizeof(sSecondClockDigits));
-		sHalfDay = false;
-	}
-	memcpy(_dialIndices, sDialIndices, sizeof(_dialIndices));
-	memcpy(_firstClockDigits, sFirstClockDigits, sizeof(_firstClockDigits));
-	memcpy(_secondClockDigits, sSecondClockDigits, sizeof(_secondClockDigits));
-	_halfDay = sHalfDay;
+	const ClockPuzzleState &state = _engine->getPuzzleState()->clock;
+	memcpy(_dialIndices, state.dialIndices, sizeof(_dialIndices));
+	memcpy(_firstClockDigits, state.firstClockDigits, sizeof(_firstClockDigits));
+	memcpy(_secondClockDigits, state.secondClockDigits, sizeof(_secondClockDigits));
+	_halfDay = state.halfDay;
 }
 
 void ClockPuzzle::storePersistentState() const {
-	memcpy(sDialIndices, _dialIndices, sizeof(_dialIndices));
-	memcpy(sFirstClockDigits, _firstClockDigits, sizeof(_firstClockDigits));
-	memcpy(sSecondClockDigits, _secondClockDigits, sizeof(_secondClockDigits));
-	sHalfDay = _halfDay;
+	ClockPuzzleState &state = _engine->getPuzzleState()->clock;
+	memcpy(state.dialIndices, _dialIndices, sizeof(_dialIndices));
+	memcpy(state.firstClockDigits, _firstClockDigits, sizeof(_firstClockDigits));
+	memcpy(state.secondClockDigits, _secondClockDigits, sizeof(_secondClockDigits));
+	state.halfDay = _halfDay;
 }
 
 ClockPuzzle::Result ClockPuzzle::run(uint completionFlag) {
 	const uint puzzleLevel = CLIP<uint>(_engine->getSettings()->getPuzzleLevel(), 1, 3);
 	debugC(1, kDebugPuzzles,
-		"Ripper: entered clock puzzle completionFlag=%u level=%u helpTable=0x%x target=dials:7,8 first:14:35 second:09:35 halfDay=1",
-		completionFlag, puzzleLevel, kHelpSelectionTable);
+		"Ripper: entered clock puzzle completionFlag=%u level=%u",
+		completionFlag, puzzleLevel);
 	if (!captureBackground() || !loadAssets())
 		return kLoadFailed;
 

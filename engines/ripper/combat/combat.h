@@ -8,6 +8,15 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_COMBAT_COMBAT_H
@@ -19,7 +28,7 @@
 #include "common/rect.h"
 #include "common/str.h"
 
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/resources.h"
 #include "ripper/scenes/scene.h"
 
@@ -43,6 +52,10 @@ struct CombatEncounterDefinition {
 	uint helpResource;
 	bool atkiniSceneRouting;
 };
+
+extern const CombatEncounterDefinition kMechiniDefinition;
+extern const CombatEncounterDefinition kRatiniDefinition;
+extern const CombatEncounterDefinition kAtkiniDefinition;
 
 class CombatEncounter : public Scene, public MediaSequenceCallback {
 public:
@@ -130,10 +143,6 @@ private:
 	bool loadBitmapAssets();
 	void loadMeterConfig(const Common::INIFile &ini, const char *section,
 		MeterConfig &config);
-	Common::String configString(const Common::INIFile &ini, const char *section,
-		const char *key, const Common::String &fallback = Common::String()) const;
-	int configInt(const Common::INIFile &ini, const char *section,
-		const char *key, int fallback = 0) const;
 	static Common::String basenameFromPath(const Common::String &path);
 	static Common::String normalizeCueName(const Common::String &path);
 	static const char *meterName(uint meter);
@@ -152,7 +161,7 @@ private:
 		const Common::Point &point) const;
 	void spawnEffect(byte group, const Common::Point &point);
 	void advanceEffects();
-	void drawOverlay(const Common::Point &point, bool targetActive,
+	void drawOverlay(const Common::Point &point,
 		bool enemyAttackActive);
 	void drawFrameScaled(byte *screen, uint pitch, const BitmapAssetFrame &frame,
 		int x, int y) const;
@@ -190,7 +199,6 @@ private:
 	Effect _effects[kEffectCapacity];
 	const SceneData *_activeScene;
 	uint _activeSceneIndex;
-	uint _completionFlag;
 	uint _arcadeKeywordIndex;
 	uint32 _lastWeaponShotMillis;
 	bool _weaponHeld;

@@ -1,6 +1,8 @@
 /* ScummVM - Graphic Adventure Engine
  *
- * ScummVM is the legal property of their respective copyright holders.
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -9,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/scenes/gym_scene.h"
@@ -26,7 +29,7 @@
 #include "ripper/detection.h"
 #include "ripper/input.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
 
 namespace Ripper {
@@ -62,16 +65,13 @@ static const uint16 kFailureCommand = 0x7ffd;
 
 static bool isButtonPoint(uint button, const Common::Point &point) {
 	return button < ARRAYSIZE(kButtonLeft) &&
-		point.x >= kButtonLeft[button] &&
-		point.x < kButtonLeft[button] + kButtonWidth[button] &&
-		point.y >= kButtonTop[button] &&
-		point.y < kButtonTop[button] + kButtonHeight[button];
+		Common::Rect(kButtonLeft[button], kButtonTop[button],
+			kButtonLeft[button] + kButtonWidth[button],
+			kButtonTop[button] + kButtonHeight[button]).contains(point);
 }
 
 static bool isExitPoint(const Common::Point &point) {
-	// RunGymSelectorScene at 0x3c64b builds the exit control at scene-space
-	// (0, 0) with width 166 and height 300. The scene viewport starts at y=50.
-	return point.x >= 0 && point.x < 166 && point.y >= 50 && point.y < 350;
+	return Common::Rect(0, 50, 166, 350).contains(point);
 }
 
 } // End of anonymous namespace
@@ -82,14 +82,12 @@ GymScene::GymScene(RipperEngine *engine) : Scene(engine),
 
 bool GymScene::initialize() {
 	for (uint button = 0; button < ARRAYSIZE(_buttonFrames); ++button) {
-		BitmapAssetSequence sequence;
-		if (!_engine->getResources()->loadBitmapSequence(
-				kButtonBitmaps[button], sequence) || sequence.frames.empty()) {
+		if (!_engine->getResources()->loadBitmapSequenceFirstFrame(
+				kButtonBitmaps[button], _buttonFrames[button])) {
 			warning("Ripper: could not load gym selector bitmap '%s'",
 				kButtonBitmaps[button]);
 			return false;
 		}
-		_buttonFrames[button] = Common::move(sequence.frames.front());
 		if (_buttonFrames[button].width != kButtonWidth[button] ||
 				_buttonFrames[button].height != kButtonHeight[button]) {
 			warning("Ripper: gym selector bitmap '%s' has invalid size=%ux%u",
@@ -291,8 +289,8 @@ uint16 GymScene::service(uint frame) {
 bool GymScene::playStateMedia(uint state, uint16 &command) {
 	const Common::String path = Common::String::format("fd_gym%u.smk", state);
 	command = 0;
-	const bool played = _engine->getMedia()->playPuzzleSequence(
-		path, 0, this, &command);
+	const bool played = _engine->getMedia()->playPuzzleSequenceSegment(
+		path, 0, 0xffffffff, 100, 0, this, &command);
 	debugC(played ? 2 : 1, kDebugPuzzles,
 		"Ripper: gym selector media='%s' state=%u command=0x%04x result=%d",
 		path.c_str(), state, command, played);
@@ -310,7 +308,7 @@ GymScene::Result GymScene::run(uint completionFlag) {
 
 	prepare("gym-selector-entry", kDefaultCursor, true);
 	debugC(1, kDebugPuzzles,
-		"Ripper: entered gym selector scene function=RunGymSelectorScene@0x3c64b "
+		"Ripper: entered gym selector scene "
 		"milestone=%u initialState=0 introState=4 help=0x%x",
 		completionFlag, kHelpResource);
 
@@ -377,7 +375,7 @@ GymScene::Result GymScene::run(uint completionFlag) {
 	stopAllAudio();
 	_engine->getCursor()->setSelectionIndex(0);
 	finish("gym-selector-exit", 0, true);
-	debugC(result == kLoadFailed ? 2 : 1, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: left gym selector scene result=%d milestone=%u state=%u "
 		"command=0x%04x selectedTarget=%d quit=%d",
 		result, completionFlag, _currentState, command, selectedTarget,

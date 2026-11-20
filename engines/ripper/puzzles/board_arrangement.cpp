@@ -1,6 +1,8 @@
 /* ScummVM - Graphic Adventure Engine
  *
- * ScummVM is the legal property of their respective copyright holders.
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -9,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/board_arrangement.h"
@@ -27,11 +30,12 @@
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
+#include "ripper/puzzles/state.h"
 #include "ripper/ripper.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -65,31 +69,15 @@ static const uint16 kEscapeCommand = 0x1b;
 static const uint16 kHelpCommand = 0x3b00;
 static const uint16 kScreenshotCommand = 0x4400;
 
-// g_astBoardArrangementRuntimePositions at 0x84b39 stores scene-space Y
-// followed by X for each piece. ScummVM normalizes those pairs to physical
-// screen points here.
-static const Common::Point kInitialPositions[kPieceCount] = {
-	Common::Point(103, 13 + kSceneOriginY),
-	Common::Point(168, 13 + kSceneOriginY),
-	Common::Point(103, 70 + kSceneOriginY),
-	Common::Point(168, 70 + kSceneOriginY),
-	Common::Point(103, 244 + kSceneOriginY),
-	Common::Point(168, 126 + kSceneOriginY),
-	Common::Point(103, 189 + kSceneOriginY),
-	Common::Point(103, 126 + kSceneOriginY)
-};
-
 static const uint kValidationOrder[5] = {1, 0, 3, 6, 2};
-
-static RipperEngine *sBoardStateOwner = nullptr;
-static Common::Point sBoardPositions[kPieceCount];
 
 } // End of anonymous namespace
 
 BoardArrangementPuzzle::BoardArrangementPuzzle(RipperEngine *engine) :
 		Puzzle(engine), _draggedPiece(-1), _hoveredPiece(-1) {
+	const BoardArrangementPuzzleState defaults;
 	for (uint piece = 0; piece < kPieceCount; ++piece) {
-		_positions[piece] = kInitialPositions[piece];
+		_positions[piece] = defaults.positions[piece];
 		_zOrder[piece] = piece;
 	}
 }
@@ -109,15 +97,14 @@ bool BoardArrangementPuzzle::loadPieceSet(const char *prefix,
 		Common::Array<BitmapAssetFrame> &frames) {
 	frames.clear();
 	for (uint piece = 0; piece < kPieceCount; ++piece) {
-		BitmapAssetSequence sequence;
+		BitmapAssetFrame asset;
 		const Common::String path = Common::String::format("%s%u.bbm", prefix, piece);
-		if (!_engine->getResources()->loadBitmapSequence(path, sequence) ||
-				sequence.frames.empty()) {
+		if (!_engine->getResources()->loadBitmapSequenceFirstFrame(path, asset)) {
 			warning("Ripper: could not load board arrangement piece '%s'",
 				path.c_str());
 			return false;
 		}
-		frames.push_back(Common::move(sequence.frames.front()));
+		frames.push_back(Common::move(asset));
 	}
 	return true;
 }
@@ -156,35 +143,21 @@ bool BoardArrangementPuzzle::loadAssets() {
 }
 
 void BoardArrangementPuzzle::loadPersistentState() {
-	if (sBoardStateOwner != _engine) {
-		sBoardStateOwner = _engine;
-		for (uint piece = 0; piece < kPieceCount; ++piece)
-			sBoardPositions[piece] = kInitialPositions[piece];
-	}
+	const BoardArrangementPuzzleState &state = _engine->getPuzzleState()->boardArrangement;
 	for (uint piece = 0; piece < kPieceCount; ++piece)
-		_positions[piece] = sBoardPositions[piece];
+		_positions[piece] = state.positions[piece];
 }
 
 void BoardArrangementPuzzle::storePersistentState() const {
+	BoardArrangementPuzzleState &state = _engine->getPuzzleState()->boardArrangement;
 	for (uint piece = 0; piece < kPieceCount; ++piece)
-		sBoardPositions[piece] = _positions[piece];
+		state.positions[piece] = _positions[piece];
 }
 
 void BoardArrangementPuzzle::drawFrame(byte *screen, uint pitch,
 		const BitmapAssetFrame &frame, int x, int y) const {
-	for (uint sourceY = 0; sourceY < frame.height; ++sourceY) {
-		const int destinationY = y + sourceY;
-		if (destinationY < 0 || destinationY >= kRipperScreenHeight)
-			continue;
-		for (uint sourceX = 0; sourceX < frame.width; ++sourceX) {
-			const int destinationX = x + sourceX;
-			if (destinationX < 0 || destinationX >= kRipperScreenWidth)
-				continue;
-			const byte pixel = frame.pixels[sourceY * frame.width + sourceX];
-			if (pixel != frame.transparentColor)
-				screen[destinationY * pitch + destinationX] = pixel;
-		}
-	}
+	IndexedBitmapRenderer::drawBitmap(screen, pitch, frame, x, y,
+		Common::Rect(0, 0, kRipperScreenWidth, kRipperScreenHeight));
 }
 
 void BoardArrangementPuzzle::render() const {
@@ -350,9 +323,6 @@ void BoardArrangementPuzzle::finishDrag() {
 		piece, _positions[piece].x, _positions[piece].y);
 }
 
-// The RunBoardArrangementPuzzleScene validation block at 0x3a889 uses
-// UiControlState fields stored as Y, X, height, width. The positions and frames
-// below are normalized to ScummVM's X, Y, width, height ordering.
 bool BoardArrangementPuzzle::isSolved(bool logPairs) const {
 	bool solved = true;
 	for (uint order = 0; order + 1 < ARRAYSIZE(kValidationOrder); ++order) {
@@ -394,7 +364,7 @@ bool BoardArrangementPuzzle::complete(uint completionFlag) {
 	if (!markSolved(completionFlag, "board-arrangement-puzzle"))
 		return false;
 	debugC(1, kDebugPuzzles,
-		"Ripper: solved board arrangement puzzle milestone=%u order=1,0,3,6,2",
+		"Ripper: solved board arrangement puzzle milestone=%u",
 		completionFlag);
 	if (!_engine->getMedia()->playBlockingAudio("q_p_16.wav"))
 		warning("Ripper: board arrangement completion audio failed");
@@ -417,14 +387,7 @@ BoardArrangementPuzzle::Result BoardArrangementPuzzle::run(uint completionFlag) 
 		return kLoadFailed;
 	}
 	debugC(1, kDebugPuzzles,
-		"Ripper: entered board arrangement puzzle function=RunBoardArrangementPuzzleScene@0x39d8f "
-		"milestone=%u help=0x%x dragBounds=[%d,%d,%d,%d] validation=1,0,3,6,2",
-		completionFlag, kHelpSelectionTable, kDragLeft, kDragTop,
-		kDragRight, kDragBottom);
-	debugC(1, kDebugPuzzles,
-		"Ripper: board arrangement rules leftToRight=1,0,3,6,2 "
-		"nextLeft>=previousRight vertical=touch-or-overlap "
-		"maximumHorizontalGap=none ignoredPieces=4,5,7");
+		"Ripper: entered board arrangement puzzle milestone=%u", completionFlag);
 
 	Result result = _engine->getMilestones()->isSet(completionFlag) ?
 		kSolved : kExited;
@@ -493,10 +456,7 @@ BoardArrangementPuzzle::Result BoardArrangementPuzzle::run(uint completionFlag) 
 		if (redraw)
 			render();
 		else {
-			// RunBoardArrangementPuzzleScene at 0x39d8f services
-			// ServiceUiControlStateSelection on every idle loop while the
-			// selection presentation is active. Submit unchanged puzzle frames
-			// too so ScummVM's software cursor tracks those input ticks.
+			// Present unchanged frames too so the software cursor follows idle input ticks.
 			presentScreen();
 		}
 		g_system->delayMillis(10);
@@ -512,7 +472,7 @@ BoardArrangementPuzzle::Result BoardArrangementPuzzle::run(uint completionFlag) 
 	_engine->getInput()->drainKeys();
 	_engine->getInput()->discardMouseTransitions();
 	const bool arrangementSolved = isSolved(false);
-	debugC(result == kLoadFailed ? 2 : 1, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: left board arrangement puzzle result=%d "
 		"arrangementSolved=%d milestone=%u milestoneSet=%d quit=%d",
 		result, arrangementSolved, completionFlag,

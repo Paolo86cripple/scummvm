@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/wac/broken_mug.h"
@@ -30,7 +31,7 @@
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
 #include "ripper/resources.h"
 #include "ripper/ripper.h"
@@ -59,19 +60,19 @@ static const int kSolvedTolerance = 5;
 static const int kCompletionX = 143;
 static const int kCompletionY = 111;
 
-static const int kInitialX[kPieceCount] = {
+static const int kInitialY[kPieceCount] = {
 	122, 220, 216, 61, 54, 114, 160, 207, 230
 };
 
-static const int kInitialY[kPieceCount] = {
+static const int kInitialX[kPieceCount] = {
 	258, 260, 94, 94, 254, 164, 123, 228, 155
 };
 
-static const int kSolvedDeltaX[kPieceCount] = {
+static const int kSolvedDeltaY[kPieceCount] = {
 	0, -6, 31, -2, 68, 5, 31, 64, 65
 };
 
-static const int kSolvedDeltaY[kPieceCount] = {
+static const int kSolvedDeltaX[kPieceCount] = {
 	0, -36, -2, 15, 16, -24, -2, 4, 55
 };
 
@@ -85,9 +86,8 @@ BrokenMugPuzzle::BrokenMugPuzzle(RipperEngine *engine) : _engine(engine),
 bool BrokenMugPuzzle::loadPiece(uint pieceIndex) {
 	const Common::String name = Common::String::format("mug%u.smk", pieceIndex);
 	ResourceManager *resources = _engine->getResources();
-	Common::SeekableReadStream *stream = resources && resources->puzzle().hasMember(name) ?
-		resources->puzzle().createReadStreamForMember(name) :
-		(resources ? resources->createReadStreamForPath(name) : nullptr);
+	Common::SeekableReadStream *stream = resources ?
+		resources->createReadStream(name, ResourceManager::kSourcePuzzlePiece) : nullptr;
 	if (!stream) {
 		warning("Ripper: unable to open broken mug asset '%s'", name.c_str());
 		return false;
@@ -124,10 +124,7 @@ bool BrokenMugPuzzle::loadPiece(uint pieceIndex) {
 		piece.frames.push_back(Common::move(frame));
 	}
 
-	// RunWacMugSelectionScene stores the first coordinate in UiControlState +0
-	// and the second at +2. RIPPER.LE's WAC display path consumes that pair in
-	// transposed screen order, as it does for the chooser frame controls.
-	piece.position = Common::Point(kInitialY[pieceIndex], kInitialX[pieceIndex]);
+	piece.position = Common::Point(kInitialX[pieceIndex], kInitialY[pieceIndex]);
 	piece.orientation = kInitialOrientation;
 	debugC(2, kDebugWac,
 		"Ripper: loaded broken mug piece=%u control=0x%x frames=%u size=%ux%u position=%d,%d orientation=%u",
@@ -193,9 +190,9 @@ void BrokenMugPuzzle::render() {
 	for (int y = 0; y < screen->h; ++y)
 		memcpy(screen->getBasePtr(0, y),
 			_backgroundDisplay.pixels().data() + y * screen->w, screen->w);
-	for (int y = kViewportTop; y < kViewportBottom; ++y)
-		memset(screen->getBasePtr(kViewportLeft, y), kViewportFillColor,
-			kViewportRight - kViewportLeft);
+	screen->fillRect(Common::Rect(kViewportLeft, kViewportTop,
+		kViewportRight, kViewportBottom),
+		kViewportFillColor);
 	for (int order = (int)_frontToBack.size() - 1; order >= 0; --order) {
 		const Piece &piece = _pieces[_frontToBack[order]];
 		drawPiece((byte *)screen->getPixels(), screen->pitch, piece, currentFrame(piece));
@@ -293,8 +290,8 @@ bool BrokenMugPuzzle::isSolved() const {
 	for (uint pieceIndex = 1; pieceIndex < kPieceCount; ++pieceIndex) {
 		const int deltaX = _pieces[pieceIndex].position.x - anchor.x;
 		const int deltaY = _pieces[pieceIndex].position.y - anchor.y;
-		if (ABS(deltaX - kSolvedDeltaY[pieceIndex]) > kSolvedTolerance ||
-			ABS(deltaY - kSolvedDeltaX[pieceIndex]) > kSolvedTolerance)
+		if (ABS(deltaX - kSolvedDeltaX[pieceIndex]) > kSolvedTolerance ||
+			ABS(deltaY - kSolvedDeltaY[pieceIndex]) > kSolvedTolerance)
 			return false;
 	}
 	return true;
@@ -307,9 +304,9 @@ bool BrokenMugPuzzle::playCompletionMedia(RipperEngine *engine) {
 			g_system->unlockScreen();
 		return false;
 	}
-	for (int y = kViewportTop; y < kViewportBottom; ++y)
-		memset(screen->getBasePtr(kViewportLeft, y), kViewportFillColor,
-			kViewportRight - kViewportLeft);
+	screen->fillRect(Common::Rect(kViewportLeft, kViewportTop,
+		kViewportRight, kViewportBottom),
+		kViewportFillColor);
 	g_system->unlockScreen();
 	presentScreen();
 
@@ -360,7 +357,6 @@ BrokenMugPuzzle::Result BrokenMugPuzzle::run() {
 	bool active = true;
 	while (active && !_engine->shouldQuit()) {
 		if (_engine->getInput()->pollEvents()) {
-			_engine->quitGame();
 			break;
 		}
 		while (_engine->getInput()->hasPendingKey()) {

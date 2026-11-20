@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_BRIEFING_H
@@ -45,7 +46,8 @@ public:
 
 	bool initialize(ResourceManager &resources, bool demoVariant);
 	bool arm(uint selector, bool playNotification = true);
-	bool restore(bool armed, uint selector);
+	static bool isValidRestore(bool armed, uint selector, uint16 announcedSelectors);
+	bool restore(bool armed, uint selector, uint16 announcedSelectors);
 	void clear();
 	void prepareForSceneTransition();
 	BriefingServiceResult service(const MouseState &mouse);
@@ -53,6 +55,7 @@ public:
 
 	bool isArmed() const { return _armed; }
 	uint getSelector() const { return _selector; }
+	uint16 getAnnouncedSelectors() const { return _announcedSelectors; }
 
 private:
 	void advanceAnimation(uint32 now);
@@ -72,7 +75,7 @@ private:
 	bool _armed;
 	bool _initialized;
 	bool _hovered;
-	bool _announcedSelectors[9];
+	uint16 _announcedSelectors;
 };
 
 } // End of namespace Ripper

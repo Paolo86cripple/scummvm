@@ -1,6 +1,8 @@
 /* ScummVM - Graphic Adventure Engine
  *
- * ScummVM is the legal property of their respective copyright holders.
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -9,8 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/ka_book_code.h"
@@ -25,8 +31,8 @@
 #include "ripper/detection.h"
 #include "ripper/display.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/media/media.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
 
 namespace Ripper {
@@ -106,9 +112,6 @@ void KaBookCodePuzzle::drawPrompt(const Common::String &typedCode) {
 }
 
 KaBookCodePuzzle::Result KaBookCodePuzzle::run() {
-	// RunKaBookCodeEntryPrompt at 0x2bc33 owns the KA_PUZ.PCX display,
-	// KA_KEY.WAV feedback, seven input cells, and HC2021R comparison. Its caller
-	// in RunKaDialogueScene only consumes the returned solved/failed state.
 	if (!loadAssets())
 		return kLoadFailed;
 
@@ -125,7 +128,6 @@ KaBookCodePuzzle::Result KaBookCodePuzzle::run() {
 	bool active = true;
 	while (active && !_engine->shouldQuit()) {
 		if (_engine->getInput()->pollEvents()) {
-			_engine->quitGame();
 			break;
 		}
 		while (_engine->getInput()->hasPendingKey()) {

@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_MILESTONES_H
@@ -78,11 +79,13 @@ public:
 
 	bool initialize(ResourceManager &resources);
 	bool isSet(uint flag) const;
+	uint chapter() const;
 	bool set(uint flag, bool value, const char *source);
 	bool toggle(uint flag, const char *source);
 	bool hasRipperIdentity() const;
 	bool selectRipperIdentity(uint candidate, const char *source);
 	bool syncGame(Common::Serializer &serializer);
+	void restoreFlags(const Milestones &state) { memcpy(_flags, state._flags, sizeof(_flags)); }
 	void setChangeObserver(MilestoneObserver *observer) { _observer = observer; }
 
 	const Common::String &label(uint flag) const;

@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/world_map.h"
@@ -42,7 +43,6 @@ static const uint kTravelLocationNameResource = 100;
 static const uint kTravelDetailResource = 116;
 static const uint kTravelTargetResource = 150;
 static const uint kWorldMapCursor = 16;
-// RIPPER.LE layout 0x207ac stores these controls in display-service Y/X order.
 static const int kLocationListLeft = 45;
 static const int kLocationListTop = 305;
 static const int kLocationListRight = 235;
@@ -61,8 +61,6 @@ static const int kScrollControlDown = 1;
 static const byte kListTextColor = 4;
 static const byte kSelectedTextColor = 254;
 
-// RunSceneSelectionMenu at 0x20808 copies this table from
-// g_sceneSelectionEntryGroupIds at 0x20702 before testing flags 20..44.
 static const byte kSceneEntryGroups[kSceneEntryCount] = {
 	0, 1, 2, 2, 3, 4, 4, 4, 4, 4, 5, 5, 6,
 	7, 8, 9, 9, 9, 9, 10, 11, 12, 12, 13, 14
@@ -107,10 +105,6 @@ bool WorldMap::initialize(ResourceManager &resources) {
 	return true;
 }
 
-bool WorldMap::isLocationAvailable(uint locationIndex) const {
-	return locationIndex < _locations.size() && _locations[locationIndex].available;
-}
-
 const Common::String &WorldMap::locationName(uint locationIndex) const {
 	static const Common::String empty;
 	return locationIndex < _locations.size() ? _locations[locationIndex].name : empty;
@@ -123,33 +117,9 @@ const Common::String &WorldMap::resourceString(uint resourceId) const {
 	return _gameText[resourceId - 1];
 }
 
-bool WorldMap::captureDisplay() {
-	Graphics::Surface *screen = g_system->lockScreen();
-	if (!screen || screen->format.bytesPerPixel != 1 ||
-		screen->w < (int)kWorldMapWidth || screen->h < (int)kWorldMapHeight) {
-		if (screen)
-			g_system->unlockScreen();
-		return false;
-	}
-
-	_savedPixels.resize(kWorldMapWidth * kWorldMapHeight);
-	for (uint y = 0; y < kWorldMapHeight; ++y)
-		memcpy(_savedPixels.data() + y * kWorldMapWidth, screen->getBasePtr(0, y), kWorldMapWidth);
-	g_system->unlockScreen();
-	_savedPalette.resize(256 * 3);
-	g_system->getPaletteManager()->grabPalette(_savedPalette.data(), 0, 256);
-	return true;
-}
-
 void WorldMap::restoreDisplay() {
-	if (!_savedPixels.empty())
-		g_system->copyRectToScreen(_savedPixels.data(), kWorldMapWidth,
-			0, 0, kWorldMapWidth, kWorldMapHeight);
-	if (_savedPalette.size() >= 256 * 3)
-		g_system->getPaletteManager()->setPalette(_savedPalette.data(), 0, 256);
-	presentScreen();
-	_savedPixels.clear();
-	_savedPalette.clear();
+	_savedDisplay.restore();
+	_savedDisplay.clear();
 }
 
 void WorldMap::refreshLocations() {
@@ -252,8 +222,8 @@ void WorldMap::draw() const {
 }
 
 int WorldMap::findVisibleLocation(const Common::Point &point) const {
-	if (point.x < kLocationListLeft || point.x >= kLocationListRight ||
-		point.y < kLocationListTop || point.y >= kLocationListBottom)
+	if (!Common::Rect(kLocationListLeft, kLocationListTop,
+		kLocationListRight, kLocationListBottom).contains(point))
 		return -1;
 	const uint rowHeight = _font.lineHeight + 2;
 	const uint relativeRow = (point.y - kLocationListTop) / rowHeight;
@@ -347,16 +317,6 @@ void WorldMap::updateFirstVisible() {
 		_firstVisible = _selectedVisible - visibleRows + 1;
 }
 
-uint WorldMap::resolveChapter() const {
-	// ResolveHighestSetSelectionFlag at 0x20394 checks named flags 4 through 1
-	// and supplies the highest set value to the destination script pattern.
-	for (uint flag = kMilestoneCompletedAct3; flag != 0; --flag) {
-		if (_engine->getMilestones()->isSet(flag))
-			return flag;
-	}
-	return 0;
-}
-
 Common::String WorldMap::resolveTargetScript(uint locationIndex, uint chapter) const {
 	if (locationIndex >= _locations.size())
 		return Common::String();
@@ -365,9 +325,10 @@ Common::String WorldMap::resolveTargetScript(uint locationIndex, uint chapter) c
 }
 
 bool WorldMap::run(Common::String &targetScript, uint &chapter) {
+	RipperEngine::SaveLoadScope saveLoad(*_engine);
 	targetScript.clear();
 	chapter = 0;
-	if (!_initialized || !captureDisplay())
+	if (!_initialized || !_savedDisplay.capture())
 		return false;
 
 	refreshLocations();
@@ -394,7 +355,6 @@ bool WorldMap::run(Common::String &targetScript, uint &chapter) {
 	bool selected = false;
 	while (!_engine->shouldQuit() && !cancelled && !selected) {
 		if (_engine->getInput()->pollEvents()) {
-			_engine->quitGame();
 			break;
 		}
 		while (_engine->getInput()->hasPendingKey()) {
@@ -460,7 +420,7 @@ bool WorldMap::run(Common::String &targetScript, uint &chapter) {
 	_engine->getCursor()->setVisible(false);
 	if (selected) {
 		const uint locationIndex = _visibleLocations[_selectedVisible];
-		chapter = resolveChapter();
+		chapter = _engine->getMilestones()->chapter();
 		targetScript = resolveTargetScript(locationIndex, chapter);
 		debugC(1, kDebugScene,
 			"Ripper: world map selected location=%u name='%s' chapter=%u target='%s'",
@@ -468,8 +428,7 @@ bool WorldMap::run(Common::String &targetScript, uint &chapter) {
 			targetScript.c_str());
 		g_system->fillScreen(0);
 		presentScreen();
-		_savedPixels.clear();
-		_savedPalette.clear();
+		_savedDisplay.clear();
 	} else {
 		debugC(1, kDebugScene, "Ripper: world map cancelled");
 		restoreDisplay();

@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_WAC_WAC_H
@@ -25,6 +26,7 @@
 #include "common/rect.h"
 
 #include "ripper/controls.h"
+#include "ripper/display.h"
 #include "ripper/resources.h"
 
 namespace Ripper {
@@ -86,8 +88,7 @@ private:
 	Common::Array<BitmapAssetFrame> _databaseScrollArrows;
 	Common::Array<Common::String> _gameText;
 	BitmapFontAsset _font;
-	Common::Array<byte> _savedPixels;
-	Common::Array<byte> _savedPalette;
+	IndexedDisplaySnapshot _savedDisplay;
 	int _hoveredControl;
 	int _pressedControl;
 	bool _notebookUpdatePending;

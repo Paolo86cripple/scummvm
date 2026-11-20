@@ -1,6 +1,8 @@
 /* ScummVM - Graphic Adventure Engine
  *
- * ScummVM is the legal property of their respective copyright holders.
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -9,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_PUZZLES_STAINED_GLASS_H
@@ -41,8 +44,6 @@ public:
 private:
 	bool loadConfiguration();
 	bool loadAssets();
-	bool loadPcx(const Common::String &name, BitmapAssetFrame &frame);
-	bool loadBitmap(const Common::String &name, BitmapAssetFrame &frame);
 	bool buildPuzzleBacking();
 	void drawFrame(byte *screen, uint pitch, const BitmapAssetFrame &frame,
 		int x, int y) const;
@@ -62,7 +63,6 @@ private:
 	bool playAmbient();
 	void stopAudio();
 	bool serviceKeyword(uint16 command);
-	void applyPalette();
 	void clearDisplay();
 
 	AssetLibrary _library;

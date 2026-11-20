@@ -1,6 +1,8 @@
 /* ScummVM - Graphic Adventure Engine
  *
- * ScummVM is the legal property of their respective copyright holders.
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -9,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_PUZZLES_WEB_GRID_SHIFT_H
@@ -53,7 +56,6 @@ private:
 	int targetForDirection(uint direction) const;
 	bool runAutoPlay(uint moveLimit, uint completionFlag, Result &result);
 	bool showPreview();
-	bool waitTicks(uint ticks);
 	bool updateCursor(const Common::Point &point);
 	int findCell(const Common::Point &point) const;
 	bool isSolved() const;

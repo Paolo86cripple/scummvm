@@ -2,7 +2,7 @@
  *
  * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this program.
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/scenes/ending_sequence.h"
@@ -31,7 +32,7 @@
 #include "ripper/detection.h"
 #include "ripper/diagnostics/screen_presenter.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
 #include "ripper/resources.h"
 #include "ripper/ripper.h"
@@ -61,8 +62,8 @@ struct ThrowTarget {
 	int cursorXMax;
 };
 
-// RIPPER.LE table 0x84fe4 stores Y/X bounds at +0x08/+0x0c/+0x10/+0x14 in
-// RIPMID.AVI's 320x200 space. Playback scales them 2:1.
+// Target bounds use RIPMID.AVI's logical 320x200 coordinates.
+// Playback scales them 2:1.
 static const ThrowTarget kThrowTargets[kThrowTargetCount] = {
 	{ 42, 79, 53, 139, 136, 179 },
 	{ 84, 122, 53, 124, 136, 173 },
@@ -82,19 +83,8 @@ static const char *const kCorrectEpilogueMedia[4] = {
 	"q4_v4.avi", "q4_v3.avi", "q4_v6.avi", "q4_v5.avi"
 };
 
-// RunEndingSelectionEpiloguesAndCredits at 0x43adb maps the story flags to
-// these ending indices. The names preserve RIPPER.LE's diagnostic strings.
 static const char *const kEndingNames[4] = {
 	"Burton", "Eddie", "Powel", "Magnotta"
-};
-
-static const uint kEndingMilestoneFlags[4] = { 8, 7, 9, 6 };
-
-static const char *const kCorrectOutcomeRoutes[4] = {
-	"end_her.avi -> quin_win.avi -> q4_v4.avi",
-	"quin_win.avi -> q4_v3.avi",
-	"end_her.avi -> quin_win.avi -> q4_v6.avi",
-	"end_him.avi -> quin_win.avi -> q4_v5.avi"
 };
 
 static int findActiveThrowTarget(uint frame) {
@@ -204,7 +194,7 @@ private:
 				_overlayPaletteIndex = index;
 		}
 
-		// RIPPER.LE uses strict edge comparisons; exclude pixels no click can hit.
+		// Exclude edge pixels because the target hit test uses strict comparisons.
 		const Common::Rect bounds(
 			(region.cursorXMin + 1) * kEndingSelectionDisplayScale,
 			(region.cursorYMin + 1) * kEndingSelectionDisplayScale,
@@ -278,16 +268,14 @@ public:
 		_sequenceId = sequenceId;
 		_selectionActive = sequenceId == kEndingSelectionSequenceId;
 		if (_selectionActive) {
-			// Sequence 3 starts at logical (100,160) under the 2:1 descriptor
-			// installed by RIPPER.LE at 0x43840.
 			_engine->getInput()->warpMousePosition(Common::Point(
 				kEndingSelectionCursorX * kEndingSelectionDisplayScale,
 				kEndingSelectionCursorY * kEndingSelectionDisplayScale));
 			activateCursor();
 			debugC(1, kDebugScene,
-				"Ripper: ending selection armed expectedEnding=%u expected='%s' milestone=%u cursorLogical=%d,%d cursorPhysical=%d,%d",
+				"Ripper: ending selection armed expectedEnding=%u expected='%s' cursorLogical=%d,%d cursorPhysical=%d,%d",
 				_storyEnding, kEndingNames[_storyEnding],
-				kEndingMilestoneFlags[_storyEnding], kEndingSelectionCursorX,
+				kEndingSelectionCursorX,
 				kEndingSelectionCursorY,
 				kEndingSelectionCursorX * kEndingSelectionDisplayScale,
 				kEndingSelectionCursorY * kEndingSelectionDisplayScale);
@@ -301,7 +289,6 @@ public:
 
 	uint16 service(uint frame) override {
 		if (_engine->getInput()->pollEvents()) {
-			_engine->quitGame();
 			return kCancelCommand;
 		}
 		while (_engine->getInput()->hasPendingKey()) {
@@ -313,8 +300,8 @@ public:
 			}
 		}
 
-		// HandleEndingSelectionThrowTargetCallback at 0x438cf gates spin audio
-		// and input on packetized playback state 3, not Smacker frame 3.
+		// Input and spin audio start with packetized sequence 3, independently
+		// of its frame number.
 		const MouseState mouse = _engine->getInput()->publishMouseState();
 		if (!_selectionActive)
 			return 0;
@@ -330,9 +317,7 @@ public:
 		const bool refreshPalette =
 			_debugHelper.update(_selectionActive, frame);
 
-		// HandleEndingSelectionThrowTargetCallback tests the published current
-		// button flags, so a held primary button remains eligible until a target
-		// window accepts it.
+		// A held primary button remains eligible until a target window accepts it.
 		if ((mouse.buttons & kMouseButtonLeft) == 0) {
 			_reportedHeldMiss = false;
 			return refreshPalette ? kContinueRefreshPalette : 0;
@@ -354,12 +339,11 @@ public:
 				_engine->getMedia()->playSoundEffect(
 					"ballthro.wav", _throwHandle, 100, false);
 				debugC(1, kDebugScene,
-					"Ripper: ending selection queued throw command=0x%04x target=%u candidateEnding=%u candidate='%s' expectedEnding=%u expected='%s' correct=%d sound='ballthro.wav' initialMedia='%s' followupRoute='%s' sequence=%u frame=%u point=%d,%d logical=%d,%d",
+					"Ripper: ending selection queued throw command=0x%04x target=%u candidateEnding=%u candidate='%s' expectedEnding=%u expected='%s' correct=%d sound='ballthro.wav' initialMedia='%s' sequence=%u frame=%u point=%d,%d logical=%d,%d",
 					activeTarget + 1, (uint)activeTarget, selectedEnding,
 					kEndingNames[selectedEnding], _storyEnding,
 					kEndingNames[_storyEnding], correct,
-					kChosenEndingMedia[selectedEnding], correct ?
-						kCorrectOutcomeRoutes[selectedEnding] : "ripfinal.avi",
+					kChosenEndingMedia[selectedEnding],
 					_sequenceId, frame, mouse.position.x, mouse.position.y,
 					logicalPoint.x, logicalPoint.y);
 				return activeTarget + 1;
@@ -457,9 +441,6 @@ EndingSequence::EndingSequence(RipperEngine *engine) : _engine(engine) {
 }
 
 bool EndingSequence::run() {
-	// RunEndingSelectionEpiloguesAndCredits at 0x43adb resolves the selected
-	// Ripper from flags 6..9 before installing the END_CURS.PL cursor set and
-	// playing RIPMID.AVI through HandleEndingSelectionThrowTargetCallback.
 	int storyEnding = -1;
 	if (_engine->getMilestones()->isSet(6))
 		storyEnding = 3;
@@ -488,9 +469,8 @@ bool EndingSequence::run() {
 		"windfin.wav", windHandle, 100, true);
 	uint16 command = 0;
 	debugC(1, kDebugScene,
-		"Ripper: entered ending selection function=RunEndingSelectionEpiloguesAndCredits@0x43adb storyEnding=%d expected='%s' milestone=%u wind=%d",
-		storyEnding, kEndingNames[storyEnding],
-		kEndingMilestoneFlags[storyEnding], windStarted);
+		"Ripper: entered ending selection storyEnding=%d expected='%s' wind=%d",
+		storyEnding, kEndingNames[storyEnding], windStarted);
 	bool result = _engine->getMedia()->playInteractiveIavf(
 		"ripmid.avi", &callback, &command);
 
@@ -506,12 +486,11 @@ bool EndingSequence::run() {
 		const uint selectedEnding = (command - 1) % 4;
 		const bool correct = selectedEnding == (uint)storyEnding;
 		debugC(1, kDebugScene,
-			"Ripper: ending selection resolving queued throw command=0x%04x target=%u selectedEnding=%u selected='%s' expectedEnding=%d expected='%s' correct=%d initialMedia='%s' followupRoute='%s'",
+			"Ripper: ending selection resolving queued throw command=0x%04x target=%u selectedEnding=%u selected='%s' expectedEnding=%d expected='%s' correct=%d initialMedia='%s'",
 			command, command - 1, selectedEnding,
 			kEndingNames[selectedEnding], storyEnding,
 			kEndingNames[storyEnding], correct,
-			kChosenEndingMedia[selectedEnding],
-			correct ? kCorrectOutcomeRoutes[selectedEnding] : "ripfinal.avi");
+			kChosenEndingMedia[selectedEnding]);
 		result = _engine->getMedia()->play(
 			kChosenEndingMedia[selectedEnding], true) && result;
 		_engine->getMedia()->stopSoundEffect(spinHandle);
@@ -549,7 +528,7 @@ bool EndingSequence::run() {
 		g_system->fillScreen(0);
 		presentScreen();
 	}
-	debugC(result ? 1 : 2, kDebugScene,
+	debugC(1, kDebugScene,
 		"Ripper: left ending sequence result=%d command=0x%04x quit=%d",
 		result, command, _engine->shouldQuit());
 	return result;

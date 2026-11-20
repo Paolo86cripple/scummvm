@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_PUZZLES_EIGHT_BUTTON_SEQUENCE_H
@@ -25,7 +26,7 @@
 #include "common/array.h"
 #include "common/rect.h"
 
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/puzzles/puzzle.h"
 #include "ripper/resources.h"
 
@@ -55,7 +56,6 @@ private:
 	int findButton(const Common::Point &point) const;
 	void drawFeedback(bool visible);
 	void drawSuccessDark();
-	bool waitTicks(uint ticks);
 	uint16 pressButton(uint button);
 	bool playCue(uint cue);
 	void stopAudio();

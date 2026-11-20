@@ -11,18 +11,17 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/crystal.h"
 
 #include "common/debug.h"
-#include "common/file.h"
-#include "common/formats/ini-file.h"
 #include "common/system.h"
 #include "graphics/paletteman.h"
 #include "graphics/surface.h"
@@ -30,10 +29,11 @@
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
+#include "ripper/settings.h"
 
 namespace Ripper {
 
@@ -57,7 +57,6 @@ static const int kEdgeTop = kSceneOriginY + 30;
 static const int kEdgeBottom = kEdgeTop + 235;
 static const int kHeadX = 328;
 static const int kHeadY = kSceneOriginY;
-static const uint kDefaultPuzzleLevel = 2;
 static const uint kCrystalCompletionFadeSteps = 9;
 static const uint kEasySeedDelayTicks = 0x12;
 static const uint kDosTimerTickMillis = 55;
@@ -109,12 +108,11 @@ bool CrystalPuzzle::loadPieceSet(const char *prefix,
 		Common::Array<BitmapAssetFrame> &frames) {
 	frames.clear();
 	for (uint piece = 0; piece < kPieceCount; ++piece) {
-		BitmapAssetSequence sequence;
+		BitmapAssetFrame asset;
 		const Common::String name = Common::String::format("%s%u.bbm", prefix, piece);
-		if (!_engine->getResources()->loadBitmapSequence(name, sequence) ||
-				sequence.frames.empty())
+		if (!_engine->getResources()->loadBitmapSequenceFirstFrame(name, asset))
 			return false;
-		frames.push_back(Common::move(sequence.frames.front()));
+		frames.push_back(Common::move(asset));
 	}
 	return true;
 }
@@ -145,19 +143,8 @@ Common::Point CrystalPuzzle::gridPosition(uint cell, const BitmapAssetFrame &fra
 
 void CrystalPuzzle::drawFrame(byte *screen, uint pitch, const BitmapAssetFrame &frame,
 		int x, int y) const {
-	for (uint sourceY = 0; sourceY < frame.height; ++sourceY) {
-		const int destinationY = y + sourceY;
-		if (destinationY < 0 || destinationY >= 400)
-			continue;
-		for (uint sourceX = 0; sourceX < frame.width; ++sourceX) {
-			const int destinationX = x + sourceX;
-			if (destinationX < 0 || destinationX >= 640)
-				continue;
-			const byte pixel = frame.pixels[sourceY * frame.width + sourceX];
-			if (pixel != frame.transparentColor)
-				screen[destinationY * pitch + destinationX] = pixel;
-		}
-	}
+	IndexedBitmapRenderer::drawBitmap(screen, pitch, frame, x, y,
+		Common::Rect(0, 0, kRipperScreenWidth, kRipperScreenHeight));
 }
 
 void CrystalPuzzle::render() {
@@ -284,22 +271,6 @@ bool CrystalPuzzle::isSolved() const {
 	return true;
 }
 
-uint CrystalPuzzle::readPuzzleLevel() const {
-	Common::File iniFile;
-	Common::INIFile ini;
-	Common::String value;
-	uint puzzleLevel = kDefaultPuzzleLevel;
-	if (iniFile.open("ripper.ini") && ini.loadFromStream(iniFile) &&
-			ini.getKey("puzzle level", "game", value)) {
-		const uint64 configuredLevel = value.asUint64();
-		if (configuredLevel >= 1 && configuredLevel <= 3)
-			puzzleLevel = (uint)configuredLevel;
-	}
-	debugC(2, kDebugPuzzles, "Ripper: crystal puzzle difficulty level=%u",
-		puzzleLevel);
-	return puzzleLevel;
-}
-
 void CrystalPuzzle::seedInitialPieces(uint puzzleLevel) {
 	if (puzzleLevel == 1) {
 		_pieceCells[0] = 9;
@@ -387,11 +358,11 @@ CrystalPuzzle::Result CrystalPuzzle::run(uint completionFlag) {
 	}
 
 	debugC(1, kDebugPuzzles,
-		"Ripper: entered crystal puzzle pieces=%u grid=%ux%u completionFlag=%u keyword='%s'",
+		"Ripper: entered crystal puzzle pieces=%u grid=%ux%u completionFlag=%u difficulty=%u",
 		kPieceCount, kGridColumns, ARRAYSIZE(kGridRowY), completionFlag,
-		kCompletionKeyword);
+		_engine->getSettings()->getPuzzleLevel());
 	_engine->getInput()->discardMouseTransitions();
-	seedInitialPieces(readPuzzleLevel());
+	seedInitialPieces(_engine->getSettings()->getPuzzleLevel());
 	render();
 
 	Result result = kExited;
@@ -415,14 +386,7 @@ CrystalPuzzle::Result CrystalPuzzle::run(uint completionFlag) {
 				render();
 				continue;
 			}
-			char character = command & 0xff;
-			if (character >= 'A' && character <= 'Z')
-				character += 'a' - 'A';
-			if (character == kCompletionKeyword[_keywordIndex])
-				++_keywordIndex;
-			else
-				_keywordIndex = 0;
-			if (kCompletionKeyword[_keywordIndex] == '\0') {
+			if (advanceKeyword(command & 0xff, kCompletionKeyword, _keywordIndex)) {
 				debugC(1, kDebugPuzzles,
 					"Ripper: crystal puzzle solved by hidden keyword");
 				result = complete(completionFlag) ? kSolved : kLoadFailed;

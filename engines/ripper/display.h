@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_DISPLAY_H
@@ -64,6 +65,15 @@ public:
 	static bool drawBitmap(byte *pixels, uint pitch,
 		const BitmapAssetFrame &bitmap, int x, int y,
 		const Common::Rect &clip);
+	static bool drawBitmap(byte *pixels, uint pitch,
+		const BitmapAssetFrame &bitmap, int x, int y,
+		const Common::Rect &clip, byte transparentColor);
+	static bool drawBitmap2x(byte *pixels, uint pitch,
+		const BitmapAssetFrame &bitmap, int x, int y,
+		const Common::Rect &clip);
+	static void drawHintRect(byte *pixels, uint pitch,
+		const Common::Rect &bounds, const Common::Rect &clip,
+		byte color, uint ditherMask);
 	static bool drawNineSlice(byte *pixels, uint pitch,
 		const Common::Array<BitmapAssetFrame> &skin,
 		const Common::Rect &bounds, const Common::Rect &clip);
@@ -72,6 +82,11 @@ public:
 class BitmapFontRenderer {
 public:
 	static uint measureText(const BitmapFontAsset &font, const Common::String &text);
+	static void wrapText(const BitmapFontAsset &font, const Common::String &text,
+		uint maxWidth, Common::Array<Common::String> &lines);
+	// Draw the full glyph and return its horizontal advance.
+	static int drawChar(byte *pixels, uint pitch, const BitmapFontAsset &font,
+		int x, int y, byte character, byte color);
 	static void drawText(byte *pixels, uint pitch, const BitmapFontAsset &font,
 		int x, int y, const Common::String &text, byte color);
 	static void drawTextClipped(byte *pixels, uint pitch, const BitmapFontAsset &font,

@@ -2,7 +2,7 @@
  *
  * ScummVM is the legal property of its developers, whose names
  * are too numerous to list here. Please refer to the COPYRIGHT
- * file distributed with this program.
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -11,17 +11,17 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/table_gate.h"
 
 #include "common/debug.h"
-#include "common/file.h"
 #include "common/formats/ini-file.h"
 #include "common/system.h"
 #include "common/util.h"
@@ -32,9 +32,9 @@
 #include "ripper/detection.h"
 #include "ripper/input.h"
 #include "ripper/ini.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
 #include "ripper/settings.h"
 
@@ -74,8 +74,7 @@ static const uint16 kHelpAction = 0x3b00;
 static const uint kHelpSelectionTable = 0x1a1;
 static const uint kNoLaunchFrame = 0xffffffff;
 
-// RunTableGateLeverPuzzleScene at 0x38eb8 normalizes RIPPER.LE's 1-based
-// records at 0x84720 once. These are the resulting zero-based links.
+// Zero-based path links; -1 ends a failed route and -2 reaches the exit.
 static const PathNode kPathNodes[kPathNodeCount] = {
 	{22, 486, 1}, {72, 486, 6}, {185, 487, 3}, {263, 485, -2},
 	{37, 446, 16}, {66, 446, 4}, {71, 455, 7}, {76, 446, 8},
@@ -110,8 +109,6 @@ static const PathNode kPathNodes[kPathNodeCount] = {
 	{44, 218, 76}, {55, 177, 96}, {146, 179, 99}
 };
 
-// The source node and two routes are the normalized records at 0x84a02.
-// Gate state zero selects route0 and state one selects route1.
 static const GateDefinition kGateDefinitions[kGateCount] = {
 	{68, 445, 6, 7, 5}, {226, 427, 13, 14, 12},
 	{66, 394, 16, 17, 114}, {111, 397, 25, 23, 115},
@@ -130,8 +127,6 @@ static const Common::Point kLeverPositions[kLeverCount] = {
 	Common::Point(533, 179 + kSceneOriginY)
 };
 
-// Dirty-region coordinates at 0x84ae4. RIPPER.LE reveals one indicator
-// after each lever activation and restores all five after a failed traversal.
 static const Common::Point kActivationPositions[kLeverCount] = {
 	Common::Point(537, 97 + kSceneOriginY),
 	Common::Point(531, 102 + kSceneOriginY),
@@ -170,9 +165,8 @@ void TableGatePuzzle::restoreBackground() const {
 bool TableGatePuzzle::loadConfiguration() {
 	const uint puzzleLevel = CLIP<uint>(_engine->getSettings()->getPuzzleLevel(), 1, 3);
 	const Common::String filename = Common::String::format("tblini%u.ini", puzzleLevel);
-	Common::File file;
 	Common::INIFile ini;
-	if (!file.open(Common::Path(filename)) || !ini.loadFromStream(file)) {
+	if (!ini.loadFromFile(Common::Path(filename))) {
 		warning("Ripper: could not load table gate puzzle configuration '%s'", filename.c_str());
 		return false;
 	}
@@ -224,12 +218,10 @@ bool TableGatePuzzle::loadConfiguration() {
 }
 
 bool TableGatePuzzle::loadFrame(const Common::String &name, BitmapAssetFrame &frame) {
-	BitmapAssetSequence sequence;
-	if (!_engine->getResources()->loadBitmapSequence(name, sequence) || sequence.frames.empty()) {
+	if (!_engine->getResources()->loadBitmapSequenceFirstFrame(name, frame)) {
 		warning("Ripper: could not load table gate puzzle bitmap '%s'", name.c_str());
 		return false;
 	}
-	frame = Common::move(sequence.frames.front());
 	return true;
 }
 
@@ -272,19 +264,8 @@ bool TableGatePuzzle::loadAssets() {
 
 void TableGatePuzzle::drawFrame(byte *screen, uint pitch,
 		const BitmapAssetFrame &frame, int x, int y) const {
-	for (uint sourceY = 0; sourceY < frame.height; ++sourceY) {
-		const int destinationY = y + sourceY;
-		if (destinationY < 0 || destinationY >= 400)
-			continue;
-		for (uint sourceX = 0; sourceX < frame.width; ++sourceX) {
-			const int destinationX = x + sourceX;
-			if (destinationX < 0 || destinationX >= 640)
-				continue;
-			const byte pixel = frame.pixels[sourceY * frame.width + sourceX];
-			if (pixel != frame.transparentColor)
-				screen[destinationY * pitch + destinationX] = pixel;
-		}
-	}
+	IndexedBitmapRenderer::drawBitmap(screen, pitch, frame, x, y,
+		Common::Rect(0, 0, kRipperScreenWidth, kRipperScreenHeight));
 }
 
 void TableGatePuzzle::render() {
@@ -558,10 +539,8 @@ TableGatePuzzle::Result TableGatePuzzle::run(uint completionFlag) {
 		"Ripper: entered table gate puzzle completionFlag=%u pathNodes=%u gates=%u levers=%u",
 		completionFlag, kPathNodeCount, kGateCount, kLeverCount);
 	_engine->getInput()->discardMouseTransitions();
-	// RunTableGateLeverPuzzleScene at 0x3912a..0x39134 stores and dispatches
-	// cursor row 14 before activating the puzzle's UI-selection presentation.
-	// GBZ1 has just hidden the cursor, so reinstall the frame after the retained
-	// scene and overlay palette have been presented.
+	// GBZ1 hides the cursor. Reinstall its frame after presenting the
+	// retained scene and overlay palette.
 	_engine->getCursor()->setSelectionIndex(kDefaultCursor);
 	_engine->getCursor()->dispatchSelectionIndexChange(kDefaultCursor);
 	playCue(1);
@@ -597,9 +576,7 @@ TableGatePuzzle::Result TableGatePuzzle::run(uint completionFlag) {
 
 		const MouseState mouse = _engine->getInput()->publishMouseState();
 		updateCursor(mouse.position);
-		// ServiceUiControlStateSelection at 0x393f6 runs under RIPPER.LE's
-		// active UI-selection presentation. Present each translated cursor tick
-		// explicitly for ScummVM's software cursor.
+		// Present each cursor tick for the software cursor.
 		presentScreen();
 		if ((mouse.pressed & kMouseButtonLeft) != 0) {
 			if (isExitRegion(mouse.position)) {

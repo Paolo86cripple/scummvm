@@ -11,14 +11,15 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 
 #include "audio/audiostream.h"
 #include "audio/decoders/raw.h"
@@ -46,15 +47,18 @@ static const uint kBlockingAudioCursor = 0x13;
 
 bool MediaPlayer::playBlockingAudio(const Common::String &path, bool showCursor,
 		const Common::String &presentationText, int displayTop) {
+	RipperEngine::SaveLoadScope saveLoad(*_engine);
 	Common::String source;
 	Common::SeekableReadStream *audioStream =
-		openSource(path, kSourceBlockingAudio, source);
+		_engine->getResources()->createReadStream(
+			path, ResourceManager::kSourceBlockingAudio, &source);
 	if (!audioStream) {
 		warning("Ripper: could not open blocking audio '%s' from the filesystem or sound library",
 			path.c_str());
 		return false;
 	}
-	Audio::SeekableAudioStream *stream = Audio::makeWAVStream(audioStream, DisposeAfterUse::YES);
+	Common::ScopedPtr<Audio::SeekableAudioStream> stream(
+		Audio::makeWAVStream(audioStream, DisposeAfterUse::YES));
 	if (!stream)
 		return false;
 	const uint32 durationMs = stream->getLength().msecs();
@@ -62,19 +66,16 @@ bool MediaPlayer::playBlockingAudio(const Common::String &path, bool showCursor,
 		displayTop);
 	IndexedDisplaySnapshot textBacking;
 	if (textControl.isActive()) {
-		if (!textBacking.capture()) {
-			delete stream;
+		if (!textBacking.capture())
 			return false;
-		}
 		textControl.configureSegment(1, durationMs, 0, 0,
 			_engine->getSettings()->getVideoMode());
 		textControl.applySharedPalettePatch();
 	}
 
 	Audio::SoundHandle handle;
-	// PlayBlockingAudioWithOptionalText at 0x206e0 is part of the same presentation path as
-	// packetized dialogue/video audio, which the Remote Control names VIDEO VOL.
-	_mixer->playStream(Audio::Mixer::kSpeechSoundType, &handle, stream);
+	// VIDEO VOL controls both blocking audio and movie dialogue.
+	_mixer->playStream(Audio::Mixer::kSpeechSoundType, &handle, stream.release());
 	if (showCursor)
 		_engine->getCursor()->update(kBlockingAudioCursor);
 	else
@@ -91,7 +92,6 @@ bool MediaPlayer::playBlockingAudio(const Common::String &path, bool showCursor,
 		if (showCursor)
 			_engine->getCursor()->update(kBlockingAudioCursor);
 		if (_input->pollEvents()) {
-			_engine->quitGame();
 			break;
 		}
 		if (textControl.isActive()) {
@@ -188,7 +188,8 @@ bool MediaPlayer::playAudioClip(const Common::String &path, Audio::SoundHandle &
 		const char *description) {
 	Common::String source;
 	Common::SeekableReadStream *audioStream =
-		openSource(path, kSourceSoundEffect, source);
+		_engine->getResources()->createReadStream(
+			path, ResourceManager::kSourceSoundEffect, &source);
 	if (!audioStream) {
 		warning("Ripper: could not open %s '%s' from the filesystem or sound library",
 			description, path.c_str());

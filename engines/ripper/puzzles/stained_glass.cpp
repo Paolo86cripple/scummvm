@@ -1,6 +1,8 @@
 /* ScummVM - Graphic Adventure Engine
  *
- * ScummVM is the legal property of their respective copyright holders.
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -9,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/stained_glass.h"
@@ -25,18 +28,17 @@
 #include "common/ptr.h"
 #include "common/stream.h"
 #include "common/system.h"
-#include "graphics/paletteman.h"
 #include "graphics/surface.h"
 
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
 #include "ripper/settings.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -63,10 +65,8 @@ static const char *const kTransitionMaskName = "frame3.pcx";
 static const char *const kAmbientName = "g-puzzle.wav";
 static const char kCompletionKeyword[] = "headache";
 
-// g_stainedGlassPuzzleTilePositionTable at 0x843f0 stores ordinary X/Y
-// pairs. RunStainedGlassPuzzleScene at 0x2e366 cancels a 50-pixel scene
-// presentation offset before creating the controls, so these coordinates are
-// physical even when the preceding media used the scene viewport.
+// Physical screen coordinates, even when the preceding media used
+// the scene viewport.
 static const Common::Point kTilePositions[kTileCount] = {
 	Common::Point(277, 5),
 	Common::Point(228, 54), Common::Point(326, 54),
@@ -143,8 +143,7 @@ bool StainedGlassPuzzle::loadConfiguration() {
 					name.c_str(), section.c_str(), key.c_str(), value.c_str());
 				return false;
 			}
-			// LoadStainedGlassPuzzleMoveTable at 0x2da64 leaves a
-			// destination unchanged when the INI lookup returns zero.
+			// A zero INI value leaves the destination unchanged.
 			_moveTable[row][destination] = source == 0 ? -1 : (int)source - 1;
 			active = true;
 		}
@@ -197,30 +196,6 @@ bool StainedGlassPuzzle::loadConfiguration() {
 	return true;
 }
 
-bool StainedGlassPuzzle::loadPcx(const Common::String &name,
-		BitmapAssetFrame &frame) {
-	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		_library.createReadStreamForMember(name));
-	if (!stream || !decodePcxAsset(*stream, frame)) {
-		warning("Ripper: could not decode stained glass PCX '%s'",
-			name.c_str());
-		return false;
-	}
-	return true;
-}
-
-bool StainedGlassPuzzle::loadBitmap(const Common::String &name,
-		BitmapAssetFrame &frame) {
-	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		_library.createReadStreamForMember(name));
-	if (!stream || !decodeBitmapAsset(*stream, frame)) {
-		warning("Ripper: could not decode stained glass bitmap '%s'",
-			name.c_str());
-		return false;
-	}
-	return true;
-}
-
 bool StainedGlassPuzzle::loadAssets() {
 	Common::ScopedPtr<Common::SeekableReadStream> stream(
 		_engine->getResources()->createReadStreamForPath(kLibraryName));
@@ -229,8 +204,8 @@ bool StainedGlassPuzzle::loadAssets() {
 			kLibraryName);
 		return false;
 	}
-	if (!loadPcx(kBackgroundName, _background) ||
-			!loadPcx(kTransitionMaskName, _transitionMask))
+	if (!_library.loadPcx(kBackgroundName, _background) ||
+			!_library.loadPcx(kTransitionMaskName, _transitionMask))
 		return false;
 	if (_background.width != kRipperScreenWidth ||
 			_background.height != kRipperScreenHeight ||
@@ -244,11 +219,11 @@ bool StainedGlassPuzzle::loadAssets() {
 	}
 
 	for (uint tile = 0; tile < kTileCount; ++tile) {
-		if (!loadBitmap(Common::String::format("p%02u.bbm", tile + 1),
+		if (!_library.loadBitmap(Common::String::format("p%02u.bbm", tile + 1),
 				_tiles[tile]))
 			return false;
 	}
-	if (!loadBitmap("p17.bbm", _blankTile))
+	if (!_library.loadBitmap("p17.bbm", _blankTile))
 		return false;
 	for (uint cue = 0; cue < kCueCount; ++cue) {
 		const Common::String name = Common::String::format("glas%u.wav", cue);
@@ -274,19 +249,8 @@ bool StainedGlassPuzzle::loadAssets() {
 
 void StainedGlassPuzzle::drawFrame(byte *screen, uint pitch,
 		const BitmapAssetFrame &frame, int x, int y) const {
-	for (uint sourceY = 0; sourceY < frame.height; ++sourceY) {
-		const int destinationY = y + sourceY;
-		if (destinationY < 0 || destinationY >= kRipperScreenHeight)
-			continue;
-		for (uint sourceX = 0; sourceX < frame.width; ++sourceX) {
-			const int destinationX = x + sourceX;
-			if (destinationX < 0 || destinationX >= kRipperScreenWidth)
-				continue;
-			const byte pixel = frame.pixels[sourceY * frame.width + sourceX];
-			if (pixel != frame.transparentColor)
-				screen[destinationY * pitch + destinationX] = pixel;
-		}
-	}
+	IndexedBitmapRenderer::drawBitmap(screen, pitch, frame, x, y,
+		Common::Rect(0, 0, kRipperScreenWidth, kRipperScreenHeight));
 }
 
 bool StainedGlassPuzzle::buildPuzzleBacking() {
@@ -299,16 +263,6 @@ bool StainedGlassPuzzle::buildPuzzleBacking() {
 			kTilePositions[position].x, kTilePositions[position].y);
 	}
 	return true;
-}
-
-void StainedGlassPuzzle::applyPalette() {
-	Common::Array<byte> palette = _background.palette;
-	_engine->applySharedPalettePatch(palette.data(),
-		kRipperPaletteColorCount);
-	_engine->getSettings()->applyVideoPalette(palette.data(),
-		kRipperPaletteColorCount, true);
-	g_system->getPaletteManager()->setPalette(palette.data(), 0,
-		kRipperPaletteColorCount);
 }
 
 void StainedGlassPuzzle::renderOrder(const uint *order) {
@@ -333,7 +287,7 @@ void StainedGlassPuzzle::renderOrder(const uint *order) {
 			kTilePositions[position].x, kTilePositions[position].y);
 	}
 	g_system->unlockScreen();
-	applyPalette();
+	_engine->installScenePalette(_background.palette);
 	presentScreen();
 }
 
@@ -374,7 +328,7 @@ void StainedGlassPuzzle::renderTransition(const uint *previousOrder,
 		drawFrame(pixels, screen->pitch, _tiles[tile], x, y);
 	}
 	// FRAME3.PCX is a stencil: transparent pixels expose moving pieces; other
-	// pixels restore the GLASS.PCX lattice (RIPPER.LE 0x2dc23).
+	// pixels restore the GLASS.PCX lattice.
 	for (uint y = 0; y < _transitionMask.height; ++y) {
 		for (uint x = 0; x < _transitionMask.width; ++x) {
 			const uint offset = y * _transitionMask.width + x;
@@ -384,7 +338,7 @@ void StainedGlassPuzzle::renderTransition(const uint *previousOrder,
 		}
 	}
 	g_system->unlockScreen();
-	applyPalette();
+	_engine->installScenePalette(_background.palette);
 	presentScreen();
 }
 
@@ -598,14 +552,7 @@ bool StainedGlassPuzzle::applyMove(uint selectedTile) {
 bool StainedGlassPuzzle::serviceKeyword(uint16 command) {
 	if (command > 0xff)
 		return false;
-	char character = (char)command;
-	if (character >= 'A' && character <= 'Z')
-		character += 'a' - 'A';
-	if (character == kCompletionKeyword[_keywordIndex])
-		++_keywordIndex;
-	else
-		_keywordIndex = 0;
-	if (_keywordIndex + 1 == ARRAYSIZE(kCompletionKeyword)) {
+	if (advanceKeyword(command, kCompletionKeyword, _keywordIndex)) {
 		_keywordIndex = 0;
 		debugC(1, kDebugPuzzles,
 			"Ripper: stained glass completion keyword matched keyword='%s'",
@@ -622,10 +569,6 @@ void StainedGlassPuzzle::clearDisplay() {
 }
 
 StainedGlassPuzzle::Result StainedGlassPuzzle::run(uint completionFlag) {
-	// RunStainedGlassPuzzleScene at 0x2e366 owns STGLASS.PL, loads the move
-	// table from STGLASSn.INI, and creates controls 0x672..0x681. It begins
-	// from identity order, previews the solved image, then animates to the
-	// configured initial permutation.
 	if (!_incomingDisplay.capture() || !loadConfiguration() || !loadAssets() ||
 			!buildPuzzleBacking()) {
 		_incomingDisplay.restore();
@@ -645,10 +588,10 @@ StainedGlassPuzzle::Result StainedGlassPuzzle::run(uint completionFlag) {
 	if (!playAmbient())
 		warning("Ripper: could not start stained glass ambient audio");
 	debugC(1, kDebugPuzzles,
-		"Ripper: entered stained glass puzzle function=RunStainedGlassPuzzleScene@0x2e366 "
-		"completionFlag=%u controls=%u help=0x%x keyword='%s' order=[%s]",
+		"Ripper: entered stained glass puzzle "
+		"completionFlag=%u controls=%u help=0x%x order=[%s]",
 		completionFlag, kTileCount, kHelpSelectionTable,
-		kCompletionKeyword, orderString(_currentOrder).c_str());
+		orderString(_currentOrder).c_str());
 
 	Result result = kExited;
 	bool active = showInitialPreview();
@@ -735,7 +678,7 @@ StainedGlassPuzzle::Result StainedGlassPuzzle::run(uint completionFlag) {
 	_engine->getCursor()->setVisible(true);
 	_engine->getInput()->drainKeys();
 	_engine->getInput()->discardMouseTransitions();
-	debugC(result == kLoadFailed ? 2 : 1, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: left stained glass puzzle result=%d milestone=%u "
 		"milestoneSet=%d order=[%s] quit=%d",
 		result, completionFlag,

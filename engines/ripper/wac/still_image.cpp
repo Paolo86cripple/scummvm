@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/wac/still_image.h"
@@ -29,7 +30,7 @@
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
 #include "ripper/resources.h"
 #include "ripper/ripper.h"
@@ -56,9 +57,6 @@ static const int kWacMediaScrollStep = 10;
 static const uint kWacMediaPaletteFirst = 10;
 static const uint kWacMediaPaletteCount = 140;
 static const byte kWacDatabaseBackground = 4;
-static const uint16 kWacDatabaseSelectionChanged = 0xfffe;
-static const uint16 kNoAction = WacManager::kNoAction;
-static const uint16 kExitAction = WacManager::kExitAction;
 
 WacStillImageViewer::WacStillImageViewer(WacDatabaseSession *database) :
 		_database(database), _scrollOffset(0), _scrollControl(0),
@@ -74,8 +72,6 @@ bool WacStillImageViewer::load(const Common::String &path) {
 		return false;
 
 	_image = Common::move(image);
-	// RIPPER.LE opens a tall PCX on its final 0x11a-row slice. The top-down
-	// buffer therefore begins at height minus the viewport height.
 	_scrollOffset = _image.height > kWacMediaHeight ?
 		_image.height - kWacMediaHeight : 0;
 	_scrollControl = 0;
@@ -116,9 +112,9 @@ void WacStillImageViewer::draw() const {
 		return;
 	}
 
-	for (int y = kWacMediaTop; y < kWacMediaTop + kWacMediaHeight; ++y)
-		memset(screen->getBasePtr(kWacMediaLeft, y), kWacDatabaseBackground,
-			kWacMediaWidth);
+	screen->fillRect(Common::Rect(kWacMediaLeft, kWacMediaTop,
+		kWacMediaLeft + kWacMediaWidth, kWacMediaTop + kWacMediaHeight),
+		kWacDatabaseBackground);
 	const uint copyWidth = MIN<uint>(_image.width, kWacMediaWidth);
 	const uint copyHeight = MIN<uint>(
 		_image.height - _scrollOffset, kWacMediaHeight);
@@ -185,12 +181,12 @@ void WacStillImageViewer::scroll(int delta) {
 	draw();
 }
 
-uint16 WacStillImageViewer::run(byte entryIndex,
+DatabaseInputOutcome WacStillImageViewer::run(byte entryIndex,
 		const Common::String &entryLabel, const Common::String &path) {
 	return runInternal(entryIndex, entryLabel, path, Common::String(), 0, 0);
 }
 
-uint16 WacStillImageViewer::runWithOptionalPresentation(byte entryIndex,
+DatabaseInputOutcome WacStillImageViewer::runWithOptionalPresentation(byte entryIndex,
 		const Common::String &entryLabel, const Common::String &imagePath,
 		const Common::String &mediaPath, uint presentationFlag,
 		uint completionFlag) {
@@ -198,12 +194,10 @@ uint16 WacStillImageViewer::runWithOptionalPresentation(byte entryIndex,
 		presentationFlag, completionFlag);
 }
 
-uint16 WacStillImageViewer::runInternal(byte entryIndex,
+DatabaseInputOutcome WacStillImageViewer::runInternal(byte entryIndex,
 		const Common::String &entryLabel, const Common::String &imagePath,
 		const Common::String &mediaPath, uint presentationFlag,
 		uint completionFlag) {
-	// RIPPER.LE's presentation variant aligns X to four pixels and exposes its
-	// WACVID1A/B control only while flag 0x57 is set.
 	const bool hasOptionalPresentation = !mediaPath.empty();
 	const bool presentationAvailable = hasOptionalPresentation &&
 		_database->engine()->getMilestones()->isSet(presentationFlag);
@@ -211,7 +205,7 @@ uint16 WacStillImageViewer::runInternal(byte entryIndex,
 	if (!load(imagePath)) {
 		warning("Ripper: could not load WAC database still image '%s'",
 			imagePath.c_str());
-		return kNoAction;
+		return DatabaseInputOutcome::kContinue;
 	}
 
 	Common::Array<BitmapAssetFrame> presentationFrames;
@@ -224,7 +218,7 @@ uint16 WacStillImageViewer::runInternal(byte entryIndex,
 					frameNames[frame], sequence) || sequence.frames.empty()) {
 				warning("Ripper: could not load WAC presentation control '%s'",
 					frameNames[frame]);
-				return kNoAction;
+				return DatabaseInputOutcome::kContinue;
 			}
 			presentationFrames[frame] = Common::move(sequence.frames[0]);
 		}
@@ -241,27 +235,25 @@ uint16 WacStillImageViewer::runInternal(byte entryIndex,
 
 	_database->engine()->getInput()->discardMouseTransitions();
 	debugC(1, kDebugWac,
-		"Ripper: entered WAC still-image viewer entry=%u label='%s' function=%s image='%s' scrollable=%d presentation='%s' available=%d gate=0x%x completion=0x%x control=%d,%d,%d,%d",
-		entryIndex, entryLabel.c_str(), hasOptionalPresentation ?
-			"RunWacStillImageScreenWithOptionalPresentation@0x22a32" :
-			"RunWacStillImageScreenWithOptionalAudio@0x22f1f",
+		"Ripper: entered WAC still-image viewer entry=%u label='%s' image='%s' scrollable=%d presentation='%s' available=%d gate=0x%x completion=0x%x control=%d,%d,%d,%d",
+		entryIndex, entryLabel.c_str(),
 		imagePath.c_str(), _image.height > kWacMediaHeight,
 		mediaPath.c_str(), presentationAvailable, presentationFlag,
 		completionFlag, presentationBounds.left, presentationBounds.top,
 		presentationBounds.width(), presentationBounds.height());
 
-	uint16 result = kNoAction;
+	using Outcome = DatabaseInputOutcome;
+	WacDatabaseSession::DatabaseInputState input(WacDatabaseSession::DatabaseInputMode::kViewer);
+	Outcome result = Outcome::kContinue;
 	bool presentationPressed = false;
 	while (!_database->engine()->shouldQuit()) {
-		MouseState mouse;
-		const uint16 command = _database->serviceDatabaseMediaInput(
-			entryIndex, nullptr, 0, 0, &mouse, true);
-		if (command == kWacDatabaseSelectionChanged ||
-				command == kExitAction || command == 0x1b) {
-			result = command;
+		const auto event = _database->serviceDatabaseMediaInput(entryIndex, input);
+		if (event.closesEntry()) {
+			result = event.outcome;
 			break;
 		}
-		if (command == MediaSequenceCallback::kContinueRefreshPalette) {
+		const MouseState &mouse = event.mouse;
+		if (event.outcome == Outcome::kRefreshPalette) {
 			g_system->getPaletteManager()->setPalette(
 				_image.palette.data() + kWacMediaPaletteFirst * 3,
 				kWacMediaPaletteFirst, kWacMediaPaletteCount);
@@ -304,8 +296,7 @@ uint16 WacStillImageViewer::runInternal(byte entryIndex,
 				_database->drawBitmap(presentationFrames[0],
 					presentationBounds.left, presentationBounds.top);
 				if (presentationHover) {
-					// RIPPER.LE temporarily forces video mode 1 around
-					// RunMediaPresentation, then sets the caller-supplied EBX flag.
+					// Mode 1 keeps the paired movie at the still image's scale.
 					RipperSettings *settings =
 						_database->engine()->getSettings();
 					const uint savedVideoMode = settings->getVideoMode();
@@ -334,16 +325,12 @@ uint16 WacStillImageViewer::runInternal(byte entryIndex,
 	_database->drawDatabase();
 	_database->engine()->getInput()->discardMouseTransitions();
 	debugC(1, kDebugWac,
-		"Ripper: left WAC still-image viewer entry=%u image='%s' result=0x%x scrollOffset=%u presentationAvailable=%d completion=0x%x value=%d",
-		entryIndex, imagePath.c_str(), result, _scrollOffset,
+		"Ripper: left WAC still-image viewer entry=%u image='%s' outcome=%d scrollOffset=%u presentationAvailable=%d completion=0x%x value=%d",
+		entryIndex, imagePath.c_str(), (int)result, _scrollOffset,
 		presentationAvailable, completionFlag,
 		completionFlag != 0 &&
 			_database->engine()->getMilestones()->isSet(completionFlag));
-	if (result == kWacDatabaseSelectionChanged &&
-			_database->_databaseSelection < _database->_databaseEntries.size())
-		return _database->dispatchDatabaseEntry(
-			_database->_databaseEntries[_database->_databaseSelection]);
-	return result == kExitAction ? kExitAction : kNoAction;
+	return result;
 }
 
 } // End of namespace Ripper

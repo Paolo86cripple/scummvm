@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/rolodex.h"
@@ -28,7 +29,7 @@
 #include "ripper/detection.h"
 #include "ripper/input.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
 
 namespace Ripper {
@@ -103,8 +104,6 @@ void RolodexPuzzle::stopAllAudio() {
 }
 
 void RolodexPuzzle::serviceAudio(uint frame) {
-	// ServiceRolodexMediaSequenceCallback at 0x27e38 starts the four
-	// rolo%d.wav descriptors at these exact media-sequence frame counters.
 	if (_activeSequence == 0) {
 		if (frame == 1)
 			startAudio(2);
@@ -200,8 +199,6 @@ RolodexPuzzle::Result RolodexPuzzle::run(uint completionFlag) {
 		if (_activeSequence > 6)
 			_activeSequence = 1;
 		if (_activeSequence == 6) {
-			// RunRolodexSequencePuzzleScene at 0x28328 sets the caller's
-			// named flag before starting the sixth sequence.
 			if (!markSolved(completionFlag, "rolodex-puzzle")) {
 				result = kLoadFailed;
 				break;

@@ -1,6 +1,8 @@
 /* ScummVM - Graphic Adventure Engine
  *
- * ScummVM is the legal property of their respective copyright holders.
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -9,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/web_grid_shift.h"
@@ -27,9 +30,9 @@
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
 #include "ripper/settings.h"
 
@@ -59,9 +62,7 @@ static const uint kPreviewHoldTicks = 0x36;
 static const uint kFadeSteps = 9;
 static const char *const kCompletionKeyword = "zztop";
 
-// RunWebGridShiftPuzzleScene at 0x2cdce reads these as physical coordinates.
-// Its displayBaseY calculation subtracts the 50-pixel scene origin when it is
-// active, so adding kScenePresentationTop here would invert that translation.
+// Physical screen coordinates; do not add the 50-pixel scene origin.
 static const int kRowY[kGridSize] = {
 	26, 96, 166, 236, 306
 };
@@ -138,17 +139,15 @@ void WebGridShiftPuzzle::drawTileClipped(Graphics::Surface &screen, uint tile,
 	if (tile >= kCellCount || _tiles[tile].size() != kCellWidth * kCellHeight)
 		return;
 
-	const int left = MAX<int>(x, clip.left);
-	const int top = MAX<int>(y, clip.top);
-	const int right = MIN<int>(x + kCellWidth, clip.right);
-	const int bottom = MIN<int>(y + kCellHeight, clip.bottom);
-	if (left >= right || top >= bottom)
+	const Common::Rect visible = Common::Rect(x, y, x + kCellWidth, y + kCellHeight)
+		.findIntersectingRect(clip);
+	if (visible.isEmpty())
 		return;
 
-	for (int destinationY = top; destinationY < bottom; ++destinationY) {
+	for (int destinationY = visible.top; destinationY < visible.bottom; ++destinationY) {
 		const byte *source = _tiles[tile].data() +
-			(destinationY - y) * kCellWidth + left - x;
-		memcpy(screen.getBasePtr(left, destinationY), source, right - left);
+			(destinationY - y) * kCellWidth + visible.left - x;
+		memcpy(screen.getBasePtr(visible.left, destinationY), source, visible.width());
 	}
 }
 
@@ -217,8 +216,7 @@ void WebGridShiftPuzzle::renderShift(uint targetCell, uint progress) const {
 		clip = Common::Rect(kColumnX[_currentCol], kRowY[first],
 			kColumnX[_currentCol] + kCellWidth, kRowY[last] + kCellHeight);
 	}
-	for (int y = clip.top; y < clip.bottom; ++y)
-		memset(screen->getBasePtr(clip.left, y), 0, clip.width());
+	screen->fillRect(clip, 0);
 
 	if (horizontal) {
 		for (uint column = first; column <= last; ++column) {
@@ -325,9 +323,9 @@ bool WebGridShiftPuzzle::shiftToCell(uint targetCell, bool autoPlay) {
 }
 
 int WebGridShiftPuzzle::targetForDirection(uint direction) const {
-	// RIPPER.LE maps the DOS arrow commands to the opposite physical direction:
-	// Up grows the row, Down shrinks it, Left grows the column, and Right
-	// shrinks it. The autoplay direction ids 1..4 use the same mapping.
+	// Arrow commands move opposite their physical direction: Up grows the
+	// row, Down shrinks it, Left grows the column, and Right shrinks it.
+	// Autoplay direction IDs 1..4 use the same mapping.
 	switch (direction) {
 	case 1:
 		return _currentRow < kGridSize - 1 ?
@@ -385,17 +383,6 @@ bool WebGridShiftPuzzle::runAutoPlay(uint moveLimit, uint completionFlag,
 		"current=%u,%u solved=%d tiles=[%s]",
 		attemptedMoves, _currentRow, _currentCol, isSolved(),
 		orderString().c_str());
-	return !_engine->shouldQuit();
-}
-
-bool WebGridShiftPuzzle::waitTicks(uint ticks) {
-	const uint32 end = g_system->getMillis() + ticks * kDosTickMillis;
-	while (!_engine->shouldQuit() &&
-			(int32)(end - g_system->getMillis()) > 0) {
-		if (!serviceEngineEvents())
-			return false;
-		g_system->delayMillis(10);
-	}
 	return !_engine->shouldQuit();
 }
 
@@ -508,14 +495,7 @@ bool WebGridShiftPuzzle::handleKeyword(uint16 command, uint completionFlag,
 		_keywordProgress = 0;
 		return false;
 	}
-	char character = command & 0xff;
-	if (character >= 'A' && character <= 'Z')
-		character += 'a' - 'A';
-	if (character == kCompletionKeyword[_keywordProgress])
-		++_keywordProgress;
-	else
-		_keywordProgress = 0;
-	if (kCompletionKeyword[_keywordProgress] != '\0')
+	if (!advanceKeyword(command, kCompletionKeyword, _keywordProgress))
 		return false;
 
 	debugC(1, kDebugPuzzles,
@@ -545,8 +525,6 @@ Common::String WebGridShiftPuzzle::orderString() const {
 }
 
 WebGridShiftPuzzle::Result WebGridShiftPuzzle::run(uint completionFlag) {
-	// DispatchSceneEntryAction at 0x36892 maps action 19 to
-	// RunWebGridShiftPuzzleScene at 0x2cdce.
 	if (!loadResources() || !captureGrid())
 		return kLoadFailed;
 
@@ -564,14 +542,11 @@ WebGridShiftPuzzle::Result WebGridShiftPuzzle::run(uint completionFlag) {
 	cursor->setVisible(false);
 	renderOrder(_tileOrder);
 	debugC(1, kDebugPuzzles,
-		"Ripper: entered web grid shift puzzle function="
-		"RunWebGridShiftPuzzleScene@0x2cdce milestone=%u difficulty=%u "
+		"Ripper: entered web grid shift puzzle "
+		"milestone=%u difficulty=%u "
 		"autoplayMoves=%u help=0x%x grid=5x5 cell=85x70 "
 		"current=0,4 coordinates=physical",
 		completionFlag, puzzleLevel, autoMoveLimit, kHelpSelectionTable);
-	debugC(3, kDebugPuzzles,
-		"Ripper: web grid shift hidden keyword='%s' previewCommand=0x%04x",
-		kCompletionKeyword, kPreviewCommand);
 
 	Result result = kExited;
 	bool active = runAutoPlay(autoMoveLimit, completionFlag, result);
@@ -655,7 +630,7 @@ WebGridShiftPuzzle::Result WebGridShiftPuzzle::run(uint completionFlag) {
 	cursor->setVisible(savedCursorVisible);
 	_engine->getInput()->drainKeys();
 	_engine->getInput()->discardMouseTransitions();
-	debugC(result == kLoadFailed ? 2 : 1, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: left web grid shift puzzle result=%d milestone=%u "
 		"milestoneSet=%d current=%u,%u solved=%d quit=%d",
 		result, completionFlag,

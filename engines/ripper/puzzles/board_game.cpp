@@ -11,31 +11,32 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/board_game.h"
 
+#include "common/algorithm.h"
 #include "common/debug.h"
 #include "common/ptr.h"
 #include "common/stream.h"
 #include "common/system.h"
-#include "graphics/paletteman.h"
 #include "graphics/surface.h"
 
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
 #include "ripper/settings.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -77,8 +78,7 @@ static const byte kPuzzleHelpOptimalColor = 255;
 static const uint kPuzzleHelpLegalDitherMask = 3;
 static const uint kPuzzleHelpOptimalDitherMask = 1;
 
-// The table at 0x40ab8 stores scene Y followed by X. These normalized
-// physical points are the piece anchors used by RenderBoardState at 0x418c8.
+// Physical screen anchors for each board cell.
 static const Common::Point kCellAnchors[BoardGameModel::kCellCount] = {
 	Common::Point(41, 220), Common::Point(95, 200),
 	Common::Point(148, 181), Common::Point(199, 164),
@@ -103,9 +103,8 @@ static const Common::Point kCellAnchors[BoardGameModel::kCellCount] = {
 	Common::Point(545, 266), Common::Point(591, 245)
 };
 
-// The piece-origin records at 0x84f14 are also stored Y/X. The first row is
-// PART_A (positive), followed by PART_B (negative), with types one through
-// five in each row.
+// The first row is PART_A for positive pieces, followed by PART_B for
+// negative pieces. Each row contains types one through five.
 static const Common::Point kPieceOrigins[2][5] = {
 	{
 		Common::Point(55, 123), Common::Point(76, 132),
@@ -119,21 +118,12 @@ static const Common::Point kPieceOrigins[2][5] = {
 	}
 };
 
-// RenderBoardState at 0x418c8 uses this fixed depth order from 0x40c08.
+// Draw from back to front so nearer pieces cover farther ones.
 static const byte kRenderOrder[BoardGameModel::kCellCount] = {
 	5, 4, 11, 3, 10, 17, 2, 9, 16, 23, 1, 8, 15, 22,
 	29, 0, 7, 14, 21, 28, 35, 6, 13, 20, 27, 34, 41, 12,
 	19, 26, 33, 40, 18, 25, 32, 39, 24, 31, 38, 30, 37, 36
 };
-
-static bool containsDestination(const Common::Array<int> &destinations,
-		int destination) {
-	for (uint i = 0; i < destinations.size(); ++i) {
-		if (destinations[i] == destination)
-			return true;
-	}
-	return false;
-}
 
 static Common::String moveString(const BoardGameModel::Move &move) {
 	return Common::String::format("%d..%d", move.source, move.destination);
@@ -235,10 +225,8 @@ void BoardGamePuzzle::DebugHelper::draw(const BoardGamePuzzle &puzzle,
 				kPuzzleHelpLegalDitherMask;
 			if (((x + y) & ditherMask) != 0)
 				continue;
-			// ApplySharedDisplayPalettePatch at 0x205d0 guarantees the
-			// interface red and yellow entries in every presentation palette.
-			// Spatial dithering preserves the board without relying on
-			// BOARDPAL, whose limited colors collapse arbitrary RGB tints.
+			// Spatial dithering uses the interface red and yellow entries without
+			// relying on BOARDPAL, whose limited colors collapse arbitrary RGB tints.
 			screen[y * pitch + x] = optimal ? kPuzzleHelpOptimalColor :
 				kPuzzleHelpLegalColor;
 		}
@@ -250,17 +238,6 @@ BoardGamePuzzle::BoardGamePuzzle(RipperEngine *engine) :
 		_selectedCell(-1), _hoveredCode(-1), _movingSource(-1), _movingPiece(0),
 		_keywordIndex(0), _searchDepth(1), _savedSelectionIndex(0),
 		_savedCursorVisible(true), _movingActive(false) {
-}
-
-bool BoardGamePuzzle::loadBitmap(const Common::String &name,
-		BitmapAssetFrame &frame) {
-	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		_library.createReadStreamForMember(name));
-	if (!stream || !decodeBitmapAsset(*stream, frame)) {
-		warning("Ripper: could not decode board-game bitmap '%s'", name.c_str());
-		return false;
-	}
-	return true;
 }
 
 bool BoardGamePuzzle::loadSelectionShading() {
@@ -291,8 +268,8 @@ bool BoardGamePuzzle::loadAssets() {
 		warning("Ripper: could not open board-game library '%s'", kLibraryName);
 		return false;
 	}
-	if (!loadBitmap(kBackgroundName, _background) ||
-			!loadBitmap(kHitMapName, _hitMap) ||
+	if (!_library.loadBitmap(kBackgroundName, _background) ||
+			!_library.loadBitmap(kHitMapName, _hitMap) ||
 			!loadSelectionShading())
 		return false;
 	if (_background.width != kRipperScreenWidth ||
@@ -309,7 +286,7 @@ bool BoardGamePuzzle::loadAssets() {
 		for (uint type = 0; type < 5; ++type) {
 			const Common::String name = Common::String::format(
 				"part_%c%02u", side == 0 ? 'a' : 'b', type);
-			if (!loadBitmap(name, _pieces[side][type]))
+			if (!_library.loadBitmap(name, _pieces[side][type]))
 				return false;
 		}
 	}
@@ -321,16 +298,6 @@ bool BoardGamePuzzle::loadAssets() {
 		_background.height, _hitMap.width, _hitMap.height,
 		kSelectionShadingName, kSelectedPieceEffectStrength);
 	return true;
-}
-
-void BoardGamePuzzle::applyPalette() {
-	Common::Array<byte> palette = _background.palette;
-	_engine->applySharedPalettePatch(palette.data(),
-		kRipperPaletteColorCount);
-	_engine->getSettings()->applyVideoPalette(palette.data(),
-		kRipperPaletteColorCount, true);
-	g_system->getPaletteManager()->setPalette(palette.data(), 0,
-		kRipperPaletteColorCount);
 }
 
 void BoardGamePuzzle::drawFrame(byte *screen, uint pitch,
@@ -357,9 +324,7 @@ void BoardGamePuzzle::drawFrame(byte *screen, uint pitch,
 byte BoardGamePuzzle::blendSelectionPixel(byte source,
 		byte destination) const {
 	// BOARDPAL's 0x1000-byte tail maps 12-bit RGB (rrrrggggbbbb) back
-	// into its 256-color palette. The strength passed at 0x41876 grows
-	// from 0 toward 0xff during AnimateBoardIntroFadeIn at 0x4365c, so
-	// it is source opacity rather than a shade-table index.
+	// into its 256-color palette.
 	const byte *palette = _selectionShading.data();
 	const byte *colorCube = palette + kShadingPaletteBytes;
 	const uint inverseStrength =
@@ -420,7 +385,7 @@ void BoardGamePuzzle::render() {
 	if (movingPiecePending)
 		drawPiece(pixels, screen->pitch, _movingPiece, _movingAnchor);
 	g_system->unlockScreen();
-	applyPalette();
+	_engine->installScenePalette(_background.palette);
 	_engine->getCursor()->setVisible(true);
 	presentScreen();
 }
@@ -446,7 +411,8 @@ void BoardGamePuzzle::updateCursor(const Common::Point &point) {
 	} else if (hitCode >= 0 && hitCode <= BoardGameModel::kOffBoardDestination) {
 		if (_selectedCell >= 0 ?
 				(hitCode == _selectedCell ||
-				 containsDestination(_legalDestinations, hitCode)) :
+				 Common::find(_legalDestinations.begin(), _legalDestinations.end(),
+					hitCode) != _legalDestinations.end()) :
 				(hitCode < BoardGameModel::kCellCount &&
 				 _model.pieceAt(hitCode) > 0))
 			cursor = kSelectionCursor;
@@ -464,14 +430,7 @@ void BoardGamePuzzle::updateCursor(const Common::Point &point) {
 bool BoardGamePuzzle::serviceKeyword(uint16 command) {
 	if (command > 0xff)
 		return false;
-	char character = (char)command;
-	if (character >= 'A' && character <= 'Z')
-		character += 'a' - 'A';
-	if (character == kCompletionKeyword[_keywordIndex])
-		++_keywordIndex;
-	else
-		_keywordIndex = character == kCompletionKeyword[0] ? 1 : 0;
-	if (_keywordIndex + 1 == ARRAYSIZE(kCompletionKeyword)) {
+	if (advanceKeyword(command, kCompletionKeyword, _keywordIndex, true)) {
 		_keywordIndex = 0;
 		debugC(1, kDebugPuzzles,
 			"Ripper: board-game completion keyword matched keyword='%s'",
@@ -752,11 +711,11 @@ BoardGamePuzzle::Result BoardGamePuzzle::run(uint completionFlag) {
 	_engine->getCursor()->setVisible(true);
 	render();
 	debugC(1, kDebugPuzzles,
-		"Ripper: entered board-game puzzle function=RunBoardGameScene@0x436c0 "
-		"milestone=%u library='%s' cells=%u side=%d difficulty=%u help=0x%x keyword='%s' puzzleHelp=%d",
+		"Ripper: entered board-game puzzle "
+		"milestone=%u library='%s' cells=%u side=%d difficulty=%u help=0x%x puzzleHelp=%d",
 		completionFlag, kLibraryName, BoardGameModel::kCellCount,
 		_model.sideToMove(), _searchDepth, kHelpSelectionTable,
-		kCompletionKeyword, _engine->isPuzzleHelpEnabled());
+		_engine->isPuzzleHelpEnabled());
 
 	Result result = kExited;
 	bool active = true;
@@ -768,9 +727,6 @@ BoardGamePuzzle::Result BoardGamePuzzle::run(uint completionFlag) {
 
 		while (_engine->getInput()->hasPendingKey()) {
 			const uint16 command = _engine->getInput()->consumeKey();
-			// HandleBoardPlayerTurnInput at 0x42c1a first cancels an
-			// active source choice when any keyboard command is pending;
-			// the outer loop then interprets that same command.
 			if (_selectedCell >= 0) {
 				debugC(2, kDebugPuzzles,
 					"Ripper: board-game selection cancelled by keyboard source=%d command=0x%04x",
@@ -799,8 +755,6 @@ BoardGamePuzzle::Result BoardGamePuzzle::run(uint completionFlag) {
 				continue;
 			}
 			if (serviceKeyword(command)) {
-				// RunBoardGameScene at 0x437bb stores result code 1;
-				// its common cleanup path records the supplied milestone.
 				_model.setResult(1);
 				break;
 			}
@@ -838,10 +792,6 @@ BoardGamePuzzle::Result BoardGamePuzzle::run(uint completionFlag) {
 					active = false;
 				} else if (_selectedCell >= 0 &&
 						hitCode == _selectedCell) {
-					// HandleBoardPlayerTurnInput at 0x42c1a clears the
-					// selected-source global before resolving the second
-					// click. A click on the source skips the move call and
-					// reaches the common opaque redraw.
 					debugC(2, kDebugPuzzles,
 						"Ripper: board-game deselected source=%d piece=%d",
 						_selectedCell, _model.pieceAt(_selectedCell));
@@ -849,7 +799,8 @@ BoardGamePuzzle::Result BoardGamePuzzle::run(uint completionFlag) {
 					stopCue(kSelectionCue);
 					render();
 				} else if (_selectedCell >= 0 &&
-						containsDestination(_legalDestinations, hitCode)) {
+						Common::find(_legalDestinations.begin(), _legalDestinations.end(),
+							hitCode) != _legalDestinations.end()) {
 					if (!applyPlayerMove(hitCode)) {
 						result = kLoadFailed;
 						active = false;
@@ -893,7 +844,7 @@ BoardGamePuzzle::Result BoardGamePuzzle::run(uint completionFlag) {
 	_engine->getCursor()->setVisible(_savedCursorVisible);
 	_engine->getInput()->drainKeys();
 	_engine->getInput()->discardMouseTransitions();
-	debugC(result == kLoadFailed ? 2 : 1, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: left board-game puzzle result=%d boardResult=%d milestone=%u milestoneSet=%d quit=%d",
 		result, _model.result(), completionFlag,
 		_engine->getMilestones()->isSet(completionFlag),

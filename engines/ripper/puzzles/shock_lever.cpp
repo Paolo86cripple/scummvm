@@ -1,6 +1,8 @@
 /* ScummVM - Graphic Adventure Engine
  *
- * ScummVM is the legal property of their respective copyright holders.
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -9,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/shock_lever.h"
@@ -24,17 +27,15 @@
 #include "common/ptr.h"
 #include "common/stream.h"
 #include "common/system.h"
-#include "graphics/paletteman.h"
 #include "graphics/surface.h"
 
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
 #include "ripper/input.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
-#include "ripper/settings.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -63,8 +64,6 @@ static const char *const kBackgroundName = "screen";
 static const char *const kSubmitName = "down";
 static const char kCheatKeyword[] = "sparky";
 
-// g_shockLeverPuzzleLeverControlOrigins at 0x3ac07 stores the three
-// screen-space X/Y pairs copied by RunShockLeverPuzzleScene at 0x3affb.
 static const Common::Point kLeverPositions[kLeverCount] = {
 	Common::Point(258, 96 + kSceneOriginY),
 	Common::Point(305, 96 + kSceneOriginY),
@@ -78,9 +77,6 @@ static const char *const kOutcomeMediaNames[4] = {
 };
 
 static const Common::Point kSubmitPosition(222, 252 + kSceneOriginY);
-// ServiceShockPuzzleScreenPlayback at 0x3ad26 posts SCREENN's dirty region at
-// logical x=0x114, y=3. The shared scene presentation adds the physical
-// 50-pixel toolbar origin to y.
 static const Common::Point kScreenMediaPosition(276, 3);
 
 static bool isExitPoint(const Common::Point &point) {
@@ -101,17 +97,6 @@ ShockLeverPuzzle::ShockLeverPuzzle(RipperEngine *engine) :
 		_leverFrame[lever] = 3;
 }
 
-bool ShockLeverPuzzle::loadBitmap(AssetLibrary &library,
-		const Common::String &name, BitmapAssetFrame &frame) {
-	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		library.createReadStreamForMember(name));
-	if (!stream || !decodeBitmapAsset(*stream, frame)) {
-		warning("Ripper: could not decode shock lever bitmap '%s'", name.c_str());
-		return false;
-	}
-	return true;
-}
-
 bool ShockLeverPuzzle::loadLever(uint lever) {
 	Common::ScopedPtr<Common::SeekableReadStream> stream(
 		_library.createReadStreamForMember(
@@ -129,7 +114,7 @@ bool ShockLeverPuzzle::loadLever(uint lever) {
 		BitmapAssetFrame frame;
 		const Common::String member =
 			Common::String::format("%u", frameIndex + 1);
-		if (!loadBitmap(leverLibrary, member, frame))
+		if (!leverLibrary.loadBitmap(member, frame))
 			return false;
 		_leverFrames[lever].push_back(Common::move(frame));
 	}
@@ -144,8 +129,8 @@ bool ShockLeverPuzzle::loadAssets() {
 			kLibraryName);
 		return false;
 	}
-	if (!loadBitmap(_library, kBackgroundName, _background) ||
-			!loadBitmap(_library, kSubmitName, _submit))
+	if (!_library.loadBitmap(kBackgroundName, _background) ||
+			!_library.loadBitmap(kSubmitName, _submit))
 		return false;
 	for (uint lever = 0; lever < kLeverCount; ++lever) {
 		if (!loadLever(lever))
@@ -216,22 +201,14 @@ bool ShockLeverPuzzle::drawBackground() {
 		0, kSceneOriginY, false);
 	g_system->unlockScreen();
 
-	Common::Array<byte> palette = _background.palette;
-	_engine->applySharedPalettePatch(palette.data(),
-		kRipperPaletteColorCount);
-	_engine->getSettings()->applyVideoPalette(palette.data(),
-		kRipperPaletteColorCount, true);
-	g_system->getPaletteManager()->setPalette(palette.data(), 0,
-		kRipperPaletteColorCount);
+	_engine->installScenePalette(_background.palette);
 	drawOverlays();
 	return true;
 }
 
 void ShockLeverPuzzle::restoreLeverBackings(byte *screen, uint pitch) const {
-	// AnimateShockLeverToFrame at 0x3ad98 opens a scoped display backing before
-	// copying each transparent lever frame, then posts that complete dirty
-	// region. Restore the corresponding SCREEN pixels before compositing the
-	// replacement frame so transparent pixels cannot retain the prior pose.
+	// Restore the SCREEN backing before drawing each transparent lever frame
+	// so transparent pixels cannot retain the prior pose.
 	for (uint lever = 0; lever < kLeverCount; ++lever) {
 		if (_leverFrames[lever].empty())
 			continue;
@@ -529,14 +506,7 @@ uint16 ShockLeverPuzzle::serviceKeyboard() {
 		if (command > 0xff)
 			continue;
 
-		char character = (char)command;
-		if (character >= 'A' && character <= 'Z')
-			character += 'a' - 'A';
-		if (character == kCheatKeyword[_keywordIndex])
-			++_keywordIndex;
-		else
-			_keywordIndex = 0;
-		if (_keywordIndex + 1 == ARRAYSIZE(kCheatKeyword)) {
+		if (advanceKeyword(command, kCheatKeyword, _keywordIndex)) {
 			debugC(1, kDebugPuzzles,
 				"Ripper: shock lever completion keyword matched keyword='%s'",
 				kCheatKeyword);
@@ -692,8 +662,6 @@ ShockLeverPuzzle::Result ShockLeverPuzzle::run(uint completionFlag) {
 		case kCheatCommand:
 			_solved = true;
 			result = kSolved;
-			// RunShockLeverPuzzleScene at 0x3b90b sets the supplied flag
-			// before presenting M_2 on the hidden-keyword path.
 			if (!markSolved(completionFlag, "shock-lever-keyword")) {
 				result = kLoadFailed;
 			} else {

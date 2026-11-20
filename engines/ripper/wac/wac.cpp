@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/wac/wac.h"
@@ -34,8 +35,8 @@
 #include "ripper/detection.h"
 #include "ripper/display.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/media/media.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
 #include "ripper/wac/broken_mug.h"
 #include "ripper/wac/database.h"
@@ -131,40 +132,23 @@ bool WacManager::initialize(ResourceManager &resources, bool demoVariant) {
 }
 
 bool WacManager::captureDisplay() {
-	Graphics::Surface *screen = g_system->lockScreen();
-	if (!screen || screen->format.bytesPerPixel != 1 || screen->w != kWacWidth ||
-		screen->h != kWacHeight) {
-		if (screen)
-			g_system->unlockScreen();
-		return false;
-	}
-
-	_savedPixels.resize(kWacWidth * kWacHeight);
-	for (int y = 0; y < kWacHeight; ++y)
-		memcpy(_savedPixels.data() + y * kWacWidth, screen->getBasePtr(0, y), kWacWidth);
-	g_system->unlockScreen();
-	_savedPalette.resize(256 * 3);
-	g_system->getPaletteManager()->grabPalette(_savedPalette.data(), 0, 256);
-	return true;
+	return g_system->getWidth() == kWacWidth &&
+		g_system->getHeight() == kWacHeight && _savedDisplay.capture();
 }
 
 void WacManager::restoreDisplay() {
-	if (_savedPixels.size() != kWacWidth * kWacHeight || _savedPalette.size() != 256 * 3)
+	if (!_savedDisplay.isValid())
 		return;
 	Graphics::Surface *screen = g_system->lockScreen();
 	if (!screen || screen->format.bytesPerPixel != 1 || screen->w != kWacWidth ||
-		screen->h != kWacHeight) {
+			screen->h != kWacHeight) {
 		if (screen)
 			g_system->unlockScreen();
 		return;
 	}
-	for (int y = 0; y < kWacHeight; ++y)
-		memcpy(screen->getBasePtr(0, y), _savedPixels.data() + y * kWacWidth, kWacWidth);
 	g_system->unlockScreen();
-	g_system->getPaletteManager()->setPalette(_savedPalette.data(), 0, 256);
-	presentScreen();
-	_savedPixels.clear();
-	_savedPalette.clear();
+	_savedDisplay.restore();
+	_savedDisplay.clear();
 }
 
 void WacManager::drawBitmap(const BitmapAssetFrame &bitmap, int x, int y) const {
@@ -198,9 +182,6 @@ void WacManager::serviceIdleWindowAnimations() {
 			continue;
 		drawBitmap(_idleWindowAnimations[slot][_idleWindowFrame[slot]],
 			kWacIdleWindowX[slot], kWacIdleWindowY[slot]);
-		debugC(11, kDebugWac,
-			"Ripper: WAC idle window slot=%u frame=%u position=%d,%d",
-			slot, _idleWindowFrame[slot], kWacIdleWindowX[slot], kWacIdleWindowY[slot]);
 		_idleWindowFrame[slot] = (_idleWindowFrame[slot] + 1) %
 			_idleWindowAnimations[slot].size();
 	}
@@ -218,9 +199,7 @@ int WacManager::findControl(const Common::Point &point) const {
 
 uint16 WacManager::serviceFrontEndControls(const MouseState &mouse,
 		uint fallbackCursor, bool updateCursor) {
-	// RunWacFrontEndLoop at 0x21865 leaves these four UiControlState records in
-	// the shared list. ServiceWacSceneInputAction at 0x21eef therefore services
-	// them from every WAC subscene, not only from the front page.
+	// Bottom-row controls stay active while a WAC subscene owns input.
 	const int hoveredControl = findControl(mouse.position);
 	if (hoveredControl != _hoveredControl) {
 		_hoveredControl = hoveredControl;
@@ -394,8 +373,7 @@ bool WacManager::dispatchAction(uint16 action) {
 		return false;
 	if (result == kDatabaseAction) {
 		if (_demoVariant) {
-			// The demo RunWacFrontEndLoop at 0x1c085 routes 0x2000 directly to
-			// RunWacMugSelectionScene at 0x1c58e; the demo has no database list.
+			// The demo has no database list.
 			BrokenMugPuzzle puzzle(_engine);
 			const BrokenMugPuzzle::Result puzzleResult = puzzle.run();
 			drawFrontEnd();
@@ -431,13 +409,12 @@ void WacManager::drawText(byte *screen, uint pitch, int x, int y,
 }
 
 void WacManager::run() {
+	RipperEngine::SaveLoadScope saveLoad(*_engine);
 	if (!_initialized || !captureDisplay()) {
 		warning("Ripper: WAC front end could not capture the active presentation");
 		return;
 	}
 
-	// RunWacFrontEndLoop at 0x21865 owns a modal chooser registry and restores
-	// the borrowed scene presentation after its 0x1900 or Escape exit action.
 	debugC(1, kDebugWac, "Ripper: entered WAC front-end loop");
 	_engine->getInput()->discardMouseTransitions();
 	_hoveredControl = -1;
@@ -451,7 +428,7 @@ void WacManager::run() {
 		Audio::SoundHandle updateHandle;
 		const bool played = _engine->getMedia()->playSoundEffect(
 			kWacNotebookUpdateAudio, updateHandle);
-		debugC(played ? 1 : 2, kDebugWac,
+		debugC(played ? 2 : 1, kDebugWac,
 			"Ripper: consumed WAC notebook update notification audio='%s' played=%d",
 			kWacNotebookUpdateAudio, played);
 		_notebookUpdatePending = false;
@@ -460,7 +437,6 @@ void WacManager::run() {
 	bool active = true;
 	while (active && !_engine->shouldQuit()) {
 		if (_engine->getInput()->pollEvents()) {
-			_engine->quitGame();
 			break;
 		}
 		while (_engine->getInput()->hasPendingKey()) {

@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_PUZZLES_KI_SKULL_MAZE_H
@@ -100,9 +101,6 @@ private:
 	bool loadBitmap(const Common::String &path, BitmapAssetFrame &frame,
 		bool pcx);
 	bool loadAnimation(const Common::String &path, Animation &animation);
-	void applyPalette() const;
-	void drawFrame(byte *screen, uint pitch, const BitmapAssetFrame &frame,
-		int x, int y, byte transparentColor) const;
 	void render() const;
 	Common::Point playerPosition(uint direction, uint originCell) const;
 	int findCell(const Common::Point &point) const;

@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/kj_blob_shooter.h"
@@ -32,9 +33,9 @@
 #include "ripper/display.h"
 #include "ripper/input.h"
 #include "ripper/ini.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
 #include "ripper/settings.h"
 
@@ -61,7 +62,6 @@ static const uint16 kScreenshotCommand = 0x1900;
 static const uint kHelpSelectionTable = 0x1a8;
 static const byte kBlobTransparentColor = 4;
 
-// RIPPER.LE tables 0x31383 and 0x31397 store Y and X separately.
 static const int kBlobX[5] = { 185, 0, 0, 0, 210 };
 static const int kBlobY[5] = { 0, 0, 62, 0, 0 };
 static const int kScriptedHitX[5] = { 239, 75, 36, 164, 267 };
@@ -92,11 +92,6 @@ KjBlobShooter::KjBlobShooter(RipperEngine *engine) :
 		_scriptedAutoHit(false), _result(kExited) {
 }
 
-int KjBlobShooter::configInt(const Common::INIFile &ini,
-		const char *section, const char *key, int fallback) const {
-	return getIniInt(ini, section, key, fallback);
-}
-
 bool KjBlobShooter::loadConfig(uint difficulty) {
 	Common::String name = Common::String::format("kj%u.ini", difficulty);
 	Common::File file;
@@ -120,29 +115,29 @@ bool KjBlobShooter::loadConfig(uint difficulty) {
 		return false;
 
 	_config = Config();
-	_config.frameRate = configInt(ini, "SCENE", "frame rate", _config.frameRate);
+	_config.frameRate = getIniInt(ini, "SCENE", "frame rate", _config.frameRate);
 	_config.startWhooshFrame =
-		configInt(ini, "SCENE", "start whoosh", _config.startWhooshFrame);
+		getIniInt(ini, "SCENE", "start whoosh", _config.startWhooshFrame);
 	_config.spawnDelayTicks =
-		configInt(ini, "SCORE", "spawn delay", _config.spawnDelayTicks);
+		getIniInt(ini, "SCORE", "spawn delay", _config.spawnDelayTicks);
 	_config.spawnDecreaseDelayTicks =
-		configInt(ini, "SCORE", "spawn dec delay", _config.spawnDecreaseDelayTicks);
+		getIniInt(ini, "SCORE", "spawn dec delay", _config.spawnDecreaseDelayTicks);
 	_config.spawnDecreaseTicks =
-		configInt(ini, "SCORE", "spawn dec", _config.spawnDecreaseTicks);
+		getIniInt(ini, "SCORE", "spawn dec", _config.spawnDecreaseTicks);
 	_config.missesAllowed =
-		configInt(ini, "SCORE", "misses allowed", _config.missesAllowed);
+		getIniInt(ini, "SCORE", "misses allowed", _config.missesAllowed);
 	_config.shotsPerBlob =
-		configInt(ini, "SCORE", "shots", _config.shotsPerBlob);
+		getIniInt(ini, "SCORE", "shots", _config.shotsPerBlob);
 	_config.winRateTicks =
-		configInt(ini, "SCORE", "win rate", _config.winRateTicks);
+		getIniInt(ini, "SCORE", "win rate", _config.winRateTicks);
 	_config.rapidFireTicks =
-		configInt(ini, "WEAPON", "rapid fire", _config.rapidFireTicks);
+		getIniInt(ini, "WEAPON", "rapid fire", _config.rapidFireTicks);
 	_config.weaponDischarge =
-		configInt(ini, "WEAPON", "discharge", _config.weaponDischarge);
+		getIniInt(ini, "WEAPON", "discharge", _config.weaponDischarge);
 	_config.weaponCharge =
-		configInt(ini, "WEAPON", "charge", _config.weaponCharge);
+		getIniInt(ini, "WEAPON", "charge", _config.weaponCharge);
 	_config.weaponChargeTicks =
-		configInt(ini, "WEAPON", "charge time", _config.weaponChargeTicks);
+		getIniInt(ini, "WEAPON", "charge time", _config.weaponChargeTicks);
 
 	if (_config.frameRate <= 0 || _config.startWhooshFrame < 0 ||
 			_config.spawnDelayTicks < 0 ||
@@ -173,11 +168,8 @@ bool KjBlobShooter::loadConfig(uint difficulty) {
 
 bool KjBlobShooter::loadVisualAssets() {
 	ResourceManager *resources = _engine->getResources();
-	BitmapAssetSequence cursor;
-	if (!resources->loadBitmapSequence("kj_mouse.bbm", cursor) ||
-			cursor.frames.empty())
+	if (!resources->loadBitmapSequenceFirstFrame("kj_mouse.bbm", _cursorFrame))
 		return false;
-	_cursorFrame = Common::move(cursor.frames.front());
 
 	for (uint type = 0; type < kBlobTypeCount; ++type) {
 		if (!resources->loadBitmapLibrary(
@@ -310,15 +302,8 @@ uint16 KjBlobShooter::serviceKeyboard(uint backgroundFrame) {
 		if (command > 0xff)
 			continue;
 
-		byte character = command;
-		if (character >= 'A' && character <= 'Z')
-			character += 'a' - 'A';
 		static const char keyword[] = "caffeine";
-		if (character == keyword[_keywordIndex])
-			++_keywordIndex;
-		else
-			_keywordIndex = 0;
-		if (_keywordIndex == sizeof(keyword) - 1) {
+		if (advanceKeyword(command, keyword, _keywordIndex)) {
 			if (!markSolved("kj-blob-shooter-keyword"))
 				return kFailureCommand;
 			debugC(1, kDebugPuzzles,
@@ -769,7 +754,7 @@ Scene::Result KjBlobShooter::run(uint completionFlag) {
 			"Ripper: restored KJ blob-shooter caller display size=%dx%d",
 			savedDisplay.bounds().width(), savedDisplay.bounds().height());
 	}
-	debugC(_result == kLoadFailed ? 1 : 2, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: left KJ blob-shooter result=%d difficulty=%u "
 		"completionFlag=%u missed=%d destroyed=%d spawnDelay=%d",
 		_result, difficulty, completionFlag, _missedBlobs,

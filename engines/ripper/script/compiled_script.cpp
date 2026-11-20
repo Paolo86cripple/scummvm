@@ -11,16 +11,18 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
-#include "ripper/script.h"
+#include "ripper/script/compiled_script.h"
 
 #include "common/debug.h"
+#include "common/endian.h"
 #include "common/ptr.h"
 #include "common/stream.h"
 
@@ -47,7 +49,7 @@ bool CompiledScript::canRead(uint32 offset, uint32 size) const {
 }
 
 uint16 CompiledScript::readUint16(uint32 offset) const {
-	return (uint16)_data[offset] | ((uint16)_data[offset + 1] << 8);
+	return READ_LE_UINT16(_data.data() + offset);
 }
 
 int16 CompiledScript::readSint16(uint32 offset) const {
@@ -55,20 +57,15 @@ int16 CompiledScript::readSint16(uint32 offset) const {
 }
 
 uint32 CompiledScript::readUint32(uint32 offset) const {
-	return (uint32)_data[offset] |
-		((uint32)_data[offset + 1] << 8) |
-		((uint32)_data[offset + 2] << 16) |
-		((uint32)_data[offset + 3] << 24);
+	return READ_LE_UINT32(_data.data() + offset);
 }
 
 Common::String CompiledScript::getString(uint32 offset) const {
 	if (offset >= _data.size())
 		return Common::String();
 
-	Common::String value;
-	while (offset < _data.size() && _data[offset] != 0)
-		value += (char)_data[offset++];
-	return value;
+	const char *text = (const char *)_data.data() + offset;
+	return Common::String(text, Common::strnlen(text, _data.size() - offset));
 }
 
 Common::String CompiledScript::getPresentationText(uint32 offset) const {
@@ -78,9 +75,6 @@ Common::String CompiledScript::getPresentationText(uint32 offset) const {
 	Common::String value;
 	while (offset < _data.size() && _data[offset] != 0) {
 		byte character = _data[offset++];
-		// ExecutePresentationEntry at 0x1754b receives the frame's auxiliary
-		// string pointer. RIPPER.LE SCR compilation stores those bytes inverted,
-		// preserving line feeds just like inline type-7 command arguments.
 		if (character != '\n')
 			character ^= 0xff;
 		value += (char)character;
@@ -144,6 +138,7 @@ bool CompiledScript::parseHeader() {
 	}
 
 	_frames.clear();
+	_frames.reserve(frameCount);
 	for (uint i = 0; i < frameCount; ++i) {
 		const uint32 offset = frameOffset + i * kFrameRecordSize;
 		ScriptFrame frame;
@@ -177,12 +172,12 @@ bool CompiledScript::parseHeader() {
 	}
 
 	_interactions.clear();
+	_interactions.reserve(interactionCount);
 	for (uint i = 0; i < interactionCount; ++i) {
 		const uint32 offset = interactionOffset + i * kInteractionRecordSize;
 		ScriptInteraction interaction;
-		interaction.label.clear();
-		for (uint labelIndex = 0; labelIndex < 0xb && _data[offset + labelIndex] != 0; ++labelIndex)
-			interaction.label += (char)_data[offset + labelIndex];
+		const char *label = (const char *)_data.data() + offset;
+		interaction.label = Common::String(label, Common::strnlen(label, 0xb));
 		interaction.x = readSint16(offset + 0xb);
 		interaction.y = readSint16(offset + 0xd);
 		interaction.width = readSint16(offset + 0xf);
@@ -202,7 +197,7 @@ bool CompiledScript::parseHeader() {
 	return true;
 }
 
-bool CompiledScript::decodeCallback(uint32 offset, bool decodeText, Common::Array<ScriptCommand> &commands) const {
+bool CompiledScript::decodeCallback(uint32 offset, Common::Array<ScriptCommand> &commands) const {
 	commands.clear();
 	if (offset == 0)
 		return true;
@@ -253,7 +248,7 @@ bool CompiledScript::decodeCallback(uint32 offset, bool decodeText, Common::Arra
 				argument.data.resize(length);
 				for (uint dataIndex = 0; dataIndex < length; ++dataIndex) {
 					byte value = _data[cursor + dataIndex];
-					if (decodeText && type == 7 && value != 0 && value != '\n')
+					if (type == 7 && value != 0 && value != '\n')
 						value ^= 0xff;
 					argument.data[dataIndex] = value;
 				}
@@ -301,15 +296,15 @@ bool CompiledScript::decodeCallback(uint32 offset, bool decodeText, Common::Arra
 bool CompiledScript::validateCallbacks() const {
 	Common::Array<ScriptCommand> commands;
 	for (uint i = 0; i < _frames.size(); ++i) {
-		if (!decodeCallback(_frames[i].enterCallbackOffset, true, commands) ||
-			!decodeCallback(_frames[i].idleCallbackOffset, true, commands) ||
-			!decodeCallback(_frames[i].exitCallbackOffset, true, commands)) {
+		if (!decodeCallback(_frames[i].enterCallbackOffset, commands) ||
+			!decodeCallback(_frames[i].idleCallbackOffset, commands) ||
+			!decodeCallback(_frames[i].exitCallbackOffset, commands)) {
 			warning("Ripper: invalid callback in frame %u of '%s'", i, _memberName.c_str());
 			return false;
 		}
 	}
 	for (uint i = 0; i < _interactions.size(); ++i) {
-		if (!decodeCallback(_interactions[i].callbackOffset, true, commands)) {
+		if (!decodeCallback(_interactions[i].callbackOffset, commands)) {
 			warning("Ripper: invalid callback in interaction %u of '%s'", i, _memberName.c_str());
 			return false;
 		}

@@ -1,6 +1,8 @@
 /* ScummVM - Graphic Adventure Engine
  *
- * ScummVM is the legal property of their respective copyright holders.
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -9,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/circuit_chip.h"
@@ -28,11 +31,11 @@
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -57,9 +60,8 @@ static const uint kCircuitManualFlag = 0x55;
 static const uint kCircuitManualResource = 0xb6;
 static const char *const kCompletionKeyword = "theory";
 
-// RunCircuitChipPlacementPuzzleScene at 0x28aa4 reads both tables as
-// scene-space Y followed by physical X. The scene is a 640-by-400
-// presentation, so no 50-pixel scene origin is added here.
+// This puzzle fills the 640-by-400 screen, so these physical coordinates
+// do not include a 50-pixel scene origin.
 static const Common::Point kSourcePositions[kChipCount] = {
 	Common::Point(460, 22),
 	Common::Point(460, 322),
@@ -106,8 +108,6 @@ static const uint kSlotConnectorTypes[kChipCount] = {
 	16, 6, 12, 6, 16, 9, 12, 12, 9, 12, 6, 16, 16, 9, 9, 6
 };
 
-// g_circuitPuzzleExpectedChipBySlot at 0x25db1 stores one-based chip
-// numbers. This normalized table is zero based.
 static const uint kExpectedChipBySlot[kChipCount] = {
 	13, 3, 10, 5, 14, 15, 4, 0, 6, 11, 8, 1, 12, 7, 2, 9
 };
@@ -130,14 +130,10 @@ static const char *const kAudioNames[6] = {
 };
 
 static Common::Rect circuitManualBounds() {
-	// RunCircuitChipPlacementPuzzleScene loads X=0x72, Y=0x15e,
-	// width=0x113, and height=0x32 for resource 0xb6.
 	return Common::Rect(114, 350, 389, 400);
 }
 
 static Common::Rect circuitManualMediaBounds() {
-	// The RunMediaSequence call at 0x28ed2 presents the 320-by-76
-	// ED_WAC.SMK patch at physical X=0x5c, Y=0x144.
 	return Common::Rect(92, 324, 412, 400);
 }
 
@@ -176,16 +172,15 @@ bool CircuitChipPuzzle::loadAssets() {
 
 	_chips.clear();
 	for (uint chip = 0; chip < kChipCount; ++chip) {
-		BitmapAssetSequence sequence;
+		BitmapAssetFrame asset;
 		const Common::String path =
 			Common::String::format("chip%u.bbm", chip + 1);
-		if (!_engine->getResources()->loadBitmapSequence(path, sequence) ||
-				sequence.frames.empty()) {
+		if (!_engine->getResources()->loadBitmapSequenceFirstFrame(path, asset)) {
 			warning("Ripper: could not load circuit puzzle chip '%s'",
 				path.c_str());
 			return false;
 		}
-		_chips.push_back(Common::move(sequence.frames.front()));
+		_chips.push_back(Common::move(asset));
 	}
 
 	BitmapAssetSequence meterSequence;
@@ -246,19 +241,8 @@ bool CircuitChipPuzzle::captureManualBacking() {
 
 void CircuitChipPuzzle::drawFrame(byte *screen, uint pitch,
 		const BitmapAssetFrame &frame, int x, int y) const {
-	for (uint sourceY = 0; sourceY < frame.height; ++sourceY) {
-		const int destinationY = y + sourceY;
-		if (destinationY < 0 || destinationY >= kRipperScreenHeight)
-			continue;
-		for (uint sourceX = 0; sourceX < frame.width; ++sourceX) {
-			const int destinationX = x + sourceX;
-			if (destinationX < 0 || destinationX >= kRipperScreenWidth)
-				continue;
-			const byte pixel = frame.pixels[sourceY * frame.width + sourceX];
-			if (pixel != frame.transparentColor)
-				screen[destinationY * pitch + destinationX] = pixel;
-		}
-	}
+	IndexedBitmapRenderer::drawBitmap(screen, pitch, frame, x, y,
+		Common::Rect(0, 0, kRipperScreenWidth, kRipperScreenHeight));
 }
 
 void CircuitChipPuzzle::render() {
@@ -554,14 +538,7 @@ bool CircuitChipPuzzle::handleKeyword(uint16 command,
 		_keywordProgress = 0;
 		return false;
 	}
-	char character = command & 0xff;
-	if (character >= 'A' && character <= 'Z')
-		character += 'a' - 'A';
-	if (character == kCompletionKeyword[_keywordProgress])
-		++_keywordProgress;
-	else
-		_keywordProgress = 0;
-	if (kCompletionKeyword[_keywordProgress] != '\0')
+	if (!advanceKeyword(command, kCompletionKeyword, _keywordProgress))
 		return false;
 
 	debugC(1, kDebugPuzzles,
@@ -635,8 +612,6 @@ Common::String CircuitChipPuzzle::placementString() const {
 }
 
 CircuitChipPuzzle::Result CircuitChipPuzzle::run(uint completionFlag) {
-	// DispatchSceneEntryAction at 0x36892 maps action 1 to
-	// RunCircuitChipPlacementPuzzleScene at 0x28aa4.
 	if (!_incomingDisplay.capture() || !loadAssets()) {
 		_incomingDisplay.restore();
 		return kLoadFailed;
@@ -665,8 +640,6 @@ CircuitChipPuzzle::Result CircuitChipPuzzle::run(uint completionFlag) {
 	if (_manualAvailable) {
 		_engine->getMedia()->playSoundEffect(kAudioNames[5],
 			_audioHandles[5]);
-		// RunCircuitChipPlacementPuzzleScene passes physical Y=0x144 in
-		// EBX and X=0x5c in ECX to RunMediaSequence.
 		if (!_engine->getMedia()->play("ed_wac.smk", false, 92, 324))
 			warning("Ripper: circuit puzzle WAC presentation failed");
 		else if (!captureManualBacking()) {
@@ -688,17 +661,11 @@ CircuitChipPuzzle::Result CircuitChipPuzzle::run(uint completionFlag) {
 	cursor->setVisible(true);
 	render();
 	debugC(1, kDebugPuzzles,
-		"Ripper: entered circuit chip puzzle function="
-		"RunCircuitChipPlacementPuzzleScene@0x28aa4 "
+		"Ripper: entered circuit chip puzzle "
 		"milestone=%u help=0x%x chips=16 slots=16 "
 		"manualFlag=0x%x manualAvailable=%d coordinates=physical",
 		completionFlag, kHelpSelectionTable, kCircuitManualFlag,
 		_engine->getMilestones()->isSet(kCircuitManualFlag));
-	debugC(1, kDebugPuzzles,
-		"Ripper: circuit chip puzzle solution oneBased="
-		"14,4,11,6,15,16,5,1,7,12,9,2,13,8,3,10 "
-		"keyword='%s'",
-		kCompletionKeyword);
 
 	Result result = kExited;
 	bool active = true;
@@ -794,7 +761,7 @@ CircuitChipPuzzle::Result CircuitChipPuzzle::run(uint completionFlag) {
 	cursor->setVisible(savedCursorVisible);
 	_engine->getInput()->drainKeys();
 	_engine->getInput()->discardMouseTransitions();
-	debugC(result == kLoadFailed ? 2 : 1, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: left circuit chip puzzle result=%d milestone=%u "
 		"milestoneSet=%d groups=%u draggedChip=%d quit=%d",
 		result, completionFlag,

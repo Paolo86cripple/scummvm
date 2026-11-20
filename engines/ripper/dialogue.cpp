@@ -1,4 +1,23 @@
-/* ScummVM - Graphic Adventure Engine */
+/* ScummVM - Graphic Adventure Engine
+ *
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
 
 #include "ripper/dialogue.h"
 
@@ -11,7 +30,7 @@
 #include "ripper/display.h"
 #include "ripper/input.h"
 #include "ripper/ripper.h"
-#include "ripper/script.h"
+#include "ripper/script/compiled_script.h"
 
 namespace Ripper {
 
@@ -30,16 +49,13 @@ static const byte kRetailSelectedTextColor = 4;
 static const byte kDemoNormalBackgroundColor = 0;
 static const byte kDemoNormalTextColor = 253;
 static const byte kDemoSelectedBackgroundColor = 250;
-// RIP.EXE template byte 254 is a glyph lookup, not a palette index; MENUB
-// resolves it to gray index 7.
+// MENUB resolves demo text-color glyph 254 to gray palette index 7.
 static const byte kDemoSelectedTextColor = 7;
 static const uint16 kEnterCommand = 0x0d;
 static const uint16 kUpCommand = 0x4800;
 static const uint16 kDownCommand = 0x5000;
 
 bool DialogueChooser::initialize(ResourceManager &resources, bool retailPresentation) {
-	// RIP.EXE template 0x68d08 has a different palette mapping from RIPPER.LE's
-	// template initialized at 0x1196f.
 	_normalBackgroundColor = retailPresentation ?
 		kRetailNormalBackgroundColor : kDemoNormalBackgroundColor;
 	_normalTextColor = retailPresentation ?
@@ -98,10 +114,6 @@ void DialogueChooser::draw(bool captureBacking) {
 				(y - _backingBounds.top) * _backingBounds.width(),
 				screen->getBasePtr(_backingBounds.left, y), _backingBounds.width());
 		}
-		debugC(11, kDebugDialogue,
-			"Ripper: captured dialogue chooser backing bounds=%d,%d,%d,%d",
-			_backingBounds.left, _backingBounds.top,
-			_backingBounds.width(), _backingBounds.height());
 	}
 	const uint renderedPixelCount = _chooserBounds.width() * _chooserBounds.height();
 	const bool rebuildVisual = _visualDirty || _renderedChoicePixels.size() != renderedPixelCount;
@@ -111,34 +123,18 @@ void DialogueChooser::draw(bool captureBacking) {
 			const bool hasChoice = _chooser.resolveVisibleRow(visibleRow, choiceIndex);
 			const int row = _chooserBounds.top + visibleRow * kChoiceRowHeight;
 			const bool selected = hasChoice && choiceIndex == _chooser.selectedIndex();
-			for (int y = row; y < row + kChoiceRowHeight; ++y)
-				memset(screen->getBasePtr(_chooserBounds.left, y),
-					selected ? _selectedBackgroundColor : _normalBackgroundColor,
-					_chooserBounds.width());
+			screen->fillRect(Common::Rect(_chooserBounds.left, row,
+				_chooserBounds.right, row + kChoiceRowHeight),
+				selected ? _selectedBackgroundColor : _normalBackgroundColor);
 			if (!hasChoice)
 				continue;
 			int x = _chooserBounds.left + kChoiceHorizontalPadding;
 			const int textY = row + (kChoiceRowHeight - _font.lineHeight) / 2;
 			for (uint c = 0; c < _choices[choiceIndex].text.size() &&
 					x < _chooserBounds.right - kChoiceHorizontalPadding; ++c) {
-				const byte ch = (byte)_choices[choiceIndex].text[c];
-				if (ch == ' ') {
-					x += _font.spaceWidth;
-					continue;
-				}
-				if (ch < _font.firstCharacter || ch >= _font.firstCharacter + _font.glyphs.size())
-					continue;
-				const BitmapFontGlyph &glyph = _font.glyphs[ch - _font.firstCharacter];
-				for (int gy = 0; gy < glyph.height; ++gy) {
-					for (int gx = 0; gx < glyph.width; ++gx) {
-						const byte pixel = _font.pixels[glyph.pixelOffset + gy * glyph.width + gx];
-						if (pixel != _font.transparentColor)
-							*(byte *)screen->getBasePtr(x + glyph.xOffset + gx,
-								textY + glyph.yOffset + gy) =
-									selected ? _selectedTextColor : _normalTextColor;
-					}
-				}
-				x += glyph.xOffset + glyph.width + _font.characterSpacing;
+				x += BitmapFontRenderer::drawChar((byte *)screen->getPixels(), screen->pitch,
+					_font, x, textY, (byte)_choices[choiceIndex].text[c],
+					selected ? _selectedTextColor : _normalTextColor);
 			}
 		}
 		_renderedChoicePixels.resize(renderedPixelCount);
@@ -171,24 +167,24 @@ void DialogueChooser::draw(bool captureBacking) {
 	_visualDirty = false;
 }
 
-bool DialogueChooser::execute(const CompiledScript &script, const ScriptCommand &command,
+bool DialogueChooser::execute(const ScriptCommand &command,
 		bool includeChoice) {
 	if (command.opcode == kAddDialogueChoice ||
 		command.opcode == kAddConditionalDialogueChoice) {
 		if (command.arguments.size() < 2 || command.arguments[0].data.empty())
 			return false;
 		Choice choice;
-		for (uint i = 0; i < command.arguments[0].data.size() &&
-				command.arguments[0].data[i] != 0; ++i)
-			choice.text += (char)command.arguments[0].data[i];
+		const char *text = (const char *)command.arguments[0].data.data();
+		choice.text = Common::String(text,
+			Common::strnlen(text, command.arguments[0].data.size()));
 		choice.result = command.arguments[1].value & 0xffff;
 		if (includeChoice) {
 			appendChoice(choice.text, choice.result);
-			debugC(1, kDebugDialogue,
+			debugC(3, kDebugDialogue,
 				"Ripper: dialogue choice appended index=%u result=%u text='%s'",
 				_choices.size() - 1, choice.result, choice.text.c_str());
 		} else {
-			debugC(1, kDebugDialogue,
+			debugC(3, kDebugDialogue,
 				"Ripper: dialogue choice omitted result=%u reason=response-played text='%s'",
 				choice.result, choice.text.c_str());
 		}
@@ -198,29 +194,9 @@ bool DialogueChooser::execute(const CompiledScript &script, const ScriptCommand 
 	if (command.opcode == kStartDialogue) {
 		if (!activateChoices("scene-script"))
 			return false;
-		debugC(1, kDebugDialogue,
-			"Ripper: dialogue chooser activated script='%s' offset=0x%x "
-				"selector=%u choices=%u",
-			script.getMemberName().c_str(), command.offset, command.selector, _choices.size());
-		for (uint i = 0; i < _choices.size(); ++i)
-			debugC(2, kDebugDialogue, "Ripper: dialogue choice index=%u result=%u text='%s'",
-				i, _choices[i].result, _choices[i].text.c_str());
 		return true;
 	}
 
-	debugC(1, kDebugDialogue,
-		"Ripper: dialogue command script='%s' offset=0x%x selector=%u arguments=%u",
-		script.getMemberName().c_str(), command.offset, command.selector,
-		command.arguments.size());
-	for (uint i = 0; i < command.arguments.size(); ++i) {
-		const ScriptArgument &argument = command.arguments[i];
-		Common::String text;
-		for (uint j = 0; j < argument.data.size() && argument.data[j] != 0; ++j)
-			text += (char)argument.data[j];
-		debugC(2, kDebugDialogue,
-			"Ripper: dialogue argument=%u type=%u value=0x%x bytes=%u text='%s'",
-			i, argument.type, argument.value, argument.data.size(), text.c_str());
-	}
 	return true;
 }
 
@@ -367,47 +343,71 @@ void DialogueChooser::dismissForSceneTransition(const char *reason) {
 		reason, choiceCount, restored);
 }
 
+void DialogueChooser::captureSaveState(SaveState &state) const {
+	state.choices = _choices;
+	state.chooser = _chooser;
+	state.pending = _pending;
+}
+
 bool DialogueChooser::syncGame(Common::Serializer &serializer) {
-	byte pending = _pending ? 1 : 0;
+	SaveState state;
+	if (serializer.isSaving())
+		captureSaveState(state);
+	if (!syncGame(serializer, state))
+		return false;
+	if (serializer.isLoading())
+		applySaveState(state);
+	return true;
+}
+
+bool DialogueChooser::syncGame(Common::Serializer &serializer, SaveState &state) const {
+	byte pending = state.pending ? 1 : 0;
 	serializer.syncAsByte(pending);
 
-	uint32 choiceCount = _choices.size();
+	uint32 choiceCount = state.choices.size();
 	serializer.syncAsUint32LE(choiceCount);
 	if (serializer.isLoading()) {
 		if (choiceCount > 256)
 			return false;
-		_backingBounds = Common::Rect();
-		_backingPixels.clear();
-		_renderedChoicePixels.clear();
-		_choices.clear();
-		_choices.resize(choiceCount);
+		state.choices.clear();
+		state.choices.resize(choiceCount);
 	}
 	for (uint i = 0; i < choiceCount; ++i) {
-		serializer.syncString(_choices[i].text);
-		serializer.syncAsUint16LE(_choices[i].result);
-		if (serializer.isLoading() && _choices[i].text.size() > 1024)
+		serializer.syncString(state.choices[i].text);
+		serializer.syncAsUint16LE(state.choices[i].result);
+		if (serializer.isLoading() && state.choices[i].text.size() > 1024)
 			return false;
 	}
 
-	uint32 selectedChoice = _chooser.selectedIndex();
-	uint32 firstVisibleChoice = _chooser.firstVisibleIndex();
+	uint32 selectedChoice = state.chooser.selectedIndex();
+	uint32 firstVisibleChoice = state.chooser.firstVisibleIndex();
 	serializer.syncAsUint32LE(selectedChoice);
 	serializer.syncAsUint32LE(firstVisibleChoice);
 	if (serializer.isLoading()) {
-		_pending = pending != 0;
-		_visualDirty = _pending;
-		_hoveredArrow = 0;
-		if (_choices.empty()) {
-			_pending = false;
-			_chooser.clear();
+		state.pending = pending != 0;
+		if (state.choices.empty()) {
+			state.pending = false;
+			state.chooser.clear();
 		} else {
-			if (!_chooser.restore(_choices.size(), maximumVisibleChoiceCount(),
+			if (!state.chooser.restore(state.choices.size(), maximumVisibleChoiceCount(),
 					selectedChoice, firstVisibleChoice))
 				return false;
-			updateLayout();
 		}
 	}
 	return !serializer.err();
+}
+
+void DialogueChooser::applySaveState(SaveState &state) {
+	_choices = Common::move(state.choices);
+	_chooser = state.chooser;
+	_pending = state.pending;
+	_backingBounds = Common::Rect();
+	_backingPixels.clear();
+	_renderedChoicePixels.clear();
+	_visualDirty = _pending;
+	_hoveredArrow = 0;
+	if (!_choices.empty())
+		updateLayout();
 }
 
 uint DialogueChooser::measureText(const Common::String &text) const {
@@ -443,10 +443,8 @@ void DialogueChooser::updateLayout() {
 Common::Rect DialogueChooser::visualBounds() const {
 	Common::Rect bounds = _chooserBounds;
 	if (hasScrollArrows() && _choices.size() > _chooser.visibleCount()) {
-		bounds.left = MIN(bounds.left, MIN(_upArrowBounds.left, _downArrowBounds.left));
-		bounds.top = MIN(bounds.top, MIN(_upArrowBounds.top, _downArrowBounds.top));
-		bounds.right = MAX(bounds.right, MAX(_upArrowBounds.right, _downArrowBounds.right));
-		bounds.bottom = MAX(bounds.bottom, MAX(_upArrowBounds.bottom, _downArrowBounds.bottom));
+		bounds.extend(_upArrowBounds);
+		bounds.extend(_downArrowBounds);
 	}
 	return bounds;
 }
@@ -495,10 +493,8 @@ void DialogueChooser::rebuildPresentationBands(const char *reason) const {
 
 	// Controlled AVI restores only the 640x300 scene page. Clear the uncovered
 	// indexed bands before the next palette; SMK keeps its complete final frame.
-	for (int y = 0; y < kSceneTop; ++y)
-		memset(screen->getBasePtr(0, y), 0, 640);
-	for (int y = kSceneBottom; y < 400; ++y)
-		memset(screen->getBasePtr(0, y), 0, 640);
+	screen->fillRect(Common::Rect(0, 0, 640, kSceneTop), 0);
+	screen->fillRect(Common::Rect(0, kSceneBottom, 640, 400), 0);
 	g_system->unlockScreen();
 	debugC(2, kDebugDialogue,
 		"Ripper: rebuilt dialogue presentation bands reason=%s top=0..%d bottom=%d..399",

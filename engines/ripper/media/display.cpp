@@ -11,14 +11,15 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 
 #include "common/debug.h"
 #include "common/ptr.h"
@@ -33,7 +34,7 @@
 #include "ripper/ripper.h"
 #include "ripper/resources.h"
 #include "ripper/settings.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -65,9 +66,9 @@ void MediaPlayer::fadePalette(bool fadeIn, uint stepCount) {
 }
 
 bool MediaPlayer::displayScenePcx(const Common::String &path) {
-	Common::String source;
 	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		openSource(path, kSourceConfiguredPath, source));
+		_engine->getResources()->createReadStream(
+			path, ResourceManager::kSourceConfiguredPath));
 	Image::PCXDecoder decoder;
 	if (!stream || !decoder.loadStream(*stream)) {
 		warning("Ripper: could not decode scene PCX '%s'", path.c_str());
@@ -93,8 +94,9 @@ bool MediaPlayer::displayScenePcx(const Common::String &path) {
 			g_system->unlockScreen();
 		return false;
 	}
-	for (int y = kScenePresentationTop; y < kScenePresentationTop + 300; ++y)
-		memset(screen->getBasePtr(0, y), 0, 640);
+	screen->fillRect(Common::Rect(0, kScenePresentationTop,
+		640, kScenePresentationTop + 300),
+		0);
 	const int x = (640 - surface->w) / 2;
 	for (int y = 0; y < surface->h; ++y)
 		memcpy(screen->getBasePtr(x, kScenePresentationTop + y),
@@ -133,8 +135,7 @@ bool MediaPlayer::displayInterfacePcx(const Common::String &path) {
 	}
 	const int copyWidth = frame.width < screen->w ? frame.width : screen->w;
 	const int copyHeight = frame.height < screen->h ? frame.height : screen->h;
-	for (int y = 0; y < screen->h; ++y)
-		memset(screen->getBasePtr(0, y), 0, screen->w);
+	screen->fillRect(screen->getRect(), 0);
 	for (int y = 0; y < copyHeight; ++y)
 		memcpy(screen->getBasePtr(0, y), frame.pixels.data() + y * frame.width,
 			copyWidth);

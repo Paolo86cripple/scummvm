@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_SETTINGS_H
@@ -24,11 +25,9 @@
 #include "common/scummsys.h"
 #include "common/array.h"
 
-namespace Audio {
-class Mixer;
-}
-
 namespace Ripper {
+
+class RipperEngine;
 
 class RipperSettings {
 public:
@@ -70,7 +69,7 @@ public:
 		int defaultValue;
 	};
 
-	RipperSettings(Audio::Mixer *mixer, bool demo);
+	RipperSettings(RipperEngine *engine, bool demo);
 
 	void load();
 	void save();
@@ -104,11 +103,12 @@ public:
 	static const Descriptor &getDescriptor(Slider slider);
 
 private:
-	void applyAudioVolumes();
+	friend class RipperEngine;
+	void syncSoundSettings();
 	static int mixerToPercent(int volume);
 	static int percentToMixer(int volume);
 
-	Audio::Mixer *_mixer;
+	RipperEngine *_engine;
 	bool _demo;
 	int _values[kSliderCount];
 	uint16 _actionKeys[kActionKeyCount];

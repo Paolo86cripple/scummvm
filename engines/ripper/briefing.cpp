@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/briefing.h"
@@ -28,7 +29,7 @@
 #include "ripper/detection.h"
 #include "ripper/display.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
 #include "ripper/ripper.h"
 
@@ -49,8 +50,7 @@ static bool isImplementedBriefingSelector(uint selector) {
 
 BriefingManager::BriefingManager(RipperEngine *engine) : _engine(engine),
 		_lastFrameMillis(0), _frameIndex(0), _selector(0), _armed(false),
-		_initialized(false), _hovered(false) {
-	memset(_announcedSelectors, 0, sizeof(_announcedSelectors));
+		_initialized(false), _hovered(false), _announcedSelectors(0) {
 }
 
 BriefingManager::~BriefingManager() {
@@ -58,8 +58,6 @@ BriefingManager::~BriefingManager() {
 }
 
 bool BriefingManager::initialize(ResourceManager &resources, bool demoVariant) {
-	// RIPPER.LE uses toolbar4.pl; RIP.EXE reads the third toolbar3.pl frame set
-	// at 0x698fc for the same lower-band control.
 	const char *assetName = demoVariant ? "toolbar3.pl" : "toolbar4.pl";
 	if (!resources.loadInterfaceBitmapSequence(assetName, _frames) ||
 			_frames.frames.empty())
@@ -96,7 +94,7 @@ bool BriefingManager::arm(uint selector, bool playNotification) {
 		warning("Ripper: unsupported briefing selector %u", selector);
 		return false;
 	}
-	if (_announcedSelectors[selector]) {
+	if (_announcedSelectors & (1U << selector)) {
 		debugC(2, kDebugScene,
 			"Ripper: briefing selector=%u already announced; trigger not rearmed", selector);
 		return true;
@@ -104,7 +102,7 @@ bool BriefingManager::arm(uint selector, bool playNotification) {
 	if (_armed)
 		clear();
 
-	_announcedSelectors[selector] = true;
+	_announcedSelectors |= 1U << selector;
 	_selector = selector;
 	_frameIndex = 0;
 	_lastFrameMillis = g_system->getMillis(true);
@@ -123,29 +121,29 @@ bool BriefingManager::arm(uint selector, bool playNotification) {
 	return true;
 }
 
-bool BriefingManager::restore(bool armed, uint selector) {
-	_engine->getMedia()->stopSoundEffect(_alertHandle);
-	_backing.clear();
-	if (armed && !isImplementedBriefingSelector(selector)) {
-		warning("Ripper: cannot restore unsupported briefing selector %u", selector);
-		_armed = false;
-		_selector = 0;
-		_frameIndex = 0;
-		_hovered = false;
+bool BriefingManager::isValidRestore(bool armed, uint selector, uint16 announcedSelectors) {
+	return (announcedSelectors & ~0x1feU) == 0 &&
+		(!armed || (isImplementedBriefingSelector(selector) &&
+			(announcedSelectors & (1U << selector)) != 0));
+}
+
+bool BriefingManager::restore(bool armed, uint selector, uint16 announcedSelectors) {
+	if (!isValidRestore(armed, selector, announcedSelectors)) {
+		warning("Ripper: cannot restore briefing selector=%u announced=0x%03x",
+			selector, announcedSelectors);
 		return false;
 	}
-	_armed = armed && _initialized && selector != 0 &&
-		selector < ARRAYSIZE(_announcedSelectors);
+	_engine->getMedia()->stopSoundEffect(_alertHandle);
+	_backing.clear();
+	_announcedSelectors = announcedSelectors;
+	_armed = armed && _initialized;
 	_selector = _armed ? selector : 0;
 	_frameIndex = 0;
 	_lastFrameMillis = g_system->getMillis(true);
 	_hovered = false;
-	if (_armed) {
-		_announcedSelectors[_selector] = true;
-		debugC(2, kDebugSaveLoad,
-			"Ripper: restored armed briefing trigger selector=%u control=0x4e1",
-			_selector);
-	}
+	debugC(2, kDebugSaveLoad,
+		"Ripper: restored briefing armed=%d selector=%u announced=0x%03x",
+		_armed, _selector, _announcedSelectors);
 	return true;
 }
 
@@ -215,6 +213,7 @@ void BriefingManager::restoreBacking() {
 }
 
 bool BriefingManager::activate() {
+	RipperEngine::SaveLoadScope saveLoad(*_engine);
 	const uint selector = _selector;
 	clear();
 	_engine->getCursor()->setVisible(false);
@@ -345,7 +344,6 @@ bool BriefingManager::waitForAcknowledgement(uint selector) {
 
 	while (!_engine->shouldQuit()) {
 		if (input->pollEvents()) {
-			_engine->quitGame();
 			break;
 		}
 		if (input->hasPendingKey()) {

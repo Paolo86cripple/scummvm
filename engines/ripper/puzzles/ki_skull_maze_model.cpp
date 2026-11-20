@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/ki_skull_maze_model.h"
@@ -31,7 +32,7 @@ KiSkullMazeModel::KiSkullMazeModel() :
 }
 
 uint KiSkullMazeModel::nextRandom15() {
-	// GenerateRandomInt15 at 0x49a2f uses the Microsoft-compatible LCG.
+	// The puzzle's configured seeds depend on this exact random sequence.
 	_randomSeed = _randomSeed * 0x41c64e6dU + 0x3039U;
 	return (_randomSeed >> 16) & 0x7fff;
 }

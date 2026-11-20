@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/resources.h"
@@ -24,30 +25,23 @@
 #include "common/debug.h"
 #include "common/endian.h"
 #include "common/file.h"
+#include "common/formats/iff_container.h"
 #include "common/formats/ini-file.h"
 #include "common/memstream.h"
 #include "common/ptr.h"
 #include "common/stream.h"
 #include "common/substream.h"
 #include "graphics/surface.h"
+#include "image/iff.h"
 #include "image/pcx.h"
 
 #include "ripper/detection.h"
-#include "ripper/iff.h"
 
 namespace Ripper {
 
 static const uint32 kModernLibraryMagic = 0x4c494232;
 static const uint32 kCustomBitmapHeaderSize = 0x1c;
 static const uint32 kCustomBitmapExtendedHeaderSize = 0xc;
-
-static bool hasDirectorySeparator(const Common::String &path) {
-	for (uint i = 0; i < path.size(); ++i) {
-		if (path[i] == '/' || path[i] == '\\' || path[i] == ':')
-			return true;
-	}
-	return false;
-}
 
 static bool readStream(Common::SeekableReadStream &stream, Common::Array<byte> &data) {
 	if (stream.size() < 0 || (uint64)stream.size() > 0xffffffffULL)
@@ -132,7 +126,6 @@ static bool expandCustomBitmap(const Common::Array<byte> &payload, const byte *d
 }
 
 static bool decodeCustomBitmap(Common::SeekableReadStream &stream, BitmapAssetFrame &frame) {
-	// DecodeCustomBitmapAsset at 0x53f60 reads this 0x1c-byte header and optional GCMS extension.
 	byte header[kCustomBitmapHeaderSize];
 	if (stream.read(header, sizeof(header)) != sizeof(header))
 		return false;
@@ -155,7 +148,6 @@ static bool decodeCustomBitmap(Common::SeekableReadStream &stream, BitmapAssetFr
 		return false;
 	}
 
-	// DecodeCustomBitmapAsset at 0x53f60 stores descriptor height first and width second.
 	const uint16 height = READ_LE_UINT16(header + 0x16);
 	const uint16 width = READ_LE_UINT16(header + 0x18);
 	const uint32 pixelCount = (uint32)width * height;
@@ -186,10 +178,6 @@ static bool decodeCustomBitmap(Common::SeekableReadStream &stream, BitmapAssetFr
 
 	byte colorMap[256];
 	if ((flags & 2) != 0) {
-		// DecodeCustomBitmapAsset at 0x54106 reads only colorCount bytes into
-		// its zero-initialized remap table. This matters for assets such as the
-		// combat explosions, whose 0xff transparency key lies beyond that range
-		// and therefore resolves to palette index 0.
 		memset(colorMap, 0, sizeof(colorMap));
 		if (stream.read(colorMap, colorCount) != colorCount)
 			return false;
@@ -200,7 +188,6 @@ static bool decodeCustomBitmap(Common::SeekableReadStream &stream, BitmapAssetFr
 
 	decodedFrame.transparentColor = colorMap[transparentColor];
 	decodedFrame.pixels.resize(pixelCount);
-	// ExpandCustomBitmapCompressedPixels at 0x53de0 consumes low nibbles before high nibbles.
 	if (!expandCustomBitmap(payload, header + 5, colorCount, rawTailSize, compressionMode,
 			colorMap, decodedFrame.pixels))
 		return false;
@@ -233,12 +220,37 @@ bool decodePcxAsset(Common::SeekableReadStream &stream, BitmapAssetFrame &frame)
 		copyIndexedSurface(decoder.getSurface(), decoder.getPalette(), 0, frame);
 }
 
+namespace {
+
+class IFFDecoder : public Image::IFFDecoder {
+protected:
+	void loadPBMBitmap(Common::SeekableReadStream &stream, byte *data, uint16 outPitch) override {
+		const Image::IFFDecoder::Header *header = getHeader();
+		// PBM rows include a padding byte when the width is odd.
+		const uint16 scanlinePitch = (header->width + 1) & ~1;
+		Common::Array<byte> scanline(scanlinePitch);
+
+		for (uint16 i = 0; i < header->height; ++i) {
+			if (header->compression) {
+				Common::PackBitsReadStream packStream(stream);
+				packStream.read(scanline.data(), scanlinePitch);
+			} else {
+				stream.read(scanline.data(), scanlinePitch);
+			}
+
+			memcpy(data, scanline.data(), outPitch);
+			data += outPitch;
+		}
+	}
+};
+
+} // End of anonymous namespace
+
 static bool decodeIffBitmap(Common::SeekableReadStream &stream, BitmapAssetFrame &frame) {
 	IFFDecoder decoder;
 	if (!decoder.loadStream(stream))
 		return false;
 
-	// DecodeIffBitmapAssetToDescriptor at 0x6aca4 maps IFF height/width to the same descriptor order.
 	if (!copyIndexedSurface(decoder.getSurface(), decoder.getPalette(),
 			decoder.getHeader()->transparentColor & 0xff, frame))
 		return false;
@@ -282,6 +294,7 @@ bool decodeBitmapAssetSequence(Common::SeekableReadStream &stream,
 		(uint64)directoryOffset + (uint64)entryCount * 12 > data.size())
 		return false;
 
+	sequence.frames.reserve(entryCount);
 	for (uint i = 0; i < entryCount; ++i) {
 		const uint32 entryOffset = READ_LE_UINT32(data.data() + directoryOffset + i * 12);
 		const uint32 endOffset = i + 1 < entryCount ?
@@ -303,8 +316,6 @@ bool decodeBitmapAssetSequence(Common::SeekableReadStream &stream,
 
 bool decodePresentationFrameRegionTable(Common::SeekableReadStream &stream,
 		PresentationFrameRegionTable &table) {
-	// LoadPresentationFrameRegionTable at 0x35615 skips the 0x64-byte tool
-	// header, then separates frameCount * 6 state bytes from 9-byte regions.
 	table.frames.clear();
 	if (stream.size() < 0x68)
 		return false;
@@ -359,9 +370,6 @@ bool decodePresentationFrameRegionTable(Common::SeekableReadStream &stream,
 
 bool decodePresentationFrameAudioMap(Common::SeekableReadStream &stream,
 		uint frameCount, PresentationFrameAudioMap &map) {
-	// LoadPresentationFrameAudioCueMap at 0x3574a reads the 16-bit rate and
-	// optional 16-bit frame count, 60-byte source paths, then one
-	// cue-index/volume pair for every presentation frame.
 	map = PresentationFrameAudioMap();
 	if (stream.size() < 0x6c)
 		return false;
@@ -380,10 +388,7 @@ bool decodePresentationFrameAudioMap(Common::SeekableReadStream &stream,
 		char path[60];
 		if (stream.read(path, sizeof(path)) != sizeof(path))
 			return false;
-		uint length = 0;
-		while (length < sizeof(path) && path[length] != '\0')
-			++length;
-		map.sounds.push_back(Common::String(path, path + length));
+		map.sounds.push_back(Common::String(path, Common::strnlen(path, sizeof(path))));
 	}
 
 	map.cues.resize(frameCount);
@@ -400,18 +405,12 @@ AssetLibrary::AssetLibrary() : _looseArchive(nullptr), _modernFormat(false) {
 }
 
 Common::String AssetLibrary::readFixedString(const char *data, uint length) {
-	uint actualLength = 0;
-	while (actualLength < length && data[actualLength] != '\0')
-		++actualLength;
-	return Common::String(data, data + actualLength);
+	return Common::String(data, Common::strnlen(data, length));
 }
 
 Common::String AssetLibrary::normalizeMemberName(const Common::String &memberName, bool includeExtension) {
-	uint baseStart = 0;
-	for (uint i = 0; i < memberName.size(); ++i) {
-		if (memberName[i] == '/' || memberName[i] == '\\' || memberName[i] == ':')
-			baseStart = i + 1;
-	}
+	const size_t separator = memberName.findLastOf("/\\:");
+	const uint baseStart = separator == Common::String::npos ? 0 : separator + 1;
 
 	uint dot = memberName.size();
 	for (uint i = baseStart; i < memberName.size(); ++i) {
@@ -506,6 +505,7 @@ bool AssetLibrary::loadDirectory(Common::SeekableReadStream &file, uint32 fileSi
 		return false;
 	}
 
+	_entries.reserve(entryCount);
 	file.seek(directoryOffset);
 	for (uint i = 0; i < entryCount; ++i) {
 		Entry entry;
@@ -625,6 +625,53 @@ Common::SeekableReadStream *AssetLibrary::createReadStreamForMember(const Common
 		DisposeAfterUse::YES);
 }
 
+bool AssetLibrary::loadBitmap(const Common::String &memberName,
+		BitmapAssetFrame &frame) const {
+	Common::ScopedPtr<Common::SeekableReadStream> stream(
+		createReadStreamForMember(memberName));
+	if (!stream || !decodeBitmapAsset(*stream, frame)) {
+		warning("Ripper: could not decode bitmap '%s' from library '%s'",
+			memberName.c_str(), _filename.toString().c_str());
+		return false;
+	}
+	debugC(2, kDebugResources,
+		"Ripper: decoded bitmap '%s' from library '%s' size=%ux%u colors=%u",
+		memberName.c_str(), _filename.toString().c_str(), frame.width,
+		frame.height, frame.palette.size() / 3);
+	return true;
+}
+
+bool AssetLibrary::loadBitmapSequence(const Common::String &memberName,
+		BitmapAssetSequence &sequence) const {
+	Common::ScopedPtr<Common::SeekableReadStream> stream(
+		createReadStreamForMember(memberName));
+	if (!stream || !decodeBitmapAssetSequence(*stream, sequence)) {
+		warning("Ripper: could not decode bitmap sequence '%s' from library '%s'",
+			memberName.c_str(), _filename.toString().c_str());
+		return false;
+	}
+	debugC(2, kDebugResources,
+		"Ripper: decoded bitmap sequence '%s' from library '%s' frames=%u",
+		memberName.c_str(), _filename.toString().c_str(), sequence.frames.size());
+	return true;
+}
+
+bool AssetLibrary::loadPcx(const Common::String &memberName,
+		BitmapAssetFrame &frame) const {
+	Common::ScopedPtr<Common::SeekableReadStream> stream(
+		createReadStreamForMember(memberName));
+	if (!stream || !decodePcxAsset(*stream, frame)) {
+		warning("Ripper: could not decode PCX '%s' from library '%s'",
+			memberName.c_str(), _filename.toString().c_str());
+		return false;
+	}
+	debugC(2, kDebugResources,
+		"Ripper: decoded PCX '%s' from library '%s' size=%ux%u colors=%u",
+		memberName.c_str(), _filename.toString().c_str(), frame.width,
+		frame.height, frame.palette.size() / 3);
+	return true;
+}
+
 void AssetLibrary::listMembersWithPrefix(const Common::String &prefix,
 		Common::Array<Common::String> &members) const {
 	members.clear();
@@ -644,9 +691,8 @@ bool ResourceManager::initialize(bool loadNestedOptions) {
 	_gameTextLoaded = false;
 	_searchDirectories.clear();
 
-	Common::File iniFile;
 	Common::INIFile ini;
-	if (!iniFile.open("ripper.ini") || !ini.loadFromStream(iniFile)) {
+	if (!ini.loadFromFile("ripper.ini")) {
 		warning("Ripper: could not load RIPPER.INI");
 		return false;
 	}
@@ -669,7 +715,6 @@ bool ResourceManager::initialize(bool loadNestedOptions) {
 		soundLibrary.c_str());
 	Common::String puzzleDirectory;
 	ini.getKey("puzzle", "paths", puzzleDirectory);
-	puzzleDirectory.trim();
 	static const char *const searchDirectoryKeys[] = {
 		"scene",
 		"puzzle",
@@ -679,7 +724,6 @@ bool ResourceManager::initialize(bool loadNestedOptions) {
 	for (uint i = 0; i < ARRAYSIZE(searchDirectoryKeys); ++i) {
 		Common::String directory;
 		if (ini.getKey(searchDirectoryKeys[i], "paths", directory)) {
-			directory.trim();
 			if (!directory.empty())
 				_searchDirectories.push_back(directory);
 		}
@@ -719,12 +763,80 @@ bool ResourceManager::initialize(bool loadNestedOptions) {
 	return true;
 }
 
+Common::SeekableReadStream *ResourceManager::createReadStream(const Common::String &path,
+		SourcePolicy policy, Common::String *source) const {
+	if (source)
+		source->clear();
+	Common::SeekableReadStream *stream = nullptr;
+	const char *resolvedSource = "";
+	if (policy == kSourceSearchMember) {
+		stream = SearchMan.createReadStreamForMember(Common::Path(path));
+		if (stream)
+			resolvedSource = "search-member";
+	}
+	if (policy == kSourceDirectFile || policy == kSourceSoundEffect ||
+			policy == kSourceBlockingAudio) {
+		Common::ScopedPtr<Common::File> file(new Common::File());
+		if (file->open(Common::Path(path))) {
+			stream = file.release();
+			resolvedSource = "filesystem";
+		}
+	}
+	if (!stream && (policy == kSourceConfiguredPath || policy == kSourceBlockingAudio ||
+			policy == kSourceSceneAudio || policy == kSourceScriptConfiguration)) {
+		stream = createReadStreamForPath(path);
+		if (stream)
+			resolvedSource = "search-path";
+	}
+	if (policy == kSourceInterfaceLibrary) {
+		stream = _interface.createReadStreamForMember(path);
+		if (stream)
+			resolvedSource = "interface-library";
+	}
+	if (policy == kSourcePuzzleMedia || policy == kSourcePuzzlePiece) {
+		const bool hasMember = _puzzle.hasMember(path);
+		if (hasMember) {
+			stream = _puzzle.createReadStreamForMember(path);
+			if (stream)
+				resolvedSource = "puzzle-library";
+		}
+		// Piece assets treat an existing archive member as authoritative, even
+		// when it cannot be opened. Media may fall back after an open failure.
+		if (!stream && (policy == kSourcePuzzleMedia || !hasMember)) {
+			stream = createReadStreamForPath(path);
+			if (stream)
+				resolvedSource = "search-path";
+		}
+	}
+	if (!stream && (policy == kSourceSoundEffect || policy == kSourceBlockingAudio ||
+			policy == kSourceSceneAudio) && _sound.hasMember(path)) {
+		stream = _sound.createReadStreamForMember(path);
+		if (stream) {
+			resolvedSource = "sound-library";
+			if (policy == kSourceSceneAudio)
+				debugC(2, kDebugAudio,
+					"Ripper: resolved scene audio '%s' through the sound library", path.c_str());
+		}
+	}
+	if (!stream && policy == kSourceScriptConfiguration) {
+		stream = _scripts.createReadStreamForMember(path);
+		if (stream) {
+			resolvedSource = "script-library";
+			debugC(2, kDebugResources,
+				"Ripper: resolved configuration '%s' through SCRIPT.PL", path.c_str());
+		}
+	}
+	if (source)
+		*source = resolvedSource;
+	return stream;
+}
+
 Common::SeekableReadStream *ResourceManager::createReadStreamForPath(
 		const Common::String &memberName) const {
 	const Common::Path directPath(memberName);
 	if (SearchMan.hasFile(directPath))
 		return SearchMan.createReadStreamForMember(directPath);
-	if (hasDirectorySeparator(memberName))
+	if (memberName.findFirstOf("/\\:") != Common::String::npos)
 		return nullptr;
 
 	for (uint i = 0; i < _searchDirectories.size(); ++i) {
@@ -744,34 +856,14 @@ Common::SeekableReadStream *ResourceManager::createReadStreamForPath(
 	return nullptr;
 }
 
-static bool loadBitmapSequenceFromLibrary(const AssetLibrary &library,
-		const char *libraryName, const Common::String &memberName,
-		BitmapAssetSequence &sequence) {
-	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		library.createReadStreamForMember(memberName));
-	if (!stream || !decodeBitmapAssetSequence(*stream, sequence)) {
-		warning("Ripper: could not decode %s bitmap sequence '%s'",
-			libraryName, memberName.c_str());
-		return false;
-	}
-
-	debugC(2, kDebugResources, "Ripper: decoded %s bitmap sequence '%s' frames=%u",
-		libraryName, memberName.c_str(), sequence.frames.size());
-	return true;
-}
-
-static bool loadPcxFromLibrary(const AssetLibrary &library,
-		const char *libraryName, const Common::String &memberName,
-		BitmapAssetFrame &frame);
-
 bool ResourceManager::loadInterfaceBitmapSequence(const Common::String &memberName,
 		BitmapAssetSequence &sequence) const {
-	return loadBitmapSequenceFromLibrary(_interface, "interface", memberName, sequence);
+	return _interface.loadBitmapSequence(memberName, sequence);
 }
 
 bool ResourceManager::loadOptionsBitmapSequence(const Common::String &memberName,
 		BitmapAssetSequence &sequence) const {
-	return loadBitmapSequenceFromLibrary(_options, "options", memberName, sequence);
+	return _options.loadBitmapSequence(memberName, sequence);
 }
 
 bool ResourceManager::loadBitmap(const Common::String &memberName,
@@ -791,9 +883,9 @@ bool ResourceManager::loadBitmap(const Common::String &memberName,
 }
 
 bool ResourceManager::loadBitmapSequence(const Common::String &memberName,
-		BitmapAssetSequence &sequence) const {
+		BitmapAssetSequence &sequence, SourcePolicy policy) const {
 	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		SearchMan.createReadStreamForMember(Common::Path(memberName)));
+		createReadStream(memberName, policy));
 	if (!stream || !decodeBitmapAssetSequence(*stream, sequence)) {
 		warning("Ripper: could not decode bitmap sequence '%s'", memberName.c_str());
 		return false;
@@ -801,6 +893,15 @@ bool ResourceManager::loadBitmapSequence(const Common::String &memberName,
 
 	debugC(2, kDebugResources, "Ripper: decoded bitmap sequence '%s' frames=%u",
 		memberName.c_str(), sequence.frames.size());
+	return true;
+}
+
+bool ResourceManager::loadBitmapSequenceFirstFrame(const Common::String &memberName,
+		BitmapAssetFrame &frame, SourcePolicy policy) const {
+	BitmapAssetSequence sequence;
+	if (!loadBitmapSequence(memberName, sequence, policy) || sequence.frames.empty())
+		return false;
+	frame = Common::move(sequence.frames.front());
 	return true;
 }
 
@@ -814,12 +915,8 @@ bool ResourceManager::loadBitmapLibrary(const Common::String &libraryName,
 	library.listMembersWithPrefix("", members);
 	frames.clear();
 	for (uint member = 0; member < members.size(); ++member) {
-		Common::ScopedPtr<Common::SeekableReadStream> stream(
-			library.createReadStreamForMember(members[member]));
 		BitmapAssetFrame frame;
-		if (!stream || !decodeBitmapAsset(*stream, frame)) {
-			warning("Ripper: could not decode bitmap library '%s' member '%s'",
-				libraryName.c_str(), members[member].c_str());
+		if (!library.loadBitmap(members[member], frame)) {
 			frames.clear();
 			return false;
 		}
@@ -851,29 +948,12 @@ bool ResourceManager::loadInterfaceBitmapSet(const Common::String &prefix,
 
 bool ResourceManager::loadInterfacePcx(const Common::String &memberName,
 		BitmapAssetFrame &frame) const {
-	return loadPcxFromLibrary(_interface, "interface", memberName, frame);
+	return _interface.loadPcx(memberName, frame);
 }
 
 bool ResourceManager::loadOptionsPcx(const Common::String &memberName,
 		BitmapAssetFrame &frame) const {
-	return loadPcxFromLibrary(_options, "options", memberName, frame);
-}
-
-static bool loadPcxFromLibrary(const AssetLibrary &library,
-		const char *libraryName, const Common::String &memberName,
-		BitmapAssetFrame &frame) {
-	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		library.createReadStreamForMember(memberName));
-	if (!stream || !decodePcxAsset(*stream, frame)) {
-		warning("Ripper: could not decode %s PCX '%s'", libraryName, memberName.c_str());
-		return false;
-	}
-
-	debugC(2, kDebugResources,
-		"Ripper: decoded %s PCX '%s' width=%u height=%u colors=%u",
-		libraryName, memberName.c_str(), frame.width, frame.height,
-		frame.palette.size() / 3);
-	return true;
+	return _options.loadPcx(memberName, frame);
 }
 
 bool ResourceManager::loadInterfaceBitmapFont(const Common::String &memberName,
@@ -897,8 +977,6 @@ bool ResourceManager::loadInterfaceBitmapFont(const Common::String &memberName,
 		return false;
 	}
 
-	// LoadNF2TDescriptorAndBitmap at 0x5c290 reads the 12-byte descriptor,
-	// its eight-byte glyph records, and the trailing custom bitmap.
 	const uint glyphCount = data[5];
 	const uint32 bitmapOffset = 12 + glyphCount * 8;
 	if (glyphCount == 0 || bitmapOffset >= data.size())
@@ -953,7 +1031,6 @@ bool ResourceManager::loadGameText(Common::Array<Common::String> &strings) const
 	if (!stream || !readStream(*stream, data) || data.size() < 4)
 		return false;
 
-	// ResolveStartupResourceString at 0x1f7a2 indexes this one-based offset table.
 	const uint32 stringCount = READ_LE_UINT32(data.data());
 	if (stringCount == 0 || (uint64)4 + (uint64)stringCount * 4 > data.size())
 		return false;

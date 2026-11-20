@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_RESOURCES_H
@@ -122,10 +123,22 @@ public:
 	AssetLibrary();
 
 	bool open(const Common::Path &filename);
+	/** Copies the library bytes from a caller-owned stream. */
 	bool open(Common::SeekableReadStream &stream, const Common::Path &sourceName);
+	/** Borrows archive for subsequent loose-file lookups. */
 	bool openLooseFiles(const Common::Archive &archive);
 	bool hasMember(const Common::String &memberName) const;
+	/**
+	 * Returns a caller-owned member stream. For a file-backed library, the
+	 * stream owns the reopened archive file. For an in-memory library, the
+	 * stream borrows the library's bytes. Reopening or destroying the library
+	 * invalidates those borrowed streams.
+	 */
 	Common::SeekableReadStream *createReadStreamForMember(const Common::String &memberName) const;
+	bool loadBitmap(const Common::String &memberName, BitmapAssetFrame &frame) const;
+	bool loadBitmapSequence(const Common::String &memberName,
+		BitmapAssetSequence &sequence) const;
+	bool loadPcx(const Common::String &memberName, BitmapAssetFrame &frame) const;
 	void listMembersWithPrefix(const Common::String &prefix,
 		Common::Array<Common::String> &members) const;
 
@@ -156,14 +169,31 @@ private:
 
 class ResourceManager {
 public:
+	enum SourcePolicy {
+		kSourceSearchMember,
+		kSourceDirectFile,
+		kSourceConfiguredPath,
+		kSourceInterfaceLibrary,
+		kSourcePuzzleMedia,
+		kSourcePuzzlePiece,
+		kSourceSoundEffect,
+		kSourceBlockingAudio,
+		kSourceSceneAudio,
+		kSourceScriptConfiguration
+	};
+
 	ResourceManager();
 
 	bool initialize(bool loadNestedOptions);
+	Common::SeekableReadStream *createReadStream(const Common::String &path,
+		SourcePolicy policy, Common::String *source = nullptr) const;
 	Common::SeekableReadStream *createReadStreamForPath(
 		const Common::String &memberName) const;
 	bool loadBitmap(const Common::String &memberName, BitmapAssetFrame &frame) const;
 	bool loadBitmapSequence(const Common::String &memberName,
-		BitmapAssetSequence &sequence) const;
+		BitmapAssetSequence &sequence, SourcePolicy policy = kSourceSearchMember) const;
+	bool loadBitmapSequenceFirstFrame(const Common::String &memberName,
+		BitmapAssetFrame &frame, SourcePolicy policy = kSourceSearchMember) const;
 	bool loadBitmapLibrary(const Common::String &libraryName,
 		Common::Array<BitmapAssetFrame> &frames) const;
 	bool loadInterfaceBitmapSequence(const Common::String &memberName,

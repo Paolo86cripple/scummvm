@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/key_group.h"
@@ -24,17 +25,16 @@
 #include "common/ptr.h"
 #include "common/stream.h"
 #include "common/system.h"
-#include "graphics/paletteman.h"
 #include "graphics/surface.h"
 
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
 #include "ripper/input.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
+#include "ripper/puzzles/state.h"
 #include "ripper/ripper.h"
-#include "ripper/settings.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -59,16 +59,11 @@ static const uint16 kPreviousPageCommand = 0x4b00;
 static const uint16 kNextPageCommand = 0x4d00;
 static const char kCompletionKeyword[] = "sponge";
 
-// RunKeyGroupPuzzleScene at 0x3ca1f reads these source-control Y values
-// from g_keyGroupPuzzleSourcePieceControlY at 0x84c9a. The controls use
-// the puzzle's fixed physical X coordinate of 14.
 static const int kSourceY[kSourceSlotCount] = {
 	37, 54, 71, 88, 105, 122, 139, 156, 172, 189,
 	206, 223, 240, 256, 273, 289, 306, 323, 339, 355
 };
 
-// g_keyGroupPuzzleTargetPieceControlY at 0x84cc2 supplies these physical
-// Y values. The corresponding fixed X coordinate is 330.
 static const int kTargetY[kTargetSlotCount] = {
 	44, 65, 87, 108, 129, 150, 171,
 	192, 213, 233, 254, 275, 296, 317
@@ -78,20 +73,15 @@ static const int kSolvedTargetPieces[kTargetSlotCount] = {
 	0, 4, 10, 15, 1, 13, 16, 5, 9, 7, 18, 19, 14, 11
 };
 
-static RipperEngine *sStateOwner = nullptr;
-static int sSourceSlots[kSourceSlotCount];
-static int sTargetSlots[kTargetSlotCount];
-
 } // End of anonymous namespace
 
 KeyGroupPuzzle::KeyGroupPuzzle(RipperEngine *engine) :
 		Puzzle(engine), _maxPieceWidth(0), _maxPieceHeight(0),
 		_heldPiece(-1), _heldPosition(0, 0), _heldOffset(0, 0),
 		_keywordIndex(0) {
-	for (uint index = 0; index < kSourceSlotCount; ++index)
-		_sourceSlots[index] = index;
-	for (uint index = 0; index < kTargetSlotCount; ++index)
-		_targetSlots[index] = -1;
+	const KeyGroupPuzzleState defaults;
+	memcpy(_sourceSlots, defaults.sourceSlots, sizeof(_sourceSlots));
+	memcpy(_targetSlots, defaults.targetSlots, sizeof(_targetSlots));
 }
 
 bool KeyGroupPuzzle::loadBackground() {
@@ -150,51 +140,25 @@ bool KeyGroupPuzzle::loadAssets() {
 }
 
 void KeyGroupPuzzle::loadPersistentState() {
-	if (sStateOwner != _engine) {
-		sStateOwner = _engine;
-		for (uint index = 0; index < kSourceSlotCount; ++index)
-			sSourceSlots[index] = index;
-		for (uint index = 0; index < kTargetSlotCount; ++index)
-			sTargetSlots[index] = -1;
-	}
+	const KeyGroupPuzzleState &state = _engine->getPuzzleState()->keyGroup;
 	for (uint index = 0; index < kSourceSlotCount; ++index)
-		_sourceSlots[index] = sSourceSlots[index];
+		_sourceSlots[index] = state.sourceSlots[index];
 	for (uint index = 0; index < kTargetSlotCount; ++index)
-		_targetSlots[index] = sTargetSlots[index];
+		_targetSlots[index] = state.targetSlots[index];
 }
 
 void KeyGroupPuzzle::storePersistentState() const {
+	KeyGroupPuzzleState &state = _engine->getPuzzleState()->keyGroup;
 	for (uint index = 0; index < kSourceSlotCount; ++index)
-		sSourceSlots[index] = _sourceSlots[index];
+		state.sourceSlots[index] = _sourceSlots[index];
 	for (uint index = 0; index < kTargetSlotCount; ++index)
-		sTargetSlots[index] = _targetSlots[index];
-}
-
-void KeyGroupPuzzle::applyPalette() const {
-	Common::Array<byte> palette = _background.palette;
-	_engine->applySharedPalettePatch(palette.data(),
-		kRipperPaletteColorCount);
-	_engine->getSettings()->applyVideoPalette(palette.data(),
-		kRipperPaletteColorCount, true);
-	g_system->getPaletteManager()->setPalette(palette.data(), 0,
-		kRipperPaletteColorCount);
+		state.targetSlots[index] = _targetSlots[index];
 }
 
 void KeyGroupPuzzle::drawFrame(byte *screen, uint pitch,
 		const BitmapAssetFrame &frame, int x, int y) const {
-	for (uint sourceY = 0; sourceY < frame.height; ++sourceY) {
-		const int destinationY = y + sourceY;
-		if (destinationY < 0 || destinationY >= kRipperScreenHeight)
-			continue;
-		for (uint sourceX = 0; sourceX < frame.width; ++sourceX) {
-			const int destinationX = x + sourceX;
-			if (destinationX < 0 || destinationX >= kRipperScreenWidth)
-				continue;
-			const byte pixel = frame.pixels[sourceY * frame.width + sourceX];
-			if (pixel != frame.transparentColor)
-				screen[destinationY * pitch + destinationX] = pixel;
-		}
-	}
+	IndexedBitmapRenderer::drawBitmap(screen, pitch, frame, x, y,
+		Common::Rect(0, 0, kRipperScreenWidth, kRipperScreenHeight));
 }
 
 bool KeyGroupPuzzle::render() const {
@@ -229,7 +193,7 @@ bool KeyGroupPuzzle::render() const {
 		drawFrame(pixels, screen->pitch, _pieces[_heldPiece],
 			_heldPosition.x, _heldPosition.y);
 	g_system->unlockScreen();
-	applyPalette();
+	_engine->installScenePalette(_background.palette);
 	presentScreen();
 	return true;
 }
@@ -350,14 +314,7 @@ bool KeyGroupPuzzle::complete(uint completionFlag, const char *source) {
 bool KeyGroupPuzzle::serviceKeyword(uint16 command) {
 	if (command > 0xff)
 		return false;
-	char character = (char)command;
-	if (character >= 'A' && character <= 'Z')
-		character += 'a' - 'A';
-	if (character == kCompletionKeyword[_keywordIndex])
-		++_keywordIndex;
-	else
-		_keywordIndex = 0;
-	if (_keywordIndex + 1 != ARRAYSIZE(kCompletionKeyword))
+	if (!advanceKeyword(command, kCompletionKeyword, _keywordIndex))
 		return false;
 	_keywordIndex = 0;
 	debugC(1, kDebugPuzzles,
@@ -397,8 +354,6 @@ Common::String KeyGroupPuzzle::targetStateString() const {
 }
 
 KeyGroupPuzzle::Result KeyGroupPuzzle::run(uint completionFlag) {
-	// DispatchSceneEntryAction at 0x36892 maps both actions 16 and 60 to
-	// RunKeyGroupPuzzleScene at 0x3ca1f with the caller-supplied flag in EAX.
 	if (!_incomingDisplay.capture() || !loadAssets()) {
 		_incomingDisplay.restore();
 		return kLoadFailed;
@@ -419,13 +374,11 @@ KeyGroupPuzzle::Result KeyGroupPuzzle::run(uint completionFlag) {
 		return kLoadFailed;
 	}
 	debugC(1, kDebugPuzzles,
-		"Ripper: entered key group puzzle function=RunKeyGroupPuzzleScene@0x3ca1f "
+		"Ripper: entered key group puzzle "
 		"milestone=%u sourceControls=%u targetControls=%u help=0x%x "
-		"keyword='%s' target=[%s]",
+		"target=[%s]",
 		completionFlag, kSourceSlotCount, kTargetSlotCount,
-		kHelpSelectionTable, kCompletionKeyword, targetStateString().c_str());
-	debugC(3, kDebugPuzzles,
-		"Ripper: key group retail solution=[0,4,10,15,1,13,16,5,9,7,18,19,14,11]");
+		kHelpSelectionTable, targetStateString().c_str());
 
 	Result result = kExited;
 	bool active = true;
@@ -539,7 +492,7 @@ KeyGroupPuzzle::Result KeyGroupPuzzle::run(uint completionFlag) {
 	_engine->getCursor()->setVisible(true);
 	_engine->getInput()->drainKeys();
 	_engine->getInput()->discardMouseTransitions();
-	debugC(result == kLoadFailed ? 2 : 1, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: left key group puzzle result=%d milestone=%u milestoneSet=%d "
 		"held=%d target=[%s] quit=%d",
 		result, completionFlag,

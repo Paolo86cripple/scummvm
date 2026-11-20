@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_PUZZLES_KK_TILE_MATCH_H
@@ -29,6 +30,7 @@
 
 #include "ripper/display.h"
 #include "ripper/puzzles/puzzle.h"
+#include "ripper/puzzles/kk_tile_match_model.h"
 #include "ripper/resources.h"
 
 namespace Ripper {
@@ -42,27 +44,11 @@ public:
 	Result run(uint completionFlag) override;
 
 private:
-	struct AnimationFrame {
-		uint16 width;
-		uint16 height;
-		Common::Array<byte> pixels;
-
-		AnimationFrame() : width(0), height(0) {}
-	};
-
 	struct FlipAnimation {
-		Common::Array<AnimationFrame> frames;
+		Common::Array<BitmapAssetFrame> frames;
 		bool loaded;
 
 		FlipAnimation() : loaded(false) {}
-	};
-
-	struct Slot {
-		uint state;
-		uint frame;
-		bool active;
-
-		Slot() : state(0), frame(0), active(false) {}
 	};
 
 	class DebugHelper {
@@ -77,29 +63,21 @@ private:
 			byte *screen, uint pitch) const;
 
 	private:
-		struct SearchState {
-			byte states[16];
-			uint16 activeMask;
-		};
-
 		struct SearchNode {
-			SearchState state;
+			KkTileMatchModel state;
 			uint depth;
 			int firstTile;
 		};
 
 		struct SearchStateHash {
-			uint operator()(const SearchState &state) const;
+			uint operator()(const KkTileMatchModel &state) const;
 		};
 
 		struct SearchStateEqual {
-			bool operator()(const SearchState &left,
-				const SearchState &right) const;
+			bool operator()(const KkTileMatchModel &left,
+				const KkTileMatchModel &right) const;
 		};
 
-		SearchState capture(const KkTileMatchPuzzle &puzzle) const;
-		SearchState simulateClick(const KkTileMatchPuzzle &puzzle,
-			const SearchState &state, uint tile, bool &solved) const;
 		int findRecommendedTile(const KkTileMatchPuzzle &puzzle,
 			uint &solutionDepth, uint &visitedStates) const;
 
@@ -110,17 +88,12 @@ private:
 
 	bool loadConfiguration();
 	bool loadAssets();
-	bool loadBitmap(const Common::String &name, BitmapAssetFrame &frame);
 	bool loadFlipAnimation(uint state);
-	void applyPalette() const;
-	void drawBitmap(byte *screen, uint pitch, const BitmapAssetFrame &frame,
-		int x, int y) const;
-	void drawAnimationFrame(byte *screen, uint pitch,
-		const AnimationFrame &frame, int x, int y) const;
-	void drawSlot(byte *screen, uint pitch, const Slot &slot,
-		const Common::Point &position) const;
+	void drawSlot(byte *screen, uint pitch, const KkTileMatchModel &state,
+		uint tile, uint frame, const Common::Point &position) const;
 	void renderBoard() const;
-	void renderMove(const Slot *snapshot, uint selectedTile, uint step) const;
+	void renderMove(const KkTileMatchModel &snapshot, const uint *frames,
+		uint selectedTile, uint step) const;
 	bool flashTiles();
 	bool applyMove(uint selectedTile);
 	bool openTile(uint tile);
@@ -132,8 +105,6 @@ private:
 	bool playCue(uint cue, bool loop = false);
 	void stopCue(uint cue);
 	void stopAudio();
-	uint activeTileCount() const;
-	uint matchingActiveTileCount() const;
 	Common::String slotStateString() const;
 
 	AssetLibrary _library;
@@ -143,10 +114,11 @@ private:
 	FlipAnimation _flipAnimations[13];
 	Audio::SoundHandle _audioHandles[3];
 	Common::RandomSource _random;
-	int _moveTable[16][16];
-	Slot _slots[16];
+	int _moveTable[KkTileMatchModel::kTileCount][KkTileMatchModel::kTileCount];
+	KkTileMatchModel _model;
+	uint _frames[KkTileMatchModel::kTileCount];
 	DebugHelper _debugHelper;
-	bool _visibleTiles[16];
+	bool _visibleTiles[KkTileMatchModel::kTileCount];
 	int _hoveredTile;
 	uint _keywordIndex;
 };

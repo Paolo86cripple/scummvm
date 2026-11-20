@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_WAC_STILL_IMAGE_H
@@ -29,21 +30,22 @@
 namespace Ripper {
 
 class WacDatabaseSession;
+enum class DatabaseInputOutcome;
 
 class WacStillImageViewer {
 public:
 	explicit WacStillImageViewer(WacDatabaseSession *database);
 
-	uint16 run(byte entryIndex, const Common::String &entryLabel,
+	DatabaseInputOutcome run(byte entryIndex, const Common::String &entryLabel,
 		const Common::String &path);
-	uint16 runWithOptionalPresentation(byte entryIndex,
+	DatabaseInputOutcome runWithOptionalPresentation(byte entryIndex,
 		const Common::String &entryLabel, const Common::String &imagePath,
 		const Common::String &mediaPath, uint presentationFlag,
 		uint completionFlag);
 
 private:
 	bool load(const Common::String &path);
-	uint16 runInternal(byte entryIndex, const Common::String &entryLabel,
+	DatabaseInputOutcome runInternal(byte entryIndex, const Common::String &entryLabel,
 		const Common::String &imagePath, const Common::String &mediaPath,
 		uint presentationFlag, uint completionFlag);
 	Common::Point imageOrigin() const;

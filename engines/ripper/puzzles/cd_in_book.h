@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_PUZZLES_CD_IN_BOOK_H
@@ -41,7 +42,6 @@ public:
 private:
 	bool loadAssets();
 	bool loadBackground();
-	bool loadBitmap(const Common::String &name, BitmapAssetFrame &frame);
 	bool drawBackground();
 	bool captureControls();
 	void drawFrame(const BitmapAssetFrame &frame, int x, int y);

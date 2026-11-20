@@ -8,6 +8,15 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/scenes/scene.h"
@@ -20,10 +29,10 @@
 #include "ripper/detection.h"
 #include "ripper/dialogue.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/ripper.h"
-#include "ripper/script.h"
-#include "ripper/toolbar.h"
+#include "ripper/script/script.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -32,9 +41,6 @@ Scene::Scene(RipperEngine *engine) : _engine(engine),
 }
 
 void Scene::prepare(const char *reason, uint cursorIndex, bool cursorVisible) {
-	// RunKaDialogueScene at 0x2aef5, RunCainDialogueScene at 0x2c160, and
-	// RunTubeSwitchScene at 0x25e18 preserve the incoming indexed palette and
-	// replace the active control/chooser ownership while their local loop runs.
 	_engine->getToolbar()->leave();
 	if (_chooser.isPending())
 		_chooser.dismissForSceneTransition(reason);

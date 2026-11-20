@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_DETECTION_H
@@ -26,25 +27,26 @@
 #define GAMEOPTION_SKIP_INTRO GUIO_GAMEOPTIONS1
 #define GAMEOPTION_SUBTITLES GUIO_GAMEOPTIONS2
 #define GAMEOPTION_SUBTITLE_AUTOSCROLL GUIO_GAMEOPTIONS3
+#define GAMEOPTION_EASTER_EGG GUIO_GAMEOPTIONS4
 
 namespace Ripper {
 
 enum RipperDebugChannels {
-	kDebugGeneral = 1 << 0,
-	kDebugResources = 1 << 1,
-	kDebugScripts = 1 << 2,
-	kDebugScene = 1 << 3,
-	kDebugVideo = 1 << 4,
-	kDebugInput = 1 << 5,
-	kDebugCursor = 1 << 6,
-	kDebugAudio = 1 << 7,
-	kDebugDialogue = 1 << 8,
-	kDebugWac = 1 << 9,
-	kDebugSaveLoad = 1 << 10,
-	kDebugMilestones = 1 << 11,
-	kDebugPuzzles = 1 << 12,
-	kDebugCyber = 1 << 13,
-	kDebugCombat = 1 << 14
+	kDebugGeneral = 1,
+	kDebugResources,
+	kDebugScripts,
+	kDebugScene,
+	kDebugVideo,
+	kDebugInput,
+	kDebugCursor,
+	kDebugAudio,
+	kDebugDialogue,
+	kDebugWac,
+	kDebugSaveLoad,
+	kDebugMilestones,
+	kDebugPuzzles,
+	kDebugCyber,
+	kDebugCombat
 };
 
 extern const PlainGameDescriptor ripperGames[];

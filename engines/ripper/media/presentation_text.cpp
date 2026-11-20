@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/media/presentation_text.h"
@@ -24,6 +25,7 @@
 #include "common/system.h"
 #include "graphics/paletteman.h"
 
+#include "ripper/controls.h"
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
 #include "ripper/input.h"
@@ -50,9 +52,8 @@ Common::Rect calculatePresentationTextBounds(uint sequenceId, uint videoMode,
 	const int left = (640 - kPresentationTextWidth) / 2;
 	int top = displayTop + kPresentationTextInitialTop;
 	if (sequenceId != 1) {
-		// ServiceMediaPresentationTextControl at 0x17014 moves the wrapped
-		// chooser down to the bottom of an unscaled small-media page. Scaled
-		// and large branches move it to y=400, outside the active display.
+		// Following unscaled small-media branches place text at the bottom of the page.
+		// Scaled and large branches hide it below the display.
 		if (videoMode >= 2 || largeMedia)
 			return Common::Rect(left, 400,
 				left + kPresentationTextWidth, 400);
@@ -145,32 +146,8 @@ bool PresentationTextControl::serviceInput(bool allowDismissal) {
 				_sequenceId, allowDismissal);
 			break;
 		}
-		uint nextFirstVisible = _firstVisible;
-		switch (command) {
-		case 0x4700:
-			nextFirstVisible = 0;
-			break;
-		case 0x4800:
-			nextFirstVisible = _firstVisible > 0 ? _firstVisible - 1 : 0;
-			break;
-		case 0x4900:
-			nextFirstVisible = _firstVisible > _visibleRows ?
-				_firstVisible - _visibleRows : 0;
-			break;
-		case 0x4f00:
-			nextFirstVisible = _maximumFirstVisible;
-			break;
-		case 0x5000:
-			nextFirstVisible = MIN(_firstVisible + 1,
-				_maximumFirstVisible);
-			break;
-		case 0x5100:
-			nextFirstVisible = MIN(_firstVisible + _visibleRows,
-				_maximumFirstVisible);
-			break;
-		default:
-			break;
-		}
+		const uint nextFirstVisible = calculateTextScroll(command, _firstVisible,
+			_visibleRows, _maximumFirstVisible).firstVisible;
 		scrollTo(nextFirstVisible, "keyboard");
 	}
 
@@ -276,7 +253,6 @@ bool PresentationTextControl::waitForDismissal() {
 		continueBounds.top, continueBounds.width(), continueBounds.height());
 	while (!_engine->shouldQuit() && !_dismissed) {
 		if (_input->pollEvents()) {
-			_engine->quitGame();
 			break;
 		}
 		serviceInput(true);

@@ -1,6 +1,8 @@
 /* ScummVM - Graphic Adventure Engine
  *
- * ScummVM is the legal property of their respective copyright holders.
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -9,8 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_SCENES_LIBRARIAN_SCENE_H
@@ -22,7 +28,7 @@
 #include "common/rect.h"
 #include "common/str.h"
 
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/resources.h"
 #include "ripper/scenes/scene.h"
 
@@ -49,7 +55,7 @@ private:
 	void rebuildChoices();
 	const Choice *findAvailableChoice(uint16 id) const;
 	void serviceLoopAudio(uint frame);
-	void presentDialogueOverlay(uint frame);
+	void presentDialogueOverlay();
 	uint16 serviceInput();
 	void updateCursor(const Common::Point &point);
 	void stopAllAudio();

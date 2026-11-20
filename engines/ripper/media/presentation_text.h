@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_MEDIA_PRESENTATION_TEXT_H
@@ -24,8 +25,8 @@
 #include "common/rect.h"
 #include "common/str.h"
 
-#include "ripper/media.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/media/media.h"
+#include "ripper/modal/modal_dialog.h"
 
 namespace Ripper {
 

@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_PUZZLES_KJ_BLOB_SHOOTER_H
@@ -26,13 +27,9 @@
 #include "common/random.h"
 #include "common/rect.h"
 
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/puzzles/puzzle.h"
 #include "ripper/resources.h"
-
-namespace Common {
-class INIFile;
-}
 
 namespace Ripper {
 
@@ -87,8 +84,6 @@ private:
 	bool loadConfig(uint difficulty);
 	bool loadResources(uint difficulty);
 	bool loadVisualAssets();
-	int configInt(const Common::INIFile &ini, const char *section,
-		const char *key, int fallback) const;
 
 	uint16 serviceKeyboard(uint backgroundFrame);
 	void serviceWeapon(const Common::Point &point, bool firing, uint32 now);

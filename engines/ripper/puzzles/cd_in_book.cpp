@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/cd_in_book.h"
@@ -33,9 +34,9 @@
 #include "ripper/detection.h"
 #include "ripper/input.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -67,17 +68,11 @@ static const char *const kAudioNames[kAudioCueCount] = {
 	"buton.wav", "butoff.wav", "buzer.wav"
 };
 
-// RunCdInBookButtonSequencePuzzleScene at 0x28427 reads these button
-// coordinates from the twelve integers at 0x25d29. The stored Y coordinates
-// are scene-relative and become physical screen coordinates after adding 50.
 static const Position kButtonPositions[kButtonCount] = {
 	{315, 57}, {372, 88}, {359, 153},
 	{281, 173}, {246, 118}, {254, 66}
 };
 
-// The eight dirty-region origins at 0x25d59 identify the P07.BBM feedback
-// markers. RIPPER.LE chooses GenerateRandomInt15() & 7 after each of the
-// first five button presses, so the same marker may be removed more than once.
 static const Position kFeedbackPositions[kFeedbackMarkerCount] = {
 	{366, 262}, {372, 264}, {371, 269}, {378, 271},
 	{364, 273}, {377, 276}, {356, 276}, {362, 278}
@@ -118,16 +113,6 @@ bool CdInBookPuzzle::loadBackground() {
 	return true;
 }
 
-bool CdInBookPuzzle::loadBitmap(const Common::String &name, BitmapAssetFrame &frame) {
-	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		_library.createReadStreamForMember(name));
-	if (!stream || !decodeBitmapAsset(*stream, frame)) {
-		warning("Ripper: could not decode CD-in-book bitmap '%s'", name.c_str());
-		return false;
-	}
-	return true;
-}
-
 bool CdInBookPuzzle::loadAssets() {
 	Common::ScopedPtr<Common::SeekableReadStream> stream(
 		_engine->getResources()->createReadStreamForPath(kLibraryName));
@@ -139,11 +124,11 @@ bool CdInBookPuzzle::loadAssets() {
 		return false;
 
 	for (uint button = 0; button < kButtonCount; ++button) {
-		if (!loadBitmap(Common::String::format("p%02u.bbm", button + 1),
+		if (!_library.loadBitmap(Common::String::format("p%02u.bbm", button + 1),
 				_buttonFrames[button]))
 			return false;
 	}
-	if (!loadBitmap("p07.bbm", _feedbackFrame))
+	if (!_library.loadBitmap("p07.bbm", _feedbackFrame))
 		return false;
 	for (uint cue = 0; cue < kAudioCueCount; ++cue) {
 		if (!_library.hasMember(kAudioNames[cue])) {
@@ -357,9 +342,6 @@ bool CdInBookPuzzle::resetFailedAttempt() {
 }
 
 CdInBookPuzzle::Result CdInBookPuzzle::run(uint completionFlag) {
-	// RunCdInBookButtonSequencePuzzleScene at 0x28427 owns CDINBOOK.PL,
-	// controls 0x672..0x677, the six-entry answer at 0x25d99, and the supplied
-	// completion flag. Escape and either side control leave that flag clear.
 	IndexedDisplaySnapshot incomingDisplay;
 	if (!incomingDisplay.capture())
 		return kLoadFailed;
@@ -443,6 +425,7 @@ CdInBookPuzzle::Result CdInBookPuzzle::run(uint completionFlag) {
 						button + 1, attemptLength, kSequenceLength, correctEntries);
 
 					if (attemptLength < kSequenceLength) {
+						// Marker selection allows repeats, including markers already hidden.
 						removeFeedbackMarker(_random.getRandomNumber(
 							kFeedbackMarkerCount - 1));
 					} else if (correctEntries == kSequenceLength) {

@@ -8,6 +8,15 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/scenes/ebz2s_scene.h"
@@ -19,11 +28,11 @@
 #include "ripper/detection.h"
 #include "ripper/input.h"
 #include "ripper/inventory.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -82,7 +91,7 @@ Ebz2sScene::Result Ebz2sScene::run(uint sceneArgument) {
 			grantFlag = kBugUnlockFlag;
 
 		debugC(1, kDebugScene,
-			"Ripper: entered EBZ2S action menu function=RunEbz2sUnlockGatedActionMenuScene@0x36783 "
+			"Ripper: entered EBZ2S action menu "
 			"toolbarMask=0x%03x grantFlag=%d bug=%d,%d eyeball=%d,%d",
 			kToolbarMask, grantFlag,
 			milestones->isSet(kBugUnlockFlag),
@@ -97,7 +106,6 @@ Ebz2sScene::Result Ebz2sScene::run(uint sceneArgument) {
 					!milestones->isSet(kBugConsumedFlag) &&
 					!milestones->isSet(kEyeballConsumedFlag)) {
 				if (_engine->getInput()->pollEvents()) {
-					_engine->quitGame();
 					break;
 				}
 				while (_engine->getInput()->hasPendingKey()) {
@@ -145,7 +153,7 @@ Ebz2sScene::Result Ebz2sScene::run(uint sceneArgument) {
 
 	resetSelection();
 	finish("ebz2s-exit", 0, false);
-	debugC(result == kLoadFailed ? 1 : 2, kDebugScene,
+	debugC(1, kDebugScene,
 		"Ripper: left EBZ2S action menu result=%d bugConsumed=%d eyeballConsumed=%d quit=%d",
 		result,
 		_engine->getMilestones()->isSet(kBugConsumedFlag),

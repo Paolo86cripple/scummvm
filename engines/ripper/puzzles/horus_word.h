@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef RIPPER_PUZZLES_HORUS_WORD_H
@@ -57,10 +58,7 @@ private:
 		int _recommendedLetter;
 	};
 
-	bool loadPcx(const Common::String &name, BitmapAssetFrame &frame);
-	bool loadBitmap(const Common::String &name, BitmapAssetFrame &frame);
 	bool loadAssets();
-	void applyPalette() const;
 	void drawFrame(byte *screen, uint pitch, const BitmapAssetFrame &frame,
 		int x, int y, int opacity = -1) const;
 	byte blendPixel(byte source, byte destination, uint opacity) const;

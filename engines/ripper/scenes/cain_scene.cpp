@@ -8,6 +8,15 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/scenes/cain_scene.h"
@@ -43,9 +52,7 @@ static const uint16 kTalkCommand = 0x672;
 static const uint16 kChoiceCommandBase = 0x7000;
 static const uint16 kFailureCommand = 0x7ffd;
 
-// RunCainDialogueScene at 0x2c160 uses one contiguous choice-progress range.
-// There is no choice ID two because 0x15b stores conversation-started state;
-// choice ID three resumes RIPPER.LE's mapping at 0x15c.
+// Choice ID two is reserved for conversation-started state at flag 0x15b.
 static const uint kFirstChoiceFlag = 0x159;
 static const uint kConversationStartedFlag = 0x15b;
 static const uint kChoiceZeroGateFlag = 0x5c;
@@ -208,12 +215,10 @@ bool CainScene::finishConversation() {
 		milestones->set(kChoiceZeroExitUnlockFlag, true, "cain-dialogue-exit");
 }
 
-void CainScene::presentDialogueOverlay(uint frame) {
+void CainScene::presentDialogueOverlay() {
 	if (!_chooser.isPending())
 		return;
 	_chooser.draw(true);
-	debugC(11, kDebugDialogue,
-		"Ripper: composited Cain dialogue chooser above loop frame=%u", frame);
 }
 
 void CainScene::updateCursor(const Common::Point &point) {
@@ -229,8 +234,8 @@ void CainScene::updateCursor(const Common::Point &point) {
 	if (_chooser.contains(point)) {
 		hovered = 1;
 		cursor = kChoiceCursor;
-	} else if (talkEnabled && point.x >= kTalkLeft && point.x < kTalkRight &&
-			point.y >= kTalkTop && point.y < kTalkBottom) {
+	} else if (talkEnabled && Common::Rect(kTalkLeft, kTalkTop,
+			kTalkRight, kTalkBottom).contains(point)) {
 		hovered = 0;
 		cursor = kTalkCursor;
 	}
@@ -289,7 +294,7 @@ uint16 CainScene::service(uint frame) {
 		if (!serviceVoiceCompletion())
 			return kFailureCommand;
 		updateCursor(_engine->getInput()->peekMouseState().position);
-		presentDialogueOverlay(frame);
+		presentDialogueOverlay();
 		return MediaSequenceCallback::kContinueRefreshPalette;
 	}
 
@@ -317,7 +322,7 @@ uint16 CainScene::service(uint frame) {
 			choiceId, choice->flag, choice->textResource, choice->audioPath);
 		command = 0;
 	}
-	presentDialogueOverlay(frame);
+	presentDialogueOverlay();
 	if (command != 0 && command != MediaSequenceCallback::kContinueRefreshPalette) {
 		debugC(2, kDebugDialogue,
 			"Ripper: Cain dialogue input command=0x%04x frame=%u choices=%u voicePending=%d",
@@ -355,7 +360,7 @@ CainScene::Result CainScene::run(uint sceneArgument) {
 
 	stopAllAudio();
 	finish("cain-exit", -1, false);
-	debugC(result == kExited ? 1 : 2, kDebugDialogue,
+	debugC(1, kDebugDialogue,
 		"Ripper: left Cain dialogue scene result=%d command=0x%04x "
 		"conversationStarted=%d choices=%u quit=%d",
 		result, command, _conversationStarted, _choices.size(), _engine->shouldQuit());

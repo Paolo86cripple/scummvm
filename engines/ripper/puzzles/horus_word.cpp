@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/horus_word.h"
@@ -24,18 +25,17 @@
 #include "common/ptr.h"
 #include "common/stream.h"
 #include "common/system.h"
-#include "graphics/paletteman.h"
 #include "graphics/surface.h"
 
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
+#include "ripper/display.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
-#include "ripper/settings.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -63,7 +63,6 @@ static const byte kPuzzleHelpFutureColor = 254;
 static const byte kPuzzleHelpRecommendedColor = 255;
 static const uint kPuzzleHelpFutureDitherMask = 7;
 static const uint kPuzzleHelpRecommendedDitherMask = 3;
-static const int kPuzzleHelpBorderWidth = 2;
 
 static const char *const kLibraryName = "egypt.pl";
 static const char *const kBackgroundName = "bkgrnd";
@@ -75,9 +74,7 @@ static const char *const kAudioNames[kAudioCueCount] = {
 	"aztec0", "aztec2", "aztec3"
 };
 
-// g_horusWordPuzzleLetterControlOrigins at 0x3e82f stores these physical
-// X/Y pairs. RunHorusWordPuzzleScene at 0x3f976 cancels the scene's 50-pixel
-// presentation origin before creating controls 0x672 through 0x68b.
+// Physical screen coordinates; the background fills the 640-by-400 screen.
 static const Common::Point kLetterPositions[kLetterCount] = {
 	Common::Point(148, 136), Common::Point(146, 94),
 	Common::Point(146, 51), Common::Point(181, 6),
@@ -94,8 +91,6 @@ static const Common::Point kLetterPositions[kLetterCount] = {
 	Common::Point(152, 218), Common::Point(149, 176)
 };
 
-// g_astHorusFallingLetterStates at 0x84dbc stores the five final letter
-// anchors. RIPPER.LE applies EGYPT.RTP at phase * 10 over this display region.
 static const Common::Point kWordPositions[kWordLength] = {
 	Common::Point(228, 347), Common::Point(264, 347),
 	Common::Point(299, 347), Common::Point(334, 347),
@@ -183,22 +178,11 @@ void HorusWordPuzzle::DebugHelper::draw(
 			kPuzzleHelpRecommendedDitherMask : kPuzzleHelpFutureDitherMask;
 		const Common::Point &position = kLetterPositions[letter];
 		const BitmapAssetFrame &button = puzzle._buttons[letter];
-		const int left = MAX<int>(position.x, 0);
-		const int top = MAX<int>(position.y, 0);
-		const int right = MIN<int>(position.x + button.width,
-			kRipperScreenWidth);
-		const int bottom = MIN<int>(position.y + button.height,
-			kRipperScreenHeight);
-		for (int y = top; y < bottom; ++y) {
-			for (int x = left; x < right; ++x) {
-				const bool border = x - left < kPuzzleHelpBorderWidth ||
-					right - x <= kPuzzleHelpBorderWidth ||
-					y - top < kPuzzleHelpBorderWidth ||
-					bottom - y <= kPuzzleHelpBorderWidth;
-				if (border || ((x + y) & ditherMask) == 0)
-					screen[y * pitch + x] = color;
-			}
-		}
+		IndexedBitmapRenderer::drawHintRect(screen, pitch,
+			Common::Rect(position.x, position.y, position.x + button.width,
+				position.y + button.height),
+			Common::Rect(0, 0, kRipperScreenWidth, kRipperScreenHeight),
+			color, ditherMask);
 	}
 }
 
@@ -206,30 +190,6 @@ HorusWordPuzzle::HorusWordPuzzle(RipperEngine *engine) :
 		Puzzle(engine), _hoveredLetter(-1), _lastAnimationTick(0),
 		_settleDeadline(0), _wordComplete(false), _wordSolved(false),
 		_exitRequested(false) {
-}
-
-bool HorusWordPuzzle::loadBitmap(const Common::String &name,
-		BitmapAssetFrame &frame) {
-	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		_library.createReadStreamForMember(name));
-	if (!stream || !decodeBitmapAsset(*stream, frame)) {
-		warning("Ripper: could not decode Horus word bitmap '%s'",
-			name.c_str());
-		return false;
-	}
-	return true;
-}
-
-bool HorusWordPuzzle::loadPcx(const Common::String &name,
-		BitmapAssetFrame &frame) {
-	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		_library.createReadStreamForMember(name));
-	if (!stream || !decodePcxAsset(*stream, frame)) {
-		warning("Ripper: could not decode Horus word PCX '%s'",
-			name.c_str());
-		return false;
-	}
-	return true;
 }
 
 bool HorusWordPuzzle::loadAssets() {
@@ -240,8 +200,8 @@ bool HorusWordPuzzle::loadAssets() {
 			kLibraryName);
 		return false;
 	}
-	if (!loadBitmap(kBackgroundName, _background) ||
-			!loadBitmap(kMaskName, _mask))
+	if (!_library.loadBitmap(kBackgroundName, _background) ||
+			!_library.loadBitmap(kMaskName, _mask))
 		return false;
 	if (_background.width != kRipperScreenWidth ||
 			_background.height != kRipperScreenHeight ||
@@ -255,9 +215,9 @@ bool HorusWordPuzzle::loadAssets() {
 	}
 
 	for (uint letter = 0; letter < kLetterCount; ++letter) {
-		if (!loadBitmap(Common::String::format("but%u", letter + 1),
+		if (!_library.loadBitmap(Common::String::format("but%u", letter + 1),
 				_buttons[letter]) ||
-				!loadPcx(Common::String::format("%c", 'a' + letter),
+				!_library.loadPcx(Common::String::format("%c", 'a' + letter),
 				_letters[letter]))
 			return false;
 	}
@@ -294,16 +254,6 @@ bool HorusWordPuzzle::loadAssets() {
 		_background.height, kLetterCount, kLetterCount, _mask.width,
 		_mask.height, _shading.size(), kAudioCueCount);
 	return true;
-}
-
-void HorusWordPuzzle::applyPalette() const {
-	Common::Array<byte> palette = _background.palette;
-	_engine->applySharedPalettePatch(palette.data(),
-		kRipperPaletteColorCount);
-	_engine->getSettings()->applyVideoPalette(palette.data(),
-		kRipperPaletteColorCount, true);
-	g_system->getPaletteManager()->setPalette(palette.data(), 0,
-		kRipperPaletteColorCount);
 }
 
 byte HorusWordPuzzle::blendPixel(byte source, byte destination,
@@ -377,7 +327,7 @@ void HorusWordPuzzle::render() const {
 	_debugHelper.draw(*this, pixels, screen->pitch);
 
 	g_system->unlockScreen();
-	applyPalette();
+	_engine->installScenePalette(_background.palette);
 	presentScreen();
 }
 
@@ -425,7 +375,7 @@ bool HorusWordPuzzle::playCue(uint cue, uint volume, bool loop) {
 		_library.createReadStreamForMember(kAudioNames[cue]);
 	const bool result = _engine->getMedia()->playSoundEffectStream(
 		stream, kAudioNames[cue], _audioHandles[cue], volume, loop);
-	debugC(result ? 3 : 2, kDebugPuzzles,
+	debugC(result ? 3 : 1, kDebugPuzzles,
 		"Ripper: Horus word audio cue=%u name='%s' volume=%u "
 		"loop=%d success=%d", cue, kAudioNames[cue], volume, loop,
 		result);
@@ -568,8 +518,6 @@ bool HorusWordPuzzle::stepAnimation(uint32 now) {
 }
 
 HorusWordPuzzle::Result HorusWordPuzzle::run(uint completionFlag) {
-	// DispatchSceneEntryAction at 0x36892 routes action 20 to
-	// RunHorusWordPuzzleScene at 0x3f976 with the completion flag in EAX.
 	if (!_incomingDisplay.capture())
 		return kLoadFailed;
 
@@ -599,14 +547,11 @@ HorusWordPuzzle::Result HorusWordPuzzle::run(uint completionFlag) {
 	_engine->getCursor()->dispatchSelectionIndexChange(kDefaultCursor);
 	render();
 	debugC(1, kDebugPuzzles,
-		"Ripper: entered Horus word puzzle function="
-		"RunHorusWordPuzzleScene@0x3f976 milestone=%u library='%s' "
+		"Ripper: entered Horus word puzzle "
+		"milestone=%u library='%s' "
 		"controls=%u slots=%u help=0x%x puzzleHelp=%d",
 		completionFlag, kLibraryName, kLetterCount, kWordLength,
 		kHelpSelectionTable, _engine->isPuzzleHelpEnabled());
-	debugC(3, kDebugPuzzles,
-		"Ripper: Horus word retail target='%s' controls=0x672..0x68b",
-		kTargetWord);
 
 	Result result = kExited;
 	bool active = true;
@@ -675,7 +620,7 @@ HorusWordPuzzle::Result HorusWordPuzzle::run(uint completionFlag) {
 	_incomingDisplay.restore();
 	_engine->getInput()->drainKeys();
 	_engine->getInput()->discardMouseTransitions();
-	debugC(result == kLoadFailed ? 2 : 1, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: left Horus word puzzle result=%d milestone=%u "
 		"milestoneSet=%d word='%s' exitRequested=%d quit=%d",
 		result, completionFlag,

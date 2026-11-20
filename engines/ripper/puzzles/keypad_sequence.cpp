@@ -1,6 +1,8 @@
 /* ScummVM - Graphic Adventure Engine
  *
- * ScummVM is the legal property of their respective copyright holders.
+ * ScummVM is the legal property of its developers, whose names
+ * are too numerous to list here. Please refer to the COPYRIGHT
+ * file distributed with this source distribution.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -9,29 +11,28 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/keypad_sequence.h"
 
 #include "common/debug.h"
-#include "common/ptr.h"
-#include "common/stream.h"
 #include "common/system.h"
 #include "graphics/surface.h"
 
 #include "ripper/cursor.h"
 #include "ripper/detection.h"
 #include "ripper/input.h"
-#include "ripper/media.h"
+#include "ripper/media/media.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -52,8 +53,6 @@ static const uint kDosTickMillis = 55;
 
 static const int kMediaX = 100;
 static const int kCodeX = 142;
-// RunKeypadSequencePuzzleScene at 0x3bd30 loads ECX=0x8e and
-// EBX=g_presentationViewportTopY+0x109 before initializing control 0x672.
 static const int kCodeY = 265 + kSceneOriginY;
 static const int kBlinkX = 126;
 static const int kBlinkY = 213 + kSceneOriginY;
@@ -62,7 +61,6 @@ static const int kSlotX[kSequenceLength] = {
 	169, 181, 193, 205, 217, 229, 241, 253, 265
 };
 
-// g_astKeypadButtonPositions at 0x84b8e stores scene-space Y/X pairs.
 static const Common::Point kKeyPositions[kKeyCount] = {
 	Common::Point(138,  38 + kSceneOriginY),
 	Common::Point(188,  37 + kSceneOriginY),
@@ -105,15 +103,11 @@ KeypadSequencePuzzle::KeypadSequencePuzzle(RipperEngine *engine) :
 
 bool KeypadSequencePuzzle::loadFrame(const Common::String &path,
 		BitmapAssetFrame &frame) {
-	Common::ScopedPtr<Common::SeekableReadStream> stream(
-		_engine->getResources()->createReadStreamForPath(path));
-	BitmapAssetSequence sequence;
-	if (!stream || !decodeBitmapAssetSequence(*stream, sequence) ||
-			sequence.frames.empty()) {
+	if (!_engine->getResources()->loadBitmapSequenceFirstFrame(path, frame,
+			ResourceManager::kSourceConfiguredPath)) {
 		warning("Ripper: could not decode keypad bitmap '%s'", path.c_str());
 		return false;
 	}
-	frame = Common::move(sequence.frames.front());
 	return true;
 }
 
@@ -146,15 +140,16 @@ bool KeypadSequencePuzzle::loadAssets() {
 }
 
 bool KeypadSequencePuzzle::captureEntryDisplay() {
-	// RIPPER.LE clears an off-screen page at 0x3bd64. Clearing ScummVM's one
-	// framebuffer here would erase the retained JB_DOOR frame.
+	// Clearing ScummVM's single framebuffer would erase the retained JB_DOOR frame.
 	return _baseDisplay.capture();
 }
 
 bool KeypadSequencePuzzle::openKeypad() {
 	_engine->getCursor()->setVisible(false);
-	if (!_engine->getMedia()->playScene(kOpenMedia, kMediaX, 0, false,
-			false, false))
+	ScenePlaybackOptions options;
+	options.x = kMediaX;
+	options.y = 0;
+	if (!_engine->getMedia()->playScene(kOpenMedia, options))
 		return false;
 	if (!_baseDisplay.capture())
 		return false;
@@ -176,10 +171,12 @@ bool KeypadSequencePuzzle::openKeypad() {
 
 bool KeypadSequencePuzzle::closeKeypad() {
 	_engine->getCursor()->setVisible(false);
-	const bool result = _engine->getMedia()->playScene(kCloseMedia, kMediaX, 0,
-		false, false, false);
+	ScenePlaybackOptions options;
+	options.x = kMediaX;
+	options.y = 0;
+	const bool result = _engine->getMedia()->playScene(kCloseMedia, options);
 	_engine->getInput()->discardMouseTransitions();
-	debugC(result ? 1 : 2, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: closed keypad sequence presentation media='%s' success=%d",
 		kCloseMedia, result);
 	return result;
@@ -187,19 +184,8 @@ bool KeypadSequencePuzzle::closeKeypad() {
 
 void KeypadSequencePuzzle::drawFrame(byte *screen, uint pitch,
 		const BitmapAssetFrame &frame, int x, int y) const {
-	for (uint sourceY = 0; sourceY < frame.height; ++sourceY) {
-		const int destinationY = y + sourceY;
-		if (destinationY < 0 || destinationY >= kRipperScreenHeight)
-			continue;
-		for (uint sourceX = 0; sourceX < frame.width; ++sourceX) {
-			const int destinationX = x + sourceX;
-			if (destinationX < 0 || destinationX >= kRipperScreenWidth)
-				continue;
-			const byte pixel = frame.pixels[sourceY * frame.width + sourceX];
-			if (pixel != frame.transparentColor)
-				screen[destinationY * pitch + destinationX] = pixel;
-		}
-	}
+	IndexedBitmapRenderer::drawBitmap(screen, pitch, frame, x, y,
+		Common::Rect(0, 0, kRipperScreenWidth, kRipperScreenHeight));
 }
 
 void KeypadSequencePuzzle::render() const {
@@ -416,8 +402,6 @@ void KeypadSequencePuzzle::stopAudio() {
 }
 
 KeypadSequencePuzzle::Result KeypadSequencePuzzle::run(uint completionFlag) {
-	// DispatchSceneEntryAction at 0x36892 maps action 34 to
-	// RunKeypadSequencePuzzleScene at 0x3bd30.
 	if (!loadAssets() || !captureEntryDisplay())
 		return kLoadFailed;
 
@@ -430,12 +414,9 @@ KeypadSequencePuzzle::Result KeypadSequencePuzzle::run(uint completionFlag) {
 	resetEntry();
 	render();
 	debugC(1, kDebugPuzzles,
-		"Ripper: entered keypad sequence puzzle function="
-		"RunKeypadSequencePuzzleScene@0x3bd30 milestone=%u "
+		"Ripper: entered keypad sequence puzzle milestone=%u "
 		"help=0x%x controls=12 sequenceLength=9",
 		completionFlag, kHelpSelectionTable);
-	debugC(3, kDebugPuzzles,
-		"Ripper: keypad sequence retail solution=450144286");
 
 	Result result = kExited;
 	bool active = true;
@@ -508,7 +489,7 @@ KeypadSequencePuzzle::Result KeypadSequencePuzzle::run(uint completionFlag) {
 	_engine->getCursor()->setVisible(true);
 	_engine->getInput()->drainKeys();
 	_engine->getInput()->discardMouseTransitions();
-	debugC(result == kLoadFailed ? 2 : 1, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: left keypad sequence puzzle result=%d milestone=%u "
 		"milestoneSet=%d opened=%d quit=%d",
 		result, completionFlag,

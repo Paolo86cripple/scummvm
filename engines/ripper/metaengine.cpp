@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "base/plugins.h"
@@ -57,6 +58,18 @@ static const ADExtraGuiOptionsMap gameGuiOptions[] = {
 			"ripper_subtitle_autoscroll",
 			false,
 			1,
+			0
+		}
+	},
+
+	{
+		GAMEOPTION_EASTER_EGG,
+		{
+			_s("Play easter egg video only"),
+			_s("Only display the video that plays when running the game using RIPER.BAT."),
+			"ripper_easter_egg",
+			false,
+			0,
 			0
 		}
 	},

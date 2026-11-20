@@ -11,11 +11,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include "ripper/puzzles/date_selection.h"
@@ -31,9 +32,9 @@
 #include "ripper/display.h"
 #include "ripper/input.h"
 #include "ripper/milestones.h"
-#include "ripper/modal_dialog.h"
+#include "ripper/modal/modal_dialog.h"
 #include "ripper/ripper.h"
-#include "ripper/toolbar.h"
+#include "ripper/ui/toolbar.h"
 
 namespace Ripper {
 
@@ -44,7 +45,6 @@ static const uint kDefaultCursor = 14;
 static const uint kHelpSelectionTable = 0x1b6;
 static const uint kMaximumDateLength = 0x16;
 static const uint kMediaLoopStartFrame = 10;
-static const uint kDosTickMillis = 55;
 static const uint kFeedbackStepCount = 17;
 static const uint kFirstDateFlag = 339;
 static const uint kSecondDateFlag = 340;
@@ -158,17 +158,6 @@ DateSelectionPuzzle::DateGroup DateSelectionPuzzle::matchDate(
 	}
 	day = 0;
 	return kInvalidDate;
-}
-
-bool DateSelectionPuzzle::waitTicks(uint ticks) {
-	const uint32 target = g_system->getMillis() + ticks * kDosTickMillis;
-	while (!_engine->shouldQuit() &&
-			(int32)(target - g_system->getMillis()) > 0) {
-		if (!serviceEngineEvents())
-			return false;
-		g_system->delayMillis(10);
-	}
-	return !_engine->shouldQuit();
 }
 
 bool DateSelectionPuzzle::drawFeedback() {
@@ -291,8 +280,6 @@ uint16 DateSelectionPuzzle::service(uint frame) {
 }
 
 DateSelectionPuzzle::Result DateSelectionPuzzle::run(uint completionFlag) {
-	// DispatchSceneEntryAction at 0x36892 maps action 17 to
-	// RunDateSelectionPuzzleScene at 0x3d5ed.
 	if (!loadAssets())
 		return kLoadFailed;
 
@@ -310,8 +297,7 @@ DateSelectionPuzzle::Result DateSelectionPuzzle::run(uint completionFlag) {
 		_result = kLoadFailed;
 
 	debugC(1, kDebugPuzzles,
-		"Ripper: entered date-selection puzzle function="
-		"RunDateSelectionPuzzleScene@0x3d5ed milestone=%u help=0x%x "
+		"Ripper: entered date-selection puzzle milestone=%u help=0x%x "
 		"progressFlags=%u,%u,%u maxLength=%u",
 		completionFlag, kHelpSelectionTable, kFirstDateFlag,
 		kSecondDateFlag, kRemainingDatesFlag, kMaximumDateLength);
@@ -359,7 +345,7 @@ DateSelectionPuzzle::Result DateSelectionPuzzle::run(uint completionFlag) {
 	_engine->getCursor()->setVisible(true);
 	_engine->getInput()->drainKeys();
 	_engine->getInput()->discardMouseTransitions();
-	debugC(_result == kLoadFailed ? 2 : 1, kDebugPuzzles,
+	debugC(1, kDebugPuzzles,
 		"Ripper: left date-selection puzzle result=%d milestone=%u milestoneSet=%d "
 		"progress=%d,%d,%d quit=%d",
 		_result, completionFlag,
