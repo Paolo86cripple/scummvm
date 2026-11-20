@@ -8,6 +8,7 @@ MODULE_OBJS := \
 	metaengine.o \
 	music.o \
 	pmvplayer.o \
+	redreader.o \
 	resource.o \
 	screen.o \
 	screenfx.o \

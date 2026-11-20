@@ -356,8 +356,8 @@ void IgorEngine::startIgorDialogue() {
 	}
 	DialogueText text = *dt;
 	// Empty lines reduce the displayed prefix without changing the queued record.
-	for (int i = dt->count - 1; i >= 0; --i) {
-		if (_globalDialogueTexts[dt->num + i][0] == '\0') {
+	for (int line = dt->num + dt->count - 1; line >= dt->num; --line) {
+		if (_globalDialogueTexts[line][0] == '\0') {
 			--text.count;
 		}
 	}
@@ -573,7 +573,7 @@ void IgorEngine::handleDialogue(int x, int y, int r, int g, int b, bool restoreU
 				dialogueReplyToQuestion(x, y, r, g, b, code);
 			}
 		}
-		if ((code >= 1 && code <= 99) || (getPart() == 15 && code == 1)) {
+		if ((code >= 1 && code <= 99) || (getPart() == 15 && code == 1)) { //-V560
 			_gameState.dialogueData[offset] = 0;
 			if (getPart() == 21 && (code == 60 || code == 70 || code == 80) && _dialogueInfo[0] == 1) {
 				_gameState.dialogueData[offset + 2] = 4;

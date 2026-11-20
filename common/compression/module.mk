@@ -7,7 +7,6 @@ MODULE_OBJS := \
 	gzio.o \
 	installshield_cab.o \
 	installshieldv3_archive.o \
-	kd_red.o \
 	packice.o \
 	powerpacker.o \
 	rnc_deco.o \

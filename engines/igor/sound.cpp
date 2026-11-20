@@ -50,7 +50,7 @@ void IgorEngine::syncSoundSettings() {
 	_gameState.talkMode = speechMute ? kTalkModeTextOnly
 		: (ConfMan.getBool("subtitles") ? kTalkModeSpeechAndText : kTalkModeSpeechOnly);
 
-	if (speechMute && (_gameState.talkSpeed < 1 || _gameState.talkSpeed > 5))
+	if (speechMute && (_gameState.talkSpeed < 1 || _gameState.talkSpeed > 5)) //-V1051
 		_gameState.talkSpeed = 3;
 	if (sfxMute)
 		_mixer->stopHandle(_sfxHandle);
@@ -247,7 +247,10 @@ void IgorEngine::playSound(int num, int type) {
 		if (_mixer->isSoundHandleActive(_sfxHandle)) {
 			return;
 		}
-		assert(num >= 0 && num < _soundOffsetsCount);
+		if (num < 0 || num >= _soundOffsetsCount) {
+			warning("playSound: invalid sound id %d", num + 1);
+			return;
+		}
 		soundOffset = _soundOffsets[num];
 		soundType = Audio::Mixer::kSFXSoundType;
 		soundHandle = &_sfxHandle;
@@ -260,7 +263,10 @@ void IgorEngine::playSound(int num, int type) {
 			return;
 		}
 		num += 101;
-		assert(num >= 0 && num < _soundOffsetsCount);
+		if (num < 0 || num >= _soundOffsetsCount) {
+			warning("playSound: invalid speech id %d", num - 101);
+			return;
+		}
 		soundOffset = _soundOffsets[num];
 		soundType = Audio::Mixer::kSpeechSoundType;
 		soundHandle = &_speechHandle;

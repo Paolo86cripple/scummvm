@@ -243,6 +243,7 @@ private:
 	int _previousMusic;
 
 	Common::File _ovlFile;
+	Common::File _tblFile;
 	Common::File _sndFile;
 
 	Audio::SoundHandle _sfxHandle;
@@ -259,6 +260,7 @@ private:
 	Graphics::ManagedSurface _screenTempLayerSurface; // 100x100 scratch block
 	Graphics::ManagedSurface _inventoryPanelSurface; // two panels (320x30 each)
 	Graphics::ManagedSurface _inventoryImagesSurface;
+	Graphics::ManagedSurface _inventoryPanelOriginalSurface;
 	Graphics::ManagedSurface _verbsPanelSurface;
 	Graphics::ManagedSurface _facingIgorFramesSurface[4]; // 13500 bytes each: Igor sprite frames, one per facing direction
 	Graphics::ManagedSurface _igorHeadFramesSurface; // 3696 bytes: Igor head close-up frames
@@ -274,6 +276,8 @@ private:
 	uint8 *_animFramesBuffer;
 	uint8 *_inventoryPanelBuffer;
 	uint8 *_inventoryImagesBuffer;
+	uint8 *_inventoryPanelOriginal; // untouched panel, drawInventory() works on a copy
+	int _inventoryPanelSize;
 	uint8 *_verbsPanelBuffer;
 	int _verbsPanelSize;
 	int _screenVGAVOffset;
@@ -463,6 +467,7 @@ private:
 	int getTalkMode() const;
 	int prepareDialoguePlayback(const DialogueText &text);
 	void loadIgorFrames();
+	void loadInventoryResources();
 	void loadIgorBeachFrames();
 
 	void ADD_DIALOGUE_TEXT(int num, int count, int sound = kNoSpeechSound);
@@ -1467,6 +1472,8 @@ private:
 	int lookupScale(int xOffset, int yOffset, int h) const;
 	void lookupScale(int curX, int curY, uint8 &scale, uint8 &xScale, uint8 &yScale) const;
 
+	void advanceWalkDataLastIndex();
+	void retreatWalkDataLastIndex();
 	void buildWalkPathSimple(int srcX, int srcY, int dstX, int dstY);
 	void buildWalkPathArea(int srcX, int srcY, int dstX, int dstY);
 	int getVerticalStepsCount(int minX, int minY, int maxX, int maxY);

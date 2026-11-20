@@ -197,6 +197,24 @@ void IgorEngine::moveIgor(int pos, int frame) {
 		screenIgorDrawOffset += 320;
 	}
 }
+void IgorEngine::advanceWalkDataLastIndex() {
+	// the path must never grow past the walk table: keep overwriting the final entry instead
+	if (_walkDataLastIndex + 1 >= ARRAYSIZE(_walkData)) {
+		warning("Walk path too long, truncating");
+		return;
+	}
+	++_walkDataLastIndex;
+}
+
+void IgorEngine::retreatWalkDataLastIndex() {
+	// the index is unsigned: never let it wrap below the first walk entry
+	if (_walkDataLastIndex == 0) {
+		warning("Walk path index already at the first entry");
+		return;
+	}
+	--_walkDataLastIndex;
+}
+
 void IgorEngine::buildWalkPathSimple(int srcX, int srcY, int dstX, int dstY) {
 	debugC(9, kDebugWalk, "IgorEngine::buildWalkPathSimple(%d, %d, %d, %d)", srcX, srcY, dstX, dstY);
 	if (srcX != dstX || srcY != dstY) {
@@ -372,7 +390,7 @@ void IgorEngine::buildWalkPathAreaUpDirection(int srcX, int srcY, int dstX, int 
 		_walkData[_walkDataLastIndex] = _walkData[_walkDataLastIndex - 1];
 		_walkData[_walkDataLastIndex].posNum = (dstX > srcX) ? kFacingPositionRight : kFacingPositionLeft;
 		_walkData[_walkDataLastIndex].frameNum = 5;
-		++_walkDataLastIndex;
+		advanceWalkDataLastIndex();
 	} else {
 		_walkCurrentPos = 1;
 	}
@@ -419,7 +437,7 @@ void IgorEngine::buildWalkPathAreaUpDirection(int srcX, int srcY, int dstX, int 
 						wd->dxPos = _walkData[_walkDataLastIndex - 1].x - wd->x;
 					}
 				}
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 				vStepCur += vStepDist;
 			}
 		} else {
@@ -427,7 +445,7 @@ void IgorEngine::buildWalkPathAreaUpDirection(int srcX, int srcY, int dstX, int 
 				_walkData[_walkDataLastIndex] = _walkData[_walkDataLastIndex - 1];
 				_walkData[_walkDataLastIndex].posNum = 1;
 				_walkData[_walkDataLastIndex].frameNum = 1;
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 			}
 		}
 		lookupScale(dstX, dstY, scale, xScale, yScale);
@@ -457,7 +475,7 @@ void IgorEngine::buildWalkPathAreaUpDirection(int srcX, int srcY, int dstX, int 
 				wd->dxPos = curX - dstX;
 			}
 		}
-		++_walkDataLastIndex;
+		advanceWalkDataLastIndex();
 	} else {
 		int vStepsCount = getVerticalStepsCount(dstX, dstY, srcX, srcY);
 		if (vStepsCount > 0) {
@@ -494,7 +512,7 @@ void IgorEngine::buildWalkPathAreaUpDirection(int srcX, int srcY, int dstX, int 
 						wd->dxPos = wd->x - _walkData[_walkDataLastIndex - 1].x;
 					}
 				}
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 				vStepCur += vStepDist;
 			}
 		} else {
@@ -502,7 +520,7 @@ void IgorEngine::buildWalkPathAreaUpDirection(int srcX, int srcY, int dstX, int 
 				_walkData[_walkDataLastIndex] = _walkData[_walkDataLastIndex - 1];
 				_walkData[_walkDataLastIndex].posNum = 1;
 				_walkData[_walkDataLastIndex].frameNum = 1;
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 			}
 		}
 		lookupScale(dstX, dstY, scale, xScale, yScale);
@@ -534,7 +552,7 @@ void IgorEngine::buildWalkPathAreaUpDirection(int srcX, int srcY, int dstX, int 
 				wd->dxPos = dstX - curX;
 			}
 		}
-		++_walkDataLastIndex;
+		advanceWalkDataLastIndex();
 	}
 }
 
@@ -545,7 +563,7 @@ void IgorEngine::buildWalkPathAreaDownDirection(int srcX, int srcY, int dstX, in
 		_walkData[_walkDataLastIndex] = _walkData[_walkDataLastIndex - 1];
 		_walkData[_walkDataLastIndex].posNum = (srcX > dstX) ? kFacingPositionLeft : kFacingPositionRight;
 		_walkData[_walkDataLastIndex].frameNum = 1;
-		++_walkDataLastIndex;
+		advanceWalkDataLastIndex();
 	} else {
 		_walkCurrentPos = 3;
 	}
@@ -592,7 +610,7 @@ void IgorEngine::buildWalkPathAreaDownDirection(int srcX, int srcY, int dstX, in
 						wd->dxPos = _walkData[_walkDataLastIndex - 1].x - wd->x;
 					}
 				}
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 				vStepCur += vStepDist;
 			}
 		} else {
@@ -600,7 +618,7 @@ void IgorEngine::buildWalkPathAreaDownDirection(int srcX, int srcY, int dstX, in
 				_walkData[_walkDataLastIndex] = _walkData[_walkDataLastIndex - 1];
 				_walkData[_walkDataLastIndex].posNum = 3;
 				_walkData[_walkDataLastIndex].frameNum = 1;
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 			}
 		}
 		lookupScale(dstX, dstY, scale, xScale, yScale);
@@ -630,7 +648,7 @@ void IgorEngine::buildWalkPathAreaDownDirection(int srcX, int srcY, int dstX, in
 				wd->dxPos = curX - dstX;
 			}
 		}
-		++_walkDataLastIndex;
+		advanceWalkDataLastIndex();
 	} else {
 		int vStepsCount = getVerticalStepsCount(srcX, srcY, dstX, dstY);
 		if (vStepsCount > 0) {
@@ -666,7 +684,7 @@ void IgorEngine::buildWalkPathAreaDownDirection(int srcX, int srcY, int dstX, in
 						wd->dxPos = wd->x - _walkData[_walkDataLastIndex - 1].x;
 					}
 				}
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 				vStepCur += vStepDist;
 			}
 		} else {
@@ -674,7 +692,7 @@ void IgorEngine::buildWalkPathAreaDownDirection(int srcX, int srcY, int dstX, in
 				_walkData[_walkDataLastIndex] = _walkData[_walkDataLastIndex - 1];
 				_walkData[_walkDataLastIndex].posNum = 3;
 				_walkData[_walkDataLastIndex].frameNum = 1;
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 			}
 		}
 		lookupScale(dstX, dstY, scale, xScale, yScale);
@@ -704,7 +722,7 @@ void IgorEngine::buildWalkPathAreaDownDirection(int srcX, int srcY, int dstX, in
 				wd->dxPos = dstX - curX;
 			}
 		}
-		++_walkDataLastIndex;
+		advanceWalkDataLastIndex();
 	}
 }
 
@@ -715,7 +733,7 @@ void IgorEngine::buildWalkPathAreaRightDirection(int srcX, int srcY, int dstX, i
 		_walkData[_walkDataLastIndex] = _walkData[_walkDataLastIndex - 1];
 		_walkData[_walkDataLastIndex].posNum = (srcY > dstY) ? kFacingPositionBack : kFacingPositionFront;
 		_walkData[_walkDataLastIndex].frameNum = 5;
-		++_walkDataLastIndex;
+		advanceWalkDataLastIndex();
 	} else {
 		_walkCurrentPos = kFacingPositionRight;
 	}
@@ -763,7 +781,7 @@ void IgorEngine::buildWalkPathAreaRightDirection(int srcX, int srcY, int dstX, i
 						wd->dxPos = xSkip;
 					}
 				}
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 				hStepCur += hStepDist;
 				WalkData::setNextFrame(kFacingPositionRight, _walkCurrentFrame);
 			}
@@ -772,7 +790,7 @@ void IgorEngine::buildWalkPathAreaRightDirection(int srcX, int srcY, int dstX, i
 				_walkData[_walkDataLastIndex] = _walkData[_walkDataLastIndex - 1];
 				_walkData[_walkDataLastIndex].posNum = 2;
 				_walkData[_walkDataLastIndex].frameNum = 1;
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 			}
 		}
 		wd = &_walkData[_walkDataLastIndex];
@@ -802,7 +820,7 @@ void IgorEngine::buildWalkPathAreaRightDirection(int srcX, int srcY, int dstX, i
 				wd->dxPos = dstX - curX;
 			}
 		}
-		++_walkDataLastIndex;
+		advanceWalkDataLastIndex();
 		WalkData::setNextFrame(kFacingPositionLeft, _walkCurrentFrame);
 	} else {
 		int hStepsCount = getHorizontalStepsCount(srcX, srcY, dstX, dstY);
@@ -843,7 +861,7 @@ void IgorEngine::buildWalkPathAreaRightDirection(int srcX, int srcY, int dstX, i
 						wd->dxPos = xSkip;
 					}
 				}
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 				hStepCur += hStepDist;
 				WalkData::setNextFrame(kFacingPositionRight, _walkCurrentFrame);
 			}
@@ -852,7 +870,7 @@ void IgorEngine::buildWalkPathAreaRightDirection(int srcX, int srcY, int dstX, i
 				_walkData[_walkDataLastIndex] = _walkData[_walkDataLastIndex - 1];
 				_walkData[_walkDataLastIndex].posNum = 2;
 				_walkData[_walkDataLastIndex].frameNum = 1;
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 			}
 		}
 		wd = &_walkData[_walkDataLastIndex];
@@ -882,7 +900,7 @@ void IgorEngine::buildWalkPathAreaRightDirection(int srcX, int srcY, int dstX, i
 				wd->dxPos = dstX - curX;
 			}
 		}
-		++_walkDataLastIndex;
+		advanceWalkDataLastIndex();
 		WalkData::setNextFrame(kFacingPositionRight, _walkCurrentFrame);
 	}
 }
@@ -894,7 +912,7 @@ void IgorEngine::buildWalkPathAreaLeftDirection(int srcX, int srcY, int dstX, in
 		_walkData[_walkDataLastIndex] = _walkData[_walkDataLastIndex - 1];
 		_walkData[_walkDataLastIndex].posNum = (srcY > dstY) ? kFacingPositionBack : kFacingPositionFront;
 		_walkData[_walkDataLastIndex].frameNum = 5;
-		++_walkDataLastIndex;
+		advanceWalkDataLastIndex();
 	} else {
 		_walkCurrentPos = kFacingPositionLeft;
 	}
@@ -942,7 +960,7 @@ void IgorEngine::buildWalkPathAreaLeftDirection(int srcX, int srcY, int dstX, in
 						wd->dxPos = xSkip;
 					}
 				}
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 				hStepCur += hStepDist;
 				WalkData::setNextFrame(kFacingPositionLeft, _walkCurrentFrame);
 			}
@@ -951,7 +969,7 @@ void IgorEngine::buildWalkPathAreaLeftDirection(int srcX, int srcY, int dstX, in
 				_walkData[_walkDataLastIndex] = _walkData[_walkDataLastIndex - 1];
 				_walkData[_walkDataLastIndex].posNum = 4;
 				_walkData[_walkDataLastIndex].frameNum = 1;
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 			}
 		}
 		wd = &_walkData[_walkDataLastIndex];
@@ -981,7 +999,7 @@ void IgorEngine::buildWalkPathAreaLeftDirection(int srcX, int srcY, int dstX, in
 				wd->dxPos = curX - dstX;
 			}
 		}
-		++_walkDataLastIndex;
+		advanceWalkDataLastIndex();
 		WalkData::setNextFrame(kFacingPositionLeft, _walkCurrentFrame);
 	} else {
 		int hStepsCount = getHorizontalStepsCount(dstX, srcY, srcX, dstY);
@@ -1022,7 +1040,7 @@ void IgorEngine::buildWalkPathAreaLeftDirection(int srcX, int srcY, int dstX, in
 						wd->dxPos = xSkip;
 					}
 				}
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 				hStepCur += hStepDist;
 				WalkData::setNextFrame(kFacingPositionLeft, _walkCurrentFrame);
 			}
@@ -1031,7 +1049,7 @@ void IgorEngine::buildWalkPathAreaLeftDirection(int srcX, int srcY, int dstX, in
 				_walkData[_walkDataLastIndex] = _walkData[_walkDataLastIndex - 1];
 				_walkData[_walkDataLastIndex].posNum = 4;
 				_walkData[_walkDataLastIndex].frameNum = 1;
-				++_walkDataLastIndex;
+				advanceWalkDataLastIndex();
 			}
 		}
 		wd = &_walkData[_walkDataLastIndex];
@@ -1061,7 +1079,7 @@ void IgorEngine::buildWalkPathAreaLeftDirection(int srcX, int srcY, int dstX, in
 				wd->dxPos = curX - dstX;
 			}
 		}
-		++_walkDataLastIndex;
+		advanceWalkDataLastIndex();
 		WalkData::setNextFrame(kFacingPositionLeft, _walkCurrentFrame);
 	}
 }
@@ -1236,7 +1254,7 @@ void IgorEngine::fixWalkPosition(int *x, int *y) {
 		}
 	}
 	// skip areas from top to bottom
-	while (_roomObjectAreasTable[_screenLayer2[yPos * 320 + xPos]].area == 0 && yPos < _roomWalkBounds.y2) {
+	while (yPos < _roomWalkBounds.y2 && _roomObjectAreasTable[_screenLayer2[yPos * 320 + xPos]].area == 0) {
 		++yPos;
 	}
 	if (getPart() == 17) {
@@ -1247,7 +1265,7 @@ void IgorEngine::fixWalkPosition(int *x, int *y) {
 		}
 	}
 	// skip areas from bottom to top
-	while (_roomObjectAreasTable[_screenLayer2[yPos * 320 + xPos]].area == 0 && yPos > _roomWalkBounds.y1) {
+	while (yPos > _roomWalkBounds.y1 && _roomObjectAreasTable[_screenLayer2[yPos * 320 + xPos]].area == 0) {
 		--yPos;
 	}
 	*x = xPos;

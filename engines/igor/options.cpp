@@ -845,7 +845,7 @@ bool IgorEngine::saveLoadEditName(const SaveLoadLayout &l, const uint8 *button, 
 				_eventQuitGame = true;
 			} else if (ev.type == Common::EVENT_KEYDOWN) {
 				int key = saveLoadKeyToCode(ev.kbd);
-				if (key >= 0 && key < kSaveLoadNameCharsSize * 8 && (allowed[key >> 3] & (1 << (key & 7))) && !full && index <= kSaveLoadNameLength) {
+				if (key >= 0 && key < kSaveLoadNameCharsSize * 8 && (allowed[key >> 3] & (1 << (key & 7))) && !full && index <= kSaveLoadNameLength) { //-V560
 					if (key == 0x27 && l.apostropheGlyph) {
 						key = 0x25;
 					}
@@ -919,18 +919,21 @@ bool IgorEngine::originalSaveLoadPage(bool save) {
 	}
 	if (save && slots.size() < maxEntries) {
 		// the new savegame uses the first free slot
+		const int maxSlot = (int)maxEntries - 1;
 		int freeSlot = 0;
-		for (;;) {
+		for (; freeSlot <= maxSlot; ++freeSlot) {
 			bool used = (freeSlot == autosaveSlot);
 			for (uint i = 0; i < slots.size() && !used; ++i) {
 				used = (slots[i] == freeSlot);
 			}
 			if (!used)
 				break;
-			++freeSlot;
 		}
-		slots.push_back(freeSlot);
-		names.push_back(Common::String(kSaveLoadNameLength, ' '));
+		// every valid slot may already be taken (e.g. by the autosave)
+		if (freeSlot <= maxSlot) {
+			slots.push_back(freeSlot);
+			names.push_back(Common::String(kSaveLoadNameLength, ' '));
+		}
 	}
 	if (slots.empty()) {
 		saveLoadDrawTitle(l, kOptionsNoSavedGames, l.noSavedGamesX, kSaveLoadNoSavedGamesY, l.colorNoGames);
@@ -942,7 +945,7 @@ bool IgorEngine::originalSaveLoadPage(bool save) {
 	uint8 *button = loadData(IMG_OptionsButton);
 	bool done = false;
 	int top = 1;
-	while (!done && !_eventQuitGame && _currentPart != kInvalidPart) {
+	while (!_eventQuitGame && _currentPart != kInvalidPart) {
 		saveLoadFillRows(l, button, kSaveLoadCaptionArtRow, l.captionFirstY, l.captionLastY);
 		saveLoadDrawTitle(l, save ? kOptionsSaveTitle : kOptionsLoadTitle, save ? l.saveTitleX : l.loadTitleX, l.captionTextY, l.colorTitle);
 		int row;
@@ -1083,7 +1086,9 @@ void IgorEngine::handleOptionsMenu() {
 	memcpy(_paletteBuffer, _currentPalette, 208 * 3);
 	memcpy(_currentPalette + 208 * 3, _paletteBuffer + 208 * 3, 48 * 3);
 	setPaletteRange(208, 255);
-	if (!_gameState.dialogueStarted)
+	// The logo slideshow uses the whole screen, so the dialogue text strip must stay.
+	const bool splashScreen = _currentPart >= 900 && _currentPart <= 904;
+	if (!_gameState.dialogueStarted && !splashScreen)
 		fillScreenRows(144, 11, 0);
 	_system->copyRectToScreen(_screenVGA, 320, 0, 0, 320, 200);
 	for (int m = 3; m <= kFadeSteps; m += 3) {

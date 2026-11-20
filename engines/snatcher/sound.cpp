@@ -132,12 +132,18 @@ void SoundEngine::setSoundEffectVolume(int vol) {
 void SoundEngine::loadState(Common::SeekableReadStream *in, SaveFlags flags) {
 	if (in->readUint32BE() != MKTAG('S', 'N', 'A', 'T'))
 		error("%s(): Save file invalid or corrupt", __FUNCTION__);
+
+	if (!(flags & kFlagTempData)) {
+		_dev->pcmSendCommand(0xFF, 0);
+		_dev->fmSendCommand(0xFF, 0);
+	}
+
 	_pcmStatus.resourceId = _pcmStatus.resourceId2 = in->readSint16BE();
 	_pcmStatus.blocked = in->readByte();
 	_fmStatus.music = in->readByte();
 	_fmStatus.reduceVol2 = in->readByte();
 
-	if (flags & (kSaveFlagsScriptedSave | kSaveFlagsTempData)) {
+	if (flags & (kFlagScriptedSave | kFlagTempData)) {
 		_cdaRestoreTrack = -1;
 		return;
 	}
@@ -153,7 +159,7 @@ void SoundEngine::saveState(Common::SeekableWriteStream *out, SaveFlags flags) {
 	out->writeByte(_fmStatus.music);
 	out->writeByte(_fmStatus.reduceVol2);
 
-	if (flags & (kSaveFlagsScriptedSave | kSaveFlagsTempData))
+	if (flags & (kFlagScriptedSave | kFlagTempData))
 		return;
 
 	int16 cdaTrack = _dev->cdaGetCurTrack();

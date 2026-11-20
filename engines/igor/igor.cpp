@@ -50,6 +50,7 @@ IgorEngine::IgorEngine(OSystem *syst, const IgorGameDescription *gameDesc) : Eng
 	_screenTempLayerSurface.create(100, 100, clut8);
 	_inventoryPanelSurface.create(320, 60, clut8);
 	_inventoryImagesSurface.create(320, 150, clut8);
+	_inventoryPanelOriginalSurface.create(320, 60, clut8);
 	_verbsPanelSurface.create(320, 12, clut8);
 	_screenVGA = (uint8 *)_screenVGASurface.getPixels();
 	_screenLayer1 = (uint8 *)_screenLayer1Surface.getPixels();
@@ -58,6 +59,8 @@ IgorEngine::IgorEngine(OSystem *syst, const IgorGameDescription *gameDesc) : Eng
 	_screenTempLayer = (uint8 *)_screenTempLayerSurface.getPixels();
 	_inventoryPanelBuffer = (uint8 *)_inventoryPanelSurface.getPixels();
 	_inventoryImagesBuffer = (uint8 *)_inventoryImagesSurface.getPixels();
+	_inventoryPanelOriginal = (uint8 *)_inventoryPanelOriginalSurface.getPixels();
+	_inventoryPanelSize = 0;
 	_verbsPanelBuffer = (uint8 *)_verbsPanelSurface.getPixels();
 	for (int i = 0; i < 4; i++) {
 		_facingIgorFramesSurface[i].create(13500, 1, clut8);
@@ -91,6 +94,10 @@ IgorEngine::IgorEngine(OSystem *syst, const IgorGameDescription *gameDesc) : Eng
 	// _currentPart = 850;
 	_midiPlayer = nullptr;
 	_musicData = nullptr;
+	_resourceEntriesCount = 0;
+	_resourceEntries = nullptr;
+	_soundOffsetsCount = 0;
+	_soundOffsets = nullptr;
 
 	_fastMode = 1;
 
@@ -104,6 +111,19 @@ IgorEngine::IgorEngine(OSystem *syst, const IgorGameDescription *gameDesc) : Eng
 	_part85CurrentTalkingActor = 0;
 	_part85WaterSoundPlaying = false;
 	_partMargaretRoomAnimCounter = 0;
+
+	// members not covered by restart(), which only runs once the engine starts
+	_optionsControlRow = 0;
+	_eventQuitGame = false;
+	_scrollInventoryStartY = _scrollInventoryEndY = _scrollInventoryDy = 0;
+	_part32DeclinationIndex = _part32AscensionIndex = 0;
+	_part32LineRow = _part32Blink = _part32Result = 0;
+	_part32Done = false;
+	memset(&_roomWalkBounds, 0, sizeof(_roomWalkBounds));
+	memset(&_roomDataOffsets, 0, sizeof(_roomDataOffsets));
+
+	// give every remaining member its initial value before the engine runs
+	restart();
 }
 
 IgorEngine::~IgorEngine() {
@@ -206,6 +226,7 @@ void IgorEngine::restart() {
 	_executeMainAction = 0;
 	_executeRoomAction = 0;
 	_previousMusic = 0;
+	free(_musicData);
 	_musicData = 0;
 	_scrollInventory = false;
 	_roomCursorOn = true;
@@ -217,8 +238,10 @@ void IgorEngine::restart() {
 	_updateRoomBackground = 0;
 
 	_resourceEntriesCount = 0;
+	free(_resourceEntries);
 	_resourceEntries = 0;
 	_soundOffsetsCount = 0;
+	free(_soundOffsets);
 	_soundOffsets = 0;
 
 	_demoActionsCounter = 0;
@@ -252,6 +275,7 @@ Common::Error IgorEngine::run() {
 		_midiPlayer = new MidiPlayer(_mixer);
 	loadMainTexts();
 	loadIgorFrames();
+	loadInventoryResources();
 
 	_gameState.talkMode = kTalkModeSpeechAndText;
 	_gameState.talkSpeed = 3;
@@ -266,6 +290,7 @@ Common::Error IgorEngine::run() {
 
 	partMain();
 	_ovlFile.close();
+	_tblFile.close();
 	_sndFile.close();
 
 	return Common::kNoError;
@@ -516,14 +541,16 @@ void IgorEngine::handlePause() {
 	drawActionSentence(getString(STR_GamePaused), 0xFB);
 	do {
 		waitForTimer();
-	} while (!_inputVars[kInputPause]);
+	} while (!_inputVars[kInputPause] && !_eventQuitGame);
+	if (_eventQuitGame)
+		return; // keep the escape flag set by the quit event
 	memset(_inputVars, 0, sizeof(_inputVars));
 }
 
 Common::Error IgorEngine::syncGame(Common::Serializer &s) {
 
-	// Walk data (100 entries)
-	for (int i = 0; i < 100; ++i) {
+	// Walk data
+	for (int i = 0; i < ARRAYSIZE(_walkData); ++i) {
 		s.skip(2);
 		s.syncAsSint16LE(_walkData[i].x);
 		s.syncAsSint16LE(_walkData[i].y);
@@ -607,7 +634,7 @@ Common::Error IgorEngine::syncGame(Common::Serializer &s) {
 	s.syncAsByte(_gameState.unk11);
 	s.syncAsByte(_gameState.dialogueStarted);
 	s.skip(1);
-	for (int i = 0; i < 500; ++i) {
+	for (int i = 0; i < ARRAYSIZE(_gameState.dialogueData); ++i) {
 		s.syncAsByte(_gameState.dialogueData[i]);
 	}
 	s.syncAsByte(_gameState.dialogueChoiceStart);
