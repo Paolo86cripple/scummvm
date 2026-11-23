@@ -30,31 +30,31 @@ namespace {
 
 // RESOURCE.B02; approach points and action IDs from the retail room at 0x444aa0.
 const RunawayHotspot kHotspots[] = {
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{1265, 546, 1, {301, 346}, {0, 1}}, // 1: Bathroom door.
-	{1075, 534, 7, {302, 303}, {0, 0}}, // 2: Gina.
-	{846, 453, 1, {304, 305}, {1, 1}}, // 3: Glass.
-	{858, 453, 1, {306, 307}, {1, 1}}, // 4: Package of pills.
-	{622, 457, 7, {308, 309}, {0, 1}}, // 5: Sheet.
-	{417, 444, 7, {310, 311}, {0, 0}}, // 6: Locker.
-	{417, 444, 7, {312, 313}, {0, 1}}, // 7: Gina's bag.
-	{265, 456, 7, {314, 332}, {1, 1}}, // 8: Window.
-	{690, 540, 1, {315, 316}, {1, 1}}, // 9: Gina's medical chart.
-	{453, 455, 1, {317, 318}, {1, 1}}, // 10: Chart.
-	{687, 448, 7, {319, 320}, {0, 1}}, // 11: Fake patient.
-	{459, 473, 7, {321, 322}, {0, 0}}, // 12: Fire sprinkler.
-	{846, 453, 7, {323, 324}, {0, 0}}, // 13: Buzzer.
-	{712, 445, 3, {323, 324}, {0, 0}}, // 14: Buzzer.
-	{265, 456, 7, {325, 326}, {0, 0}}, // 15: Radiator.
-	{713, 533, 1, {327, 328}, {0, 0}}, // 16: Poster.
-	{454, 455, 1, {329, 328}, {0, 0}}, // 17: Poster.
-	{1265, 546, 1, {330, 331}, {1, 0}}, // 18: Emergency exit map.
-	{404, 456, 1, {344, 345}, {0, 0}}, // 19: Bed.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{1265, 546, 1, {301, 346}, {0, 1}, {1324, 530}, 5}, // 1: Bathroom door.
+	{1075, 534, 7, {302, 303}, {0, 0}, {1040, 463}, 3, true}, // 2: Gina.
+	{846, 453, 1, {304, 305}, {1, 1}, {902, 421}}, // 3: Glass.
+	{858, 453, 1, {306, 307}, {1, 1}, {902, 421}}, // 4: Package of pills.
+	{622, 457, 7, {308, 309}, {0, 1}, {620, 436}}, // 5: Sheet.
+	{417, 444, 7, {310, 311}, {0, 0}, {401, 432}}, // 6: Locker.
+	{417, 444, 7, {312, 313}, {0, 1}, {401, 432}}, // 7: Gina's bag.
+	{265, 456, 7, {314, 332}, {1, 1}, {237, 438}}, // 8: Window.
+	{690, 540, 1, {315, 316}, {1, 1}, {748, 517}}, // 9: Gina's medical chart.
+	{453, 455, 1, {317, 318}, {1, 1}, {650, 420}}, // 10: Chart.
+	{687, 448, 7, {319, 320}, {0, 1}, {650, 420}}, // 11: Fake patient.
+	{459, 473, 7, {321, 322}, {0, 0}, {459, 473}}, // 12: Fire sprinkler.
+	{846, 453, 7, {323, 324}, {0, 0}, {982, 412}}, // 13: Buzzer.
+	{712, 445, 3, {323, 324}, {0, 0}, {666, 407}}, // 14: Buzzer.
+	{265, 456, 7, {325, 326}, {0, 0}, {237, 438}}, // 15: Radiator.
+	{713, 533, 1, {327, 328}, {0, 0}, {1046, 489}}, // 16: Poster.
+	{454, 455, 1, {329, 328}, {0, 0}, {696, 424}}, // 17: Poster.
+	{1265, 546, 1, {330, 331}, {1, 0}, {1324, 530}}, // 18: Emergency exit map.
+	{404, 456, 1, {344, 345}, {0, 0}, {650, 420}}, // 19: Bed.
 	// IDs 20-22 hold alternate bed/chart shapes and names in the original.
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{313, 532, 5, {351, 352}, {0, 0}}, // 23: Hallway door.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{313, 532, 5, {351, 352}, {-1, 0}, {40, 599}, 7}, // 23: Hallway door.
 };
 
 // Item IDs 1-19, then hotspot IDs in kHotspots order. Zero uses kItemActions.
@@ -130,70 +130,73 @@ const RunawaySequence::Command kGinaStory[] = {
 	{RunawaySequence::kOpen, 9},
 	{RunawaySequence::kMusic, 11, 255, 0},
 	{RunawaySequence::kPlay, 0, 28},
-	{RunawaySequence::kTalk, 83, 0, 1, 0},
+	{RunawaySequence::kTalk, 83, 0, 1, 0, 14},
 	{RunawaySequence::kTalk, 83, 1, 3, 0},
-	{RunawaySequence::kTalk, 83, 2, 1, 0},
+	{RunawaySequence::kTalk, 83, 2, 1, 0, 14},
 	{RunawaySequence::kTalk, 83, 3, 3, 0},
-	{RunawaySequence::kTalk, 83, 4, 1, 0},
-	{RunawaySequence::kTalk, 83, 5, 5, 0},
-	{RunawaySequence::kSpeech, 83, 6, 0},
+	{RunawaySequence::kTalk, 83, 4, 1, 0, 14},
+	{RunawaySequence::kTalk, 83, 5, 5, 0, 14},
+	{RunawaySequence::kSpeech, 83, 6, 0, 0, 14},
 	{RunawaySequence::kPlay, 65, 105, RunawaySequence::kIdleDuringSpeech},
 	{RunawaySequence::kMusic, 29, 255, 0},
 	{RunawaySequence::kPlay, 106, 214},
 	{RunawaySequence::kEffect, 25, 102, 1, 1},
-	{RunawaySequence::kTalk, 83, 7, 7, 0},
+	{RunawaySequence::kTalk, 83, 7, 7, 0, 13},
 	{RunawaySequence::kPlay, 222, 254},
 	{RunawaySequence::kMusic, 25, 255, 1},
-	{RunawaySequence::kTalk, 83, 8, 9, 0},
-	{RunawaySequence::kTalk, 83, 9, 11, 0},
-	{RunawaySequence::kTalk, 83, 10, 9, 0},
-	{RunawaySequence::kTalk, 83, 11, 11, 0},
+	{RunawaySequence::kTalk, 83, 8, 9, 0, 14},
+	{RunawaySequence::kTalk, 83, 9, 11, 0, 13},
+	{RunawaySequence::kTalk, 83, 10, 9, 0, 14},
+	{RunawaySequence::kTalk, 83, 11, 11, 0, 13},
 	{RunawaySequence::kStopEffects},
 	{RunawaySequence::kPlay, 1608, 1632},
-	{RunawaySequence::kSpeech, 83, 12, 0},
+	{RunawaySequence::kSpeech, 83, 12, 0, 0, 14},
 	{RunawaySequence::kPlay, 1633, 1687, RunawaySequence::kIdleDuringSpeech},
-	{RunawaySequence::kTalk, 83, 13, 5, 0},
+	{RunawaySequence::kTalk, 83, 13, 5, 0, 14},
 	{RunawaySequence::kMusic, 26, 255, 0},
 	{RunawaySequence::kTalk, 83, 14, 5, 1},
-	{RunawaySequence::kTalk, 83, 15, 5, 0},
-	{RunawaySequence::kSpeech, 83, 16, 0},
+	{RunawaySequence::kTalk, 83, 15, 5, 0, 14},
+	{RunawaySequence::kSpeech, 83, 16, 0, 0, 14},
 	{RunawaySequence::kPlay, 1632, 1687, RunawaySequence::kIdleDuringSpeech},
 	{RunawaySequence::kMusic, 27, 255, 1},
 	{RunawaySequence::kPlay, 1688, 1713},
-	{RunawaySequence::kTalk, 83, 17, 15, 0},
+	{RunawaySequence::kTalk, 83, 17, 15, 0, 36},
 	{RunawaySequence::kPlay, 302, 324},
-	{RunawaySequence::kTalk, 83, 18, 13, 0},
+	{RunawaySequence::kTalk, 83, 18, 13, 0, 36},
 	{RunawaySequence::kEffect, 22, 255, 0, 0},
 	{RunawaySequence::kPlay, 336, 350},
-	{RunawaySequence::kSpeech, 83, 19, 22},
+	{RunawaySequence::kSpeech, 83, 19, 19, 0, 27},
+	{RunawaySequence::kSpeech, 83, 20, 20, 0, 13},
+	{RunawaySequence::kSpeech, 83, 21, 21, 0, 22},
+	{RunawaySequence::kSpeech, 83, 22, 22, 0, 13},
 	{RunawaySequence::kPlay, 351, 990},
 	{RunawaySequence::kWaitSpeech},
-	{RunawaySequence::kTalk, 83, 23, 15, 0},
+	{RunawaySequence::kTalk, 83, 23, 15, 0, 36},
 	{RunawaySequence::kPlay, 1003, 1025},
-	{RunawaySequence::kTalk, 83, 24, 17, 0},
+	{RunawaySequence::kTalk, 83, 24, 17, 0, 37},
 	{RunawaySequence::kPlay, 1038, 1117},
-	{RunawaySequence::kTalk, 83, 25, 19, 0},
+	{RunawaySequence::kTalk, 83, 25, 19, 0, 27},
 	{RunawaySequence::kEffect, 23, 255, 0, 0},
 	{RunawaySequence::kPlay, 1129, 1146},
-	{RunawaySequence::kSpeech, 83, 26, 0},
+	{RunawaySequence::kSpeech, 83, 26, 0, 0, 22},
 	{RunawaySequence::kPlay, 1147, 1208},
 	{RunawaySequence::kWaitSpeech},
-	{RunawaySequence::kTalk, 83, 27, 21, 0},
-	{RunawaySequence::kTalk, 83, 28, 23, 0},
+	{RunawaySequence::kTalk, 83, 27, 21, 0, 22},
+	{RunawaySequence::kTalk, 83, 28, 23, 0, 27},
 	{RunawaySequence::kEffect, 24, 255, 0, 0},
 	{RunawaySequence::kPlay, 1232, 1270},
-	{RunawaySequence::kSpeech, 83, 29, 0},
+	{RunawaySequence::kSpeech, 83, 29, 0, 0, 14},
 	{RunawaySequence::kPlay, 1271, 1300},
-	{RunawaySequence::kSpeech, 83, 30, 0},
+	{RunawaySequence::kSpeech, 83, 30, 0, 0, 36},
 	{RunawaySequence::kMusic, 24, 255, 1},
 	{RunawaySequence::kPlay, 1301, 1360},
-	{RunawaySequence::kSpeech, 83, 31, 0},
+	{RunawaySequence::kSpeech, 83, 31, 0, 0, 14},
 	{RunawaySequence::kPlay, 1361, 1560},
 	{RunawaySequence::kMusic, 11, 255, 0},
-	{RunawaySequence::kSpeech, 83, 32, 0},
+	{RunawaySequence::kSpeech, 83, 32, 0, 0, 14},
 	{RunawaySequence::kPlay, 1561, 1590},
 	{RunawaySequence::kWaitSpeech},
-	{RunawaySequence::kTalk, 83, 33, 25, 0},
+	{RunawaySequence::kTalk, 83, 33, 25, 0, 14},
 	{RunawaySequence::kTalk, 83, 34, 27, 0},
 	{RunawaySequence::kEnd},
 };
@@ -226,13 +229,13 @@ const RunawaySequence::Command kHospitalAmbush[] = {
 	{RunawaySequence::kEffect, 11, 255, 0, 0},
 	{RunawaySequence::kPlay, 0, 204},
 	{RunawaySequence::kStopEffects},
-	{RunawaySequence::kTalk, 81, 0, 0, 0},
+	{RunawaySequence::kTalk, 81, 0, 0, 0, 27},
 	{RunawaySequence::kPlay, 204, 310},
 	{RunawaySequence::kEffect, 12, 255, 0, 0},
 	{RunawaySequence::kPlay, 311, 318},
 	{RunawaySequence::kDelay, 2000},
 	{RunawaySequence::kPlay, 318, 388},
-	{RunawaySequence::kTalk, 81, 1, 0, 0},
+	{RunawaySequence::kTalk, 81, 1, 0, 0, 27},
 	{RunawaySequence::kMusic, 22, 255, 0},
 	{RunawaySequence::kPlay, 388, 412},
 	{RunawaySequence::kEffect, 13, 255, 0, 0},
@@ -262,11 +265,11 @@ const RunawaySequence::Command kHospitalEscape[] = {
 	{RunawaySequence::kPlay, 119, 160},
 	{RunawaySequence::kSpeech, 82, 1, 0},
 	{RunawaySequence::kPlay, 161, 210},
-	{RunawaySequence::kSpeech, 82, 2, 0},
+	{RunawaySequence::kSpeech, 82, 2, 0, 0, 14},
 	{RunawaySequence::kPlay, 211, 248},
 	{RunawaySequence::kWaitSpeech},
 	{RunawaySequence::kMusic, 24, 255, 1},
-	{RunawaySequence::kSpeech, 82, 3, 5},
+	{RunawaySequence::kSpeech, 82, 3, 3, 0, 11}, {RunawaySequence::kSpeech, 82, 4, 4, 0, 14}, {RunawaySequence::kSpeech, 82, 5, 5, 0, 11},
 	{RunawaySequence::kPlay, 249, 649, RunawaySequence::kLoopDuringSpeech},
 	{RunawaySequence::kStopEffects},
 	{RunawaySequence::kEffect, 40, 255, 0, 0},
@@ -276,7 +279,7 @@ const RunawaySequence::Command kHospitalEscape[] = {
 	{RunawaySequence::kEffect, 30, 3, 1, 1},
 	{RunawaySequence::kEffect, 16, 255, 0, 0},
 	{RunawaySequence::kPlay, 0, 100},
-	{RunawaySequence::kSpeech, 80, 0, 0},
+	{RunawaySequence::kSpeech, 80, 0, 0, 0, 14},
 	{RunawaySequence::kSpeech, 80, 2, 0},
 	{RunawaySequence::kPlay, 101, 400},
 	{RunawaySequence::kEffect, 18, 51, 0, 0},
@@ -284,49 +287,52 @@ const RunawaySequence::Command kHospitalEscape[] = {
 	{RunawaySequence::kWaitSpeech},
 	{RunawaySequence::kPlay, 875, 932},
 	{RunawaySequence::kStopEffects},
-	{RunawaySequence::kTalk, 80, 3, 1, 0},
+	{RunawaySequence::kTalk, 80, 3, 1, 0, 14},
 	{RunawaySequence::kPlay, 820, 863},
 	{RunawaySequence::kTalk, 80, 4, 3, 0},
-	{RunawaySequence::kTalk, 80, 5, 1, 0},
+	{RunawaySequence::kTalk, 80, 5, 1, 0, 14},
 	{RunawaySequence::kTalk, 80, 6, 3, 0},
-	{RunawaySequence::kTalk, 80, 7, 1, 0},
+	{RunawaySequence::kTalk, 80, 7, 1, 0, 14},
 	{RunawaySequence::kEffect, 30, 3, 1, 1},
-	{RunawaySequence::kSpeech, 80, 8, 11},
+	{RunawaySequence::kSpeech, 80, 8, 8, 0, 11},
+	{RunawaySequence::kSpeech, 80, 9, 9, 0, 14},
+	{RunawaySequence::kSpeech, 80, 10, 10, 0, 11},
+	{RunawaySequence::kSpeech, 80, 11, 11, 0, 14},
 	{RunawaySequence::kPlay, 200, 719, RunawaySequence::kLoopDuringSpeech},
 	{RunawaySequence::kStopEffects},
 	{RunawaySequence::kTalk, 80, 12, 3, 0},
-	{RunawaySequence::kTalk, 80, 13, 3, 1},
+	{RunawaySequence::kTalk, 80, 13, 3, 1, 14},
 	{RunawaySequence::kEffect, 30, 3, 1, 1},
 	{RunawaySequence::kEffect, 17, 255, 0, 0},
-	{RunawaySequence::kSpeech, 80, 14, 0},
+	{RunawaySequence::kSpeech, 80, 14, 0, 0, 14},
 	{RunawaySequence::kPlay, 720, 819},
 	{RunawaySequence::kWaitSpeech},
 	{RunawaySequence::kStopEffects},
 	{RunawaySequence::kOpen, 7},
 	{RunawaySequence::kMusic, 31, 255, 1},
 	{RunawaySequence::kPlay, 0, 36},
-	{RunawaySequence::kTalk, 84, 1, 0, 0},
-	{RunawaySequence::kTalk, 84, 2, 0, 0},
-	{RunawaySequence::kTalk, 84, 3, 0, 0},
-	{RunawaySequence::kTalk, 84, 4, 0, 0},
-	{RunawaySequence::kTalk, 84, 5, 0, 0},
-	{RunawaySequence::kTalk, 84, 6, 0, 0},
-	{RunawaySequence::kTalk, 84, 7, 0, 0},
+	{RunawaySequence::kTalk, 84, 1, 0, 0, 36},
+	{RunawaySequence::kTalk, 84, 2, 0, 0, 27},
+	{RunawaySequence::kTalk, 84, 3, 0, 0, 36},
+	{RunawaySequence::kTalk, 84, 4, 0, 0, 27},
+	{RunawaySequence::kTalk, 84, 5, 0, 0, 36},
+	{RunawaySequence::kTalk, 84, 6, 0, 0, 27},
+	{RunawaySequence::kTalk, 84, 7, 0, 0, 36},
 	{RunawaySequence::kEffect, 44, 153, 0, 0},
 	{RunawaySequence::kPlay, 37, 40},
-	{RunawaySequence::kSpeech, 84, 8, 0},
+	{RunawaySequence::kSpeech, 84, 8, 0, 0, 37},
 	{RunawaySequence::kPlay, 41, 236},
 	{RunawaySequence::kWaitSpeech},
-	{RunawaySequence::kTalk, 84, 9, 1, 0},
-	{RunawaySequence::kTalk, 84, 10, 3, 0},
-	{RunawaySequence::kTalk, 84, 11, 5, 0},
-	{RunawaySequence::kTalk, 84, 12, 3, 0},
-	{RunawaySequence::kTalk, 84, 13, 5, 0},
-	{RunawaySequence::kTalk, 84, 14, 3, 0},
-	{RunawaySequence::kTalk, 84, 15, 3, 1},
-	{RunawaySequence::kTalk, 84, 16, 5, 0},
+	{RunawaySequence::kTalk, 84, 9, 1, 0, 36},
+	{RunawaySequence::kTalk, 84, 10, 3, 0, 37},
+	{RunawaySequence::kTalk, 84, 11, 5, 0, 36},
+	{RunawaySequence::kTalk, 84, 12, 3, 0, 37},
+	{RunawaySequence::kTalk, 84, 13, 5, 0, 36},
+	{RunawaySequence::kTalk, 84, 14, 3, 0, 37},
+	{RunawaySequence::kTalk, 84, 15, 3, 1, 36},
+	{RunawaySequence::kTalk, 84, 16, 5, 0, 36},
 	{RunawaySequence::kPlay, 272, 284},
-	{RunawaySequence::kSpeech, 84, 17, 0},
+	{RunawaySequence::kSpeech, 84, 17, 0, 0, 36},
 	{RunawaySequence::kPlay, 285, 371},
 	{RunawaySequence::kWaitSpeech},
 	{RunawaySequence::kDelay, 1000},
@@ -402,25 +408,21 @@ RunawayRoomScene::ActionResult Scene2020::dispatchCustomSceneAction(uint16 actio
 	case 305: // Take the glass.
 		_hospital.glassTaken = 1;
 		_inventory.add(13);
-		_facing = 4;
 		say(62, 0, true);
 		return kBackgroundChanged;
 	case 307: // Take the sleeping pills.
 		_hospital.pillsTaken = 1;
 		_inventory.add(8);
-		_facing = 4;
 		say(57, 0, true);
 		return kBackgroundChanged;
 	case 309: // Take the sheet.
 		_hospital.sheetTaken = 1;
 		_inventory.add(7);
-		_facing = 4;
 		say(18, _random.getRandomNumber(2), true);
 		return kBackgroundChanged;
 	case 313: // Take Gina's bag.
 		_hospital.bagTaken = 1;
 		_inventory.add(5);
-		_facing = 6;
 		say(9, 1);
 		return kBackgroundChanged;
 	case 330: // Read the emergency exit map.
@@ -490,6 +492,8 @@ RunawayRoomScene::ActionResult Scene2020::dispatchCustomSceneAction(uint16 actio
 			say(34);
 			return kHandled;
 		}
+		_audio.playMusic(33, false);
+		_audio.setMusicVolume(255);
 		beginRoomAnimation(action, 19, 35);
 		_actionFrames.push_back(33);
 		for (int frame = 32; frame >= 0; --frame) {
@@ -857,7 +861,8 @@ void Scene2020::handleAnimationFrameHook() {
 		error("Cannot clear Runaway hospital chart");
 	}
 	if (_roomAction == 332 && (_actionStep == 21 || _actionStep == 35 || _actionStep == 41)) {
-		_audio.playFootstep(1, _random.getRandomBit());
+		const byte volume = CLIP<int>((int)(actorHeight() * 255 / 455), 0, 255);
+		_audio.playFootstep(1, _random.getRandomBit(), volume, _position.x);
 	}
 }
 

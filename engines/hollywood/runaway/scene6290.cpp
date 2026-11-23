@@ -19,6 +19,8 @@
  *
  */
 
+#include "common/events.h"
+#include "common/system.h"
 #include "common/textconsole.h"
 #include "common/util.h"
 #include "hollywood/runaway/scene6290.h"
@@ -31,21 +33,21 @@ namespace {
 const Common::Point kMotorcycleSoundPosition(1081, 200);
 
 const RunawayHotspot kHotspots[] = {
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{0, 537, 5, {301, 302}, {0, 3}}, // 1: Crater.
-	{1739, 442, 3, {303, 304}, {0, 3}}, // 2: Trail.
-	{440, 556, 7, {305, 306}, {0, 1}}, // 3: Panel of buttons.
-	{607, 549, 7, {307, 308}, {0, 0}}, // 4: Switch.
-	{1133, 434, 0, {309, 310}, {0, 0}}, // 5: Motorcycle.
-	{1396, 293, 3, {311, 312}, {0, 0}}, // 6: Camping tent.
-	{0, 0, 7, {313, 314}, {0, 0}}, // 7: Lighting panel.
-	{440, 556, 7, {315, 316}, {0, 1}}, // 8: Joshua.
-	{0, 0, 7, {317, 318}, {0, 0}}, // 9: Strap.
-	{0, 0, 7, {319, 320}, {0, 0}}, // 10: Wrench.
-	{0, 0, 0, {321, 322}, {0, 0}}, // 11: Machine.
-	{0, 0, 0, {1, 1}, {0, 0}},
-	{0, 0, 7, {330, 331}, {0, 0}}, // 13: Rotor.
-	{0, 0, 0, {1, 1}, {0, 0}}
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{0, 537, 5, {301, 302}, {0, 3}, {-100, 537}, 7}, // 1: Crater.
+	{1739, 442, 3, {303, 304}, {0, 3}, {1839, 442}, 5}, // 2: Trail.
+	{440, 556, 7, {305, 306}, {0, 1}, {479, 468}}, // 3: Panel of buttons.
+	{607, 549, 7, {307, 308}, {0, 0}, {612, 506}}, // 4: Switch.
+	{1133, 434, 0, {309, 310}, {0, 0}, {1068, 422}}, // 5: Motorcycle.
+	{1396, 293, 3, {311, 312}, {0, 0}, {1485, 336}}, // 6: Camping tent.
+	{0, 0, 7, {313, 314}, {0, 0}, {201, 442}}, // 7: Lighting panel.
+	{440, 556, 7, {315, 316}, {0, 1}, {293, 508}, 3}, // 8: Joshua.
+	{0, 0, 7, {317, 318}, {0, 0}, {1068, 422}}, // 9: Strap.
+	{0, 0, 7, {319, 320}, {0, 0}, {1095, 395}}, // 10: Wrench.
+	{0, 0, 0, {321, 322}, {0, 0}, {547, 500}}, // 11: Machine.
+	{0, 0, 0, {1, 1}, {0, 0}, {0, 0}},
+	{0, 0, 7, {330, 331}, {0, 0}, {669, 500}}, // 13: Rotor.
+	{0, 0, 0, {1, 1}, {0, 0}, {0, 0}}
 };
 
 const RunawayResponse kResponses[] = {
@@ -61,8 +63,6 @@ const RunawayResponse kResponses[] = {
 	{6290, 322, 18, 0},  // Refuse to move the machine.
 	{6290, 326, 23, 0},  // Do not give Joshua the gasoline.
 	{6290, 327, 24, 0},  // Do not pour concentrated gasoline into the motorcycle.
-	{6290, 330, 26, 0},  // Identify the rotor's purpose.
-	{6290, 331, 27, 0},  // Turning the rotor by hand would not help.
 	{6290, 332, 28, 0}   // Let Joshua use the wrench.
 };
 
@@ -70,8 +70,8 @@ const RunawayItemAction kItemActions[] = {
 	{6290, 10, 5, 332, false}, {6290, 10, 8, 324},
 	{6290, 11, 5, 323, false}, {6290, 11, 8, 325}, {6290, 11, 13, 323, false},
 	{6290, 12, 5, 327, false}, {6290, 12, 8, 326, false},
-	{6290, 24, 5, 328, false}, {6290, 24, 8, 326, false},
-	{6290, 25, 5, 329, false}, {6290, 26, 5, 333, false}
+	{6290, 24, 5, 328}, {6290, 24, 8, 326, false},
+	{6290, 25, 5, 329, false}, {6290, 26, 13, 333, false}
 };
 
 } // End of anonymous namespace
@@ -85,7 +85,21 @@ const RunawayRoom kRunawayScene6290 = {
 namespace Runaway {
 
 Scene6290::Scene6290(RunawayAudio &audio, RunawayInventory &inventory, const RunawayStrings &strings, RunawayGameType game) :
-	RunawayRoomScene(audio, inventory, strings, game) {}
+	RunawayRoomScene(audio, inventory, strings, game) {
+	_speechColors[1] = 29; // Joshua.
+}
+
+const char *Scene6290::actionCaptionVariant(byte id, bool look, byte item) const {
+	if (!look && !item) {
+		if (id == 4 && _town.joshuaGone) {
+			return "raised";
+		}
+		if (id == 5 && _town.machinePowered && !_town.joshuaGone) {
+			return "running";
+		}
+	}
+	return nullptr;
+}
 
 bool Scene6290::loadCustomResources() {
 	return _joshuaAnimation.load(_archive, 10, 131) && _machineAnimation.load(_archive, 5, 52) &&
@@ -106,8 +120,12 @@ void Scene6290::resumeAmbientAudio(bool entering) {
 	if (_town.machinePowered && !_town.joshuaGone) {
 		_audio.playEffectAt(78, kMotorcycleSoundPosition, 178, 1, true);
 	}
-	if (entering || !_audio.musicPlaying()) {
-		_audio.playMusic(_town.joshuaGone ? 30 : 19);
+	if (entering && _entryScene == 6290) {
+		_audio.playMusic(12 + _random.getRandomNumber(4), false);
+	} else if (_town.joshuaGone) {
+		RunawayRoomScene::resumeAmbientAudio(entering);
+	} else if (entering || !_audio.musicPlaying()) {
+		_audio.playMusic(19, false);
 	}
 }
 
@@ -132,10 +150,16 @@ void Scene6290::runCustomEntrySequence() {
 void Scene6290::advanceCustomGameplayLoop(uint32 delta) {
 	if (_keyboard && _pressedNote) {
 		if (!_noteSoundPlayed && _now - _noteStarted >= 18 * 80) {
-			_audio.playMusicEffect(30 + _pressedNote);
+			_audio.playMusicEffect(30 + _pressedNote, 255, 0, true);
 			_noteSoundPlayed = true;
 		}
-		if (_now - _noteStarted >= 27 * 80) {
+		// Hold the note for at least twelve ticks, then wait for the mouse release.
+		const bool pressed = g_system->getEventManager()->getButtonState() & Common::EventManager::LBUTTON;
+		if (!_noteReleaseStarted && _now - _noteStarted >= 30 * 80 && !pressed) {
+			_noteReleaseStarted = _now;
+		}
+		if (_noteReleaseStarted && _now - _noteReleaseStarted >= 9 * 80) {
+			_audio.stopEffect(0);
 			_pressedNote = 0;
 			if (_noteCount == ARRAYSIZE(_notes)) {
 				leaveKeyboard(true);
@@ -220,6 +244,9 @@ void Scene6290::findWalkPath(Common::Point target) {
 }
 
 Common::U32String Scene6290::hotspotName(byte id) const {
+	if (_keyboard) {
+		return actionCaption(id, kVerbUse, 0);
+	}
 	if (id == 11 && _town.machineKnown) {
 		return _strings.hotspotName(_room, 14);
 	}
@@ -249,19 +276,28 @@ void Scene6290::drawCustomBackgroundComposite(Graphics::ManagedSurface &viewport
 		uint brian = 0, button = 0, light = 0;
 		if (_pressedNote) {
 			const uint note = _pressedNote - 1;
-			const uint step = MIN<uint>(26, (_now - _noteStarted) / 80);
-			if (step < 10) {
-				brian = step;
-			} else if (step < 18) {
-				brian = note ? 27 + (note - 1) * 14 + MIN<uint>(6, step - 10) : MIN<uint>(17, step);
+			if (_noteReleaseStarted) {
+				const uint step = MIN<uint>(8, (_now - _noteReleaseStarted) / 80);
+				if (note && step < 5) {
+					brian = 34 + (note - 1) * 14 + step;
+				} else if (step < 8) {
+					brian = 18 + step;
+				}
+				button = step ? 0 : note * 4 + 2;
+				light = note * 6 + (step < 5 ? 5 - step : 0);
 			} else {
-				brian = note ? 34 + (note - 1) * 14 + MIN<uint>(6, step - 18) : step;
-			}
-			if (step >= 15 && step < 18) {
-				button = note * 4 + step - 14;
-			}
-			if (step >= 18 && step < 24) {
-				light = note * 6 + step - 17;
+				const uint step = (_now - _noteStarted) / 80;
+				if (step < 10) {
+					brian = step;
+				} else {
+					brian = note ? 27 + (note - 1) * 14 + MIN<uint>(6, step - 10) : MIN<uint>(17, step);
+				}
+				if (step >= 15) {
+					button = note * 4 + MIN<uint>(4, step - 14);
+				}
+				if (step >= 18) {
+					light = note * 6 + MIN<uint>(5, step - 18);
+				}
 			}
 		}
 		_lightsAnimation.draw(viewport, light, _camera.x, 0);
@@ -310,14 +346,17 @@ byte Scene6290::hotspotAt(Common::Point mouse) const {
 	const byte id = _keyboardMaps[256 + _keyboardMask[y * _background.w + x]];
 	for (uint i = 0; i < _noteCount; ++i) {
 		if (id == 20 + _notes[i]) {
-			return 0;
+			return 29; // The note is labelled but cannot be pressed again.
 		}
 	}
 	return id;
 }
 
 Common::U32String Scene6290::actionCaption(byte id, RunawayVerb verb, byte item) const {
-	return _keyboard ? Common::U32String() : RunawayRoomScene::actionCaption(id, verb, item);
+	if (_keyboard) {
+		return _strings.sceneActionCaption(_room, id, 0, false);
+	}
+	return RunawayRoomScene::actionCaption(id, verb, item);
 }
 
 void Scene6290::click(Common::Point mouse, RunawayVerb verb, byte item) {
@@ -335,6 +374,7 @@ void Scene6290::click(Common::Point mouse, RunawayVerb verb, byte item) {
 		_pressedNote = id - 19;
 		_notes[_noteCount++] = id - 20;
 		_noteStarted = _now;
+		_noteReleaseStarted = 0;
 		_noteSoundPlayed = false;
 	}
 }
@@ -353,6 +393,7 @@ void Scene6290::startKeyboard() {
 }
 
 void Scene6290::leaveKeyboard(bool review) {
+	_audio.stopEffect(0);
 	_keyboard = false;
 	_pressedNote = 0;
 	_reviewingMelody = review;
@@ -416,6 +457,18 @@ void Scene6290::finishCustomConversation() {
 	_joshuaTalking = false;
 }
 
+int8 Scene6290::customizeSceneActionApproach(byte id, bool use, byte item, int8 approach) const {
+	if (use && !item) {
+		if (id == 3) {
+			return !_town.joshuaGone;
+		}
+		if (id == 6) {
+			return _town.joshuaGone != 0;
+		}
+	}
+	return approach;
+}
+
 RunawayRoomScene::ActionResult Scene6290::dispatchCustomSceneAction(uint16 action) {
 	switch (action) {
 	case 302: // Visit the crater floor after Joshua disappears.
@@ -466,7 +519,7 @@ RunawayRoomScene::ActionResult Scene6290::dispatchCustomSceneAction(uint16 actio
 			_town.wrenchDelivered = 2;
 		}
 		_town.campLeft = 1;
-		_audio.playMusic(12 + _random.getRandomNumber(4));
+		_audio.playMusic(12 + _random.getRandomNumber(4), false);
 		leaveTownRoom(6350);
 		break;
 	case 309: // Examine the motorcycle before or after the repair.
@@ -491,7 +544,7 @@ RunawayRoomScene::ActionResult Scene6290::dispatchCustomSceneAction(uint16 actio
 		say(11, _town.melodyTried);
 		break;
 	case 329: // The thirty-CC tube cannot fuel the motorcycle directly.
-	case 333: // The fifty-CC tube cannot fuel the motorcycle directly.
+	case 333: // Do not pour the fifty-CC tube's concentrate into the rotor.
 		if (action == 329 ? !_inventory.town().tube30 : !_inventory.town().tube50) {
 			say(19, 0, true);
 		} else {
@@ -590,21 +643,40 @@ RunawayRoomScene::ActionResult Scene6290::dispatchCustomSceneAction(uint16 actio
 		} else if (_inventory.town().bottleContents == 1) {
 			say(25);
 		} else if (_town.machinePowered) {
-			say(25, _town.joshuaGone ? 3 : 1);
+			if (_town.joshuaGone && !_town.motorcycleRefilled) {
+				say(25, 2);
+				walkTo(Common::Point(1133, 434), 7, true);
+				deferTownAction(540);
+			} else {
+				say(25, _town.joshuaGone ? 3 : 1);
+			}
 		} else {
 			say(25, 4);
 			walkTo(Common::Point(1133, 434), 7, true);
 			deferTownAction(440);
 		}
 		break;
-	case 440: { // Fill the motorcycle's tank with the diluted gasoline.
+	case 330: // Examine the rotor before, during, or after the machine's operation.
+		say(26, _town.joshuaGone ? 2 : _town.machinePowered);
+		break;
+	case 331: // The running rotor cannot be stopped by hand.
+		say(27, _town.machinePowered && !_town.joshuaGone);
+		break;
+	case 440: // Fill the motorcycle's tank with the diluted gasoline.
+	case 540: { // Top up the tank after Joshua's departure.
 		byte frames[120];
 		for (uint i = 0; i < ARRAYSIZE(frames); ++i) {
 			frames[i] = i < 40 ? i : i < 80 ? 39 : 119 - i;
 		}
-		beginRoomAnimation(440, 28, 40, frames, ARRAYSIZE(frames));
+		beginRoomAnimation(action, 28, 40, frames, ARRAYSIZE(frames));
 		break;
 	}
+	case 1540: // The stopped motorcycle only needs refilling once.
+		_town.motorcycleRefilled = 1;
+		_inventory.town().bottleContents = 0;
+		_inventory.select(0);
+		say(27, 0, true);
+		break;
 	case 1440: // Tell Joshua the motorcycle is ready.
 		_inventory.town().bottleContents = 0;
 		_inventory.select(0);
@@ -805,7 +877,26 @@ void Scene6290::finishCustomFilm() {
 }
 
 void Scene6290::handleAnimationFrameHook() {
-	if (_roomAction == 440) {
+	static const AnimationFootstep descendingSteps[] = {
+		{24, 200, 102}, {30, 150, 204}, {37, 100, 102}
+	};
+	static const AnimationFootstep returningSteps[] = {
+		{3, 50, 102}, {9, 100, 204}, {17, 150, 102}, {22, 200, 204}
+	};
+	if (_roomAction == 450) {
+		playAnimationFootsteps(_actionStep, 2, descendingSteps, ARRAYSIZE(descendingSteps));
+	} else if (_roomAction == 451) {
+		playAnimationFootsteps(_actionStep, 2, returningSteps, ARRAYSIZE(returningSteps));
+	}
+	if (_roomAction == 403) {
+		const byte frame = _actionFrames[_actionStep];
+		if (frame == 62 || frame == 83) {
+			say(0, frame == 62 ? 2 : 3, false, 1);
+			_actionHoldSpeech = _actionLoopSpeech = true;
+		} else if (_actionStep == _actionFrames.size() - 1) {
+			_actionLoopSpeech = false;
+		}
+	} else if (_roomAction == 440 || _roomAction == 540) {
 		if (_actionStep == 11 || _actionStep == 33 || _actionStep == 106) {
 			_audio.playEffect(_actionStep == 11 ? 35 : _actionStep == 33 ? 36 : 37, 204);
 		}

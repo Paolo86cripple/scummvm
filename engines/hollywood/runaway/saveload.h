@@ -40,6 +40,7 @@ struct RunawaySaveState {
 	struct Museum {
 		byte susan = 0, restoration = 0, laserUpgraded = 0, laserSeen = 0, shelvesSeen = 0;
 		byte susanMet = 0, labVisited = 0, shelfBooksSeen = 0, safeUsed = 0;
+		byte officeVisited = 0, exhibitionVisited = 0, phonePlanExplained = 0;
 		byte willyMet = 0, batteryRequested = 0, coffeeMachine = 0, coffeeSeen = 0;
 		byte basketSeen = 0, needsPackage = 0, needsGroundCoffee = 0, willyInLab = 0;
 		byte keypad = 0, sawCode = 0, phoneUsed = 0, voiceLockSeen = 0;
@@ -73,7 +74,7 @@ struct RunawaySaveState {
 		byte busDoor = 0, lipstickShelf = 0, keyTaken = 0, glassesTaken = 0;
 		byte vacuum = 0, crank = 0, necklacesSeen = 0, ringsSeen = 0;
 		byte fridgeOpened = 0, ventCleaned = 0, ventSeen = 0, needle = 0, fridgeSeen = 0;
-		byte carlaMet = 0, carlaStory = 0, planKnown = 0;
+		byte carlaMet = 0, carlaDrank = 0, planKnown = 0;
 		uint32 carlaTopics = 0, lulaTopics = 0;
 	} desert;
 
@@ -115,6 +116,8 @@ struct RunawaySaveState {
 		byte safeOpened = 0, stethoscopeTried = 0, safeDialVisited = 0;
 		byte safeDial = 69, safeProgress = 0;
 		byte machinePowered = 0, melodyTried = 0, campingGearTaken = 0;
+		byte motorcycleRefilled = 0;
+		byte wateringCanTaken = 0, cellVisited = 0;
 	} town;
 
 	struct TownItems {
@@ -129,7 +132,7 @@ struct RunawaySaveState {
 		byte cliffVisited = 0, skeletonSeen = 0, nail = 0, timber = 0;
 		byte femurTaken = 0, rockTried = 0;
 		byte ginaFound = 0, villageLevel = 0, rope = 0, legSplinted = 0;
-		byte cryptVisited = 0;
+		byte cryptVisited = 0, cryptReturnVisited = 0;
 		byte canyonVisited = 0, cryptEntranceVisited = 0, keyholeBlockedKnown = 0, bushSeen = 0;
 		byte cryptDoor = 0; // Sand-blocked, cleared, open, sealed after visiting Wupuchim.
 		byte statueVisited = 0, tomahawk = 0, leftCrossSeen = 0, rightCrossSeen = 0;

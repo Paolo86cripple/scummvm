@@ -22,12 +22,14 @@
 #ifndef HOLLYWOOD_RUNAWAY_SCENE_H
 #define HOLLYWOOD_RUNAWAY_SCENE_H
 
+#include "hollywood/hotspots.h"
 #include "hollywood/resource.h"
 #include "hollywood/runaway/animation.h"
 #include "hollywood/runaway/audio.h"
 #include "hollywood/runaway/graphics.h"
 #include "hollywood/runaway/inventory.h"
 #include "hollywood/runaway/navigation.h"
+#include "hollywood/runaway/presentation.h"
 #include "hollywood/runaway/saveload.h"
 #include "hollywood/runaway/scene_data.h"
 #include "hollywood/runaway/sequence.h"
@@ -36,7 +38,7 @@
 
 namespace Hollywood {
 
-class RunawayScene {
+class RunawayScene : public RunawayPresentation, public HotspotSource {
 public:
 	struct Transition {
 		uint16 scene = 0; // Preserve entry substates, e.g. 2020..2023, until dispatch.
@@ -56,10 +58,16 @@ public:
 	virtual int cameraX() const { return 0; }
 	virtual int roomWidth() const = 0;
 	virtual Graphics::ManagedSurface &screen() = 0;
-	virtual byte hotspotAt(Common::Point mouse) const = 0;
+	byte hotspotAt(Common::Point mouse) const override = 0;
+	virtual bool hasVerbControls() const { return true; }
+	// Cursor tile 3 is talk, 4..7 are exit arrows; zero keeps the usual verbs.
+	virtual byte actionCursor(byte hotspot) const { return 0; }
+	virtual bool preferLook(byte hotspot) const { return false; }
+	virtual bool isWalkHotspot(byte hotspot) const { return false; }
 	virtual Common::U32String actionCaption(byte hotspot, RunawayVerb verb, byte item) const = 0;
 	virtual const Common::U32String &committedCaption() const = 0;
 	virtual const Common::U32String &subtitle() const = 0;
+	virtual byte subtitleColor() const { return 11; }
 	virtual bool busy() const = 0;
 	virtual bool speaking() const = 0;
 	virtual byte speechFrame() const { return 0; }
@@ -68,6 +76,8 @@ public:
 	virtual void chooseDialogue(uint choice) {}
 	virtual bool playingVideo() const { return false; }
 	virtual bool inventoryPresentation() const { return false; }
+	// A scene can override the inventory portrait during an item action.
+	virtual byte inventoryFrame() const { return 0xff; }
 	virtual void skipVideo() {}
 	virtual void sayInventory(const RunawayInventory::Reply &reply) = 0;
 	virtual bool escaped() const { return false; }
@@ -76,11 +86,17 @@ public:
 	// Prepare a replacement scene without changing shared inventory or audio.
 	virtual bool restoreState(const RunawaySaveState &state, uint32 now, bool entering = false) { return false; }
 	virtual void setOptions(bool antialias, bool fastScrolling) = 0;
+	void setRestoredContent(bool enabled) { _restoredContent = enabled; }
 
 protected:
+	Common::U32String hotspotName(byte id) const override { return Common::U32String(); }
+	void skipPresentation(uint32 now) override final { skipVideo(); }
+	void skipPresentationSpeech(uint32 now) override final { skipSpeech(); }
+
 	Common::Array<Common::U32String> _noChoices;
 	uint16 _entryScene = 0;
 	Transition _transition;
+	bool _restoredContent = false;
 };
 
 class RunawayStrings;
@@ -101,10 +117,16 @@ public:
 	int roomWidth() const override { return _background.w; }
 	Graphics::ManagedSurface &screen() override { return _screen; }
 	byte hotspotAt(Common::Point mouse) const override;
+	byte actionCursor(byte id) const override;
+	bool preferLook(byte id) const override;
+	bool isWalkHotspot(byte id) const override;
 	Common::U32String actionCaption(byte hotspot, RunawayVerb verb, byte item) const override;
 	const Common::U32String &committedCaption() const override { return _caption; }
 	const Common::U32String &subtitle() const override;
-	bool busy() const override { return _sequence.active() || _pendingHotspot != 0 || _transition.scene || _hospitalExit.scene || _arrivalFacing != 0xff || _roomAction || _conversation || speaking(); }
+	byte subtitleColor() const override { return _sequence.active() ? _sequence.subtitleColor() : _speech.subtitleColor(); }
+	bool busy() const override { return _sequence.active() || _pendingHotspot != 0 || _transition.scene || _hospitalExit.scene || _arrivalFacing != 0xff || _roomAction || _conversation || _reviewingDesertPlan || speaking(); }
+	bool inventoryPresentation() const override { return _reviewingDesertPlan; }
+	byte inventoryFrame() const override;
 	bool speaking() const override { return _sequence.active() ? !_sequence.subtitle().empty() : !_speech.subtitle().empty(); }
 	byte speechFrame() const override { return _sequence.active() ? _sequence.speechFrame() : _speech.frame(_now); }
 	bool playingVideo() const override { return _sequence.active(); }
@@ -123,6 +145,13 @@ public:
 protected:
 	enum ObjectState { kUnexamined, kIdentified, kTaken };
 	enum ActionResult { kUnhandled, kHandled, kBackgroundChanged };
+	struct AnimationFootstep {
+		constexpr AnimationFootstep(byte frameNumber, int16 position, byte loudness = 255) :
+			frame(frameNumber), x(position), volume(loudness) {}
+		byte frame;
+		int16 x;
+		byte volume;
+	};
 
 	virtual bool loadCustomResources() { return true; }
 	virtual bool loadBackground();
@@ -155,9 +184,10 @@ protected:
 	virtual void setupActorDepth(RunawayActor::RenderParams &params) const {}
 	virtual bool drawCustomComposite(Graphics::ManagedSurface &viewport) { return false; }
 	virtual bool shouldDrawActor() const { return true; }
+	virtual bool roomAnimationInForeground() const { return false; }
 	virtual bool shouldUpdateActor() const { return true; }
 	virtual bool shouldPlayGameplayClickPath() const { return true; }
-	virtual bool shouldApproachHotspot(byte id, bool use, byte item, bool approach) const { return approach; }
+	virtual int8 customizeSceneActionApproach(byte id, bool use, byte item, int8 approach) const { return approach; }
 	// Accept the adjusted target without the shared floor-mask adjustment.
 	virtual bool adjustCustomWalkTargetToFloorMask(Common::Point &target) const { return false; }
 	// Return true when a scene sequence owns this frame's action updates.
@@ -172,6 +202,7 @@ protected:
 	bool enterRoom(uint16 room, Common::Point position, byte facing);
 	bool loadForeground(uint layer, uint chunk, bool pixels = false);
 	void drawForeground(Graphics::ManagedSurface &viewport, uint layer);
+	virtual void drawRoomAnimation(Graphics::ManagedSurface &viewport);
 	void drawAmbientAnimations(Graphics::ManagedSurface &viewport, const RunawayAnimation *animations, uint count);
 	bool rebuildBackground();
 	bool applyPatch(uint chunk);
@@ -181,25 +212,30 @@ protected:
 	void execute(uint16 action);
 	void executeItemAction(uint16 action);
 	void useItem(byte item, byte hotspot);
-	void say(uint16 cue, byte variation = 0, bool global = false, byte speaker = 0);
+	void say(uint16 cue, byte variation = 0, bool global = false, byte speaker = 0, byte color = 0);
+	void say(const SceneTextStore &text, const SceneSpeechCue &speech, bool global, byte speaker = 0, byte color = 0);
 	void showLine();
 	void changeFloor(bool upper, Common::Point position);
 	void updateCamera();
 	void beginRoomAnimation(uint16 action, uint chunk, uint frames, const byte *order = nullptr, uint count = 0, bool hideActor = true, uint frameDuration = 80);
+	void beginActorAnimation(uint16 action, uint bank, uint frames, uint count = 0, uint frameDuration = 60);
+	void beginAnimation(uint16 action, uint frames, const byte *order, uint count, bool hideActor, uint frameDuration);
 	void beginRoomAnimationRange(uint16 action, uint chunk, uint frames, uint first, uint last, bool hideActor = true, uint frameDuration = 80);
 	void holdRoomAnimation(uint16 action, uint chunk, uint frames, uint frame, bool hideActor = true);
 	void loopRoomAnimationDuringSpeech(uint16 action, uint chunk, uint frames, uint first, uint last, bool hideActor = true);
 	void setRoomAnimationOverlay(uint chunk, uint frames, const byte *order, uint count);
-	bool drawingRoomAnimation() const { return _roomAction && !_actionFrames.empty() && (_actionHoldSpeech || !speaking()) && !_walkPath.active(); }
+	bool drawingRoomAnimation() const { return !_actionUsesActor && _roomAction && !_actionFrames.empty() && (_actionHoldSpeech || !speaking()) && !_walkPath.active(); }
 	void updateRoomAnimation();
+	void playAnimationFootsteps(uint frame, byte surface, const AnimationFootstep *steps, uint count);
 	virtual float actorHeight() const { return 455; }
 	virtual float actorWalkSpeed() const { return 0.18f * actorHeight() / 455; }
 	virtual const RunawayHotspot *hotspot(byte id) const;
-	virtual Common::U32String hotspotName(byte id) const;
+	Common::U32String hotspotName(byte id) const override;
 	virtual const char *actionCaptionVariant(byte id, bool look, byte item) const { return nullptr; }
 	virtual bool isValidHotspot(byte id) const { return hotspot(id) != nullptr; }
 	virtual Common::Point customizeSceneActionPosition(byte id, byte item, Common::Point position) const { return position; }
 	virtual byte customizeSceneActionFacing(byte id, byte facing) const { return facing; }
+	virtual Common::Point sceneActionLookPosition(byte id) const { return hotspot(id)->lookPosition; }
 
 	byte walkZone() const { return _originalMaps[_mask[_position.y * _background.w + _position.x]]; }
 
@@ -208,6 +244,7 @@ protected:
 	void updateHospital(uint elapsed);
 	void updateHospitalAudio();
 	bool sayHospitalInventory(const RunawayInventory::Reply &reply);
+	void updateHospitalInventory();
 	void leaveHospitalRoom(uint16 scene, Common::Point position, byte facing);
 
 	bool museumChapter() const { return _game == kRunawayFullGame && _room / 1000 == 4; }
@@ -215,11 +252,12 @@ protected:
 	void resumeMuseum();
 	void updateMuseum(uint elapsed);
 	bool sayMuseumInventory(const RunawayInventory::Reply &reply);
+	bool updateMuseumInventory();
 	void deferMuseumAction(uint16 action);
 	void refreshMuseum();
 	void leaveMuseumRoom(uint16 scene, Common::Point position, byte facing = 3, bool door = false);
 	enum MuseumFilm { kArrivalFilm, kCliveFilm, kDrillingFilm, kLaserFilm, kRubyFilm,
-		kMobstersFilm, kPhoneFilm, kScannerFilm, kBetrayalFilm, kMuseumExitFilm };
+		kCrucifixFilm, kMobstersFilm, kPhoneFilm, kScannerFilm, kBetrayalFilm, kMuseumExitFilm };
 	void startMuseumFilm(MuseumFilm film);
 	void startConversation(byte character);
 	void updateConversation();
@@ -234,6 +272,7 @@ protected:
 	void visitDesertRoom(byte index, byte lines);
 	void leaveDesertRoom(uint16 scene);
 	void deferDesertAction(uint16 action);
+	void reviewDesertPlan(byte variation);
 
 	bool townChapter() const { return _game == kRunawayFullGame && _room / 1000 == 6; }
 	void resumeTown();
@@ -250,6 +289,7 @@ protected:
 	void updateFinaleOutdoorAudio(byte wildlifeVolume = 0);
 	void resumeFinaleJailAudio(bool entering);
 	void updateFinaleJailAudio();
+	void updateAmbientMusic();
 	void updateOutdoorMusic(byte cueCount = 3);
 	void updateGameplay(uint32 delta);
 	void findGameplayWalkPath(Common::Point target);
@@ -272,18 +312,22 @@ protected:
 	Common::Array<byte> _actionFrames, _secondaryFrames;
 	Graphics::ManagedSurface _background, _screen;
 	Common::Array<byte> _mask, _originalMaps, _maps;
+	Common::Array<byte> _walkRoutes;
 	Common::Array<Common::Rect> _foreground[5];
 	RunawayWalkPath _walkPath;
 	struct SpeechLine {
 		Common::U32String text;
 		uint16 sample;
 		bool global;
-		byte speaker;
+		byte speaker, color;
 	};
 	Common::Array<SpeechLine> _lines;
+	// Local animation speaker IDs map to the original font palette.
+	byte _speechColors[7] = {11, 11, 11, 11, 11, 11, 11};
 	Common::U32String _caption;
 	Common::Point _position, _camera;
 	uint _lineIndex = 0;
+	const RunawayRoom *_roomData = nullptr;
 	uint16 _room = 0, _pendingAction = 0;
 	byte _facing = 3, _pendingHotspot = 0, _pendingItem = 0;
 	byte _arrivalFacing = 0xff;
@@ -298,6 +342,7 @@ protected:
 	RunawaySaveState::Hospital _hospital;
 	RunawaySaveState::Museum _museum;
 	RunawaySaveState::Desert _desert;
+	bool _reviewingDesertPlan = false;
 	RunawaySaveState::Town _town;
 	RunawaySaveState::Hopi _hopi;
 	RunawaySaveState::Finale _finale;
@@ -313,13 +358,12 @@ protected:
 	byte _conversation = 0, _dialogueDepth = 0, _dialogueNode = 0, _dialogueIntro = 0;
 	bool _dialogueEnding = false;
 	uint16 _afterConversation = 0;
-	byte _musicCue = 11;
-	uint32 _nextMusic = 0;
 	uint32 _finaleAmbientTick = 0;
 	byte _finaleLastAmbient = 0;
 	bool _entering = false;
 	uint16 _roomAction = 0;
 	bool _actionHidesActor = true;
+	bool _actionUsesActor = false;
 	bool _actionHoldSpeech = false;
 	bool _actionLoopSpeech = false;
 	byte _actionStage = 0;

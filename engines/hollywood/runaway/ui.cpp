@@ -61,7 +61,7 @@ bool RunawayUI::load(RunawayGameType game, byte chapter) {
 	_museum = museum;
 	_audio.setMuseum(museum);
 	Common::Array<byte> animation;
-	if (!_font.load(false, museum))
+	if (!_font.load(false, museum, _strings.language()))
 		return false;
 	if (museum) {
 		if (!loadRunawaySurface(Common::Path("raton10.spf"), 904, 360, _cursors) ||
@@ -145,14 +145,18 @@ bool RunawayUI::inViewport() const {
 		_mouse.y >= kRunawayViewportTop && _mouse.y < kRunawayViewportTop + kRunawayViewportHeight;
 }
 
-void RunawayUI::setVerb(RunawayVerb verb) {
-	if (_verb != verb) {
-		if (_pointerSound && !_blocked && !_speaking && !busy())
+void RunawayUI::setVerb(RunawayVerb verb, byte actionCursor) {
+	const byte cursor = verb == kVerbUse && actionCursor ? actionCursor : (byte)verb;
+	if (_verb != verb || _cursorType != cursor) {
+		if (_pointerSound && (_inventoryOpen || _roomHasVerbs) && !_blocked && !_speaking && !busy()) {
 			_audio.playPointer();
-		_previousVerb = _verb;
+		}
+		_previousCursor = _cursorType;
+		_cursorType = cursor;
 		_verb = verb;
 		_verbStarted = _now;
 	}
+	_actionCursor = actionCursor;
 }
 
 void RunawayUI::captureState(RunawaySaveState &state) const {
@@ -166,9 +170,14 @@ void RunawayUI::restoreState(const RunawaySaveState &state, uint32 now) {
 	_blinkUntil = _idleStarted = _pickupStarted = 0;
 	_pickupItem = _hovered = _buttonFrame = _optionsFrame = _mouth = 0;
 	_blocked = _speaking = _inventoryPresentation = _returnAfterPickup = _pickupSoundPlayed = false;
+	_inventoryFrame = 0xff;
 	_inventoryOpen = state.inventoryOpen;
 	_enteredInventory = false;
-	_verb = _previousVerb = (RunawayVerb)state.verb;
+	_verb = (RunawayVerb)state.verb;
+	_cursorType = _previousCursor = state.verb;
+	_actionCursor = 0;
+	_preferLook = false;
+	_walkHotspot = false;
 	_cursorKey = -1;
 	// The options cursor may still be on top of the stack. Rebuild ours
 	// on the next gameplay update, after the menu has popped its cursor.
@@ -189,7 +198,7 @@ void RunawayUI::toggleInventory() {
 }
 
 bool RunawayUI::cancel() {
-	if (busy() || _inventoryPresentation)
+	if (busy() || _inventoryPresentation || _inventoryFrame != 0xff)
 		return true;
 	if (_inventory.selected()) {
 		_inventory.select(0);
@@ -203,7 +212,7 @@ bool RunawayUI::cancel() {
 }
 
 void RunawayUI::update(uint32 now, Common::Point mouse, byte roomHotspot, bool blocked, bool speaking,
-		bool inventoryPresentation, byte speechFrame) {
+		bool inventoryPresentation, byte speechFrame, bool roomHasVerbs, byte actionCursor, bool preferLook, bool walkHotspot) {
 	_now = now;
 	_mouse = mouse;
 	_blocked = blocked;
@@ -247,9 +256,21 @@ void RunawayUI::update(uint32 now, Common::Point mouse, byte roomHotspot, bool b
 			setInventoryOpen(false);
 	}
 	const byte hovered = _inventoryOpen ? itemAt(mouse) : roomHotspot;
-	if (_hovered != hovered) {
+	if (_inventoryOpen || !roomHasVerbs)
+		walkHotspot = false;
+	if (_inventoryOpen || !roomHasVerbs || (_museum && actionCursor != 3)) {
+		actionCursor = 0;
+		preferLook = false;
+	}
+	if (_hovered != hovered || _roomHasVerbs != roomHasVerbs || _actionCursor != actionCursor ||
+			_preferLook != preferLook || _walkHotspot != walkHotspot) {
 		_hovered = hovered;
-		setVerb(hovered ? (_inventoryOpen ? kVerbUse : kVerbLook) : kVerbWalk);
+		_roomHasVerbs = roomHasVerbs;
+		_preferLook = preferLook;
+		_walkHotspot = walkHotspot;
+		setVerb(hovered && !walkHotspot && (_inventoryOpen || _roomHasVerbs) ?
+			(_inventoryOpen ? (_inventory.isPlan(hovered) ? kVerbLook : kVerbUse) :
+			(actionCursor && !preferLook ? kVerbUse : kVerbLook)) : kVerbWalk, actionCursor);
 	}
 	if (now - _buttonTick >= 20) {
 		const uint steps = MIN<uint>(6, (now - _buttonTick) / 20);
@@ -271,14 +292,14 @@ void RunawayUI::update(uint32 now, Common::Point mouse, byte roomHotspot, bool b
 	}
 	if (_inventoryOpen && now - _portraitTick >= 60) {
 		_portraitTick = now;
-		if (_speaking) {
+		if (_speaking || _inventoryFrame != 0xff) {
 			_blinkUntil = 0;
 			_lastInteraction = now;
 			_idleStarted = 0;
 		} else if (!busy() && _random.getRandomNumber(49) == 0) {
 			_blinkUntil = now + 180;
 		}
-		if (!busy() && !_speaking && !_idleStarted && now - _lastInteraction >= 30000)
+		if (!busy() && !_speaking && _inventoryFrame == 0xff && !_idleStarted && now - _lastInteraction >= 30000)
 			_idleStarted = now;
 		if (_idleStarted && now - _idleStarted >= _idlePortrait.frameCount() * 60) {
 			_idleStarted = 0;
@@ -315,10 +336,11 @@ RunawayUI::Command RunawayUI::click(bool right) {
 	if (_blocked || busy())
 		return command;
 	if (right) {
-		if (_inventory.selected())
+		if (_inventory.selected()) {
 			_inventory.select(0);
-		else if (_hovered)
-			setVerb(_verb == kVerbLook ? kVerbUse : kVerbLook);
+		} else if (_hovered && !_walkHotspot && (_inventoryOpen || _roomHasVerbs)) {
+			setVerb(_verb == kVerbLook ? kVerbUse : kVerbLook, _actionCursor);
+		}
 		return command;
 	}
 	if (overButton()) {
@@ -329,7 +351,7 @@ RunawayUI::Command RunawayUI::click(bool right) {
 		return command;
 	command.mouse = _mouse;
 	command.verb = _verb;
-	command.item = _inventory.selected();
+	command.item = _inventoryOpen || _roomHasVerbs ? _inventory.selected() : 0;
 	command.target = _hovered;
 	if (!_inventoryOpen) {
 		command.type = Command::kRoom;
@@ -346,6 +368,8 @@ RunawayUI::Command RunawayUI::click(bool right) {
 			_inventory.select(0);
 		} else if (_verb == kVerbLook) {
 			command.type = Command::kExamineItem;
+		} else if (_inventory.isPlan(_hovered)) {
+			command.type = Command::kUseItem;
 		} else {
 			_inventory.select(_hovered);
 		}
@@ -360,17 +384,22 @@ void RunawayUI::updateCursor() {
 	CursorMan.showMouse(!waiting);
 	if (waiting)
 		return;
-	const byte item = _choices.empty() ? _inventory.selected() : 0;
-	uint tile = _museum ? (_verb == kVerbWalk ? 0 : _verb == kVerbLook ? 6 : 7) : (uint)_verb;
+	const bool useVerbs = _inventoryOpen || _roomHasVerbs;
+	const byte item = _choices.empty() && useVerbs ? _inventory.selected() : 0;
+	uint tile = useVerbs ? _cursorType : 0;
+	if (_museum && tile) {
+		tile = tile == 1 ? 6 : tile == 3 ? 8 : 7;
+	}
 	uint shade = 0;
 	if (item) {
-		tile = _inventory.cursor(item) + (_hovered != 0);
+		tile = _inventory.cursor(item) + (_hovered != 0 && !_walkHotspot);
 	} else {
 		const uint phase = (_now - _verbStarted) / 20;
-		if (!_museum && phase < 10) {
+		// Close-ups such as the keypad keep the plain pointer, without verb morphs.
+		if (useVerbs && !_museum && phase < 10) {
 			// Four cels collapse the old verb to a ball; four expand the new one.
-			tile = !phase ? (uint)_previousVerb : phase < 5 ? _previousVerb * 4 + 8 + phase :
-				phase == 5 ? 8 : _verb * 4 + 18 - phase;
+			tile = !phase ? _previousCursor : phase < 5 ? _previousCursor * 4 + 8 + phase :
+				phase == 5 ? 8 : _cursorType * 4 + 18 - phase;
 		} else {
 			const byte pulse[] = {0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 8, 7, 6, 5, 4, 3, 2, 1};
 			shade = pulse[(_now / 50) % ARRAYSIZE(pulse)];
@@ -401,6 +430,8 @@ void RunawayUI::updateCursor() {
 }
 
 Common::U32String RunawayUI::inventoryCaption() const {
+	if (!_hovered)
+		return Common::U32String();
 	const byte selected = _inventory.selected();
 	if (selected) {
 		if (_hovered == selected)
@@ -409,13 +440,11 @@ Common::U32String RunawayUI::inventoryCaption() const {
 		if (!combination.empty()) {
 			return combination;
 		}
-		Common::U32String caption = _strings.text(RunawayStrings::kUse) + _inventory.name(selected);
-		if (_hovered)
-			caption += _strings.text(RunawayStrings::kWith) + _inventory.name(_hovered);
-		return caption;
+		return _strings.text(RunawayStrings::kUse) + _inventory.name(selected) +
+			_strings.text(RunawayStrings::kWith) + _inventory.name(_hovered);
 	}
-	if (!_hovered)
-		return Common::U32String();
+	if (_inventory.isPlan(_hovered) && _verb == kVerbUse)
+		return _strings.text(RunawayStrings::kPutPlanIntoAction);
 	return _strings.text(_verb == kVerbLook ? RunawayStrings::kLook : RunawayStrings::kTake) + _inventory.name(_hovered);
 }
 
@@ -451,6 +480,8 @@ void RunawayUI::drawInventory(Graphics::ManagedSurface &screen) {
 		} else {
 			_portrait.draw(screen, 64 + MIN<uint>(17, (_now - _pickupStarted) / 60), 0, kRunawayViewportTop);
 		}
+	} else if (_inventoryFrame != 0xff) {
+		_portrait.draw(screen, _inventoryFrame, 0, kRunawayViewportTop);
 	} else if (_idleStarted) {
 		_idlePortrait.draw(screen, MIN<uint>(_idlePortrait.frameCount() - 1, (_now - _idleStarted) / 60), 0, kRunawayViewportTop);
 	} else {
@@ -462,10 +493,11 @@ void RunawayUI::drawInventory(Graphics::ManagedSurface &screen) {
 void RunawayUI::setDialogueChoices(const Common::Array<Common::U32String> &choices) {
 	_choices.clear();
 	_choiceRects.clear();
+	const int textWidth = 968 - _font.getCharWidth('~');
 	int height = 0;
 	for (uint i = 0; i < choices.size(); ++i) {
 		Common::Array<Common::U32String> lines;
-		_font.wordWrapText(choices[i], 968, lines);
+		_font.wordWrapText(choices[i], textWidth, lines);
 		const uint lineHeight = MAX<uint>(1, lines.size()) * 28 + 8;
 		_choiceRects.push_back(Common::Rect(20, height, 1004, height + lineHeight));
 		height += lineHeight;
@@ -475,31 +507,31 @@ void RunawayUI::setDialogueChoices(const Common::Array<Common::U32String> &choic
 		_choiceRects[i].translate(0, kRunawayScreenHeight - 12 - height);
 }
 
-void RunawayUI::drawSubtitle(Graphics::ManagedSurface &screen, const Common::U32String &text) const {
+void RunawayUI::drawSubtitle(Graphics::ManagedSurface &screen, const Common::U32String &text, byte color) const {
 	Common::Array<Common::U32String> lines;
 	_font.wordWrapText(text, 984, lines);
 	for (uint i = 0; i < MIN<uint>(3, lines.size()); ++i)
 		_font.drawString(screen.surfacePtr(), lines[i], 20, 684 + i * 28, 984,
-			kUIFormat.RGBToColor(255, 223, 206), Graphics::kTextAlignCenter);
+			RunawayFont::getColor(color), Graphics::kTextAlignCenter);
 }
 
 void RunawayUI::draw(Graphics::ManagedSurface &screen, const Common::U32String &roomCaption,
-		const Common::U32String &committedCaption, const Common::U32String &subtitle, bool showSubtitles, bool hideInventory) {
-	if (_inventoryOpen && !hideInventory) {
+		const Common::U32String &committedCaption, const Common::U32String &subtitle, byte subtitleColor, bool showSubtitles) {
+	if (_inventoryOpen) {
 		drawInventory(screen);
 	}
 	const Graphics::ManagedSurface &button = _inventoryOpen ? _returnButton : _inventoryButton;
 	screen.copyRectToSurface(button, kButtonX, 0, Common::Rect(_buttonFrame * 100, 0, (_buttonFrame + 1) * 100, 74));
 	screen.copyRectToSurface(_optionsButton, 612, 0, Common::Rect(_optionsFrame * 100, 0, (_optionsFrame + 1) * 100, 74));
-	if (_speaking) {
+	if (!subtitle.empty()) {
 		if (showSubtitles)
-			drawSubtitle(screen, subtitle);
+			drawSubtitle(screen, subtitle, subtitleColor);
 	} else {
 		Common::U32String caption;
-		uint16 color = kUIFormat.RGBToColor(189, 166, 148);
+		uint16 color = RunawayFont::getColor(9);
 		if (!_inventoryOpen && !committedCaption.empty()) {
 			caption = committedCaption;
-			color = kUIFormat.RGBToColor(255, 223, 206);
+			color = RunawayFont::getColor(10);
 		} else if (!_blocked && !busy()) {
 			caption = overOptions() ? _strings.text(RunawayStrings::kOptions) :
 				overButton() ? _strings.text(_inventoryOpen ? RunawayStrings::kResume : RunawayStrings::kInventory) :
@@ -509,11 +541,14 @@ void RunawayUI::draw(Graphics::ManagedSurface &screen, const Common::U32String &
 	}
 	if (!_choices.empty() && !_speaking) {
 		screen.fillRect(Common::Rect(0, _choiceRects[0].top - 8, kRunawayScreenWidth, kRunawayScreenHeight), 0);
+		// The original font stores the dialogue bullet in the '~' glyph.
+		const int markerWidth = _font.getCharWidth('~');
 		for (uint i = 0; i < _choices.size(); ++i) {
-			const uint16 color = _choiceRects[i].contains(_mouse) ?
-				kUIFormat.RGBToColor(255, 223, 206) : kUIFormat.RGBToColor(189, 166, 148);
-			for (uint j = 0; j < _choices[i].size(); ++j)
-				_font.drawString(screen.surfacePtr(), _choices[i][j], 28, _choiceRects[i].top + j * 28, 968, color);
+			const uint16 color = RunawayFont::getColor(_choiceRects[i].contains(_mouse) ? 16 : 15);
+			_font.drawChar(screen.surfacePtr(), '~', 28, _choiceRects[i].top, color);
+			for (uint j = 0; j < _choices[i].size(); ++j) {
+				_font.drawString(screen.surfacePtr(), _choices[i][j], 28 + markerWidth, _choiceRects[i].top + j * 28, 968 - markerWidth, color);
+			}
 		}
 	}
 	// Native 0x4020b0 copies the demo logo to the bottom-right corner.

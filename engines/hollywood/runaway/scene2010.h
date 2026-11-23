@@ -41,10 +41,12 @@ public:
 	void start(uint32 now);
 	void update(uint32 now);
 	void skip(uint32 now);
+	void skipSpeech(uint32 now);
 	void draw(Graphics::ManagedSurface &screen);
 	bool finished() const { return _step == kFinished || _failed; }
 	bool failed() const { return _failed; }
 	const Common::U32String &subtitle() const { return _speech.subtitle(); }
+	byte subtitleColor() const { return _speech.subtitleColor(); }
 
 private:
 	enum Step {
@@ -84,6 +86,7 @@ private:
 	uint _bodyFrame = 20, _headBank = 1;
 	byte _chapter = 1, _chapterVariation = 0;
 	byte _narrationCue = 0;
+	byte _speechColor = 11;
 	bool _chapterOnly = false;
 	uint16 _row = 0, _lastRow = 0, _sample = 0;
 	bool _narrating = true, _themeStarted = false, _failed = false;

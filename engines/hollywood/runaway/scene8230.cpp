@@ -70,7 +70,9 @@ const RunawayRoom kRunawayScene8230 = {
 namespace Runaway {
 
 Scene8230::Scene8230(RunawayAudio &audio, RunawayInventory &inventory, const RunawayStrings &strings, RunawayGameType game) :
-	RunawayRoomScene(audio, inventory, strings, game) {}
+	RunawayRoomScene(audio, inventory, strings, game) {
+	_speechColors[1] = 35; // Rutger.
+}
 
 bool Scene8230::loadCustomResources() {
 	if (!loadForeground(0, 4) || !_plants.load(_archive, 5, 36) || !_rutger.load(_archive, 6, 101)) {
@@ -173,7 +175,7 @@ bool Scene8230::drawCustomComposite(Graphics::ManagedSurface &viewport) {
 		params.roomWidth = _background.w;
 		params.height = actorHeight();
 		params.antialias = _antialias;
-		const byte light = MIN<byte>(4, _maps[768 + _mask[_position.y * _background.w + _position.x]]);
+		const byte light = MIN<byte>(4, findRunawayLight(_position, _background.w, _mask, _maps));
 		memcpy(params.light, kRunawayScene8230.light[light], sizeof(params.light));
 		_actor.draw(_screen, params, _mask, _maps);
 	}

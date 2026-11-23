@@ -35,15 +35,20 @@ private:
 	bool loadCustomResources() override;
 	bool applyCustomBackgroundPatches() override;
 	void applyCustomHotspotState() override;
+	void resumeAmbientAudio(bool entering) override;
 	float actorHeight() const override;
 	void setupActorDepth(RunawayActor::RenderParams &params) const override;
 	ActionResult dispatchCustomSceneAction(uint16 action) override;
 	void runCustomEntrySequence() override;
+	void advanceCustomGameplayLoop(uint32 delta) override;
 	void startCarlaConversation();
 	void handleCustomDialogueChoice(byte effect) override;
 	void drawCustomBackgroundComposite(Graphics::ManagedSurface &viewport) override;
+	void drawCustomForegroundComposite(Graphics::ManagedSurface &viewport) override;
 
 	RunawayAnimation _ambientAnimations[4];
+	RunawayAnimation _refrigeratorAnimation;
+	RunawayCarlaAnimation _carla;
 };
 
 } // End of namespace Runaway

@@ -26,15 +26,15 @@ namespace Hollywood {
 namespace {
 
 const RunawayHotspot kHotspots[] = {
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{1379, 491, 0, {301, 302}, {0, 3}}, // 1: Street.
-	{285, 501, 0, {303, 305}, {1, 0}}, // 2: Cell.
-	{1020, 483, 0, {315, 316}, {0, 1}}, // 3: Bag holding the thugs' stuff.
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{1020, 483, 0, {308, 309}, {0, 0}}, // 5: Desk.
-	{1020, 483, 0, {310, 311}, {0, 0}}, // 6: Gun cabinet.
-	{857, 490, 0, {312, 313}, {0, 0}}, // 7: Bulletin board.
-	{285, 501, 0, {306, 307}, {0, 0}} // 8: Gustav and Feodor.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{1379, 491, 0, {301, 302}, {0, 3}, {1379, 491}, 5}, // 1: Street.
+	{285, 501, 0, {303, 305}, {1, 0}, {258, 427}}, // 2: Cell.
+	{1020, 483, 0, {315, 316}, {0, 1}, {1020, 480}}, // 3: Bag holding the thugs' stuff.
+	{0, 0, 0, {0, 0}, {0, 0}, {536, 425}},
+	{1020, 483, 0, {308, 309}, {0, 0}, {1020, 458}}, // 5: Desk.
+	{1020, 483, 0, {310, 311}, {0, 0}, {1020, 458}}, // 6: Gun cabinet.
+	{857, 490, 0, {312, 313}, {0, 0}, {857, 435}}, // 7: Bulletin board.
+	{285, 501, 0, {306, 307}, {0, 0}, {271, 444}, 3, true} // 8: Gustav and Feodor.
 };
 
 const RunawayResponse kResponses[] = {
@@ -112,7 +112,10 @@ const RunawayRoom kRunawayScene8200 = {
 namespace Runaway {
 
 Scene8200::Scene8200(RunawayAudio &audio, RunawayInventory &inventory, const RunawayStrings &strings, RunawayGameType game) :
-	RunawayRoomScene(audio, inventory, strings, game), _tauntSpeech(audio, _random) {}
+	RunawayRoomScene(audio, inventory, strings, game), _tauntSpeech(audio, _random) {
+	_speechColors[1] = 22; // Feodor.
+	_speechColors[2] = 27; // Gustav.
+}
 
 bool Scene8200::usesAlternateActor() const {
 	return false;
@@ -327,7 +330,7 @@ void Scene8200::startTaunt(uint index, byte variation) {
 void Scene8200::showTauntLine() {
 	const Common::U32String text(_text.largeTextRecord(_tauntCue.textRecordId + _tauntLine), Common::kDos850);
 	const uint16 sample = _tauntCue.voiceSampleId ? _tauntCue.voiceSampleId + _tauntLine : 0;
-	_tauntSpeech.start(text, sample, false, _now);
+	_tauntSpeech.start(text, sample, false, _now, _speechColors[_tauntSpeaker]);
 }
 
 void Scene8200::stopAmbientSpeech() {
@@ -342,6 +345,10 @@ const Common::U32String &Scene8200::subtitle() const {
 		return _tauntSpeech.subtitle();
 	}
 	return RunawayRoomScene::subtitle();
+}
+
+byte Scene8200::subtitleColor() const {
+	return _tauntSpeaker ? _tauntSpeech.subtitleColor() : RunawayRoomScene::subtitleColor();
 }
 
 void Scene8200::sayInventory(const RunawayInventory::Reply &reply) {
@@ -384,6 +391,13 @@ Common::Point Scene8200::customizeSceneActionPosition(byte id, byte item, Common
 
 byte Scene8200::customizeSceneActionFacing(byte id, byte facing) const {
 	return id == 2 && !_finale.oscarAway ? 4 : facing;
+}
+
+const char *Scene8200::actionCaptionVariant(byte id, bool look, byte item) const {
+	if (id == 2 && !look && !item && _finale.oscarAway) {
+		return "locked";
+	}
+	return nullptr;
 }
 
 RunawayRoomScene::ActionResult Scene8200::dispatchCustomSceneAction(uint16 action) {

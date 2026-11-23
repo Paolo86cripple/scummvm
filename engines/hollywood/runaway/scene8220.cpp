@@ -28,18 +28,18 @@ namespace Hollywood {
 namespace {
 
 const RunawayHotspot kHotspots[] = {
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{188, 599, 5, {301, 302}, {0, 3}}, // 1: Path.
-	{778, 512, 3, {303, 304}, {0, 1}}, // 2: Saloon.
-	{125, 441, 7, {305, 306}, {0, 1}}, // 3: Hotel.
-	{388, 284, 7, {307, 308}, {0, 1}}, // 4: Sheriff's office.
-	{574, 242, 7, {309, 310}, {0, 1}}, // 5: Liquor store.
-	{647, 198, 0, {311, 312}, {0, 3}}, // 6: Bank.
-	{722, 192, 0, {313, 314}, {0, 1}}, // 7: Locomotive.
-	{293, 350, 7, {315, 316}, {1, 0}}, // 8: Wagon.
-	{450, 345, 7, {318, 319}, {0, 1}}, // 9: Oscar.
-	{456, 271, 1, {320, 321}, {0, 0}}, // 10: Car.
-	{722, 192, 0, {322, 323}, {0, 3}} // 11: North side of town.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{188, 599, 5, {301, 302}, {0, 3}, {188, 599}, 7}, // 1: Path.
+	{778, 512, 3, {303, 304}, {0, 1}, {778, 512}, 6}, // 2: Saloon.
+	{125, 441, 7, {305, 306}, {0, 1}, {79, 399}, 4}, // 3: Hotel.
+	{388, 284, 7, {307, 308}, {0, 1}, {388, 284}, 4}, // 4: Sheriff's office.
+	{574, 242, 7, {309, 310}, {0, 1}, {526, 216}, 4}, // 5: Liquor store.
+	{647, 198, 0, {311, 312}, {0, 3}, {646, 195}, 4}, // 6: Bank.
+	{722, 192, 0, {313, 314}, {0, 1}, {722, 192}, 5}, // 7: Locomotive.
+	{293, 350, 7, {315, 316}, {1, 0}, {285, 340}}, // 8: Wagon.
+	{450, 345, 7, {318, 319}, {0, 1}, {404, 302}, 3}, // 9: Oscar.
+	{456, 271, 1, {320, 321}, {0, 0}, {472, 254}}, // 10: Car.
+	{722, 192, 0, {322, 323}, {0, 3}, {722, 192}, 5} // 11: North side of town.
 };
 
 const RunawayResponse kResponses[] = {
@@ -70,7 +70,9 @@ const RunawayRoom kRunawayScene8220 = {
 namespace Runaway {
 
 Scene8220::Scene8220(RunawayAudio &audio, RunawayInventory &inventory, const RunawayStrings &strings, RunawayGameType game) :
-	RunawayRoomScene(audio, inventory, strings, game), _oscar(false, 6) {}
+	RunawayRoomScene(audio, inventory, strings, game), _oscar(false, 6) {
+	_speechColors[1] = 32; // Oscar.
+}
 
 bool Scene8220::loadCustomResources() {
 	return _oscarAnimation.load(_archive, 7, 107) && _brianAnimation.load(_archive, 8, 33) &&
@@ -98,12 +100,10 @@ void Scene8220::prepareCustomGameplayLoop() {
 void Scene8220::resumeAmbientAudio(bool entering) {
 	resumeFinaleOutdoorAudio(false, 36, 51);
 	if (entering && _entryScene == 8220 && (!_finale.streetVisited || !_random.getRandomNumber(5))) {
-		_musicCue = 20;
-		_audio.playMusic(_musicCue, false);
+		_audio.playMusic(20, false);
 		_finale.streetVisited = 1;
 	} else if (entering && _entryScene == 8223) {
-		_musicCue = 12 + _random.getRandomNumber(4);
-		_audio.playMusic(_musicCue, false);
+		_audio.playMusic(12 + _random.getRandomNumber(4), false);
 	}
 	_audio.setMusicVolume(255);
 }
@@ -138,8 +138,7 @@ void Scene8220::runCustomEntrySequence() {
 		updateMaps();
 		_arrivalPhase = kWaitingForCar;
 		_roomAction = 420;
-		_musicCue = 38;
-		_audio.playMusic(_musicCue, false);
+		_audio.playMusic(38, false);
 		_audio.setMusicVolume(255);
 		_audio.playEffect(67, 178);
 		return;
@@ -318,9 +317,8 @@ void Scene8220::leaveStreet(uint16 destination, bool advanceResearch) {
 	if (advanceResearch && _finale.bankResearch == 1) {
 		_finale.bankResearch = 2;
 	}
-	if (destination == 8350 && _musicCue == 20) {
-		_musicCue = 12 + _random.getRandomNumber(4);
-		_audio.playMusic(_musicCue, false);
+	if (destination == 8350 && _audio.musicCue() == 20) {
+		_audio.playMusic(12 + _random.getRandomNumber(4), false);
 		_audio.setMusicVolume(255);
 	}
 	leaveRoom(destination);
@@ -417,6 +415,7 @@ RunawayRoomScene::ActionResult Scene8220::dispatchCustomSceneAction(uint16 actio
 	}
 	case 1414: { // Show Sushi, Saturn and Rutger watching Brian leave.
 		typedef RunawaySequence S;
+		static const byte colors[] = {30, 31, 35};
 		const bool gog = Common::File::exists("DATAVC00.000");
 		_filmCommands.clear();
 		_filmCommands.push_back({S::kOpen, 9});
@@ -426,7 +425,7 @@ RunawayRoomScene::ActionResult Scene8220::dispatchCustomSceneAction(uint16 actio
 			if (gog) {
 				_filmCommands.push_back(S::Command(S::kStill, 45 + i));
 			}
-			_filmCommands.push_back(S::Command(S::kTalk, 40, i, 1 + i * 2));
+			_filmCommands.push_back(S::Command(S::kTalk, 40, i, 1 + i * 2, 0, colors[i]));
 		}
 		_filmCommands.push_back(S::Command(S::kPlay, gog ? 48 : 63, gog ? 105 : 120));
 		_filmCommands.push_back(S::Command(S::kEnd));
@@ -449,7 +448,7 @@ RunawayRoomScene::ActionResult Scene8220::dispatchCustomSceneAction(uint16 actio
 
 void Scene8220::finishCustomFilm() {
 	_farewell = true;
-	say(40, 3, false, 1);
+	say(40, 3, false, 1, 35); // Rutger's offscreen farewell.
 	deferAction(415);
 }
 

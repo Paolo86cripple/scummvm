@@ -28,15 +28,15 @@ namespace Hollywood {
 namespace {
 
 const RunawayHotspot kHotspots[] = {
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{0, 453, 5, {301, 302}, {0, 3}}, // 1: Door.
-	{782, 408, 7, {303, 304}, {0, 1}}, // 2: Stairs.
-	{395, 402, 7, {305, 306}, {0, 3}}, // 3: Rutger.
-	{1286, 435, 0, {307, 308}, {0, 0}}, // 4: Watering can.
-	{742, 332, 5, {309, 310}, {0, 0}}, // 5: Gardening shed.
-	{610, 467, 1, {311, 312}, {0, 0}}, // 6: Door knob.
-	{1393, 427, 0, {313, 314}, {0, 0}}, // 7: Plant.
-	{955, 396, 1, {315, 316}, {0, 0}} // 8: Bonsai tree.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{0, 453, 5, {301, 302}, {0, 3}, {0, 453}, 7}, // 1: Door.
+	{782, 408, 7, {303, 304}, {0, 1}, {625, 391}, 4}, // 2: Stairs.
+	{395, 402, 7, {305, 306}, {0, 3}, {346, 260}, 3}, // 3: Rutger.
+	{1286, 435, 0, {307, 308}, {0, 0}, {1286, 405}}, // 4: Watering can.
+	{742, 332, 5, {309, 310}, {0, 0}, {821, 340}}, // 5: Gardening shed.
+	{610, 467, 1, {311, 312}, {0, 0}, {669, 431}}, // 6: Door knob.
+	{1393, 427, 0, {313, 314}, {0, 0}, {1393, 386}}, // 7: Plant.
+	{955, 396, 1, {315, 316}, {0, 0}, {1009, 366}} // 8: Bonsai tree.
 };
 
 const RunawayResponse kResponses[] = {
@@ -47,15 +47,12 @@ const RunawayResponse kResponses[] = {
 	{8240, 309, 7, 3},  // Examine the gardening shed.
 	{8240, 312, 10, 0}, // The door knob is carved into the column.
 	{8240, 315, 13, 0}, // Examine the bonsai.
-	{8240, 316, 14, 0}, // Leave the bonsai where it belongs.
-	{8240, 317, 15, 0}  // Refuse to water the plants with an inventory item.
+	{8240, 316, 14, 0}  // Leave the bonsai where it belongs.
 };
 
 const RunawayItemAction kItemActions[] = {
 	{8240, 9, 3, 318, false},  // Offer Rutger the Hopi axe-pipe.
-	{8240, 10, 3, 319, false}, // Give Rutger the yawaskel seeds.
-	{8240, 16, 7, 317, false}, {8240, 16, 8, 317, false},
-	{8240, 24, 7, 317, false}, {8240, 24, 8, 317, false}
+	{8240, 10, 3, 319, false}  // Give Rutger the yawaskel seeds.
 };
 
 const byte kRutgerFrames[] = {
@@ -94,7 +91,9 @@ const RunawayRoom kRunawayScene8240 = {
 namespace Runaway {
 
 Scene8240::Scene8240(RunawayAudio &audio, RunawayInventory &inventory, const RunawayStrings &strings, RunawayGameType game) :
-	Scene6240(audio, inventory, strings, game) {}
+	Scene6240(audio, inventory, strings, game) {
+	_speechColors[1] = 35; // Rutger.
+}
 
 bool Scene8240::loadCustomResources() {
 	_brew = _entryScene == 8243;
@@ -102,13 +101,19 @@ bool Scene8240::loadCustomResources() {
 }
 
 bool Scene8240::applyCustomBackgroundPatches() {
-	return applyPatch(9) && (!_brew || applyPatch(13));
+	if (!applyPatch(9) || (_brew && !applyPatch(13))) {
+		return false;
+	}
+	return removeWateringCan();
 }
 
 void Scene8240::applyCustomHotspotState() {
 	for (uint i = 0; i < 256; ++i) {
 		if (_maps[i] >= 6 && _maps[i] <= 8) {
 			_maps[i] = 0;
+		}
+		if (_maps[256 + i] == 4 && _town.wateringCanTaken) {
+			_maps[256 + i] = 0;
 		}
 	}
 }
@@ -353,7 +358,7 @@ RunawayRoomScene::ActionResult Scene8240::dispatchCustomSceneAction(uint16 actio
 	case 415: { // Cut to black as Brian leaves for his final medium test.
 		typedef RunawaySequence S;
 		static const S::Command commands[] = {
-			{S::kDelay, 500}, {S::kSpeech, 18, 7, 7}, {S::kWaitSpeech}, {S::kEnd}
+			{S::kDelay, 500}, {S::kSpeech, 18, 7, 7, 0, 35}, {S::kWaitSpeech}, {S::kEnd}
 		};
 		_film = kLeaveAfterBrew;
 		_sequence.start(commands, _text, _now, 'H');
@@ -396,9 +401,8 @@ RunawayRoomScene::ActionResult Scene8240::dispatchCustomSceneAction(uint16 actio
 }
 
 void Scene8240::handleAnimationFrameHook() {
-	if (_roomAction == 304 && (_actionStep == 11 || _actionStep == 18)) {
-		_audio.playFootstep(3, _random.getRandomBit());
-	} else if (_roomAction == 414 && _actionStep == 37) {
+	Scene6240::handleAnimationFrameHook();
+	if (_roomAction == 414 && _actionStep == 37) {
 		_audio.playEffect(42, 230, 1);
 	}
 }

@@ -23,6 +23,7 @@
 #include "audio/decoders/raw.h"
 #include "common/debug.h"
 #include "common/file.h"
+#include "common/random.h"
 #include "common/substream.h"
 
 #include "hollywood/debug.h"
@@ -92,6 +93,7 @@ uint32 RunawayAudio::play(const char *archive, uint16 cue, uint tableCount, bool
 }
 
 void RunawayAudio::playIntroMusic(uint16 cue) {
+	stopMusic();
 	// The Pendulo logo uses RESOURCE.002 cue 2 on native channel 7, which
 	// has the same 16 kHz stereo PCM format as the room music channels.
 	// Cue 4 accompanies the retail narrator's montage.
@@ -100,20 +102,50 @@ void RunawayAudio::playIntroMusic(uint16 cue) {
 }
 
 uint32 RunawayAudio::playMusic(uint16 cue, bool loop) {
+	_musicCue = cue;
+	_musicLooping = loop;
+	_nextMusic = 0;
 	// Retail/cabin PCM is 16 kHz; the old museum demo uses 22.05 kHz music.
 	const Common::String archive = Common::String::format("RESOURCE.M%02u", _museum ? 4 : _chapter);
 	return play(archive.c_str(), cue, 100, false, Audio::FLAG_16BITS | Audio::FLAG_LITTLE_ENDIAN | Audio::FLAG_STEREO,
 		Audio::Mixer::kMusicSoundType, _music, 96, loop, _museum ? 22050 : 16000);
 }
 
+void RunawayAudio::updateBackgroundMusic(uint32 now, Common::RandomSource &random, byte firstCue, byte cueCount, byte volume, int repeatDelay) {
+	assert(cueCount);
+	if (musicPlaying()) {
+		_nextMusic = 0;
+		return;
+	}
+	if (!_nextMusic) {
+		// The original leaves these pauses between background tracks.
+		static const uint delays[] = {0, 60000, 30000, 15000};
+		_nextMusic = now + (repeatDelay < 0 ? delays[random.getRandomNumber(ARRAYSIZE(delays) - 1)] : (uint)repeatDelay);
+	}
+	if ((int32)(now - _nextMusic) >= 0) {
+		byte cue;
+		do {
+			cue = firstCue + random.getRandomNumber(cueCount - 1);
+		} while (cueCount > 1 && cue == _musicCue);
+		playMusic(cue, false);
+		setMusicVolume(volume);
+	}
+}
+
 void RunawayAudio::setMusicVolume(byte volume) {
 	_music.setVolume(volume);
+}
+
+void RunawayAudio::pauseMusic(bool paused) {
+	_music.pause(paused);
 }
 
 void RunawayAudio::setListenerPosition(int x) {
 	_listenerX = x;
 	_speech.setListenerPosition(x);
-	_footstep.setListenerPosition(x);
+	for (uint i = 0; i < ARRAYSIZE(_footsteps); ++i) {
+		_footsteps[i].setListenerPosition(x);
+	}
 	for (uint i = 0; i < ARRAYSIZE(_effects); ++i) {
 		_effects[i].setListenerPosition(x);
 	}
@@ -174,14 +206,19 @@ void RunawayAudio::playFootstep(byte surface, byte variant, byte volume, int x) 
 	assert(surface >= 1 && surface <= 7 && variant < 2);
 	// Retail 0x40a370 / cabin demo 0x407410 select one of two mono samples
 	// per surface, starting at cue 21 in the shared music archive.
+	// Each sample has its own playback buffer, so different steps can overlap.
+	const uint footstep = (surface - 1) * 2 + variant;
 	const Common::Point position(x, 200);
-	play("RESOURCE.002", 21 + (surface - 1) * 2 + variant, 100, false,
-		Audio::FLAG_16BITS | Audio::FLAG_LITTLE_ENDIAN, Audio::Mixer::kSFXSoundType, _footstep, volume, false, 16000,
+	play("RESOURCE.002", 21 + footstep, 100, false,
+		Audio::FLAG_16BITS | Audio::FLAG_LITTLE_ENDIAN, Audio::Mixer::kSFXSoundType, _footsteps[footstep], volume, false, 16000,
 		x >= 0 ? &position : nullptr);
 }
 
 void RunawayAudio::stopMusic() {
 	_music.stop();
+	_musicCue = 0;
+	_musicLooping = false;
+	_nextMusic = 0;
 }
 
 void RunawayAudio::playPointer() {
@@ -208,6 +245,7 @@ void RunawayAudio::playMenuMusic() {
 		playMusic(11);
 		return;
 	}
+	stopMusic();
 	// Options volume preview and credits use shared music cue 1, channel 7.
 	play("RESOURCE.002", 1, 100, false, Audio::FLAG_16BITS | Audio::FLAG_LITTLE_ENDIAN | Audio::FLAG_STEREO,
 		Audio::Mixer::kMusicSoundType, _music, 255, true, 16000);
@@ -219,7 +257,9 @@ void RunawayAudio::stopSpeech() {
 
 void RunawayAudio::stopEffect() {
 	_pointer.stop();
-	_footstep.stop();
+	for (uint i = 0; i < ARRAYSIZE(_footsteps); ++i) {
+		_footsteps[i].stop();
+	}
 	for (uint i = 0; i < ARRAYSIZE(_effects); ++i)
 		_effects[i].stop();
 }
@@ -227,6 +267,16 @@ void RunawayAudio::stopEffect() {
 void RunawayAudio::stopEffect(byte channel) {
 	assert(channel < ARRAYSIZE(_effects));
 	_effects[channel].stop();
+}
+
+void RunawayAudio::pauseEffect(byte channel, bool paused) {
+	assert(channel < ARRAYSIZE(_effects));
+	_effects[channel].pause(paused);
+}
+
+void RunawayAudio::setEffectVolume(byte channel, byte volume) {
+	assert(channel < ARRAYSIZE(_effects));
+	_effects[channel].setVolume(volume);
 }
 
 bool RunawayAudio::musicPlaying() const {

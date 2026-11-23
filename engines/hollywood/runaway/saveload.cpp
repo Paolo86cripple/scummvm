@@ -186,7 +186,7 @@ void RunawaySaveState::sync(Common::Serializer &s) {
 	s.syncAsByte(desert.needle, 7);
 	s.syncAsByte(desert.fridgeSeen, 7);
 	s.syncAsByte(desert.carlaMet, 7);
-	s.syncAsByte(desert.carlaStory, 7);
+	s.syncAsByte(desert.carlaDrank, 7);
 	s.syncAsByte(desert.planKnown, 7);
 	s.syncAsUint32LE(desert.carlaTopics, 7);
 	s.syncAsUint32LE(desert.lulaTopics, 7);
@@ -380,6 +380,13 @@ void RunawaySaveState::sync(Common::Serializer &s) {
 	s.syncAsByte(finale.trailerInteriorVisited, 25);
 	s.syncAsByte(finale.ginaVisited, 26);
 	s.syncAsByte(finale.ginaMediumDiscussed, 26);
+	s.syncAsByte(museum.officeVisited, 27);
+	s.syncAsByte(museum.exhibitionVisited, 27);
+	s.syncAsByte(museum.phonePlanExplained, 27);
+	s.syncAsByte(town.motorcycleRefilled, 28);
+	s.syncAsByte(town.wateringCanTaken, 29);
+	s.syncAsByte(town.cellVisited, 29);
+	s.syncAsByte(hopi.cryptReturnVisited, 30);
 }
 
 byte RunawaySaveState::chapter() const {
@@ -437,6 +444,7 @@ bool RunawaySaveState::valid() const {
 	if (museum.susan > 3 || museum.restoration > 2 || museum.laserUpgraded > 1 ||
 			museum.laserSeen > 1 || museum.shelvesSeen > 1 || museum.susanMet > 1 ||
 			museum.labVisited > 1 || museum.shelfBooksSeen > 1 || museum.safeUsed > 1 ||
+			museum.officeVisited > 1 || museum.exhibitionVisited > 1 || museum.phonePlanExplained > 1 ||
 			museum.willyMet > 2 || museum.batteryRequested > 1 || museum.coffeeMachine > 2 ||
 			museum.coffeeSeen > 1 || museum.basketSeen > 1 || museum.needsPackage > 1 ||
 			museum.needsGroundCoffee > 1 || museum.willyInLab > 2 || museum.keypad > 4 ||
@@ -465,7 +473,7 @@ bool RunawaySaveState::valid() const {
 			desert.busDoor > 3 || desert.lipstickShelf > 3 || desert.keyTaken > 1 || desert.glassesTaken > 1 ||
 			desert.vacuum > 2 || desert.crank > 2 || desert.necklacesSeen > 1 || desert.ringsSeen > 1 ||
 			desert.fridgeOpened > 1 || desert.ventCleaned > 1 || desert.ventSeen > 1 || desert.needle > 2 || desert.fridgeSeen > 1 ||
-			desert.carlaMet > 1 || desert.carlaStory > 1 || desert.planKnown > 1 ||
+			desert.carlaMet > 1 || desert.carlaDrank > 1 || desert.planKnown > 1 ||
 			desertItems.antTrickKnown > 1 || desertItems.helmet > 4 || desertItems.lipstick > 1 || desertItems.lipsticks > 1 ||
 			desertItems.belt > 2 || desertItems.ball > 2 || desertItems.glasses > 2 || desertItems.pill > 1 ||
 			desertItems.bucket > 2 || desertItems.gunReady > 1 || desertItems.bombReady > 1 || desertItems.helicopterReady > 1)
@@ -489,7 +497,8 @@ bool RunawaySaveState::valid() const {
 			town.roughSculptureRefused > 1 || town.polishedSculptureRefused > 1 || town.oscarStrengthKnown > 1 || town.basementVisited > 1 ||
 			town.bankImpactSeen > 1 || town.safeOpened > 1 || town.stethoscopeTried > 1 || town.safeDialVisited > 1 ||
 			town.safeDial > 99 || town.safeProgress > 3 || town.machinePowered > 1 || town.melodyTried > 1 ||
-			town.campingGearTaken > 1 || townItems.sculpture > 2 || townItems.tube30 > 3 || townItems.tube50 > 5 ||
+			town.campingGearTaken > 1 || town.motorcycleRefilled > 1 || town.wateringCanTaken > 1 || town.cellVisited > 1 ||
+			townItems.sculpture > 2 || townItems.tube30 > 3 || townItems.tube50 > 5 ||
 			townItems.mortar > 1 || townItems.mortarIdea > 1) {
 		return false;
 	}
@@ -530,7 +539,7 @@ bool RunawaySaveState::valid() const {
 		return false;
 	}
 	if (hopi.canyonVisited > 1 || hopi.cryptEntranceVisited > 1 || hopi.keyholeBlockedKnown > 1 ||
-			hopi.bushSeen > 1 || hopi.cryptDoor > 3) {
+			hopi.bushSeen > 1 || hopi.cryptDoor > 3 || hopi.cryptReturnVisited > 1) {
 		return false;
 	}
 	if (hopi.statueVisited > 1 || hopi.tomahawk > 2 || hopi.leftCrossSeen > 1 || hopi.rightCrossSeen > 1) {
@@ -578,11 +587,29 @@ bool RunawaySaveState::read(Common::SeekableReadStream &stream) {
 	if (stream.readUint32BE() != MKTAG('R', 'U', 'N', 'A'))
 		return false;
 	const uint16 version = stream.readUint16LE();
-	if (version < 1 || version > 26)
+	if (version < 1 || version > 30)
 		return false;
 	Common::Serializer s(&stream, nullptr);
 	s.setVersion(version);
 	sync(s);
+	if (version < 28) {
+		if (!town.safeSeen && town.basementVisited == 1) {
+			town.safeSeen = 1;
+		}
+		if (town.oscarStrengthKnown == 1 && !town.oscarTobacco) {
+			town.oscarTobacco = 1;
+		}
+	}
+	if (version < 29) {
+		town.cellVisited = scene == 6210 || town.bagSearched || town.bucketSeen || town.bottleSeen;
+		if (chapter() == 4) {
+			for (uint i = 0; i < MIN<uint>(itemCount, ARRAYSIZE(items)); ++i) {
+				if (items[i] == 16) {
+					town.wateringCanTaken = 1;
+				}
+			}
+		}
+	}
 	return !s.err() && !stream.eos() && valid();
 }
 
@@ -590,9 +617,9 @@ bool RunawaySaveState::write(Common::WriteStream &stream) {
 	if (!valid())
 		return false;
 	stream.writeUint32BE(MKTAG('R', 'U', 'N', 'A'));
-	stream.writeUint16LE(26);
+	stream.writeUint16LE(30);
 	Common::Serializer s(nullptr, &stream);
-	s.setVersion(26);
+	s.setVersion(30);
 	sync(s);
 	return !s.err();
 }

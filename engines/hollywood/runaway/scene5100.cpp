@@ -52,25 +52,25 @@ const byte kStudFrames[] = {
 const byte kCanThrows[][2] = {{0, 19}, {21, 40}, {42, 71}, {72, 88}};
 
 const RunawayHotspot kHotspots[] = {
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{1279, 267, 0, {301, 302}, {0, 1}}, // 1: Path.
-	{1259, 354, 7, {303, 304}, {1, 0}}, // 2: Barn Doors.
-	{0, 0, 0, {305, 306}, {1, 1}}, // 3: Bottle.
-	{1279, 267, 4, {1, 302}, {0, 1}}, // 4: Window.
-	{164, 581, 0, {307, 308}, {1, 0}}, // 5: Motorcycle.
-	{0, 0, 7, {309, 310}, {1, 1}}, // 6: Stud.
-	{0, 0, 4, {311, 312}, {0, 0}}, // 7: Remains Of Rocking Chair.
-	{0, 0, 7, {313, 314}, {0, 1}}, // 8: Piece Of Metal.
-	{0, 0, 1, {315, 316}, {1, 0}}, // 9: Barrel.
-	{0, 0, 4, {317, 318}, {0, 0}}, // 10: Barrel.
-	{0, 0, 7, {319, 320}, {0, 0}}, // 11: Helicopter.
-	{253, 418, 4, {321, 322}, {0, 0}}, // 12: Can.
-	{0, 0, 1, {323, 324}, {1, 0}}, // 13: Bucket.
-	{253, 418, 4, {1, 325}, {0, 0}}, // 14: Outside.
-	{1053, 403, 3, {1, 329}, {0, 1}}, // 15: Stud.
-	{0, 0, 0, {0, 0}, {0, 0}}, // 16: Beer Can.
-	{0, 0, 0, {0, 0}, {0, 0}}, // 17: Peanut Butter.
-	{0, 0, 0, {0, 0}, {0, 0}}, // 18: Foot Rest.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{1279, 267, 0, {301, 302}, {0, 1}, {1449, 255}, 4}, // 1: Path.
+	{1259, 354, 7, {303, 304}, {1, 0}, {1101, 298}}, // 2: Barn Doors.
+	{0, 0, 0, {305, 306}, {1, 1}, {274, 484}}, // 3: Bottle.
+	{1279, 267, 4, {1, 302}, {0, 1}, {0, 0}}, // 4: Window.
+	{164, 581, 0, {307, 308}, {1, 0}, {164, 570}}, // 5: Motorcycle.
+	{0, 0, 7, {309, 310}, {1, 1}, {490, 493}, 3, true}, // 6: Stud.
+	{0, 0, 4, {311, 312}, {0, 0}, {1329, 514}}, // 7: Remains Of Rocking Chair.
+	{0, 0, 7, {313, 314}, {0, 1}, {29, 503}}, // 8: Piece Of Metal.
+	{0, 0, 1, {315, 316}, {1, 0}, {335, 525}}, // 9: Barrel.
+	{0, 0, 4, {317, 318}, {0, 0}, {993, 558}}, // 10: Barrel.
+	{0, 0, 7, {319, 320}, {0, 0}, {1101, 298}}, // 11: Helicopter.
+	{253, 418, 4, {321, 322}, {0, 0}, {245, 491}}, // 12: Can.
+	{0, 0, 1, {323, 324}, {1, 0}, {786, 403}}, // 13: Bucket.
+	{253, 418, 4, {1, 325}, {0, 0}, {253, 600}}, // 14: Outside.
+	{1053, 403, 3, {329, 329}, {1, 1}, {490, 493}}, // 15: Stud (peek around the corner).
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}}, // 16: Beer Can.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}}, // 17: Peanut Butter.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}}, // 18: Foot Rest.
 };
 
 const RunawayResponse kResponses[] = {
@@ -88,6 +88,7 @@ const RunawayResponse kResponses[] = {
 
 const RunawayItemAction kItemActions[] = {
 	{5100, 2, 5, 327, true}, // Pry the footrest off the motorcycle.
+	{5100, 2, 6, 330, false}, // Threaten Stud with the crowbar (restored content).
 	{5100, 9, 6, 16, false}, // Offer the sleeping pill directly to Stud.
 	{5100, 9, 12, 328, true}, // Put the sleeping pill in Stud's beer.
 };
@@ -106,7 +107,18 @@ namespace Runaway {
 
 Scene5100::Scene5100(RunawayAudio &audio, RunawayInventory &inventory, const RunawayStrings &strings, RunawayGameType game) :
 	RunawayRoomScene(audio, inventory, strings, game),
-	_hangarSpeech(audio, _random, RunawaySpeech::kNoLipSync) {}
+	_hangarSpeech(audio, _random) {
+	_speechColors[1] = 26; // Stud.
+	_speechColors[2] = 28; // Lula.
+}
+
+void Scene5100::setCameraX(int x) {
+	// Keep the guard out of view until Brian enters or watches the spiked beer.
+	if (!_desert.insideBarn && _desert.guard != 2 && _roomAction != 468 && _roomAction != 478) {
+		x = _background.w - kRunawayScreenWidth;
+	}
+	RunawayRoomScene::setCameraX(x);
+}
 
 const char *Scene5100::actionCaptionVariant(byte id, bool look, byte item) const {
 	if (!item && id == 2) {
@@ -130,19 +142,54 @@ bool Scene5100::loadCustomResources() {
 		_lulaAnimation.load(_archive, 16, 79);
 }
 
+bool Scene5100::adjustCustomWalkTargetToFloorMask(Common::Point &target) const {
+	if (_desert.insideBarn) {
+		target = Common::Point(253, 418);
+		return true;
+	}
+	target.x = CLIP<int>(target.x, _desert.guard == 2 ? 141 : 1053, 1471);
+	return false;
+}
+
+byte Scene5100::actorWalkZone() const {
+	// The one-pixel-wide corridors can fall between Brian's rounded positions.
+	for (int distance = 0; distance < _background.h; ++distance) {
+		const int above = _position.y - distance, below = _position.y + distance;
+		if (above >= 0 && above < _background.h) {
+			const byte zone = _originalMaps[_mask[above * _background.w + _position.x]];
+			if (zone)
+				return zone;
+		}
+		if (below >= 0 && below < _background.h) {
+			const byte zone = _originalMaps[_mask[below * _background.w + _position.x]];
+			if (zone)
+				return zone;
+		}
+	}
+	return 0;
+}
+
 float Scene5100::actorHeight() const {
 	return _position.y * 0.668016195f + 87.591095f;
 }
 
+int Scene5100::sceneViewportYOffset() const {
+	// The walk area extends 100 pixels below the painted hangar exterior.
+	return 0;
+}
+
 void Scene5100::setupActorDepth(RunawayActor::RenderParams &params) const {
-	params.depthY[1] = 599;
-	params.depthY[2] = 303;
-	params.depthY[3] = 446;
+	const bool behindHangar = _desert.guard != 2 && actorWalkZone() == 3;
+	params.depthY[1] = behindHangar ? 599 : 0;
+	params.depthY[2] = behindHangar ? 599 : 303;
+	params.depthY[3] = behindHangar ? 599 : 446;
 	params.depthY[4] = 699;
 }
 
 RunawayRoomScene::ActionResult Scene5100::dispatchCustomSceneAction(uint16 action) {
 	switch (action) {
+	case 1: // The window and exit have no look response.
+		break;
 	case 302: // Go to the desert overview.
 		leaveDesertRoom(5010);
 		break;
@@ -237,6 +284,13 @@ RunawayRoomScene::ActionResult Scene5100::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 310: // Talk to Stud.
 		say(6, !_desert.insideBarn);
+		break;
+	case 330: // Threaten the drugged Stud with the crowbar (restored content).
+		if (_desert.guard == 2 && _restoredContent) {
+			say(12, 7, false, 1);
+		} else {
+			executeItemAction(defaultItemAction(2, 6));
+		}
 		break;
 	case 313: // Look at the loose footrest.
 		if (!_desert.footrestSeen) {
@@ -358,7 +412,7 @@ RunawayRoomScene::ActionResult Scene5100::dispatchCustomSceneAction(uint16 actio
 		const uint count = 249 - 129 + 1;
 		byte brian[count];
 		memset(brian, 18, sizeof(brian));
-		setCameraX(0);
+		_panElapsed = 0;
 		beginRoomAnimation(468, 9, 151, kStudFrames + 129, count);
 		setRoomAnimationOverlay(10, 29, brian, ARRAYSIZE(brian));
 		break;
@@ -397,10 +451,7 @@ RunawayRoomScene::ActionResult Scene5100::dispatchCustomSceneAction(uint16 actio
 		_audio.playEffect(49);
 		_desert.barnDoor = 2;
 		_inventory.desert().helicopterReady = 1;
-		if (_inventory.desert().gunReady && _inventory.desert().bombReady) {
-			say(174, 4, true);
-			leaveDesertRoom(5062);
-		}
+		reviewDesertPlan(3);
 		return kBackgroundChanged;
 	case 340: // Abandon the distraction and return to cover outside.
 		say(13);
@@ -417,7 +468,13 @@ RunawayRoomScene::ActionResult Scene5100::dispatchCustomSceneAction(uint16 actio
 		_desert.guard = 0;
 		_desert.insideBarn = 0;
 		walkHangar(Common::Point(1322, 339), 5);
+		if (_hangarShotCount < 5) {
+			deferDesertAction(520);
+		}
 		return kBackgroundChanged;
+	case 520: // Confirm Stud's return after abandoning the distraction.
+		say(13, 1);
+		break;
 	case 400: { // Arrive with Lula and the concealed walkie-talkie.
 		_desert.visited[6] = 1;
 		_desert.insideBarn = 1;
@@ -488,10 +545,12 @@ RunawayRoomScene::ActionResult Scene5100::dispatchCustomSceneAction(uint16 actio
 		break;
 	}
 	case 1450: // Stud follows Lula away from his beer.
+		_audio.playFootstep(2, _random.getRandomBit(), 255, 100);
 		_desert.guard = 1;
 		beginRoomAnimation(460, 17, 52, nullptr, 0, false);
 		return kBackgroundChanged;
 	case 1460: // Lula demonstrates her shooting on the first visit.
+		_audio.playFootstep(2, _random.getRandomBit(), 255, 100);
 		if (_desert.lulaDistractedGuard) {
 			deferDesertAction(490);
 		} else {
@@ -514,8 +573,24 @@ RunawayRoomScene::ActionResult Scene5100::dispatchCustomSceneAction(uint16 actio
 		_hangarThrowing = true;
 		say(14);
 		break;
-	case 329: // Try to walk past Stud.
+	case 600: // Notice the guard after reaching the corner on the first visit.
+		say(0);
+		deferDesertAction(610);
+		break;
+	case 610: // Peek around the corner on the first visit.
+	case 329: { // Step out and back when trying to walk past Stud.
+		byte frames[30];
+		for (uint i = 0; i < ARRAYSIZE(frames); ++i) {
+			frames[i] = i <= 18 ? i : i - 1;
+		}
+		beginRoomAnimation(action, 10, 29, frames, ARRAYSIZE(frames));
+		break;
+	}
+	case 1329: // Decide against trying to pass Stud.
 		say(1, _random.getRandomBit());
+		break;
+	case 1610: // Comment on Stud after peeking around the corner.
+		say(0, 1);
 		break;
 	default:
 		return kUnhandled;
@@ -529,9 +604,17 @@ void Scene5100::runCustomEntrySequence() {
 		return;
 	}
 	if (_entryScene == 5100) {
-		walkTo(Common::Point(1053, 403), 3);
+		if (!_desert.guard) {
+			_studState = 0;
+			_studStep = 130;
+			_studElapsed = 0;
+		}
+		walkHangar(Common::Point(1053, 403), 3);
+		if (!_desert.visited[6]) {
+			_desert.visited[6] = 1;
+			deferDesertAction(600);
+		}
 	}
-	visitDesertRoom(6, 2);
 }
 
 Common::U32String Scene5100::hotspotName(byte id) const {
@@ -550,6 +633,7 @@ Common::U32String Scene5100::hotspotName(byte id) const {
 bool Scene5100::applyCustomBackgroundPatches() {
 	const uint mask = _desert.insideBarn ? 23 : _desert.guard == 2 ? 26 : 1;
 	return loadRunawayMask(_archive, _background.w, _background.h, _mask, _originalMaps, mask) &&
+		_archive.readVariableChunk(mask + 2, _walkRoutes) &&
 		(_desert.barnDoor != 2 || applyPatch(5)) && (_desert.peanutButter != 2 || applyPatch(6));
 }
 
@@ -593,7 +677,7 @@ void Scene5100::applyCustomHotspotState() {
 
 void Scene5100::walkHangar(Common::Point target, byte facing) {
 	// Scripted entrances cross the floor that is blocked while the guard watches.
-	_walkPath.findPath(RunawayWalkMap(_background.w, _background.h, _mask, _originalMaps), target);
+	_walkPath.findPath(RunawayWalkMap(_background.w, _background.h, _mask, _originalMaps, &_walkRoutes), target);
 	_arrivalFacing = facing;
 	_walkElapsed = _lastFootstep = 0;
 	if (!_walkPath.active()) {
@@ -608,27 +692,78 @@ uint Scene5100::studFrame() const {
 	if (_roomAction == 478) {
 		return 150;
 	}
-	return kStudFrames[(_now / 80) % ARRAYSIZE(kStudFrames)];
+	if (_desert.guard == 2) {
+		// The drowsy idle rocks from frame 110 down to 65 and back again.
+		return _studState == 2 ? 65 + ABS((int)_studStep - 206) : 110;
+	}
+	return kStudFrames[_studStep];
 }
 
-void Scene5100::startHangarTaunt() {
-	// These one-line taunts play in the background while Brian remains controllable.
-	const SceneSpeechCue cue = _text.stageCue(_hangarShotCount & 1 ? 94 : 95, 7 + _random.getRandomNumber(4));
-	if (cue.valid()) {
-		_hangarSpeech.start(Common::U32String(_text.largeTextRecord(cue.textRecordId), Common::kDos850), cue.voiceSampleId, false, _now);
+void Scene5100::updateStud(uint32 delta) {
+	if (_studState != _desert.guard) {
+		_studState = _desert.guard;
+		_studStep = _desert.guard == 2 ? 161 : 0;
+		_studElapsed = 0;
 	}
+	if (_desert.guard == 1 || _hangarIntroduction || _roomAction == 468 || _roomAction == 478 ||
+			_roomAction == 488 || _hospitalExit.scene || _inventoryOpen || speaker() == 1 ||
+			!_hangarSpeech.subtitle().empty()) {
+		return;
+	}
+	_studElapsed += delta;
+	while (_studElapsed >= 80) {
+		_studElapsed -= 80;
+		if (_desert.guard == 2) {
+			if (++_studStep > 251) {
+				_studStep = 161;
+				if (!speaking() && !_roomAction) {
+					startHangarSpeech(93, _random.getRandomNumber(5));
+					return;
+				}
+			}
+		} else {
+			_studStep = (_studStep + 1) % ARRAYSIZE(kStudFrames);
+			// Native 0x48f440 gives Stud a chance to speak after drinking or throwing.
+			if ((_studStep == 129 || _studStep == 259) && !speaking() && !_roomAction && !_random.getRandomBit()) {
+				startHangarSpeech(_studStep == 129 ? 91 : 92, _random.getRandomNumber(2));
+				return;
+			}
+		}
+	}
+}
+
+void Scene5100::startHangarSpeech(uint16 cue, byte variation) {
+	_hangarCue = _text.stageCue(cue, variation);
+	_hangarLine = 0;
+	if (_hangarCue.valid()) {
+		showHangarSpeechLine();
+	}
+}
+
+void Scene5100::showHangarSpeechLine() {
+	_hangarSpeech.start(Common::U32String(_text.largeTextRecord(_hangarCue.textRecordId + _hangarLine), Common::kDos850),
+		_hangarCue.voiceSampleId + _hangarLine, false, _now, _speechColors[1]);
 }
 
 void Scene5100::handleAnimationFrameHook() {
+	static const AnimationFootstep lulaSteps[] = {
+		{26, 800}, {35, 700}, {44, 600}, {53, 500}, {62, 400}, {71, 300}
+	};
+	static const AnimationFootstep studSteps[] = {
+		{19, 512}, {30, 500}, {37, 400}, {44, 300}, {51, 200}
+	};
 	if (_roomAction == 328 && _actionStep == 21) {
 		_audio.playEffect(39, 204);
 	}
-	if (_roomAction == 450 && (_actionStep == 7 || _actionStep == 16 || _actionStep == 25 ||
-			_actionStep == 34 || _actionStep == 43 || _actionStep == 52)) {
-		_audio.playFootstep(1, _random.getRandomBit());
+	if (_roomAction == 450) {
+		playAnimationFootsteps(_actionFrames[_actionStep], 2, lulaSteps, ARRAYSIZE(lulaSteps));
+	} else if (_roomAction == 460) {
+		playAnimationFootsteps(_actionStep, 2, studSteps, ARRAYSIZE(studSteps));
 	}
-	if (_roomAction == 460 && (_actionStep == 19 || _actionStep == 30 || _actionStep == 37 || _actionStep == 44 || _actionStep == 51)) {
-		_audio.playFootstep(1, _random.getRandomBit());
+	if ((_roomAction == 329 || _roomAction == 458 || _roomAction == 498 || _roomAction == 610) &&
+			(_actionFrames[_actionStep] == 10 || _actionFrames[_actionStep] == 28)) {
+		const byte volume = CLIP<int>((int)(actorHeight() * 255 / 455), 0, 255);
+		_audio.playFootstep(2, _random.getRandomBit(), volume, _position.x);
 	}
 	if (_roomAction == 470 || _roomAction == 480 || _roomAction == 558) {
 		const byte frame = _actionFrames[_actionStep];
@@ -652,25 +787,29 @@ void Scene5100::handleAnimationFrameHook() {
 	}
 }
 
-void Scene5100::drawRoomComposite(Graphics::ManagedSurface &viewport, bool foreground) {
-	if (foreground != (walkZone() == 7)) {
-		return;
-	}
+void Scene5100::drawRoomComposite(Graphics::ManagedSurface &viewport) {
 	const uint frame = studFrame();
 	const bool guardAnimation = drawingRoomAnimation() && (_roomAction == 460 || _roomAction == 468 || _roomAction == 488);
+	const bool studSpeaking = speaker() == 1 || (_desert.guard != 1 && !_hangarSpeech.subtitle().empty());
+	const byte studMouth = speaker() == 1 ? speechFrame() : _hangarSpeech.frame(_now);
 	if (!guardAnimation) {
 		if (_desert.guard == 2) {
-			_drowsyStudAnimation.draw(viewport, speaker() == 1 ? 118 + speechFrame() % 6 : 110, _camera.x, -_camera.y);
+			const uint pose = studSpeaking ? 118 + studMouth % 6 : frame;
+			_drowsyStudAnimation.draw(viewport, pose, _camera.x, -_camera.y);
 		} else if (!_desert.guard) {
 			uint pose = _hangarIntroduction ? 92 : frame;
-			if (speaker() == 1) {
-				pose = 92 + speechFrame() % 6;
+			if (studSpeaking) {
+				pose = 92 + studMouth % 6;
 			}
 			_studAnimation.draw(viewport, pose, _camera.x, -_camera.y);
 		}
 	}
 	if (_desert.guard || _hangarIntroduction || (frame >= 82 && frame <= 92)) {
 		_beerAnimation.draw(viewport, 0, _camera.x, -_camera.y);
+	} else if (studSpeaking) {
+		// The talking frames contain the can even after Stud has thrown it.
+		const Common::Rect beer(225, 284, 269, 337);
+		viewport.blitFrom(_background, beer, Common::Point(beer.left - _camera.x, beer.top - _camera.y));
 	}
 	if (_desert.footrest < 2 && (!drawingRoomAnimation() || _roomAction != 327)) {
 		_footrestAnimation.draw(viewport, _desert.footrest ? 26 : 0, _camera.x, -_camera.y);
@@ -680,12 +819,41 @@ void Scene5100::drawRoomComposite(Graphics::ManagedSurface &viewport, bool foreg
 		static const byte mouth[] = {18, 13, 14, 15, 16, 17};
 		_lulaAnimation.draw(viewport, speaker() == 2 ? mouth[speechFrame() % ARRAYSIZE(mouth)] : _hangarLulaPose, _camera.x, -_camera.y);
 	}
-	if (_desert.guard == 1 && !_hangarIntroduction && _hangarThrowing) {
-		_canAnimation.draw(viewport, _hangarShotFrame, _camera.x, -_camera.y);
+}
+
+void Scene5100::drawRoomAnimation(Graphics::ManagedSurface &viewport) {
+	const bool lula = _roomAction == 400 || _roomAction == 420 || _roomAction == 450;
+	const bool stud = _roomAction == 468 || _roomAction == 488;
+	if (lula || stud) {
+		// Brian's radio/peeking overlay belongs behind the other characters.
+		_secondaryAnimation.draw(viewport, _secondaryFrames[_actionStep], _camera.x, -_camera.y);
+	} else if (_actionHidesActor) {
+		RunawayRoomScene::drawRoomAnimation(viewport);
+	}
+	if (stud) {
+		_actionAnimation.draw(viewport, _actionFrames[_actionStep], _camera.x, -_camera.y);
+	}
+	drawRoomComposite(viewport);
+	if (lula || !_actionHidesActor) {
+		// Lula, the departing Stud and the flying cans are in front of the props.
+		_actionAnimation.draw(viewport, _actionFrames[_actionStep], _camera.x, -_camera.y);
 	}
 }
 
 void Scene5100::advanceCustomGameplayLoop(uint32 delta) {
+	if (_roomAction == 468 && drawingRoomAnimation()) {
+		_panElapsed += delta;
+		setCameraX(_camera.x - 16 * (int)(_panElapsed / 10));
+		_panElapsed %= 10;
+	}
+	if (!_hangarSpeech.subtitle().empty() && _hangarSpeech.finished(_now)) {
+		if (++_hangarLine < MAX<uint>(1, _hangarCue.continuationCount)) {
+			showHangarSpeechLine();
+		} else {
+			stopAmbientSpeech();
+		}
+	}
+	updateStud(delta);
 	const uint frame = studFrame();
 	byte canHotspot = 12;
 	if (!_desert.guard && (frame < 82 || frame > 92)) {
@@ -695,9 +863,6 @@ void Scene5100::advanceCustomGameplayLoop(uint32 delta) {
 		if (_originalMaps[256 + i] == 12) {
 			_maps[256 + i] = canHotspot;
 		}
-	}
-	if (!_hangarSpeech.subtitle().empty() && _hangarSpeech.finished(_now)) {
-		_hangarSpeech.stop();
 	}
 	if (_desert.guard != 1 || _hangarIntroduction || _roomAction || _hospitalExit.scene || speaking() || _inventoryOpen) {
 		return;
@@ -719,7 +884,7 @@ void Scene5100::advanceCustomGameplayLoop(uint32 delta) {
 				execute(500);
 				return;
 			}
-			startHangarTaunt();
+			startHangarSpeech(_hangarShotCount & 1 ? 94 : 95, 7 + _random.getRandomNumber(4));
 			return;
 		}
 		if (_hangarShotFrame == 9 || _hangarShotFrame == 32 || _hangarShotFrame == 70 || _hangarShotFrame == 84) {
@@ -733,17 +898,26 @@ const RunawayHotspot *Scene5100::hotspot(byte id) const {
 }
 
 void Scene5100::drawCustomBackgroundComposite(Graphics::ManagedSurface &viewport) {
-	drawRoomComposite(viewport, false);
+	if (!drawingRoomAnimation() && actorWalkZone() != 7) {
+		drawRoomComposite(viewport);
+	}
 }
 
 void Scene5100::drawCustomForegroundComposite(Graphics::ManagedSurface &viewport) {
-	drawRoomComposite(viewport, true);
+	if (!drawingRoomAnimation() && actorWalkZone() == 7) {
+		drawRoomComposite(viewport);
+	}
+	if (_desert.guard == 1 && !_hangarIntroduction && _hangarThrowing) {
+		_canAnimation.draw(viewport, _hangarShotFrame, _camera.x, -_camera.y);
+	}
 }
 
 void Scene5100::stopAmbientSpeech() {
 	if (!_hangarSpeech.subtitle().empty()) {
 		_hangarSpeech.stop();
 	}
+	_hangarCue = SceneSpeechCue();
+	_hangarLine = 0;
 }
 
 const Common::U32String &Scene5100::subtitle() const {
@@ -751,6 +925,13 @@ const Common::U32String &Scene5100::subtitle() const {
 		return _hangarSpeech.subtitle();
 	}
 	return RunawayRoomScene::subtitle();
+}
+
+byte Scene5100::subtitleColor() const {
+	if (!_sequence.active() && !speaking()) {
+		return _hangarSpeech.subtitleColor();
+	}
+	return RunawayRoomScene::subtitleColor();
 }
 
 } // End of namespace Runaway

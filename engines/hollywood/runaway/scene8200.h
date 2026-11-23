@@ -31,6 +31,7 @@ class Scene8200 : public RunawayRoomScene {
 public:
 	Scene8200(RunawayAudio &audio, RunawayInventory &inventory, const RunawayStrings &strings, RunawayGameType game);
 	const Common::U32String &subtitle() const override;
+	byte subtitleColor() const override;
 	void sayInventory(const RunawayInventory::Reply &reply) override;
 
 private:
@@ -62,6 +63,7 @@ private:
 	void findWalkPath(Common::Point target) override;
 	Common::Point customizeSceneActionPosition(byte id, byte item, Common::Point position) const override;
 	byte customizeSceneActionFacing(byte id, byte facing) const override;
+	const char *actionCaptionVariant(byte id, bool look, byte item) const override;
 	ActionResult dispatchCustomSceneAction(uint16 action) override;
 	void handleAnimationFrameHook() override;
 

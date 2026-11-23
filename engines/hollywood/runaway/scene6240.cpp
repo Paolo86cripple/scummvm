@@ -19,6 +19,9 @@
  *
  */
 
+#include "common/archive.h"
+#include "common/compression/unzip.h"
+#include "common/ptr.h"
 #include "common/util.h"
 #include "hollywood/runaway/scene6240.h"
 #include "hollywood/runaway/strings.h"
@@ -27,23 +30,21 @@ namespace Hollywood {
 namespace {
 
 const RunawayHotspot kHotspots[] = {
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{0, 453, 5, {301, 302}, {0, 3}}, // 1: Door.
-	{782, 408, 7, {303, 304}, {0, 1}}, // 2: Stairs.
-	{504, 452, 1, {305, 306}, {1, 1}}, // 3: Flower pot.
-	{1286, 435, 0, {307, 308}, {0, 0}}, // 4: Watering can.
-	{742, 332, 5, {309, 310}, {0, 0}}, // 5: Small room.
-	{610, 467, 1, {311, 312}, {0, 0}}, // 6: Door knob.
-	{1393, 427, 0, {313, 314}, {0, 0}}, // 7: Plant.
-	{955, 396, 1, {315, 316}, {0, 0}} // 8: Bonsai tree.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{0, 453, 5, {301, 302}, {0, 3}, {0, 453}, 7}, // 1: Door.
+	{782, 408, 7, {303, 304}, {0, 1}, {625, 391}, 4}, // 2: Stairs.
+	{504, 452, 1, {305, 306}, {1, 1}, {567, 418}}, // 3: Flower pot.
+	{1286, 435, 0, {307, 308}, {0, 0}, {1286, 405}}, // 4: Watering can.
+	{742, 332, 5, {309, 310}, {0, 0}, {821, 340}}, // 5: Small room.
+	{610, 467, 1, {311, 312}, {0, 0}, {669, 431}}, // 6: Door knob.
+	{1393, 427, 0, {313, 314}, {0, 0}, {1393, 386}}, // 7: Plant.
+	{955, 396, 1, {315, 316}, {0, 0}, {1009, 366}} // 8: Bonsai tree.
 };
 
 const RunawayResponse kResponses[] = {
 	{6240, 301, 1, 0},   // Look out into town.
-	{6240, 303, 2, 0},   // Look up the stairs.
 	{6240, 305, 3, 0},   // Examine the pot of soil.
 	{6240, 307, 5, 0},   // Examine the watering can.
-	{6240, 308, 6, 0},   // Leave the watering to the plants' owner.
 	{6240, 312, 10, 0},  // Try to remove the carved door knob.
 	{6240, 315, 13, 0},  // Examine the bonsai.
 	{6240, 316, 14, 0},  // Leave the bonsai where it belongs.
@@ -68,6 +69,10 @@ namespace Runaway {
 Scene6240::Scene6240(RunawayAudio &audio, RunawayInventory &inventory, const RunawayStrings &strings, RunawayGameType game) :
 	RunawayRoomScene(audio, inventory, strings, game) {}
 
+const char *Scene6240::actionCaptionVariant(byte id, bool look, byte item) const {
+	return !look && !item && id == 5 && _town.gardeningShed ? "searched" : nullptr;
+}
+
 bool Scene6240::usesAlternateActor() const {
 	return false;
 }
@@ -85,7 +90,32 @@ bool Scene6240::loadCustomResources() {
 }
 
 bool Scene6240::applyCustomBackgroundPatches() {
-	return !_town.flowerPotTaken || applyPatch(9);
+	if (_town.flowerPotTaken && !applyPatch(9)) {
+		return false;
+	}
+	return removeWateringCan();
+}
+
+bool Scene6240::removeWateringCan() {
+	if (!_town.wateringCanTaken) {
+		return true;
+	}
+	if (_wateringCanPatch.empty()) {
+		Common::ScopedPtr<Common::Archive> archive(Common::makeZipArchive("hollywood.dat"));
+		if (!archive) {
+			return false;
+		}
+		Common::ScopedPtr<Common::SeekableReadStream> stream(archive->createReadStreamForMember("runaway/f24-can.patch"));
+		if (!stream || stream->size() < 2 || stream->size() > 65536) {
+			return false;
+		}
+		_wateringCanPatch.resize(stream->size());
+		if (stream->read(_wateringCanPatch.data(), _wateringCanPatch.size()) != _wateringCanPatch.size()) {
+			_wateringCanPatch.clear();
+			return false;
+		}
+	}
+	return applyRunawayPatch(_wateringCanPatch, _background);
 }
 
 void Scene6240::applyCustomHotspotState() {
@@ -94,6 +124,9 @@ void Scene6240::applyCustomHotspotState() {
 			_maps[i] = 0;
 		}
 		if (_maps[256 + i] == 3 && _town.flowerPotTaken) {
+			_maps[256 + i] = 0;
+		}
+		if (_maps[256 + i] == 4 && _town.wateringCanTaken) {
 			_maps[256 + i] = 0;
 		}
 	}
@@ -153,10 +186,23 @@ bool Scene6240::adjustCustomWalkTargetToFloorMask(Common::Point &target) const {
 	return false;
 }
 
+int8 Scene6240::customizeSceneActionApproach(byte id, bool use, byte item, int8 approach) const {
+	if (id == 4 && use && !item && townChapter() && _restoredContent) {
+		return 1;
+	}
+	if (id == 5 && use && !item && _town.gardeningShed) {
+		return -1;
+	}
+	return approach;
+}
+
 RunawayRoomScene::ActionResult Scene6240::dispatchCustomSceneAction(uint16 action) {
 	switch (action) {
 	case 302: // Return to the saloon porch.
 		leaveTownRoom(6181);
+		break;
+	case 303: // Recognize the stairs to Saturn's workshop after meeting him.
+		say(2, _town.kevinMet);
 		break;
 	case 304: // Climb the stairs to Kevin's room.
 		beginRoomAnimation(304, 5, 19);
@@ -172,6 +218,21 @@ RunawayRoomScene::ActionResult Scene6240::dispatchCustomSceneAction(uint16 actio
 		_town.flowerPotTaken = 1;
 		_inventory.add(21);
 		say(4, 1);
+		return kBackgroundChanged;
+	case 308: // Optionally collect the unused watering-can inventory item.
+		if (_town.wateringCanTaken) {
+			break;
+		}
+		if (_restoredContent) {
+			say(4);
+			deferTownAction(408);
+		} else {
+			say(6);
+		}
+		break;
+	case 408:
+		_town.wateringCanTaken = 1;
+		_inventory.add(16);
 		return kBackgroundChanged;
 	case 309: // Identify the gardening shed.
 	case 310: // Search the shed for useful items.
@@ -263,7 +324,8 @@ RunawayRoomScene::ActionResult Scene6240::dispatchCustomSceneAction(uint16 actio
 
 void Scene6240::handleAnimationFrameHook() {
 	if (_roomAction == 304 && (_actionStep == 11 || _actionStep == 18)) {
-		_audio.playFootstep(3, _random.getRandomBit());
+		const byte volume = CLIP<int>((int)(actorHeight() * 255 / 455), 0, 255);
+		_audio.playFootstep(3, _random.getRandomBit(), volume, _position.x);
 	}
 }
 

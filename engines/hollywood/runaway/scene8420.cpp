@@ -34,7 +34,10 @@ const RunawayRoom kRunawayScene8420 = {
 namespace Runaway {
 
 Scene8420::Scene8420(RunawayAudio &audio, RunawayInventory &inventory, const RunawayStrings &strings, RunawayGameType game) :
-	RunawayRoomScene(audio, inventory, strings, game) {}
+	RunawayRoomScene(audio, inventory, strings, game) {
+	_speechColors[1] = 14; // Gina.
+	_speechColors[2] = 38; // Johnny.
+}
 
 bool Scene8420::loadCustomResources() {
 	if (!_ambient[0].load(_archive, 4, 30) || !_ambient[1].load(_archive, 5, 30) || !_gina.load(_archive, 7, 74)) {
@@ -171,7 +174,11 @@ void Scene8420::exchange(uint16 cue, byte first, byte last) {
 void Scene8420::startGinaConversation() {
 	startConversation(1);
 	_destination = _finale.mediumDiscussed ? 8091 : 8101;
-	_dialogue[0][0] = {1, 0, 3, 14, 15, 1, 0};
+	byte recovery = 15;
+	if (_restoredContent) {
+		recovery = _finale.seanceComplete ? 16 : (_finale.mediumTests ? 15 : 14);
+	}
+	_dialogue[0][0] = {1, 0, 3, 14, recovery, 1, 0};
 	_dialogue[0][1] = {byte(_finale.mediumDiscussed && _finale.mediumTests < 3), 0, 1, 17, 17, 0, 0};
 	_dialogue[0][2] = {byte(!_finale.mediumDiscussed && _finale.mediumTests < 3), 1, 1, 18, 18, 0, 0};
 	_dialogue[0][3] = {byte(_finale.mediumTests >= 3), 2, 1, 21, 21, 0, 0};
@@ -188,6 +195,9 @@ void Scene8420::handleCustomDialogueChoice(byte effect) {
 }
 
 void Scene8420::finishCustomConversation() {
+	if (_finale.seanceComplete) {
+		_finale.ginaVisitPending = 1;
+	}
 	deferAction(430);
 }
 
@@ -203,7 +213,7 @@ void Scene8420::startNightmareMovement(byte first, byte last, uint16 nextAction)
 RunawayRoomScene::ActionResult Scene8420::dispatchCustomSceneAction(uint16 action) {
 	switch (action) {
 	case 400: // Greet Gina from the bedroom entrance.
-		say(40, _finale.ginaVisited ? 11 : 0);
+		say(40, (_finale.ginaVisited || _finale.seanceComplete) ? 11 : 0);
 		deferAction(401);
 		break;
 	case 401: // Let Gina finish moving her injured leg before answering.
@@ -211,7 +221,7 @@ RunawayRoomScene::ActionResult Scene8420::dispatchCustomSceneAction(uint16 actio
 		deferAction(402);
 		break;
 	case 402: // Gina recognizes Brian.
-		say(50, _finale.ginaVisited ? 11 : 0, false, 1);
+		say(50, (_finale.ginaVisited || _finale.seanceComplete) ? 11 : 0, false, 1);
 		deferAction(403);
 		break;
 	case 403: // Walk over to the bed.
@@ -219,7 +229,9 @@ RunawayRoomScene::ActionResult Scene8420::dispatchCustomSceneAction(uint16 actio
 		deferAction(404);
 		break;
 	case 404: // Explain the séance plan, or report progress on finding a medium.
-		if (!_finale.ginaVisited) {
+		if (_finale.seanceComplete) {
+			_finale.ginaVisited = 1;
+		} else if (!_finale.ginaVisited) {
 			exchange(40, 1, 8);
 			say(40, _finale.mediumDiscussed ? 10 : 9);
 			say(50, 10, false, 1);
@@ -278,7 +290,7 @@ RunawayRoomScene::ActionResult Scene8420::dispatchCustomSceneAction(uint16 actio
 		typedef RunawaySequence S;
 		static const S::Command nightmare[] = {
 			{S::kOpen, 6}, {S::kMusic, 26, 255},
-			{S::kSpeech, 44, 2, 6}, {S::kPlay, 0, 163}, {S::kWaitSpeech},
+			{S::kSpeech, 44, 2, 4, 0, 38}, {S::kSpeech, 44, 5, 6}, {S::kPlay, 0, 163}, {S::kWaitSpeech},
 			{S::kMusic, 16, 255, 1}, {S::kEnd}
 		};
 		_film = kNightmare;
@@ -364,7 +376,7 @@ void Scene8420::startConfession() {
 	_filmCommands.push_back(S::Command(S::kOpen, 8));
 	_filmCommands.push_back(S::Command(S::kStill, 0, gog));
 	for (uint i = 4; i <= 6; ++i) {
-		_filmCommands.push_back(S::Command(S::kTalk, 51, i, 1));
+		_filmCommands.push_back(S::Command(S::kTalk, 51, i, 1, 0, 14));
 		if (gog) {
 			_filmCommands.push_back(S::Command(S::kStill, i == 6 ? 0 : 1, 1));
 		}
@@ -373,18 +385,18 @@ void Scene8420::startConfession() {
 			_filmCommands.push_back(S::Command(S::kStill, 0, 1));
 		}
 	}
-	_filmCommands.push_back(S::Command(S::kTalk, 51, 7, 1));
+	_filmCommands.push_back(S::Command(S::kTalk, 51, 7, 1, 0, 14));
 	_filmCommands.push_back(S::Command(S::kMusic, 33, 255));
 	if (!gog) {
 		_filmCommands.push_back(S::Command(S::kPlay, 24, 24));
 	}
-	_filmCommands.push_back(S::Command(S::kSpeech, 51, 8, 8));
+	_filmCommands.push_back(S::Command(S::kSpeech, 51, 8, 8, 0, 14));
 	_filmCommands.push_back(S::Command(S::kPlay, gog ? 0 : 25, gog ? 237 : 261));
 	_filmCommands.push_back(S::Command(S::kMusic, 34, 255, 1));
 	_filmCommands.push_back(S::Command(S::kWaitSpeech, 0, 0, 5));
 	_filmCommands.push_back(S::Command(S::kEffect, 57, 26));
 	_filmCommands.push_back(S::Command(S::kPlay, gog ? 238 : 282, gog ? 244 : 289));
-	_filmCommands.push_back(S::Command(S::kSpeech, 51, 9, 9));
+	_filmCommands.push_back(S::Command(S::kSpeech, 51, 9, 9, 0, 14));
 	_filmCommands.push_back(S::Command(S::kPlay, gog ? 245 : 290, gog ? 1057 : 1101));
 	_filmCommands.push_back(S::Command(S::kWaitSpeech, 0, 0, 3, 1));
 	_filmCommands.push_back(S::Command(S::kMusic, 16, 255, 1));
@@ -399,7 +411,7 @@ void Scene8420::startConfession() {
 		if (gog) {
 			_filmCommands.push_back(S::Command(S::kStill, offscreen ? 1 : 0, 1));
 		}
-		_filmCommands.push_back(S::Command(S::kTalk, 51, i + 1, offscreen ? 3 : 1, offscreen));
+		_filmCommands.push_back(S::Command(S::kTalk, 51, i + 1, offscreen ? 3 : 1, offscreen, 14));
 	}
 	_filmCommands.push_back(S::Command(S::kEnd));
 	_film = kConfession;

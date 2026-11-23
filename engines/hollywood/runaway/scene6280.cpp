@@ -26,10 +26,10 @@ namespace Hollywood {
 namespace {
 
 const RunawayHotspot kHotspots[] = {
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{1023, 500, 3, {301, 302}, {0, 3}}, // 1: Outside the crater.
-	{662, 546, 7, {303, 304}, {0, 1}}, // 2: Joshua's helmet.
-	{662, 546, 7, {305, 306}, {0, 0}} // 3: Black mark.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{1023, 500, 3, {301, 302}, {0, 3}, {1023, 0}, 5}, // 1: Outside the crater.
+	{662, 546, 7, {303, 304}, {0, 1}, {597, 512}}, // 2: Joshua's helmet.
+	{662, 546, 7, {305, 306}, {0, 0}, {597, 512}} // 3: Black mark.
 };
 
 const RunawayResponse kResponses[] = {
@@ -77,7 +77,9 @@ void Scene6280::applyCustomHotspotState() {
 }
 
 void Scene6280::resumeAmbientAudio(bool entering) {
-	_audio.playMusic(30);
+	if (_audio.musicCue() != 30 || !_audio.musicPlaying()) {
+		_audio.playMusic(30);
+	}
 	_audio.playMusicEffect(38, 128, 1, true);
 }
 

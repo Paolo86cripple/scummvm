@@ -36,6 +36,7 @@ private:
 	bool loadCustomResources() override;
 	bool applyCustomBackgroundPatches() override;
 	void applyCustomHotspotState() override;
+	bool adjustCustomWalkTargetToFloorMask(Common::Point &target) const override;
 	float actorHeight() const override;
 	ActionResult dispatchCustomSceneAction(uint16 action) override;
 	void runCustomEntrySequence() override;
@@ -44,9 +45,18 @@ private:
 	void drawCustomBackgroundComposite(Graphics::ManagedSurface &viewport) override;
 	void drawCustomForegroundComposite(Graphics::ManagedSurface &viewport) override;
 	void handleAnimationFrameHook() override;
+	void advanceSignAnimation();
 
-	RunawayAnimation _ambientAnimations[6];
-	RunawayAnimation _idleAnimation, _antsAnimation;
+	RunawayAnimation _ambientAnimations[5];
+	RunawayAnimation _signAnimation, _curtainAnimation, _antsAnimation;
+	Common::Array<byte> _parallax, _shedRoof;
+	uint _ambientFrames[5] = {};
+	uint32 _ambientTime = 0;
+	byte _curtainStep = 0;
+	byte _signFrame = 11;
+	byte _signAmplitude = 5;
+	bool _signReversing = false;
+	bool _signPause = true;
 	byte _antsFrame = 0;
 	uint32 _antsTick = 0;
 };

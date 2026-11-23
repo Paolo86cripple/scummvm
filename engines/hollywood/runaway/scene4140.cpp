@@ -22,6 +22,7 @@
 #include "common/textconsole.h"
 #include "common/util.h"
 #include "hollywood/runaway/scene4140.h"
+#include "hollywood/runaway/strings.h"
 
 namespace Hollywood {
 
@@ -43,6 +44,9 @@ void Scene4140::click(Common::Point mouse, RunawayVerb verb, byte item) {
 		return;
 	}
 	const byte id = hotspotAt(mouse);
+	if (id == 16) { // The keypad casing is not an exit or a button.
+		return;
+	}
 	_pressedKey = id;
 	_keyUntil = _now + 180;
 	_keyResult = 0;
@@ -55,7 +59,6 @@ void Scene4140::click(Common::Point mouse, RunawayVerb verb, byte item) {
 	} else if (id == 12) { // Confirm the security code.
 		if (_keyCount == 4 && _museum.keypad >= 3 && _museum.keypadDigits == 8137) {
 			_keyResult = 2;
-			_museum.keypad = 4;
 			_audio.playEffect(31);
 			say(3, 3);
 			deferMuseumAction(414);
@@ -81,7 +84,11 @@ void Scene4140::click(Common::Point mouse, RunawayVerb verb, byte item) {
 }
 
 Common::U32String Scene4140::actionCaption(byte id, RunawayVerb verb, byte item) const {
-	return Common::U32String();
+	return _strings.sceneActionCaption(_room, id, 0, false);
+}
+
+Common::U32String Scene4140::hotspotName(byte id) const {
+	return actionCaption(id, kVerbUse, 0);
 }
 
 void Scene4140::update(uint32 now, int scrollDirection, bool inventoryOpen) {
@@ -140,6 +147,13 @@ bool Scene4140::drawCustomComposite(Graphics::ManagedSurface &viewport) {
 
 void Scene4140::finishCustomAnimation(uint16 action) {
 	if (action == 414) {
+		if (_keyResult == 2 && _museum.keypad != 4) {
+			_museum.keypad = 4;
+			if (museumChapter()) {
+				_audio.playMusic(23, false);
+				_audio.setMusicVolume(255);
+			}
+		}
 		leaveMuseumRoom(4063, Common::Point(1153, 297), 7);
 	}
 }
@@ -149,7 +163,7 @@ bool Scene4140::shouldUpdateActor() const {
 }
 
 bool Scene4140::isValidHotspot(byte id) const {
-	return id <= 12;
+	return id <= 12 || id == 16;
 }
 
 } // End of namespace Runaway

@@ -28,19 +28,19 @@ namespace Hollywood {
 namespace {
 
 const RunawayHotspot kHotspots[] = {
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{866, 268, 3, {301, 302}, {0, 3}}, // 1: Stairs.
-	{1023, 318, 2, {303, 304}, {0, 3}}, // 2: Other side.
-	{520, 410, 7, {305, 306}, {0, 1}}, // 3: Sushi.
-	{553, 363, 0, {307, 308}, {0, 0}}, // 4: Table.
-	{0, 0, 0, {319, 321}, {0, 0}}, // 5: Machines.
-	{0, 0, 0, {311, 312}, {0, 0}}, // 6: Satellite antenna.
-	{0, 0, 0, {313, 314}, {0, 0}}, // 7: Musical equipment.
-	{0, 0, 0, {315, 316}, {0, 0}}, // 8: Robot.
-	{0, 0, 0, {317, 318}, {0, 0}}, // 9: Fireplace.
-	{0, 0, 0, {309, 310}, {0, 0}}, // 10: Sushi's computer.
-	{0, 0, 0, {320, 321}, {0, 0}}, // 11: Machines.
-	{0, 0, 0, {322, 323}, {0, 0}} // 12: Electric guitar.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{866, 268, 0, {301, 302}, {0, 3}, {798, 250}, 7}, // 1: Stairs.
+	{1023, 318, 0, {303, 304}, {0, 1}, {1123, 300}, 6}, // 2: Other side.
+	{520, 410, 7, {305, 306}, {0, 1}, {442, 338}, 3}, // 3: Sushi.
+	{553, 363, 0, {307, 308}, {0, 0}, {616, 346}}, // 4: Table.
+	{0, 0, 0, {319, 321}, {0, 0}, {641, 214}}, // 5: Machines.
+	{0, 0, 0, {311, 312}, {0, 0}, {46, 258}}, // 6: Satellite antenna.
+	{0, 0, 0, {313, 314}, {0, 0}, {194, 247}}, // 7: Musical equipment.
+	{0, 0, 0, {315, 316}, {0, 0}, {760, 393}}, // 8: Robot.
+	{0, 0, 0, {317, 318}, {0, 0}, {508, 200}}, // 9: Fireplace.
+	{0, 0, 0, {309, 310}, {0, 0}, {398, 321}}, // 10: Sushi's computer.
+	{0, 0, 0, {320, 321}, {0, 0}, {305, 220}}, // 11: Machines.
+	{0, 0, 0, {322, 323}, {0, 0}, {929, 385}} // 12: Electric guitar.
 };
 
 const RunawayResponse kResponses[] = {
@@ -64,7 +64,8 @@ const RunawayItemAction kItemActions[] = {
 	{8380, 13, 3, 326}, // Give Sushi the gangsters' belongings.
 	{8380, 14, 3, 324}, // Ask Sushi to investigate the bank brochure.
 	{8380, 16, 3, 325}, // Hand over the recorded voices.
-	{8380, 9, 11, 31, false}, {8380, 9, 12, 31, false}
+	{8380, 9, 7, 31, false}, // Refuse to damage the musical equipment with the tomahawk.
+	{8380, 9, 8, 31, false}  // Refuse to damage the robot with the tomahawk.
 };
 
 // RESOURCE.H38 shares a body bank between typing, turning and the microphone.
@@ -96,7 +97,11 @@ const RunawayRoom kRunawayScene8380 = {
 namespace Runaway {
 
 Scene8380::Scene8380(RunawayAudio &audio, RunawayInventory &inventory, const RunawayStrings &strings, RunawayGameType game) :
-	RunawayRoomScene(audio, inventory, strings, game) {}
+	RunawayRoomScene(audio, inventory, strings, game) {
+	_speechColors[1] = 30; // Sushi.
+	_speechColors[2] = 36; // Sandretti.
+	_speechColors[3] = 14; // Recorded Gina.
+}
 
 bool Scene8380::loadCustomResources() {
 	static const uint frames[] = {48, 48, 6, 4, 11, 48, 11, 11, 11, 4, 4, 4, 6, 6, 6, 6};
@@ -284,6 +289,9 @@ void Scene8380::advanceSushi() {
 }
 
 void Scene8380::advanceCustomGameplayLoop(uint32 delta) {
+	if (!_audio.musicPlaying()) {
+		resumeAmbientAudio(false);
+	}
 	while (_now - _sushiTick >= 80) {
 		_sushiTick += 80;
 		advanceSushi();
@@ -372,6 +380,10 @@ void Scene8380::deliverItem(uint16 action) {
 }
 
 void Scene8380::receiveRecordings() {
+	if (_finale.recordings >= 3) {
+		_audio.playMusic(38, false);
+		_audio.setMusicVolume(255);
+	}
 	exchange(83, 0, 0);
 	if (_finale.recordings < 3) {
 		exchange(83, 1, 1);

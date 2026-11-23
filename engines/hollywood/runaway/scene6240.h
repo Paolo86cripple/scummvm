@@ -33,9 +33,12 @@ public:
 
 protected:
 	bool loadCustomResources() override;
+	void handleAnimationFrameHook() override;
+	bool removeWateringCan();
 	RunawayAnimation _plantAnimation;
 
 private:
+	const char *actionCaptionVariant(byte id, bool look, byte item) const override;
 	bool usesAlternateActor() const override;
 	bool applyCustomBackgroundPatches() override;
 	void applyCustomHotspotState() override;
@@ -45,12 +48,13 @@ private:
 	float actorHeight() const override;
 	void setupActorDepth(RunawayActor::RenderParams &params) const override;
 	Common::U32String hotspotName(byte id) const override;
+	int8 customizeSceneActionApproach(byte id, bool use, byte item, int8 approach) const override;
 	void findWalkPath(Common::Point target) override;
 	bool adjustCustomWalkTargetToFloorMask(Common::Point &target) const override;
 	ActionResult dispatchCustomSceneAction(uint16 action) override;
-	void handleAnimationFrameHook() override;
 
 	Common::Array<byte> _plantPatches[3];
+	Common::Array<byte> _wateringCanPatch;
 };
 
 } // End of namespace Runaway

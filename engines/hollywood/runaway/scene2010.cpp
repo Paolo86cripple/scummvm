@@ -319,6 +319,9 @@ void RunawayOpening::advance() {
 }
 
 void RunawayOpening::speak(uint16 cue, byte variation) {
+	// Gina's scream, Brian's reaction, then Feodor and Gustav outside the hospital.
+	static const byte colors[] = {14, 11, 22, 11, 22, 27, 22};
+	_speechColor = !_narrating && cue == 1 && variation < ARRAYSIZE(colors) ? colors[variation] : 11;
 	const SceneSpeechCue speech = _text.stageCue(cue, variation);
 	const uint count = MAX<uint>(1, speech.continuationCount);
 	if (!speech.valid() || speech.textRecordId < 500 ||
@@ -336,7 +339,7 @@ void RunawayOpening::speak(uint16 cue, byte variation) {
 
 void RunawayOpening::showLine() {
 	// The framing narration belongs to DATAACA0, independently of chapter.
-	_speech.start(Common::U32String(_text.largeTextRecord(_row), Common::kDos850), _sample, _narrating, _now);
+	_speech.start(Common::U32String(_text.largeTextRecord(_row), Common::kDos850), _sample, _narrating, _now, _speechColor);
 }
 
 void RunawayOpening::nextLine() {
@@ -504,19 +507,13 @@ void RunawayOpening::update(uint32 now) {
 }
 
 void RunawayOpening::skip(uint32 now) {
+	enter(kFinished, now);
+}
+
+void RunawayOpening::skipSpeech(uint32 now) {
 	_now = now;
 	if (speaking()) {
 		nextLine();
-	} else if (_step == kMontage) {
-		_video.close();
-		enter(kTurnBack, now);
-	} else if (_step >= kCity && _step < kFilm) {
-		_audio.stopEffect();
-		enter(kFilm, now);
-	} else if (_step >= kFilm && _step < kChapter) {
-		enter(kChapter, now);
-	} else if (!finished()) {
-		advance();
 	}
 }
 

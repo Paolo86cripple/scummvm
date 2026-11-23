@@ -56,9 +56,10 @@ public:
 		kMakeshiftBullet, kPileOfMakeshiftBullets,
 		kMendedStrap, kBottleWithWater, kBottleWithGasoline, kFilledMeasuringTube,
 		kPolishedStone, kStoneOfLight, kMakeshiftMortar, kSteamOutletLever, kPressureWheel,
-		kMakeshiftMiningTool, kHotScalpel, kOpenPods, kTextCount
+		kMakeshiftMiningTool, kHotScalpel, kOpenPods, kPutPlanIntoAction, kGoTo, kTextCount
 	};
 	explicit RunawayStrings(Common::Language language) : _language(language) {}
+	Common::Language language() const { return _language; }
 	bool load();
 	Common::U32String text(TextId id) const;
 	Common::U32String itemName(byte chapter, byte item) const;

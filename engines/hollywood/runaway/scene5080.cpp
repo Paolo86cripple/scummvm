@@ -27,19 +27,19 @@ namespace Hollywood {
 namespace {
 
 const RunawayHotspot kHotspots[] = {
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{-100, 484, 7, {302, 301}, {0, 1}}, // 1: Path.
-	{103, 518, 1, {303, 304}, {1, 0}}, // 2: Wooden Box.
-	{301, 478, 7, {305, 307}, {0, 1}}, // 3: Shed.
-	{301, 478, 7, {306, 307}, {0, 1}}, // 4: Door.
-	{301, 478, 7, {308, 309}, {0, 1}}, // 5: Explosives.
-	{620, 357, 7, {310, 311}, {0, 0}}, // 6: Water Tank.
-	{987, 378, 1, {312, 313}, {0, 1}}, // 7: Train Car.
-	{987, 378, 1, {312, 313}, {1, 1}}, // 8: Train Car Interior.
-	{67, 512, 0, {316, 317}, {0, 0}}, // 9: Ant-Hill.
-	{255, 546, 7, {318, 319}, {1, 0}}, // 10: Sign.
-	{620, 357, 7, {320, 321}, {0, 0}}, // 11: Ladder.
-	{0, 0, 0, {0, 0}, {0, 0}}, // 12: Sawdust.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{-100, 484, 7, {302, 301}, {0, 3}, {0, 504}, 4}, // 1: Path.
+	{103, 518, 1, {303, 304}, {1, 0}, {156, 494}}, // 2: Wooden Box.
+	{301, 478, 7, {305, 307}, {0, 1}, {243, 446}}, // 3: Shed.
+	{301, 478, 7, {306, 307}, {0, 1}, {243, 446}}, // 4: Door.
+	{301, 478, 7, {308, 309}, {0, 1}, {243, 446}}, // 5: Explosives.
+	{620, 357, 7, {310, 311}, {0, 0}, {557, 320}}, // 6: Water Tank.
+	{987, 378, 1, {312, 313}, {0, 1}, {1027, 350}}, // 7: Train Car.
+	{987, 378, 1, {312, 313}, {1, 1}, {1027, 350}, 5}, // 8: Train Car Interior.
+	{67, 512, 0, {316, 317}, {0, 0}, {66, 389}}, // 9: Ant-Hill.
+	{255, 546, 7, {318, 319}, {1, 0}, {212, 495}}, // 10: Sign.
+	{620, 357, 7, {320, 321}, {0, 0}, {610, 339}}, // 11: Ladder.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}}, // 12: Sawdust.
 };
 
 const RunawayResponse kResponses[] = {
@@ -87,17 +87,26 @@ const char *Scene5080::actionCaptionVariant(byte id, bool look, byte item) const
 }
 
 bool Scene5080::loadCustomResources() {
-	return _ambientAnimations[0].load(_archive, 18, 769) &&
-		_ambientAnimations[1].load(_archive, 17, 672) &&
-		_ambientAnimations[2].load(_archive, 16, 455) &&
-		_ambientAnimations[3].load(_archive, 20, 631) &&
-		_ambientAnimations[4].load(_archive, 19, 533) &&
-		_ambientAnimations[5].load(_archive, 15, 24) &&
-		loadForeground(0, 11) &&
-		loadForeground(1, 12) &&
-		loadForeground(2, 13) &&
-		loadForeground(3, 14) &&
-		_idleAnimation.load(_archive, 9, 47);
+	Graphics::ManagedSurface scratch(1, 1, _screen.format);
+	if (!_archive.readVariableChunk(3, _walkRoutes) ||
+		!_archive.readVariableChunk(6, _parallax) || !applyRunawayPatch(_parallax, scratch) ||
+		!_archive.readVariableChunk(21, _shedRoof) || !applyRunawayPatch(_shedRoof, scratch) ||
+		!_ambientAnimations[0].load(_archive, 18, 769) ||
+		!_ambientAnimations[1].load(_archive, 17, 672) ||
+		!_ambientAnimations[2].load(_archive, 16, 455) ||
+		!_ambientAnimations[3].load(_archive, 20, 631) ||
+		!_ambientAnimations[4].load(_archive, 19, 533) ||
+		!_signAnimation.load(_archive, 15, 24) ||
+		!_curtainAnimation.load(_archive, 9, 47) ||
+		!loadForeground(0, 11) || !loadForeground(1, 12) ||
+		!loadForeground(2, 13) || !loadForeground(3, 14)) {
+		return false;
+	}
+	for (uint i = 0; i < ARRAYSIZE(_ambientAnimations); ++i) {
+		const uint last = _ambientAnimations[i].frameCount() - 1;
+		_ambientFrames[i] = _random.getRandomBit() ? _random.getRandomNumber(last - 1) : last;
+	}
+	return true;
 }
 
 bool Scene5080::applyCustomBackgroundPatches() {
@@ -118,7 +127,18 @@ void Scene5080::applyCustomHotspotState() {
 	}
 }
 
+bool Scene5080::adjustCustomWalkTargetToFloorMask(Common::Point &target) const {
+	target.x = MIN<int>(target.x, 1133);
+	if (target.x > 683 && target.x < 766 && target.y > 374) {
+		target.x = target.x - 683 <= 766 - target.x ? 683 : 766;
+	}
+	return false;
+}
+
 float Scene5080::actorHeight() const {
+	if (_position.x >= 690) {
+		return _position.y * 0.913978517f - 166.397842f;
+	}
 	return _position.y * 0.905172408f - 162.241379f;
 }
 
@@ -126,6 +146,7 @@ RunawayRoomScene::ActionResult Scene5080::dispatchCustomSceneAction(uint16 actio
 	RunawaySaveState::DesertItems &items = _inventory.desert();
 	switch (action) {
 	case 301: // Go to the desert overview.
+		walkTo(Common::Point(-100, 484), 7, true);
 		leaveDesertRoom(5010);
 		break;
 	case 303: // Look inside the wooden box.
@@ -141,7 +162,11 @@ RunawayRoomScene::ActionResult Scene5080::dispatchCustomSceneAction(uint16 actio
 		if (_desert.antsDistracted) {
 			say(14, 0, true);
 		} else {
-			beginRoomAnimation(action, 25, 28);
+			static const byte frames[] = {
+				1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+				18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 8, 7, 6, 5, 4, 3, 2, 1
+			};
+			beginRoomAnimation(action, 25, 28, frames, ARRAYSIZE(frames), true, 60);
 		}
 		break;
 	case 1307: // Finish trying the jammed door.
@@ -158,13 +183,25 @@ RunawayRoomScene::ActionResult Scene5080::dispatchCustomSceneAction(uint16 actio
 			say(12);
 			_desert.trainEntered = 1;
 		}
-		beginRoomAnimationRange(action, 23, 35, 0, 27);
+		beginRoomAnimationRange(action, 23, 35, 0, 27, true, 60);
+		_actionFrames.insert_at(0, 0);
 		break;
 	case 1313: // Finish entering the train car.
 		leaveDesertRoom(5110);
 		break;
+	case 1400: // Finish climbing out of the train car.
+		break;
+	case 410: // Describe the railway yard after walking in.
+		visitDesertRoom(5, 1);
+		break;
 	case 316: // Look at the anthill.
-		say(13, _desert.antsDistracted ? 2 : 0);
+		if (_desert.antsDistracted) {
+			say(13, 2);
+		} else if (items.antTrickKnown && _restoredContent) {
+			say(13, 1);
+		} else {
+			say(13);
+		}
 		break;
 	case 317: // Use the anthill.
 		if (_desert.antsDistracted) {
@@ -181,7 +218,7 @@ RunawayRoomScene::ActionResult Scene5080::dispatchCustomSceneAction(uint16 actio
 			say(17, 0, true);
 		} else {
 			say(21);
-			walkTo(Common::Point(564, 497), 7, true);
+			walkTo(Common::Point(564, 497), 7);
 			byte brian[49] = {}, butter[49] = {};
 			for (uint i = 1; i < 39; ++i) {
 				brian[i] = i - 1;
@@ -192,7 +229,7 @@ RunawayRoomScene::ActionResult Scene5080::dispatchCustomSceneAction(uint16 actio
 			for (uint i = 27; i < ARRAYSIZE(butter); ++i) {
 				butter[i] = MIN<uint>(12, i - 26);
 			}
-			beginRoomAnimation(action, 26, 38, brian, ARRAYSIZE(brian));
+			beginRoomAnimation(action, 26, 38, brian, ARRAYSIZE(brian), true, 60);
 			setRoomAnimationOverlay(27, 13, butter, ARRAYSIZE(butter));
 		}
 		break;
@@ -218,7 +255,7 @@ RunawayRoomScene::ActionResult Scene5080::dispatchCustomSceneAction(uint16 actio
 		}
 		break;
 	case 446: // Step back from the ants.
-		walkTo(Common::Point(906, 450), 5, true);
+		walkTo(Common::Point(906, 450), 5);
 		deferDesertAction(456);
 		break;
 	case 456: // Watch the ants consume the shed.
@@ -253,9 +290,17 @@ void Scene5080::runCustomEntrySequence() {
 	if (_entryScene == 5081) {
 		_position = Common::Point(987, 379);
 		_walkPath.reset(_position);
-		walkTo(Common::Point(1000, 451), 5, true);
+		_facing = 5;
+		updateCamera();
+		beginRoomAnimationRange(400, 24, 20, 9, 19, true, 60);
+		return;
 	}
-	visitDesertRoom(5, 1);
+	_position = Common::Point(-100, 484);
+	_walkPath.reset(_position);
+	_facing = 3;
+	updateCamera();
+	walkTo(Common::Point(128, 526), 3, true);
+	deferDesertAction(410);
 }
 
 Common::U32String Scene5080::hotspotName(byte id) const {
@@ -266,39 +311,88 @@ Common::U32String Scene5080::hotspotName(byte id) const {
 }
 
 void Scene5080::advanceCustomGameplayLoop(uint32 delta) {
+	_ambientTime += delta;
+	while (_ambientTime >= 80) {
+		_ambientTime -= 80;
+		_curtainStep = (_curtainStep + 1) % 92;
+		advanceSignAnimation();
+		for (uint i = 0; i < ARRAYSIZE(_ambientAnimations); ++i) {
+			if (_ambientFrames[i] + 1 < _ambientAnimations[i].frameCount()) {
+				++_ambientFrames[i];
+			} else if (_random.getRandomNumber(9) == 0) {
+				_ambientFrames[i] = 0;
+			}
+		}
+	}
 	if (_roomAction < 436 || _roomAction > 466) {
 		return;
 	}
 	const uint frame = MIN<uint>(132, (_now - _antsTick) / 80);
 	if (_antsFrame < 36 && frame >= 36) {
-		_audio.playEffect(60);
+		_audio.playEffectAt(60, Common::Point(230, 200));
 	}
 	_antsFrame = frame;
 }
 
+void Scene5080::advanceSignAnimation() {
+	// Vary the swing without jumping from the last frame back to the first.
+	const int end = _signReversing ? 12 - _signAmplitude : 11 + _signAmplitude;
+	if (_signFrame == end) {
+		_signReversing = !_signReversing;
+		if (_signReversing) {
+			_signAmplitude = _random.getRandomNumberRng(3, 12);
+		}
+		_signPause = true;
+		return;
+	}
+	const int next = _signFrame + (_signReversing ? -1 : 1);
+	if (next == end && _signPause && _signAmplitude < 8) {
+		_signPause = false;
+		return;
+	}
+	_signFrame = next;
+}
+
 void Scene5080::drawCustomBackgroundComposite(Graphics::ManagedSurface &viewport) {
-	drawAmbientAnimations(viewport, _ambientAnimations, ARRAYSIZE(_ambientAnimations));
-	const uint frame = (_now / 80) % 92;
-	_idleAnimation.draw(viewport, frame <= 46 ? frame : 92 - frame, _camera.x, -_camera.y);
+	for (uint i = 0; i < ARRAYSIZE(_ambientAnimations); ++i) {
+		_ambientAnimations[i].draw(viewport, _ambientFrames[i], _camera.x, -_camera.y);
+	}
+	if (!_desert.antsDistracted) {
+		applyRunawayPatch(_shedRoof, viewport, -_camera.y, -_camera.x);
+	}
+	_signAnimation.draw(viewport, _signFrame, _camera.x, -_camera.y);
+	_curtainAnimation.draw(viewport, _curtainStep <= 46 ? _curtainStep : 92 - _curtainStep, _camera.x, -_camera.y);
 	if (_roomAction >= 436 && _roomAction <= 466) {
 		_antsAnimation.draw(viewport, _antsFrame, _camera.x, -_camera.y);
 	}
 }
 
 void Scene5080::drawCustomForegroundComposite(Graphics::ManagedSurface &viewport) {
-	drawForeground(viewport, 0);
-	drawForeground(viewport, 1);
-	if (walkZone() == 15 || walkZone() == 16) {
-		drawForeground(viewport, 2);
+	// Ground masks would cut through Brian while he spreads the mixture.
+	if (_roomAction != 326 || !drawingRoomAnimation()) {
+		drawForeground(viewport, 0);
+		drawForeground(viewport, 1);
+		const byte zone = Common::Rect(_background.w, _background.h).contains(_position) ? walkZone() : 0;
+		if (zone == 15 || zone == 16) {
+			drawForeground(viewport, 2);
+		}
+		if (zone == 15) {
+			drawForeground(viewport, 3);
+		}
 	}
-	if (walkZone() == 15) {
-		drawForeground(viewport, 3);
-	}
+	applyRunawayPatch(_parallax, viewport, -_camera.y, 408 - _camera.x / 2 - _camera.x);
 }
 
 void Scene5080::handleAnimationFrameHook() {
-	if (_roomAction == 326 && _actionStep == 23) {
-		_audio.playEffect(72);
+	if (_roomAction == 313 && _actionFrames[_actionStep] == 21) {
+		_audio.playFootstep(4, _random.getRandomBit(), 255, _position.x);
+	} else if (_roomAction == 400 && _actionFrames[_actionStep] == 15) {
+		_audio.playFootstep(2, _random.getRandomBit(), 230, 1000);
+	}
+	if (_roomAction == 307 && _actionStep == 13) {
+		_audio.playEffectAt(52, Common::Point(275, 200));
+	} else if (_roomAction == 326 && _actionStep == 23) {
+		_audio.playEffectAt(72, Common::Point(275, 200));
 	}
 }
 

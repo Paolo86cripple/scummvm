@@ -26,7 +26,7 @@ namespace Hollywood {
 namespace {
 
 const RunawayHotspot kHotspots[] = {
-	{0, 0, 0, {0, 0}, {0, 0}},
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
 };
 
 const byte kBrianFrames[] = {
@@ -111,7 +111,11 @@ const RunawayRoom kRunawayScene5140 = {
 namespace Runaway {
 
 Scene5140::Scene5140(RunawayAudio &audio, RunawayInventory &inventory, const RunawayStrings &strings, RunawayGameType game) :
-	RunawayRoomScene(audio, inventory, strings, game) {}
+	RunawayRoomScene(audio, inventory, strings, game) {
+	_speechColors[4] = 24; // Carla.
+	_speechColors[5] = 28; // Lula.
+	_speechColors[6] = 25; // Mariola.
+}
 
 bool Scene5140::loadCustomResources() {
 	return _brianAnimation.load(_archive, 1, 130) &&
@@ -127,6 +131,9 @@ void Scene5140::runCustomEntrySequence() {
 }
 
 void Scene5140::updateIntroduction() {
+	static const AnimationFootstep arrivalSteps[] = {
+		{1, 800}, {1, 100}, {6, 512}, {11, 100}, {14, 800}, {15, 512}, {24, 512}
+	};
 	BusIntroduction &intro = _busIntroduction;
 	if (intro.phase == BusIntroduction::kFilm) {
 		intro.phase = BusIntroduction::kReturn;
@@ -146,10 +153,8 @@ void Scene5140::updateIntroduction() {
 			} else {
 				--intro.frame;
 			}
-			if (intro.phase == BusIntroduction::kArrival &&
-					(intro.frame == 1 || intro.frame == 6 || intro.frame == 11 ||
-					intro.frame == 14 || intro.frame == 15 || intro.frame == 24)) {
-				_audio.playFootstep(2, _random.getRandomBit());
+			if (intro.phase == BusIntroduction::kArrival) {
+				playAnimationFootsteps(intro.frame, 2, arrivalSteps, ARRAYSIZE(arrivalSteps));
 			}
 		} else if (intro.speaker >= kCarla && intro.facing != kBrianLula) {
 			intro.blink = !_random.getRandomNumber(14);
@@ -174,7 +179,7 @@ void Scene5140::updateIntroduction() {
 			// Brian pauses to think, then announces that he has a plan.
 			typedef RunawaySequence S;
 			static const S::Command film[] = {
-				{S::kOpen, 6}, {S::kPlay, 0, 0}, {S::kEffect, 20, 255},
+				{S::kOpen, 6}, {S::kPlay, 0, 0}, {S::kMusic, 20, 255},
 				{S::kPlay, 1, 186}, {S::kTalk, 1, 31, 1}, {S::kEnd}
 			};
 			intro.phase = BusIntroduction::kFilm;

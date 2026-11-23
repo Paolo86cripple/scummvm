@@ -28,15 +28,15 @@ namespace Hollywood {
 namespace {
 
 const RunawayHotspot kHotspots[] = {
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{910, 599, 3, {301, 302}, {0, 3}}, // 1: Oil well area.
-	{696, 510, 0, {303, 304}, {0, 0}}, // 2: Entrance to the house.
-	{846, 509, 0, {305, 306}, {0, 0}}, // 3: Sign.
-	{676, 510, 7, {307, 308}, {0, 1}}, // 4: Oscar.
-	{244, 416, 7, {309, 310}, {0, 0}}, // 5: Ladder.
-	{696, 510, 0, {312, 313}, {0, 1}}, // 6: Entrance to the house.
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{50, 599, 5, {326, 327}, {0, 3}} // 8: Path.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{910, 599, 3, {301, 302}, {0, 3}, {1023, 599}, 6}, // 1: Oil well area.
+	{696, 510, 0, {303, 304}, {0, 0}, {668, 390}, 4}, // 2: Entrance to the house.
+	{846, 509, 0, {305, 306}, {0, 0}, {837, 455}}, // 3: Sign.
+	{676, 510, 7, {307, 308}, {0, 1}, {517, 463}, 3}, // 4: Oscar.
+	{244, 416, 7, {309, 310}, {0, 0}, {216, 394}}, // 5: Ladder.
+	{696, 510, 0, {312, 313}, {0, 1}, {668, 390}, 5}, // 6: Entrance to the house.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{50, 599, 5, {326, 327}, {0, 3}, {0, 599}, 7} // 8: Path.
 };
 
 const RunawayResponse kResponses[] = {
@@ -62,7 +62,16 @@ const RunawayRoom kRunawayScene8090 = {
 namespace Runaway {
 
 Scene8090::Scene8090(RunawayAudio &audio, RunawayInventory &inventory, const RunawayStrings &strings, RunawayGameType game) :
-	RunawayRoomScene(audio, inventory, strings, game), _oscar(true, 6) {}
+	RunawayRoomScene(audio, inventory, strings, game), _oscar(true, 6) {
+	_speechColors[1] = 32; // Oscar.
+}
+
+const char *Scene8090::actionCaptionVariant(byte id, bool look, byte item) const {
+	if (!look && !item && (id == 2 || id == 6) && _finale.oscarAway) {
+		return "oscar_away";
+	}
+	return nullptr;
+}
 
 bool Scene8090::loadCustomResources() {
 	if (_entryScene == 8092 && !_carryingGina.load(_archive, 10, 7)) {
@@ -106,6 +115,7 @@ void Scene8090::runCustomEntrySequence() {
 		_arrivalStarted = _now;
 		break;
 	case 8093: // Oscar returns armed, ready to confront the gangsters.
+		_inventory.remove(11);
 		_position = Common::Point(676, 510);
 		_walkPath.reset(_position);
 		_facing = 7;
@@ -204,6 +214,11 @@ bool Scene8090::drawCustomComposite(Graphics::ManagedSurface &viewport) {
 }
 
 void Scene8090::handleAnimationFrameHook() {
+	if (_roomAction == 402 && _actionStep == 9) {
+		_audio.playFootstep(1, _random.getRandomBit(), 230, 696);
+	} else if (_roomAction == 403 && (_actionStep == 5 || _actionStep == 9)) {
+		_audio.playFootstep(2, _random.getRandomBit(), 230, 696);
+	}
 	if (_roomAction == 440 && _actionStep == 14) {
 		_audio.playEffect(27, 230);
 	}
@@ -211,7 +226,12 @@ void Scene8090::handleAnimationFrameHook() {
 
 void Scene8090::skipVideo() {
 	if (_entryScene == 8092) {
-		skipSpeech();
+		_speech.stop();
+		_audio.stopEffect();
+		_arrivalPhase = kNoArrival;
+		_roomAction = 0;
+		_actionFrames.clear();
+		_transition.scene = 8100;
 	} else {
 		RunawayRoomScene::skipVideo();
 	}
@@ -224,6 +244,10 @@ void Scene8090::drawCustomBackgroundComposite(Graphics::ManagedSurface &viewport
 void Scene8090::drawCustomForegroundComposite(Graphics::ManagedSurface &viewport) {
 	drawOscar(viewport, true);
 	drawForeground(viewport, 0);
+}
+
+bool Scene8090::roomAnimationInForeground() const {
+	return _position.y < 460;
 }
 
 void Scene8090::drawOscar(Graphics::ManagedSurface &viewport, bool foreground) {
@@ -251,7 +275,7 @@ void Scene8090::findWalkPath(Common::Point target) {
 	findGameplayWalkPath(target);
 }
 
-bool Scene8090::shouldApproachHotspot(byte id, bool use, byte item, bool approach) const {
+int8 Scene8090::customizeSceneActionApproach(byte id, bool use, byte item, int8 approach) const {
 	if (id == 2 && use && !item && _finale.oscarAway) {
 		return true;
 	}
@@ -375,15 +399,18 @@ RunawayRoomScene::ActionResult Scene8090::dispatchCustomSceneAction(uint16 actio
 		_animatesOscar = false;
 		setOscarPose(13, 100, 0);
 		_oscarMouth = 94;
-		for (uint i = 12; i <= 19; ++i) {
+		for (uint i = 12; i <= 18; ++i) {
 			say(20, i, false, i <= 16 && !(i % 2));
+		}
+		if (!_inventory.contains(11)) {
+			say(20, 19);
 		}
 		deferAction(423);
 		break;
-	case 423: // Return to Sushi to continue the plan.
+	case 423: // Arm Oscar with the borrowed rifle, or fetch it from Sushi.
 		_oscarPose = 0;
 		_oscar.startIdle();
-		leaveRoom(8373);
+		leaveRoom(_inventory.contains(11) ? 8093 : 8373);
 		break;
 	case 1430: // Oscar shows Brian his rifle.
 		_animatesOscar = false;
@@ -454,7 +481,7 @@ void Scene8090::enterHouse(bool visitGina) {
 		if (_finale.mediumTests < 3) {
 			_houseDestination = 8420;
 		} else if (!_finale.recordingPlan) {
-			_houseDestination = 0;
+			_houseDestination = _restoredContent ? 8420 : 0;
 		} else if (_finale.recordings == 0 || _finale.recordings == 2) {
 			_houseDestination = 8422;
 		} else {

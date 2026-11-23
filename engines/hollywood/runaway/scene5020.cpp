@@ -27,19 +27,19 @@ namespace Hollywood {
 namespace {
 
 const RunawayHotspot kHotspots[] = {
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{1123, 416, 3, {302, 301}, {0, 1}}, // 1: Path.
-	{456, 405, 7, {0, 1}, {0, 0}},
-	{573, 400, 7, {304, 305}, {0, 0}}, // 3: Rocking Chair.
-	{644, 397, 1, {310, 311}, {0, 0}}, // 4: Tires.
-	{456, 405, 7, {306, 307}, {0, 0}}, // 5: Door.
-	{618, 386, 0, {308, 309}, {1, 1}}, // 6: Trap Door.
-	{605, 399, 7, {312, 313}, {1, 1}}, // 7: Bucket.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{1123, 416, 3, {302, 301}, {0, 3}, {1123, 416}, 6}, // 1: Path.
+	{456, 405, 7, {0, 303}, {0, 1}, {0, 0}, 0, false, true}, // 2: Walk towards the cabin (native verb 0).
+	{573, 400, 7, {304, 305}, {0, 0}, {533, 379}}, // 3: Rocking Chair.
+	{644, 397, 1, {310, 311}, {0, 0}, {677, 372}}, // 4: Tires.
+	{456, 405, 7, {306, 307}, {0, 0}, {428, 336}}, // 5: Door.
+	{618, 386, 0, {308, 309}, {1, 1}, {623, 383}, 5}, // 6: Trap Door.
+	{605, 399, 7, {312, 313}, {1, 1}, {576, 384}}, // 7: Bucket.
 };
 
 const RunawayResponse kResponses[] = {
 	{5020, 302, 2, 0}, // Look at the path.
-	{5020, 303, 1, 0}, // Use an item with the cabin.
+	{5020, 303, 1, 0}, // Refuse to walk in front of the cabin.
 	{5020, 304, 3, 0}, // Look at the rocking chair.
 	{5020, 305, 4, 0}, // Use the rocking chair.
 	{5020, 306, 5, 0}, // Look at the door.
@@ -119,6 +119,11 @@ float Scene5020::actorHeight() const {
 	return _position.y * -0.140845075f + 264.225342f;
 }
 
+void Scene5020::setupActorDepth(RunawayActor::RenderParams &params) const {
+	// The foreground rock and vegetation always cover Brian (native 0x473a60).
+	params.depthY[1] = 599;
+}
+
 RunawayRoomScene::ActionResult Scene5020::dispatchCustomSceneAction(uint16 action) {
 	switch (action) {
 	case 301: // Go to the desert overview.
@@ -150,6 +155,9 @@ RunawayRoomScene::ActionResult Scene5020::dispatchCustomSceneAction(uint16 actio
 }
 
 void Scene5020::runCustomEntrySequence() {
+	if (_entryScene == 5021) {
+		_audio.playMusic(12, false);
+	}
 	if (_entryScene == 5021 && !_desert.escapedCabin) {
 		_desert.escapedCabin = 1;
 		say(0);
@@ -176,24 +184,24 @@ void Scene5020::startRescueFilm() {
 		{S::kOpen, 2}, {S::kPlay, 0, 40},
 		// Check Mariola's position at the oil well.
 		{S::kPlay, 91, 92}, {S::kSpeech, 50, 1}, {S::kPlay, 93, 128}, {S::kWaitSpeech},
-		{S::kTalk, 50, 3, 1}, {S::kTalk, 50, 4, 1, 1},
+		{S::kTalk, 50, 3, 1, 0, 25}, {S::kTalk, 50, 4, 1, 1},
 		// Check Lula's position at the machine gun.
 		{S::kEffect, 77, 255}, {S::kPlay, 162, 163}, {S::kSpeech, 50, 5},
-		{S::kPlay, 164, 253}, {S::kWaitSpeech}, {S::kTalk, 50, 6, 3}, {S::kTalk, 50, 7, 3, 1},
+		{S::kPlay, 164, 253}, {S::kWaitSpeech}, {S::kTalk, 50, 6, 3, 0, 28}, {S::kTalk, 50, 7, 3, 1},
 		// Check Carla's helicopter, then give the signal.
-		{S::kStill, 254}, {S::kTalk, 50, 8, 5, 1}, {S::kTalk, 50, 9, 5}, {S::kTalk, 50, 10, 5, 1},
+		{S::kStill, 254}, {S::kTalk, 50, 8, 5, 1}, {S::kTalk, 50, 9, 5, 0, 24}, {S::kTalk, 50, 10, 5, 1},
 		{S::kStill, 40}, {S::kTalk, 50, 11}, {S::kMusic, 23, 255, 1},
 		// The explosion draws the guards outside.
-		{S::kEffect, 78, 255}, {S::kPlay, 346, 374}, {S::kSpeech, 50, 12},
+		{S::kEffect, 78, 255}, {S::kPlay, 346, 374}, {S::kSpeech, 50, 12, 0, 0, 22},
 		{S::kPlay, 375, 430}, {S::kWaitSpeech}, {S::kStill, 430},
-		{S::kTalk, 50, 13, 7}, {S::kTalk, 50, 14, 9},
+		{S::kTalk, 50, 13, 7, 0, 27}, {S::kTalk, 50, 14, 9, 0, 22},
 		// Gina escapes while Lula covers the retreat.
-		{S::kEffect, 79, 255}, {S::kPlay, 454, 499}, {S::kSpeech, 50, 17, 19},
-		{S::kPlay, 500, 699}, {S::kSpeech, 50, 20}, {S::kPlay, 700, 1173},
+		{S::kEffect, 79, 255}, {S::kPlay, 454, 499}, {S::kSpeech, 50, 17, 17, 0, 27}, {S::kSpeech, 50, 18, 19, 0, 22},
+		{S::kPlay, 500, 699}, {S::kSpeech, 50, 20, 0, 0, 22}, {S::kPlay, 700, 1173},
 		{S::kSpeech, 50, 21, 22}, {S::kPlay, 1174, 1379},
 		// Carla narrowly avoids the wrecked airplane during takeoff.
-		{S::kSpeech, 50, 23, 24}, {S::kSpeech, 50, 31}, {S::kPlay, 1380, 1524}, {S::kWaitSpeech},
-		{S::kTalk, 50, 32}, {S::kTalk, 50, 33}, {S::kTalk, 50, 34}, {S::kWaitEffect, 5000}, {S::kEnd}
+		{S::kSpeech, 50, 23, 23, 0, 28}, {S::kSpeech, 50, 24, 24, 0, 11}, {S::kSpeech, 50, 31}, {S::kPlay, 1380, 1524}, {S::kWaitSpeech},
+		{S::kTalk, 50, 32, 0, 0, 25}, {S::kTalk, 50, 33}, {S::kTalk, 50, 34, 0, 0, 25}, {S::kWaitEffect, 5000}, {S::kEnd}
 	};
 	if (Common::File::exists("DATAVC00.000")) {
 		// GOG removes the CD portrait frames and keeps three separate stills

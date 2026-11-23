@@ -34,16 +34,16 @@ const uint kDepartureDuration = kDepartureFadeStart + 2000;
 const S::Command kFarewellSequence[] = {
 	{S::kOpen, 3}, {S::kPlay, 0, 99}, {S::kEffect, 12, 115, 1, 1},
 	{S::kPlay, 100, 133}, {S::kMusicVolume, 76},
-	{S::kTalk, 1, 0}, {S::kTalk, 1, 1}, {S::kTalk, 1, 2}, {S::kTalk, 1, 3},
+	{S::kTalk, 1, 0, 0, 0, 14}, {S::kTalk, 1, 1}, {S::kTalk, 1, 2, 0, 0, 14}, {S::kTalk, 1, 3},
 	{S::kEffect, 13, 128}, {S::kStopEffects, 2}, {S::kPlay, 134, 199},
 	{S::kEffect, 12, 115, 1, 1}, {S::kPlay, 200, 220},
-	{S::kTalk, 1, 4}, {S::kTalk, 1, 5}, {S::kTalk, 1, 6}, {S::kTalk, 1, 7},
+	{S::kTalk, 1, 4}, {S::kTalk, 1, 5, 0, 0, 14}, {S::kTalk, 1, 6}, {S::kTalk, 1, 7, 0, 0, 14},
 	{S::kEffect, 14, 153}, {S::kStopEffects, 2}, {S::kPlay, 221, 342},
 	{S::kSpeech, 1, 10, 10}, {S::kPlay, 343, 517},
 	{S::kEffect, 12, 115, 1, 1}, {S::kPlay, 518, 593}, {S::kWaitSpeech},
-	{S::kTalk, 1, 11, 1}, {S::kTalk, 1, 12, 3},
-	{S::kPlay, 606, 649}, {S::kTalk, 1, 13, 3}, {S::kTalk, 1, 14, 1},
-	{S::kTalk, 1, 15, 1, 1}, {S::kTalk, 1, 16, 1}, {S::kTalk, 1, 17, 3},
+	{S::kTalk, 1, 11, 1}, {S::kTalk, 1, 12, 3, 0, 14},
+	{S::kPlay, 606, 649}, {S::kTalk, 1, 13, 3, 0, 14}, {S::kTalk, 1, 14, 1},
+	{S::kTalk, 1, 15, 1, 1, 14}, {S::kTalk, 1, 16, 1}, {S::kTalk, 1, 17, 3, 0, 14},
 	{S::kTalk, 1, 18, 5}, {S::kEffect, 15, 153}, {S::kStopEffects, 2},
 	{S::kPlay, 674, 772}, {S::kSpeech, 1, 19, 19}, {S::kMusicVolume, 255},
 	{S::kPlay, 773, 875}, {S::kWaitSpeech}, {S::kEnd}
@@ -219,17 +219,10 @@ void Scene9010::update(uint32 now, int scrollDirection, bool inventoryOpen) {
 }
 
 void Scene9010::skipVideo() {
-	if (_sequence.active()) {
-		_sequence.skip();
-	} else if (_step == kArrival || _step == kCarDoor) {
-		enter(kFarewell);
-	} else if (_step == kDeparture) {
-		enter(kFlight);
-	} else if (_step == kCredits) {
-		enter(kMusicTail);
-	} else if (_step == kMusicTail) {
-		enter(kFinished);
-	}
+	_sequence.skip();
+	_sequence.update(_now);
+	_audio.stopMusic();
+	enter(kFinished);
 }
 
 void Scene9010::draw() {

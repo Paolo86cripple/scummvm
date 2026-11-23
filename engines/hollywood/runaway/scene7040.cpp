@@ -29,12 +29,12 @@ namespace {
 enum CryptDoorState { kBlocked, kCleared, kOpen, kSealed };
 
 const RunawayHotspot kHotspots[] = {
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{446, 486, 1, {301, 302}, {0, 0}}, // 1: Monolith.
-	{446, 486, 1, {303, 304}, {0, 1}}, // 2: Monolith's mouth.
-	{0, 599, 5, {305, 306}, {0, 3}}, // 3: Path.
-	{705, 340, 1, {307, 308}, {0, 0}}, // 4: Cave in the rock.
-	{109, 491, 0, {309, 310}, {0, 1}} // 5: Bush.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{446, 486, 1, {301, 302}, {0, 0}, {510, 451}}, // 1: Monolith.
+	{446, 486, 1, {303, 304}, {0, 1}, {510, 451}}, // 2: Monolith's mouth.
+	{0, 599, 5, {305, 306}, {0, 3}, {-100, 650}, 7}, // 3: Path.
+	{705, 340, 1, {307, 308}, {0, 0}, {524, 438}, 5}, // 4: Cave in the rock.
+	{109, 491, 0, {309, 310}, {0, 1}, {109, 450}} // 5: Bush.
 };
 
 const RunawayResponse kResponses[] = {
@@ -73,20 +73,20 @@ typedef RunawaySequence S;
 const S::Command kCryptVisit[] = {
 	{S::kOpen, 3}, {S::kEffect, 32, 255}, {S::kPlay, 0, 511},
 	// Wupuchim welcomes Brian into the sanctuary.
-	{S::kTalk, 20, 0, 1}, {S::kTalk, 20, 1, 3, 1},
-	{S::kTalk, 20, 2, 3}, {S::kTalk, 20, 3, 3, 1}, {S::kTalk, 20, 4, 3},
+	{S::kTalk, 20, 0, 1, 0, 33}, {S::kTalk, 20, 1, 3, 1},
+	{S::kTalk, 20, 2, 3, 0, 33}, {S::kTalk, 20, 3, 3, 1}, {S::kTalk, 20, 4, 3, 0, 33},
 	{S::kEffect, 33, 255}, {S::kPlay, 524, 608},
-	{S::kTalk, 20, 5, 5}, {S::kTalk, 20, 6, 5, 1},
+	{S::kTalk, 20, 5, 5}, {S::kTalk, 20, 6, 5, 1, 33},
 	// Reveal the bottle and explain why Brian must take it away.
-	{S::kPlay, 627, 686}, {S::kSpeech, 20, 7, 8}, {S::kPlay, 687, 747}, {S::kWaitSpeech},
-	{S::kTalk, 20, 9, 3}, {S::kTalk, 20, 10, 5},
-	{S::kTalk, 20, 11, 3}, {S::kTalk, 20, 12, 5},
-	{S::kTalk, 20, 13, 5, 1}, {S::kTalk, 20, 14, 5},
-	{S::kTalk, 20, 15, 3}, {S::kTalk, 20, 16, 3, 1},
+	{S::kPlay, 627, 686}, {S::kSpeech, 20, 7, 7, 0, 11}, {S::kSpeech, 20, 8, 8, 0, 33}, {S::kPlay, 687, 747}, {S::kWaitSpeech},
+	{S::kTalk, 20, 9, 3, 0, 33}, {S::kTalk, 20, 10, 5},
+	{S::kTalk, 20, 11, 3, 0, 33}, {S::kTalk, 20, 12, 5},
+	{S::kTalk, 20, 13, 5, 1, 33}, {S::kTalk, 20, 14, 5},
+	{S::kTalk, 20, 15, 3, 0, 33}, {S::kTalk, 20, 16, 3, 1},
 	// Leave the sacred key with Wupuchim and return to Gina.
-	{S::kTalk, 20, 17, 3}, {S::kTalk, 20, 18, 3, 1},
-	{S::kTalk, 20, 19, 3}, {S::kTalk, 20, 20, 7},
-	{S::kTalk, 20, 21, 3}, {S::kTalk, 20, 22, 7},
+	{S::kTalk, 20, 17, 3, 0, 33}, {S::kTalk, 20, 18, 3, 1},
+	{S::kTalk, 20, 19, 3, 0, 33}, {S::kTalk, 20, 20, 7},
+	{S::kTalk, 20, 21, 3, 0, 33}, {S::kTalk, 20, 22, 7},
 	{S::kEffect, 34, 255}, {S::kPlay, 760, 933}, {S::kEnd}
 };
 
@@ -192,11 +192,18 @@ bool Scene7040::adjustCustomWalkTargetToFloorMask(Common::Point &target) const {
 	return false;
 }
 
-bool Scene7040::shouldApproachHotspot(byte id, bool use, byte item, bool approach) const {
+int8 Scene7040::customizeSceneActionApproach(byte id, bool use, byte item, int8 approach) const {
 	if (id == 5 && use && !item) {
 		return _hopi.keyholeBlockedKnown && !_inventory.contains(8);
 	}
 	return approach;
+}
+
+Common::Point Scene7040::sceneActionLookPosition(byte id) const {
+	if (id == 1 && _hopi.cryptDoor == kOpen) {
+		return Common::Point(323, 427);
+	}
+	return RunawayRoomScene::sceneActionLookPosition(id);
 }
 
 void Scene7040::handleAnimationFrameHook() {

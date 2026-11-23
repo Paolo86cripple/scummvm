@@ -26,18 +26,18 @@ namespace Hollywood {
 namespace {
 
 const RunawayHotspot kHotspots[] = {
-	{0, 0, 0, {0, 0}, {0, 0}},
-	{1443, 648, 1, {301, 302}, {0, 3}}, // 1: Street.
-	{775, 466, 0, {303, 304}, {0, 0}}, // 2: Stairs.
-	{0, 0, 0, {305, 306}, {0, 0}}, // 3: Front desk.
-	{423, 664, 0, {307, 308}, {0, 0}}, // 4: Fireplace.
-	{0, 0, 0, {309, 310}, {0, 0}}, // 5: Rifles.
-	{467, 678, 1, {311, 312}, {0, 1}}, // 6: Poker.
-	{757, 716, 0, {313, 314}, {0, 1}}, // 7: Bell.
-	{920, 345, 7, {315, 316}, {0, 3}}, // 8: Sushi's work area.
-	{1124, 348, 1, {317, 318}, {0, 1}}, // 9: Rifle.
-	{0, 0, 0, {319, 320}, {0, 0}}, // 10: Downstairs.
-	{828, 710, 0, {321, 322}, {1, 0}} // 11: Check-in book.
+	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
+	{1443, 648, 1, {301, 302}, {0, 3}, {1374, 626}, 5}, // 1: Street.
+	{775, 466, 0, {303, 304}, {0, -1}, {1006, 656}, 4}, // 2: Stairs.
+	{0, 0, 0, {305, 306}, {0, 0}, {828, 695}}, // 3: Front desk.
+	{423, 664, 0, {307, 308}, {0, 0}, {424, 653}}, // 4: Fireplace.
+	{0, 0, 0, {309, 310}, {0, 0}, {424, 653}}, // 5: Rifles.
+	{467, 678, 1, {311, 312}, {0, 1}, {504, 645}}, // 6: Poker.
+	{757, 716, 0, {313, 314}, {0, 1}, {757, 716}}, // 7: Bell.
+	{920, 345, 7, {315, 316}, {0, 1}, {0, 0}, 4}, // 8: Sushi's work area.
+	{1124, 348, 1, {317, 318}, {0, 1}, {1138, 336}}, // 9: Rifle.
+	{0, 0, 0, {319, 320}, {0, -1}, {965, 616}, 6}, // 10: Downstairs.
+	{828, 710, 0, {321, 322}, {1, 0}, {828, 695}} // 11: Check-in book.
 };
 
 const RunawayResponse kResponses[] = {
@@ -48,7 +48,6 @@ const RunawayResponse kResponses[] = {
 	{8370, 307, 5, 0},   // Notice the lit fireplace.
 	{8370, 311, 9, 0},   // Examine the poker.
 	{8370, 315, 13, 0},  // Watch Sushi at her computer.
-	{8370, 318, 15, 0},  // Leave the rifle until Oscar needs it.
 	{8370, 319, 16, 0},  // Notice the precarious upper floor.
 	{8370, 321, 17, 0},  // Read the check-in book.
 	{8370, 322, 18, 0},  // Leave the book on the desk.
@@ -81,6 +80,11 @@ namespace Runaway {
 
 Scene8370::Scene8370(RunawayAudio &audio, RunawayInventory &inventory, const RunawayStrings &strings, RunawayGameType game) :
 	Scene6370(audio, inventory, strings, game) {}
+
+int Scene8370::sceneViewportYOffset() const {
+	// Each floor has a fixed view, including when Brian enters on the stairs.
+	return _upperFloor ? 0 : 200;
+}
 
 bool Scene8370::loadCustomResources() {
 	return _sushi.load(_archive, 4, 94) && _fire.load(_archive, 5, 20) && _monitor.load(_archive, 6, 97);
@@ -285,7 +289,7 @@ RunawayRoomScene::ActionResult Scene8370::dispatchCustomSceneAction(uint16 actio
 		_audio.playEffect(37);
 		if (++_finale.bellRings == 5) {
 			_finale.bellRings = 1;
-			say(12, _random.getRandomBit(), false, 1);
+			say(12, _restoredContent ? _random.getRandomNumber(2) : _random.getRandomBit(), false, 1);
 		}
 		break;
 	case 316: // Enter Sushi's work area from the upper walkway.
@@ -297,6 +301,17 @@ RunawayRoomScene::ActionResult Scene8370::dispatchCustomSceneAction(uint16 actio
 			_finale.rifle = 1;
 		}
 		break;
+	case 318: // Optionally borrow Sushi's rifle before Oscar needs it.
+		if (_finale.rifle == 2) {
+			break;
+		}
+		if (_restoredContent) {
+			say(15, 1);
+			deferAction(420);
+		} else {
+			say(15, 0);
+		}
+		break;
 	case 320: // Cross to the stairs and descend to the lobby.
 		walkTo(Common::Point(702, 340), 3, false, true);
 		deferAction(415);
@@ -305,7 +320,9 @@ RunawayRoomScene::ActionResult Scene8370::dispatchCustomSceneAction(uint16 actio
 		if (!_inventory.finale().heatNeeded) {
 			say(19, 0);
 		} else if (_inventory.finale().podsOpened) {
-			say(19, _finale.mediumTests >= 3 ? 6 : 5);
+			say(19, 6);
+		} else if (_inventory.finale().scalpel == 1) {
+			say(19, 5);
 		} else {
 			say(19, 1);
 			beginRoomAnimation(416, 7, 38);
@@ -359,6 +376,11 @@ RunawayRoomScene::ActionResult Scene8370::dispatchCustomSceneAction(uint16 actio
 		_inventory.finale().scalpel = 1;
 		say(19, 4);
 		break;
+	case 420: // Remove the rifle from the room and keep it in the inventory.
+		_finale.rifle = 2;
+		_inventory.add(11);
+		say(15, 2);
+		return kBackgroundChanged;
 	default:
 		return kUnhandled;
 	}
