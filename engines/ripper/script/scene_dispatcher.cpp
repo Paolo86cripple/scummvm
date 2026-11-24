@@ -24,7 +24,7 @@
 #include "common/debug.h"
 #include "common/system.h"
 
-#include "ripper/combat/combat.h"
+#include "ripper/combat.h"
 #include "ripper/cursor.h"
 #include "ripper/cyber.h"
 #include "ripper/detection.h"
@@ -246,8 +246,7 @@ bool SceneActionDispatcher::dispatch(RipperEngine *engine, uint action, uint arg
 	case kSceneActionCrystalPuzzle: {
 		CrystalPuzzle puzzle(engine);
 		const CrystalPuzzle::Result result = puzzle.run(argument);
-		debugC(1, kDebugPuzzles,
-			"Ripper: crystal puzzle scene action completed result=%d milestone=%u", result, argument);
+		debugC(1, kDebugPuzzles, "Ripper: crystal puzzle scene action completed result=%d milestone=%u", result, argument);
 		return result != CrystalPuzzle::kLoadFailed;
 	}
 	case kSceneActionNoOp:

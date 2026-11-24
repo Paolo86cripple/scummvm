@@ -46,13 +46,12 @@ private:
 	bool loadPieceSet(const char *prefix, Common::Array<BitmapAssetFrame> &frames);
 	void loadPersistentState();
 	void storePersistentState() const;
-	void drawFrame(byte *screen, uint pitch, const BitmapAssetFrame &frame,
-		int x, int y) const;
-	void render() const;
+	void drawFrame(byte *screen, uint pitch, const BitmapAssetFrame &frame, int x, int y) const;
+	bool render() const;
 	int findPiece(const Common::Point &point, int *zIndex = nullptr) const;
 	bool updateCursor(const Common::Point &point);
 	void beginDrag(uint piece, int zIndex);
-	void updateDrag(const Common::Point &point);
+	bool updateDrag(const Common::Point &point);
 	void finishDrag();
 	void animateInvalidDrop(const Common::Point &target);
 	bool isInvalidDrop(const Common::Point &position, const BitmapAssetFrame &frame) const;

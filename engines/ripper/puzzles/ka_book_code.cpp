@@ -24,7 +24,6 @@
 #include "common/debug.h"
 #include "common/file.h"
 #include "common/system.h"
-#include "graphics/paletteman.h"
 #include "graphics/surface.h"
 
 #include "ripper/cursor.h"
@@ -64,11 +63,11 @@ bool KaBookCodePuzzle::loadAssets() {
 	}
 
 	Common::File file;
-	if (!file.open(Common::Path(kBackgroundMedia)) ||
-			!decodePcxAsset(file, _background)) {
+	if (!file.open(Common::Path(kBackgroundMedia)) || !decodePcxAsset(file, _background)) {
 		warning("Ripper: could not decode Ka book-code background '%s'", kBackgroundMedia);
 		return false;
 	}
+
 	debugC(1, kDebugPuzzles,
 		"Ripper: loaded Ka book-code puzzle background='%s' size=%ux%u colors=%u glyphs=%u",
 		kBackgroundMedia, _background.width, _background.height,
@@ -81,8 +80,7 @@ uint KaBookCodePuzzle::measureText(const Common::String &text) const {
 	return BitmapFontRenderer::measureText(_font, text);
 }
 
-void KaBookCodePuzzle::drawText(byte *screen, uint pitch, int x, int y,
-		const Common::String &text, byte color) const {
+void KaBookCodePuzzle::drawText(byte *screen, uint pitch, int x, int y, const Common::String &text, byte color) const {
 	BitmapFontRenderer::drawTextClipped(screen, pitch, _font, x, y, text, color,
 		Common::Rect(0, 0, kRipperScreenWidth, kRipperScreenHeight));
 }
@@ -94,11 +92,11 @@ void KaBookCodePuzzle::drawPrompt(const Common::String &typedCode) {
 			g_system->unlockScreen();
 		return;
 	}
+
 	byte *pixels = (byte *)screen->getPixels();
 	for (uint y = 0; y < _background.height && y + kBackgroundY < 400; ++y) {
 		const uint width = MIN<uint>(_background.width, 640);
-		memcpy(screen->getBasePtr(0, y + kBackgroundY),
-			_background.pixels.data() + y * _background.width, width);
+		memcpy(screen->getBasePtr(0, y + kBackgroundY), _background.pixels.data() + y * _background.width, width);
 	}
 	for (uint i = 0; i < typedCode.size() && i < ARRAYSIZE(kCellX); ++i) {
 		const Common::String character(typedCode.c_str() + i, 1);
@@ -106,8 +104,8 @@ void KaBookCodePuzzle::drawPrompt(const Common::String &typedCode) {
 		drawText(pixels, screen->pitch, x, kTextY, character, kTextColor);
 	}
 	g_system->unlockScreen();
-	if (_background.palette.size() >= 256 * 3)
-		g_system->getPaletteManager()->setPalette(_background.palette.data(), 0, 256);
+	if (_background.palette.size() >= kRipperPaletteByteCount)
+		setIndexedPaletteIfChanged(_background.palette.data());
 	presentScreen();
 }
 
@@ -120,9 +118,7 @@ KaBookCodePuzzle::Result KaBookCodePuzzle::run() {
 	_engine->getInput()->drainKeys();
 	_engine->getInput()->discardMouseTransitions();
 	drawPrompt(typedCode);
-	debugC(1, kDebugPuzzles,
-		"Ripper: entered Ka book-code puzzle expectedLength=7 helpTable=0x%x",
-		kHelpSelectionTable);
+	debugC(1, kDebugPuzzles, "Ripper: entered Ka book-code puzzle expectedLength=7 helpTable=0x%x", kHelpSelectionTable);
 
 	bool solved = false;
 	bool active = true;
@@ -130,23 +126,27 @@ KaBookCodePuzzle::Result KaBookCodePuzzle::run() {
 		if (_engine->getInput()->pollEvents()) {
 			break;
 		}
+
 		while (_engine->getInput()->hasPendingKey()) {
 			uint16 command = _engine->getInput()->consumeKey();
 			if (command == kEscapeCommand) {
 				active = false;
 				break;
 			}
+
 			if (command == kHelpCommand) {
 				_engine->getModalDialog()->run(kHelpSelectionTable);
 				drawPrompt(typedCode);
 				continue;
 			}
+
 			if (command == 8 && !typedCode.empty()) {
 				_engine->getMedia()->playSoundEffect(kKeyAudio, _keyHandle);
 				typedCode.deleteLastChar();
 				drawPrompt(typedCode);
 				continue;
 			}
+
 			if (command >= 'a' && command <= 'z')
 				command -= 'a' - 'A';
 			if (typedCode.size() >= ARRAYSIZE(kCellX) ||
@@ -173,6 +173,7 @@ KaBookCodePuzzle::Result KaBookCodePuzzle::run() {
 			return kLoadFailed;
 		}
 	}
+
 	debugC(1, kDebugPuzzles,
 		"Ripper: left Ka book-code puzzle result=%s typedLength=%u",
 		solved ? "solved" : "failed", typedCode.size());
