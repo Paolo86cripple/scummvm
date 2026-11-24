@@ -32,6 +32,7 @@ const Graphics::PixelFormat kUIFormat(2, 5, 6, 5, 0, 11, 5, 0, 0);
 const uint kCursorWidth = 60;
 const uint kButtonX = 312;
 const byte kMuseumPickupFrames[] = {0, 30, 31, 32, 31, 30, 31, 32, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 3};
+const byte kMuseumBlinkFrames[] = {1, 2, 1, 0, 3};
 
 void shadeBevelPixel(Graphics::ManagedSurface &screen, int x, int y, int amount) {
 	uint16 *pixel = (uint16 *)screen.getBasePtr(x, y);
@@ -146,7 +147,7 @@ bool RunawayUI::inViewport() const {
 }
 
 void RunawayUI::setVerb(RunawayVerb verb, byte actionCursor) {
-	const byte cursor = verb == kVerbUse && actionCursor ? actionCursor : (byte)verb;
+	const byte cursor = verb == kVerbExit || (verb == kVerbUse && actionCursor == 3) ? actionCursor : (byte)verb;
 	if (_verb != verb || _cursorType != cursor) {
 		if (_pointerSound && (_inventoryOpen || _roomHasVerbs) && !_blocked && !_speaking && !busy()) {
 			_audio.playPointer();
@@ -159,6 +160,16 @@ void RunawayUI::setVerb(RunawayVerb verb, byte actionCursor) {
 	_actionCursor = actionCursor;
 }
 
+RunawayVerb RunawayUI::defaultVerb() const {
+	if (!_hovered || _walkHotspot || (!_inventoryOpen && !_roomHasVerbs))
+		return kVerbWalk;
+	if (_inventoryOpen)
+		return _inventory.isPlan(_hovered) ? kVerbLook : kVerbUse;
+	if (_preferLook || !_actionCursor)
+		return kVerbLook;
+	return _actionCursor >= 4 ? kVerbExit : kVerbUse;
+}
+
 void RunawayUI::captureState(RunawaySaveState &state) const {
 	state.inventoryOpen = _inventoryOpen;
 	state.verb = _verb;
@@ -166,16 +177,19 @@ void RunawayUI::captureState(RunawaySaveState &state) const {
 
 void RunawayUI::restoreState(const RunawaySaveState &state, uint32 now) {
 	_audio.stopEffect();
-	_now = _buttonTick = _verbStarted = _portraitTick = _lastInteraction = now;
+	_now = _buttonTick = _verbStarted = _portraitTick = _mouthTick = _lastInteraction = now;
 	_blinkUntil = _idleStarted = _pickupStarted = 0;
 	_pickupItem = _hovered = _buttonFrame = _optionsFrame = _mouth = 0;
 	_blocked = _speaking = _inventoryPresentation = _returnAfterPickup = _pickupSoundPlayed = false;
 	_inventoryFrame = 0xff;
+	_inventorySpeechPose = 0;
 	_inventoryOpen = state.inventoryOpen;
 	_enteredInventory = false;
 	_verb = (RunawayVerb)state.verb;
-	_cursorType = _previousCursor = state.verb;
+	// The loaded hotspot supplies the exit arrow's direction on the next update.
+	_cursorType = _previousCursor = _verb == kVerbExit ? 0 : state.verb;
 	_actionCursor = 0;
+	_alternateVerb = kVerbLook;
 	_preferLook = false;
 	_walkHotspot = false;
 	_cursorKey = -1;
@@ -189,6 +203,11 @@ void RunawayUI::setInventoryOpen(bool open) {
 	_hovered = 0;
 	_idleStarted = 0;
 	_lastInteraction = _now;
+	if (_museum) {
+		_mouth = 0;
+		_mouthTick = _now;
+		_blinkUntil = 0;
+	}
 	setVerb(kVerbWalk);
 }
 
@@ -202,6 +221,7 @@ bool RunawayUI::cancel() {
 		return true;
 	if (_inventory.selected()) {
 		_inventory.select(0);
+		setVerb(defaultVerb(), _actionCursor);
 		return true;
 	}
 	if (_inventoryOpen) {
@@ -212,14 +232,23 @@ bool RunawayUI::cancel() {
 }
 
 void RunawayUI::update(uint32 now, Common::Point mouse, byte roomHotspot, bool blocked, bool speaking,
-		bool inventoryPresentation, byte speechFrame, bool roomHasVerbs, byte actionCursor, bool preferLook, bool walkHotspot) {
+		bool inventoryPresentation, byte speechFrame, bool roomHasVerbs, byte actionCursor, bool preferLook, bool walkHotspot,
+		RunawayVerb alternateVerb) {
 	_now = now;
 	_mouse = mouse;
 	_blocked = blocked;
 	_speaking = speaking;
-	// Native 0x40e8e0 uses the same twelve mouth/eye frames as Brian in
-	// the room, on the same speech clock, including continuation lines.
-	_mouth = MIN<byte>(11, speechFrame);
+	if (!_museum) {
+		// Native 0x40e8e0 shares the room's twelve mouth/eye frames.
+		_mouth = MIN<byte>(11, speechFrame);
+	} else if (!_speaking || !_inventoryOpen) {
+		_mouth = 0;
+		_mouthTick = now;
+	} else if (now - _mouthTick >= 150) {
+		// Native 0x428150 chooses another mouth on the 150 ms portrait clock.
+		_mouth = (_mouth + 1 + _random.getRandomNumber(3)) % 5;
+		_mouthTick = now;
+	}
 	if (_inventoryPresentation != inventoryPresentation) {
 		_inventoryPresentation = inventoryPresentation;
 		setInventoryOpen(inventoryPresentation);
@@ -261,16 +290,17 @@ void RunawayUI::update(uint32 now, Common::Point mouse, byte roomHotspot, bool b
 	if (_inventoryOpen || !roomHasVerbs || (_museum && actionCursor != 3)) {
 		actionCursor = 0;
 		preferLook = false;
+		alternateVerb = kVerbLook;
 	}
 	if (_hovered != hovered || _roomHasVerbs != roomHasVerbs || _actionCursor != actionCursor ||
-			_preferLook != preferLook || _walkHotspot != walkHotspot) {
+			_preferLook != preferLook || _walkHotspot != walkHotspot || _alternateVerb != alternateVerb) {
 		_hovered = hovered;
 		_roomHasVerbs = roomHasVerbs;
 		_preferLook = preferLook;
 		_walkHotspot = walkHotspot;
-		setVerb(hovered && !walkHotspot && (_inventoryOpen || _roomHasVerbs) ?
-			(_inventoryOpen ? (_inventory.isPlan(hovered) ? kVerbLook : kVerbUse) :
-			(actionCursor && !preferLook ? kVerbUse : kVerbLook)) : kVerbWalk, actionCursor);
+		_actionCursor = actionCursor;
+		_alternateVerb = alternateVerb;
+		setVerb(defaultVerb(), actionCursor);
 	}
 	if (now - _buttonTick >= 20) {
 		const uint steps = MIN<uint>(6, (now - _buttonTick) / 20);
@@ -296,8 +326,9 @@ void RunawayUI::update(uint32 now, Common::Point mouse, byte roomHotspot, bool b
 			_blinkUntil = 0;
 			_lastInteraction = now;
 			_idleStarted = 0;
-		} else if (!busy() && _random.getRandomNumber(49) == 0) {
-			_blinkUntil = now + 180;
+		} else if (!busy() && (!_museum || (int32)(_blinkUntil - now) <= 0) &&
+				_random.getRandomNumber(_museum ? 29 : 49) == 0) {
+			_blinkUntil = now + (_museum ? ARRAYSIZE(kMuseumBlinkFrames) * 60 : 180);
 		}
 		if (!busy() && !_speaking && _inventoryFrame == 0xff && !_idleStarted && now - _lastInteraction >= 30000)
 			_idleStarted = now;
@@ -338,8 +369,10 @@ RunawayUI::Command RunawayUI::click(bool right) {
 	if (right) {
 		if (_inventory.selected()) {
 			_inventory.select(0);
-		} else if (_hovered && !_walkHotspot && (_inventoryOpen || _roomHasVerbs)) {
-			setVerb(_verb == kVerbLook ? kVerbUse : kVerbLook, _actionCursor);
+			setVerb(defaultVerb(), _actionCursor);
+		} else if (_hovered && !_walkHotspot && _alternateVerb != kVerbWalk && (_inventoryOpen || _roomHasVerbs)) {
+			setVerb(_actionCursor >= 4 ? (_verb == kVerbExit ? _alternateVerb : kVerbExit) :
+				(_verb == kVerbLook ? kVerbUse : kVerbLook), _actionCursor);
 		}
 		return command;
 	}
@@ -485,7 +518,15 @@ void RunawayUI::drawInventory(Graphics::ManagedSurface &screen) {
 	} else if (_idleStarted) {
 		_idlePortrait.draw(screen, MIN<uint>(_idlePortrait.frameCount() - 1, (_now - _idleStarted) / 60), 0, kRunawayViewportTop);
 	} else {
-		const uint frame = _speaking ? _mouth : (int32)(_blinkUntil - _now) > 0 ? 6 : 0;
+		const bool blinking = (int32)(_blinkUntil - _now) > 0;
+		uint frame = _speaking ? _mouth : blinking ? 6 : 0;
+		if (_museum) {
+			frame = _speaking ? 3 + _inventorySpeechPose * 5 + _mouth : 3;
+			if (!_speaking && blinking) {
+				const uint elapsed = ARRAYSIZE(kMuseumBlinkFrames) * 60 - (_blinkUntil - _now);
+				frame = kMuseumBlinkFrames[elapsed / 60];
+			}
+		}
 		_portrait.draw(screen, frame, 0, kRunawayViewportTop);
 	}
 }

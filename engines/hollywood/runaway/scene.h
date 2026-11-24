@@ -63,6 +63,8 @@ public:
 	// Cursor tile 3 is talk, 4..7 are exit arrows; zero keeps the usual verbs.
 	virtual byte actionCursor(byte hotspot) const { return 0; }
 	virtual bool preferLook(byte hotspot) const { return false; }
+	// Exit arrows alternate with look or use; walk means the arrow cannot be toggled.
+	virtual RunawayVerb alternateVerb(byte hotspot) const { return kVerbLook; }
 	virtual bool isWalkHotspot(byte hotspot) const { return false; }
 	virtual Common::U32String actionCaption(byte hotspot, RunawayVerb verb, byte item) const = 0;
 	virtual const Common::U32String &committedCaption() const = 0;
@@ -78,6 +80,7 @@ public:
 	virtual bool inventoryPresentation() const { return false; }
 	// A scene can override the inventory portrait during an item action.
 	virtual byte inventoryFrame() const { return 0xff; }
+	virtual byte inventorySpeechPose() const { return 0; }
 	virtual void skipVideo() {}
 	virtual void sayInventory(const RunawayInventory::Reply &reply) = 0;
 	virtual bool escaped() const { return false; }
@@ -127,6 +130,7 @@ public:
 	bool busy() const override { return _sequence.active() || _pendingHotspot != 0 || _transition.scene || _hospitalExit.scene || _arrivalFacing != 0xff || _roomAction || _conversation || _reviewingDesertPlan || speaking(); }
 	bool inventoryPresentation() const override { return _reviewingDesertPlan; }
 	byte inventoryFrame() const override;
+	byte inventorySpeechPose() const override { return _lineIndex < _lines.size() ? _lines[_lineIndex].inventoryPose : 0; }
 	bool speaking() const override { return _sequence.active() ? !_sequence.subtitle().empty() : !_speech.subtitle().empty(); }
 	byte speechFrame() const override { return _sequence.active() ? _sequence.speechFrame() : _speech.frame(_now); }
 	bool playingVideo() const override { return _sequence.active(); }
@@ -247,11 +251,12 @@ protected:
 	void updateHospitalInventory();
 	void leaveHospitalRoom(uint16 scene, Common::Point position, byte facing);
 
-	bool museumChapter() const { return _game == kRunawayFullGame && _room / 1000 == 4; }
+	bool museumChapter() const { return _room / 1000 == 4; }
 	void startMuseum();
 	void resumeMuseum();
 	void updateMuseum(uint elapsed);
 	bool sayMuseumInventory(const RunawayInventory::Reply &reply);
+	void setMuseumInventorySpeechPoses(uint16 cue, byte variation, uint firstLine);
 	bool updateMuseumInventory();
 	void deferMuseumAction(uint16 action);
 	void refreshMuseum();
@@ -265,7 +270,7 @@ protected:
 	void finishConversation();
 	byte speaker() const { return speaking() && _lineIndex < _lines.size() ? _lines[_lineIndex].speaker : 0; }
 
-	bool desertChapter() const { return _game == kRunawayFullGame && _room / 1000 == 5; }
+	bool desertChapter() const { return _game != kRunawayMuseumDemo && _room / 1000 == 5; }
 	void startDesert();
 	void resumeDesert();
 	void updateDesert(uint elapsed);
@@ -320,6 +325,7 @@ protected:
 		uint16 sample;
 		bool global;
 		byte speaker, color;
+		byte inventoryPose = 0;
 	};
 	Common::Array<SpeechLine> _lines;
 	// Local animation speaker IDs map to the original font palette.

@@ -55,7 +55,7 @@ RunawayEngine::RunawayEngine(OSystem *syst, Common::Language language, RunawayGa
 	Engine(syst), _language(language), _game(game), _museum(game == kRunawayMuseumDemo),
 	_restoredContent(ConfMan.getBool("restored_content")), _strings(language), _audio(_mixer) {
 	_state.game = game;
-	_state.scene = _museum ? 4050 : game == kRunawayFullGame ? 2020 : 5030;
+	_state.scene = _museum ? 4010 : game == kRunawayFullGame ? 2020 : 5030;
 	_audio.setMuseum(_museum);
 	_audio.setChapter(_state.chapter());
 }
@@ -128,9 +128,10 @@ Common::Point RunawayEngine::updateUI(uint32 now) {
 		const byte hotspot = _scene->hotspotAt(mouse);
 		_ui->setDialogueChoices(_scene->dialogueChoices());
 		_ui->setInventoryFrame(_scene->inventoryFrame());
+		_ui->setInventorySpeechPose(_scene->inventorySpeechPose());
 		_ui->update(now, mouse, hotspot, sceneBusy(), _scene->speaking(),
 			_scene->inventoryPresentation(), _scene->speechFrame(), _scene->hasVerbControls(),
-			_scene->actionCursor(hotspot), _scene->preferLook(hotspot), _scene->isWalkHotspot(hotspot));
+			_scene->actionCursor(hotspot), _scene->preferLook(hotspot), _scene->isWalkHotspot(hotspot), _scene->alternateVerb(hotspot));
 	}
 	return mouse;
 }
@@ -192,7 +193,8 @@ RunawayScene *RunawayEngine::createScene(uint16 entryScene) {
 	// with a demo does not make its puzzle initialization interchangeable.
 	const RunawayRoom *room = findRunawayRoom(entryScene);
 	RunawayScene *scene = nullptr;
-	if (room && ((_museum && entryScene >= 4000) ||
+	if (room && ((_museum && entryScene / 1000 == 4) ||
+			(_game == kRunawayCabinDemo && _language == Common::FR_FRA && (entryScene == 5021 || entryScene == 5140)) ||
 			(_game == kRunawayFullGame && (entryScene / 1000 == 2 || entryScene / 1000 == 4 || entryScene / 1000 == 5 || entryScene / 1000 == 6 || entryScene / 1000 == 7 || entryScene / 1000 == 8 || entryScene / 1000 == 9)))) {
 		scene = createRunawayRoomScene(*room, _audio, *_inventory, _strings, _game);
 	} else if ((_game == kRunawayCabinDemo && entryScene == 5030) ||
@@ -241,7 +243,7 @@ Common::Error RunawayEngine::changeScene() {
 	updateSoundListener();
 	_pendingDoorClose = transition.door;
 	if (transition.door) {
-		_audio.playEffect(_museum ? 3 : 58);
+		_audio.playEffect(58);
 	}
 	return Common::kNoError;
 }
@@ -297,7 +299,7 @@ Common::Error RunawayEngine::playIntro(RunawayMenu &menu, byte chapter, RunawayI
 	_inPresentation = true;
 	_loadedGame = false;
 	RunawayIntro intro(_mixer);
-	if (!intro.load(_game == kRunawayFullGame, chapter, mode)) {
+	if (!intro.load(_game == kRunawayFullGame, chapter, mode, _game == kRunawayCabinDemo && _language == Common::FR_FRA)) {
 		_inPresentation = false;
 		return Common::Error(Common::kReadingFailed, "Cannot load the Runaway opening resources");
 	}
@@ -398,8 +400,8 @@ Common::Error RunawayEngine::run() {
 	_inventory.reset(new RunawayInventory(_strings, _game));
 	const bool hasBootParam = ConfMan.hasKey("boot_param");
 	const int bootParam = hasBootParam ? ConfMan.getInt("boot_param") : 0;
-	if (_museum && bootParam >= 4000 && findRunawayRoom(bootParam)) {
-		_state.scene = bootParam;
+	if (_museum && bootParam / 1000 == 4 && (bootParam == 4000 || findRunawayRoom(bootParam))) {
+		_state.scene = bootParam == 4000 ? 4010 : bootParam;
 	}
 	if (_game == kRunawayFullGame && hasBootParam) {
 		if (bootParam == 4000) {
@@ -474,7 +476,7 @@ Common::Error RunawayEngine::run() {
 		// Museum doors close once the opening sound finishes, across the room change.
 		if (_pendingDoorClose && !_audio.effectPlaying()) {
 			_pendingDoorClose = false;
-			_audio.playEffect(_museum ? 4 : 59);
+			_audio.playEffect(59);
 		}
 		updateUI(now);
 		if (_scene->playingVideo()) {
@@ -612,8 +614,7 @@ Common::Error RunawayEngine::run() {
 				leftPressed = rightPressed = false;
 				continue;
 			}
-			// The extended French demo's later rooms are not implemented yet;
-			// all three releases currently finish at the shared shack escape.
+			// Each demo follows its final playable scene with its own presentation.
 			const Common::Error result = playEnding(menu);
 			if (!_loadedGame || result.getCode() != Common::kNoError || shouldQuit())
 				return result;
@@ -648,7 +649,7 @@ Common::Error RunawayEngine::playEnding(RunawayMenu &menu) {
 	_inPresentation = true;
 	_loadedGame = false;
 	RunawayEnding ending(_mixer, _language);
-	if (!ending.load())
+	if (!ending.load(_museum))
 		return Common::Error(Common::kReadingFailed, "Cannot load the Runaway demo ending");
 	Graphics::ManagedSurface screen(kRunawayScreenWidth, kRunawayScreenHeight, _system->getScreenFormat());
 	_presentationMouse.update(true);
