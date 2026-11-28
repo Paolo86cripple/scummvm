@@ -28,9 +28,9 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{1023, 331, 3, {301, 302}, {0, 1}, {1023, 331}, 5}, // 1: Door.
-	{1001, 245, 3, {301, 303}, {0, 1}, {1001, 245}, 5}, // 2: Door.
-	{983, 216, 3, {301, 304}, {0, 1}, {983, 216}, 5}, // 3: Door.
+	{1023, 331, 3, {301, 302}, {0, 1}, {1023, 331}, 5, false, false, true}, // 1: Door.
+	{1001, 245, 3, {301, 303}, {0, 1}, {1001, 245}, 5, false, false, true}, // 2: Door.
+	{983, 216, 3, {301, 304}, {0, 1}, {983, 216}, 5, false, false, true}, // 3: Door.
 	{834, 370, 7, {305, 306}, {0, 0}, {0, 0}}, // 4: Street.
 	{857, 326, 1, {309, 310}, {0, 1}, {872, 312}} // 5: Object on the floor.
 };
@@ -162,8 +162,7 @@ RunawayRoomScene::ActionResult Scene6226::dispatchCustomSceneAction(uint16 actio
 	case 410: // Put the sanding block in Brian's inventory.
 		_facing = 4;
 		_town.sandingBlock = kTaken;
-		_inventory.add(30);
-		say(26, 1);
+		pickUp(30, 26, 1);
 		return kBackgroundChanged;
 	default:
 		return kUnhandled;

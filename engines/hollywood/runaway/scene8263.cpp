@@ -27,7 +27,7 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{252, 492, 0, {301, 302}, {0, 1}, {233, 165}, 5}, // 1: Window.
+	{252, 492, 0, {301, 302}, {0, 1}, {233, 165}, 5, false, false, true}, // 1: Window.
 	{223, 483, 1, {303, 304}, {0, 0}, {300, 443}}, // 2: Boiler.
 	{287, 505, 1, {305, 306}, {0, 1}, {340, 448}}, // 3: Steam outlet lever.
 	{287, 505, 1, {307, 308}, {0, 1}, {340, 448}}, // 4: Pressure wheel.
@@ -86,8 +86,8 @@ void Scene8263::runCustomEntrySequence() {
 }
 
 void Scene8263::resumeAmbientAudio(bool entering) {
-	resumeFinaleOutdoorAudio(entering, 36, 51);
-	_audio.playEffect(33, 178, 1, true);
+	resumeFinaleOutdoorAudio(entering, 36, 20);
+	_audio.playEffect(33, 70, 1, true);
 }
 
 void Scene8263::advanceCustomGameplayLoop(uint32 delta) {
@@ -120,7 +120,10 @@ Common::U32String Scene8263::hotspotName(byte id) const {
 RunawayRoomScene::ActionResult Scene8263::dispatchCustomSceneAction(uint16 action) {
 	switch (action) {
 	case 302: // Climb out through the window.
-		beginRoomAnimation(302, 25, 29, nullptr, 0, true, 60);
+		if (_skippingExit)
+			leaveRoom(8261);
+		else
+			beginRoomAnimation(302, 25, 29, nullptr, 0, true, 60);
 		break;
 	case 1302: // Finish climbing out in the exterior view.
 		leaveRoom(8261);
@@ -158,9 +161,9 @@ RunawayRoomScene::ActionResult Scene8263::dispatchCustomSceneAction(uint16 actio
 
 void Scene8263::handleAnimationFrameHook() {
 	if (_roomAction == 400 && _actionStep == 13) {
-		_audio.playEffect(21, 204);
+		_audio.playEffect(21, 80);
 	} else if (_roomAction == 302 && _actionStep == 10) {
-		_audio.playEffect(73, 204);
+		_audio.playEffect(73, 80);
 	} else if ((_roomAction == 306 && (_actionStep == 16 || _actionStep == 43)) ||
 			(_roomAction == 401 && _actionStep == 3)) {
 		_audio.playEffect(29);

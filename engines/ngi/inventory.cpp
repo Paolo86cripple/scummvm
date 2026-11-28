@@ -52,15 +52,17 @@ bool InventoryData::load(MfcArchive &file) {
 }
 
 int InventoryData::getInventoryPoolItemIndexById(int itemId) {
-	if (_itemsPool.size() <= 0)
-		return -1;
-
 	for (uint i = 0; i < _itemsPool.size(); i++) {
 		if (_itemsPool[i].id == itemId)
 			return i;
 	}
 
-	return 0;
+	return -1;
+}
+
+int Inventory::getCursorPictureId() {
+	int index = getInventoryPoolItemIndexById(getSelectedItemId());
+	return index >= 0 ? _itemsPool[index].pictureObjectNormal : 0;
 }
 
 bool InventoryData::setItemFlags(int itemId, int flags) {
@@ -128,7 +130,7 @@ void Inventory::addItem2(AniObject *obj) {
 void Inventory::removeItem(int itemId, int count) {
 	debugC(2, kDebugInventory, "Inventory::removeItem(%d, %d)", itemId, count);
 
-	while (count) {
+	while (count > 0) {
 		int i;
 		for (i = _inventoryItems.size() - 1; i >= 0; i--) {
 			InventoryItem &item = _inventoryItems[i];
@@ -138,6 +140,7 @@ void Inventory::removeItem(int itemId, int count) {
 
 				if (item.count > count) {
 					item.count -= count;
+					return;
 				} else {
 					count -= item.count;
 					_inventoryItems.remove_at(i);
@@ -149,6 +152,8 @@ void Inventory::removeItem(int itemId, int count) {
 				break;
 			}
 		}
+		if (i < 0)
+			break;
 	}
 }
 
@@ -218,6 +223,12 @@ int Inventory::getItemFlags(int itemId) {
 	return _itemsPool[idx].flags;
 }
 
+void Inventory::setItemArea(int16 sceneId, const Common::Rect &area, int interval) {
+	_sceneId = sceneId;
+	_itemArea = area;
+	_itemInterval = interval;
+}
+
 void Inventory::recalcItemPos() {
 	debugC(2, kDebugInventory, "recalcItemPos()");
 
@@ -227,6 +238,30 @@ void Inventory::recalcItemPos() {
 		return;
 
 	_inventoryIcons.clear();
+
+	if (g_nmi->usesXMLProject()) {
+		for (const InventoryItem &item : _inventoryItems) {
+			const int idx = getInventoryPoolItemIndexById(item.itemId);
+			if (idx < 0)
+				continue;
+			const InventoryPoolItem &pool = _itemsPool[idx];
+			InventoryIcon icon = {};
+			icon.pictureObjectNormal = _scene->findPictureObjectById(pool.pictureObjectNormal, 0);
+			if (!icon.pictureObjectNormal)
+				continue;
+			icon.pictureObjectSelected = _scene->findPictureObjectById(pool.pictureObjectSelected, 0);
+			const Dims size = icon.pictureObjectNormal->getFullSize();
+			icon.x1 = _itemArea.left + _inventoryIcons.size() * (size.x + _itemInterval);
+			icon.y1 = _itemArea.top;
+			icon.x2 = icon.x1 + size.x;
+			icon.y2 = icon.y1 + size.y;
+			if (icon.x2 >= _itemArea.right)
+				break;
+			icon.inventoryItemId = item.itemId;
+			_inventoryIcons.push_back(icon);
+		}
+		return;
+	}
 
 	_picture = _scene->getBigPicture(0, 0);
 	_picture->setAlpha(50);
@@ -284,6 +319,15 @@ void Inventory::recalcItemPos() {
 void Inventory::render() {
 	if (!_scene)
 		return;
+
+	if (g_nmi->usesXMLProject()) {
+		for (const InventoryIcon &icon : _inventoryIcons) {
+			PictureObject *picture = icon.inventoryItemId == _selectedId && icon.pictureObjectSelected ?
+				icon.pictureObjectSelected : icon.pictureObjectNormal;
+			picture->_picture->blitTo(g_nmi->_backgroundSurface, Common::Point(icon.x1, icon.y1));
+		}
+		return;
+	}
 
 	int oldScLeft = g_nmi->_sceneRect.left;
 	int oldScTop = g_nmi->_sceneRect.top;
@@ -421,7 +465,7 @@ int Inventory::putOnCursor(int itemId) {
 
 	_selectedId = itemId;
 
-	if (_scene) {
+	if (_scene && !g_nmi->usesXMLProject()) {
 		int idx = getInventoryPoolItemIndexById(itemId);
 
 		Texture *pic = _scene->findPictureObjectById(_itemsPool[idx].pictureObjectId1, 0)->_picture;
@@ -448,6 +492,12 @@ bool Inventory::unselectItem(bool flag) {
 }
 
 int Inventory::getItemAtPos(Common::Point *point) {
+	if (g_nmi->usesXMLProject()) {
+		for (const InventoryIcon &icon : _inventoryIcons)
+			if (Common::Rect(icon.x1, icon.y1, icon.x2, icon.y2).contains(*point))
+				return icon.inventoryItemId;
+		return 0;
+	}
 	int selId = getSelectedItemId();
 
 	if (point->y <= 20 && !_isInventoryOut && !_isLocked)

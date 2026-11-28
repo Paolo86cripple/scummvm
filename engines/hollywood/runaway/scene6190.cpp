@@ -28,8 +28,8 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{1250, 347, 3, {301, 302}, {0, 3}, {1459, 435}, 6}, // 1: Town.
-	{560, 282, 0, {303, 304}, {1, 0}, {550, 255}}, // 2: Bucket of paint.
+	{1250, 347, 3, {301, 302}, {0, 3}, {1459, 435}, 6, false, false, true}, // 1: Town.
+	{560, 282, 0, {303, 304}, {1, 0}, {550, 255}, 0, false, false, true}, // 2: Bucket of paint.
 	{757, 446, 5, {306, 307}, {1, 0}, {656, 528}}, // 3: Hole.
 	{778, 314, 7, {308, 309}, {1, 1}, {747, 290}}, // 4: Shelves.
 	{778, 314, 7, {310, 311}, {0, 1}, {747, 290}}, // 5: Metal object.
@@ -116,8 +116,10 @@ void Scene6190::runCustomEntrySequence() {
 }
 
 void Scene6190::handleAnimationFrameHook() {
-	if (_roomAction == 405 && (_actionStep == 4 || _actionStep == 14 || _actionStep == 19 || _actionStep == 22)) {
-		_audio.playFootstep(3, _random.getRandomBit(), 128, 553);
+	if (_roomAction == 404 && _actionStep == 6) {
+		_audio.playEffectAt(46, Common::Point(548, 200), 60);
+	} else if (_roomAction == 405 && (_actionStep == 4 || _actionStep == 14 || _actionStep == 19 || _actionStep == 22)) {
+		_audio.playFootstep(3, _random.getRandomBit(), 50, 553);
 	}
 }
 
@@ -157,7 +159,10 @@ RunawayRoomScene::ActionResult Scene6190::dispatchCustomSceneAction(uint16 actio
 			if (!_town.basementVisited) {
 				say(4);
 			}
-			beginRoomAnimation(404, 6, 24);
+			if (_skippingExit)
+				leaveTownRoom(6250);
+			else
+				beginRoomAnimation(404, 6, 24, nullptr, 0, true, 60);
 		} else {
 			say(3);
 		}
@@ -194,8 +199,7 @@ RunawayRoomScene::ActionResult Scene6190::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 411: // Collect the ancient stapler.
 		_town.bankShelves = 2;
-		_inventory.add(20);
-		say(10, 1);
+		pickUp(20, 10, 1);
 		return kBackgroundChanged;
 	case 313: // Search the desk and take the bank stamp.
 		if (_town.bankStampTaken) {
@@ -209,8 +213,7 @@ RunawayRoomScene::ActionResult Scene6190::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 413: // Collect the bank stamp after searching the desk.
 		_town.bankStampTaken = 1;
-		_inventory.add(32);
-		say(12, 1);
+		pickUp(32, 12, 1);
 		return kBackgroundChanged;
 	case 400: // First visit: inspect the damage from the locomotive.
 		say(0);

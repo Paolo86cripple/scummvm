@@ -27,8 +27,8 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{430, 540, 4, {301, 302}, {0, 3}, {430, 599}, 6}, // 1: Door.
-	{430, 540, 4, {301, 302}, {0, 3}, {430, 599}, 7}, // 2: Door.
+	{430, 540, 4, {301, 302}, {0, 3}, {430, 599}, 6, false, false, true}, // 1: Door.
+	{430, 540, 4, {301, 302}, {0, 3}, {430, 599}, 7, false, false, true}, // 2: Door.
 	{294, 513, 0, {303, 304}, {1, 1}, {288, 471}}, // 3: Doctor's bag.
 	{449, 504, 0, {305, 306}, {0, 0}, {449, 467}}, // 4: Dead body.
 	{757, 508, 1, {307, 308}, {1, 0}, {794, 450}}, // 5: Bucket.
@@ -67,9 +67,9 @@ const char *Scene6210::actionCaptionVariant(byte id, bool look, byte item) const
 void Scene6210::resumeAmbientAudio(bool entering) {
 	if (!_audio.musicPlaying()) {
 		_audio.playMusic(18, false);
-		_audio.setMusicVolume(191);
+		_audio.setMusicVolume(75);
 	} else if (entering) {
-		_audio.setMusicVolume(191);
+		_audio.setMusicVolume(75);
 	}
 }
 
@@ -118,8 +118,7 @@ RunawayRoomScene::ActionResult Scene6210::dispatchCustomSceneAction(uint16 actio
 	case 1410: // Only take medical tools once their purpose is known.
 		if (_town.safeSeen && !_town.stethoscopeTaken) {
 			_town.stethoscopeTaken = 1;
-			_inventory.add(7);
-			say(3, 3);
+			pickUp(7, 3, 3);
 			if (_town.oscarTobacco && !_town.linimentTaken) {
 				deferTownAction(411);
 			}
@@ -132,8 +131,7 @@ RunawayRoomScene::ActionResult Scene6210::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 411: // Take the mint liniment for the chewing tobacco.
 		_town.linimentTaken = 1;
-		_inventory.add(8);
-		say(3, 4);
+		pickUp(8, 3, 4);
 		break;
 	case 1412: // Close the bag after an unsuccessful search.
 		beginRoomAnimationRange(413, 4, 28, 16, 27);
@@ -184,7 +182,7 @@ RunawayRoomScene::ActionResult Scene6210::dispatchCustomSceneAction(uint16 actio
 
 void Scene6210::handleAnimationFrameHook() {
 	if (_roomAction == 410 && _actionStep == 8) {
-		_audio.playEffect(61, 204);
+		_audio.playEffect(61, 80);
 	}
 }
 

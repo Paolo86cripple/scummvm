@@ -28,7 +28,7 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{1165, 594, 2, {322, 301}, {0, 0}, {1165, 594}, 6}, // 1: Door.
+	{1165, 594, 2, {322, 301}, {0, 0}, {1165, 594}, 6, false, false, true}, // 1: Door.
 	{355, 595, 1, {302, 303}, {0, 1}, {430, 546}}, // 2: Pair of books.
 	{355, 595, 1, {304, 305}, {1, 0}, {430, 546}}, // 3: Crack.
 	{550, 647, 7, {306, 307}, {1, 0}, {492, 600}}, // 4: Money.
@@ -141,11 +141,13 @@ void Scene4030::update(uint32 now, int scrollDirection, bool inventoryOpen) {
 	if (speaking()) {
 		return;
 	}
-	_showKeyhole = false;
+	if (_showKeyhole) {
+		_showKeyhole = false;
+		returnHeadToCenter();
+	}
 	if (_discoveringKeyhole) {
 		_discoveringKeyhole = false;
-		_showKeyhole = true;
-		say(2, 2);
+		beginHeadMovement(400, RunawayHeadMovement::kDown, RunawayHeadMovement::kHold);
 	}
 }
 
@@ -192,6 +194,10 @@ RunawayRoomScene::ActionResult Scene4030::dispatchCustomSceneAction(uint16 actio
 		return kHandled;
 	}
 	switch (action) {
+	case 400: // Look through the crack after moving the books.
+		_showKeyhole = true;
+		say(2, 2);
+		return kHandled;
 	case 302: // Look at the books.
 		say(_books != kUnexamined ? 111 : 1, 0, _books != kUnexamined);
 		_books = MAX(_books, kIdentified);
@@ -201,8 +207,7 @@ RunawayRoomScene::ActionResult Scene4030::dispatchCustomSceneAction(uint16 actio
 			say(1);
 		}
 		_books = kTaken;
-		_inventory.add(16);
-		say(2);
+		pickUp(16, 2);
 		say(2, 1);
 		_discoveringKeyhole = true;
 		return kBackgroundChanged;
@@ -223,9 +228,8 @@ RunawayRoomScene::ActionResult Scene4030::dispatchCustomSceneAction(uint16 actio
 			say(9);
 		}
 		_recorder = kTaken;
-		_inventory.add(5);
 		say(10);
-		say(10, 1);
+		pickUp(5, 10, 1);
 		return kBackgroundChanged;
 	case 311: // Look at the right shelves.
 		say(11, _museum.shelfBooksSeen ? _random.getRandomBit() : 0);
@@ -267,21 +271,28 @@ RunawayRoomScene::ActionResult Scene4030::dispatchCustomSceneAction(uint16 actio
 void Scene4030::finishCustomAnimation(uint16 action) {
 	if (action == 321) {
 		_safeOpen = !_safeOpen;
+		refreshMuseum();
 		if (_safeOpen && !_museum.safeUsed) {
 			_museum.safeUsed = 1;
-			say(20, 1);
+			walkTo(Common::Point(550, 647), 7, false, true);
+			deferMuseumAction(401);
 		}
-		refreshMuseum();
+	} else if (action == 401) {
+		say(20, 1);
 	}
 }
 
 void Scene4030::handleAnimationFrameHook() {
 	if (_roomAction == 321) {
 		if (_actionStep == 21) {
-			_audio.playEffect(36);
+			_audio.playEffectAt(36, Common::Point(433, 200), 100, 0);
 		}
 		if (_actionStep == 27) {
-			_audio.playEffect(_safeOpen ? 39 : 38, 77);
+			_audio.playEffectAt(39, Common::Point(470, 200), 30, 1);
+		}
+		if (_actionStep == 38) {
+			// The safe's secondary animation reaches step 12 here.
+			_audio.stopEffect(1);
 		}
 	}
 }

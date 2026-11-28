@@ -28,14 +28,14 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{-100, 484, 7, {302, 301}, {0, 3}, {0, 504}, 4}, // 1: Path.
+	{-100, 484, 7, {302, 301}, {0, 3}, {0, 504}, 4, false, false, true}, // 1: Path.
 	{103, 518, 1, {303, 304}, {1, 0}, {156, 494}}, // 2: Wooden Box.
 	{301, 478, 7, {305, 307}, {0, 1}, {243, 446}}, // 3: Shed.
 	{301, 478, 7, {306, 307}, {0, 1}, {243, 446}}, // 4: Door.
 	{301, 478, 7, {308, 309}, {0, 1}, {243, 446}}, // 5: Explosives.
 	{620, 357, 7, {310, 311}, {0, 0}, {557, 320}}, // 6: Water Tank.
-	{987, 378, 1, {312, 313}, {0, 1}, {1027, 350}, 5, true}, // 7: Train Car.
-	{987, 378, 1, {312, 313}, {1, 1}, {1027, 350}, 5}, // 8: Train Car Interior.
+	{987, 378, 1, {312, 313}, {0, 1}, {1027, 350}, 5, true, false, true}, // 7: Train Car.
+	{987, 378, 1, {312, 313}, {1, 1}, {1027, 350}, 5, false, false, true}, // 8: Train Car Interior.
 	{67, 512, 0, {316, 317}, {0, 0}, {66, 389}}, // 9: Ant-Hill.
 	{255, 546, 7, {318, 319}, {1, 0}, {212, 495}}, // 10: Sign.
 	{620, 357, 7, {320, 321}, {0, 0}, {610, 339}}, // 11: Ladder.
@@ -146,7 +146,8 @@ RunawayRoomScene::ActionResult Scene5080::dispatchCustomSceneAction(uint16 actio
 	RunawaySaveState::DesertItems &items = _inventory.desert();
 	switch (action) {
 	case 301: // Go to the desert overview.
-		walkTo(Common::Point(-100, 484), 7, true);
+		if (!_skippingExit)
+			walkTo(Common::Point(-100, 484), 7, true);
 		leaveDesertRoom(5010);
 		break;
 	case 303: // Look inside the wooden box.
@@ -175,16 +176,19 @@ RunawayRoomScene::ActionResult Scene5080::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 309: // Take the dynamite.
 		_desert.dynamite = 2;
-		_inventory.add(5);
-		say(8);
+		pickUp(5, 8);
 		return kBackgroundChanged;
 	case 313: // Enter the train car.
 		if (!_desert.trainEntered) {
 			say(12);
 			_desert.trainEntered = 1;
 		}
-		beginRoomAnimationRange(action, 23, 35, 0, 27, true, 60);
-		_actionFrames.insert_at(0, 0);
+		if (_skippingExit) {
+			leaveDesertRoom(5110);
+		} else {
+			beginRoomAnimationRange(action, 23, 35, 0, 27, true, 60);
+			_actionFrames.insert_at(0, 0);
+		}
 		break;
 	case 1313: // Finish entering the train car.
 		leaveDesertRoom(5110);
@@ -385,9 +389,9 @@ void Scene5080::drawCustomForegroundComposite(Graphics::ManagedSurface &viewport
 
 void Scene5080::handleAnimationFrameHook() {
 	if (_roomAction == 313 && _actionFrames[_actionStep] == 21) {
-		_audio.playFootstep(4, _random.getRandomBit(), 255, _position.x);
+		_audio.playFootstep(4, _random.getRandomBit(), 100, _position.x);
 	} else if (_roomAction == 400 && _actionFrames[_actionStep] == 15) {
-		_audio.playFootstep(2, _random.getRandomBit(), 230, 1000);
+		_audio.playFootstep(2, _random.getRandomBit(), 90, 1000);
 	}
 	if (_roomAction == 307 && _actionStep == 13) {
 		_audio.playEffectAt(52, Common::Point(275, 200));

@@ -37,21 +37,21 @@ const byte kCoffeeCupFrames[] = {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{-25, 319, 7, {301, 302}, {0, 1}, {68, 371}, 7}, // 1: Stairs.
+	{-25, 319, 7, {301, 302}, {0, 1}, {68, 371}, 7, false, false, true}, // 1: Stairs.
 	{218, 379, 7, {321, 322}, {1, 1}, {180, 245}}, // 2: Coffee machines.
-	{607, 323, 7, {311, 312}, {0, 1}, {606, 322}, 4}, // 3: Clive's office door.
+	{607, 323, 7, {311, 312}, {0, 1}, {606, 322}, 4, false, false, true}, // 3: Clive's office door.
 	{696, 319, 7, {332, 333}, {0, 0}, {676, 164}}, // 4: Fire extinguisher.
 	{696, 319, 7, {313, 314}, {1, 1}, {668, 280}}, // 5: Wastepaper basket.
-	{873, 311, 7, {315, 316}, {0, 1}, {872, 310}, 4}, // 6: Door to the restoration laboratory.
-	{1118, 309, 7, {317, 318}, {1, 1}, {1094, 299}}, // 7: Security door.
+	{873, 311, 7, {315, 316}, {0, 1}, {872, 310}, 4, false, false, true}, // 6: Door to the restoration laboratory.
+	{1118, 309, 7, {317, 318}, {1, 1}, {1094, 299}, 0, false, false, true}, // 7: Security door.
 	{1153, 297, 7, {319, 320}, {1, 1}, {1152, 296}}, // 8: Panel.
-	{1220, 280, 7, {301, 303}, {0, 1}, {1279, 290}, 7}, // 9: Stairs.
+	{1220, 280, 7, {301, 303}, {0, 1}, {1279, 290}, 7, false, false, true}, // 9: Stairs.
 	{1473, 312, 7, {324, 325}, {0, 1}, {1440, 188}}, // 10: Telephone.
 	{1596, 351, 1, {326, 327}, {0, 0}, {1694, 186}}, // 11: Display case.
-	{140, 504, 7, {304, 305}, {0, 1}, {206, 618}, 4}, // 12: Stairs.
-	{1085, 411, 7, {304, 306}, {0, 1}, {1140, 446}, 4}, // 13: Stairs.
+	{140, 504, 7, {304, 305}, {0, 1}, {206, 618}, 4, false, false, true}, // 12: Stairs.
+	{1085, 411, 7, {304, 306}, {0, 1}, {1140, 446}, 4, false, false, true}, // 13: Stairs.
 	{921, 813, 7, {307, 308}, {0, 1}, {840, 730}, 3}, // 14: Maintenance worker.
-	{1588, 506, 7, {309, 310}, {0, 1}, {1610, 450}, 5}, // 15: Mayan exhibition.
+	{1588, 506, 7, {309, 310}, {0, 1}, {1610, 450}, 5, false, false, true}, // 15: Mayan exhibition.
 	{711, 797, 7, {328, 329}, {1, 0}, {670, 726}}, // 16: Plaque.
 	{1060, 730, 7, {330, 331}, {1, 0}, {984, 638}}, // 17: Plaque.
 };
@@ -201,8 +201,7 @@ void Scene4060::runCustomEntrySequence() {
 		changeFloor(false, Common::Point(921, 813));
 		if (_museum.willyInLab == 1) {
 			walkTo(Common::Point(1029, 842), 7, true);
-			say(38, 1);
-			deferMuseumAction(460);
+			deferMuseumAction(490);
 		} else {
 			_facing = 6;
 			say(36, 3);
@@ -217,7 +216,7 @@ void Scene4060::runCustomEntrySequence() {
 		}
 	} else if (_entryScene == 4062) {
 		beginRoomAnimationRange(473, 4, 13, 12, 0, false);
-		_audio.playEffectAt(32, Common::Point(1138, 200), 204);
+		_audio.playEffectAt(32, Common::Point(1138, 200), 80);
 	} else if (_entryScene == 4061 && _museum.susan == 2) {
 		say(40);
 		deferMuseumAction(316);
@@ -227,13 +226,13 @@ void Scene4060::runCustomEntrySequence() {
 void Scene4060::advanceCustomGameplayLoop(uint32 delta) {
 	if (_willyWalking) {
 		static const AnimationFootstep steps[] = {
-			{5, 540, 179}, {12, 570, 179}, {16, 600, 179}, {22, 630, 179},
-			{27, 660, 179}, {32, 690, 179}, {37, 720, 179}, {42, 750, 179},
-			{50, 780, 179}, {57, 810, 179}, {62, 840, 179}, {69, 870, 179},
-			{74, 900, 179}, {80, 930, 179}, {85, 960, 179}, {91, 990, 179},
-			{97, 1020, 179}, {102, 1050, 179}, {107, 1080, 179}, {112, 1110, 179},
-			{119, 1140, 179}, {125, 1170, 179}, {131, 1200, 179}, {137, 1230, 179},
-			{142, 1260, 179}, {147, 1290, 179}
+			{5, 540, 70}, {12, 570, 70}, {16, 600, 70}, {22, 630, 70},
+			{27, 660, 70}, {32, 690, 70}, {37, 720, 70}, {42, 750, 70},
+			{50, 780, 70}, {57, 810, 70}, {62, 840, 70}, {69, 870, 70},
+			{74, 900, 70}, {80, 930, 70}, {85, 960, 70}, {91, 990, 70},
+			{97, 1020, 70}, {102, 1050, 70}, {107, 1080, 70}, {112, 1110, 70},
+			{119, 1140, 70}, {125, 1170, 70}, {131, 1200, 70}, {137, 1230, 70},
+			{142, 1260, 70}, {147, 1290, 70}
 		};
 		while (_willyFrame < 150 && _now - _willyWalkStarted >= 60) {
 			_willyWalkStarted += 60;
@@ -242,7 +241,11 @@ void Scene4060::advanceCustomGameplayLoop(uint32 delta) {
 	} else {
 		_willyFrame = (_now / 80) % 22;
 	}
-	if (_roomAction == 480) {
+	if (_roomAction == 492) {
+		const uint ticks = (_now - _actionStarted) / 10;
+		_actionStarted += ticks * 10;
+		_camera.y = MAX<int>(0, _camera.y - ticks * 4);
+	} else if (_roomAction == 480) {
 		const uint ticks = (_now - _actionStarted) / 10;
 		_actionStarted += ticks * 10;
 		const int distance = ticks * 2;
@@ -266,12 +269,10 @@ void Scene4060::updateActor(uint elapsed, int scrollDirection, bool inventoryOpe
 			((_roomAction == 482 || _roomAction == 487) && actorWalkZone() == 9))) {
 		// Keep the stair-climbing direction on the narrow reserved walk zones.
 		_facing = _roomAction == 479 ? (actorWalkZone() == 8 ? 7 : 6) : 3;
-		_actor.setFrame(_facing, 1 + (_walkElapsed / 60) % 12);
+		_actor.setFrame(_facing, _walkPath.frame());
 	}
 	if (_roomAction == 480 || (_roomAction >= 483 && _roomAction <= 486)) {
 		_camera = camera;
-	} else if (!inventoryOpen && !_upperFloor && (!_roomAction || _roomAction < 461 || _roomAction > 466)) {
-		_camera.y = CLIP<int>(_position.y - 400, 200, 600);
 	}
 }
 
@@ -282,15 +283,39 @@ void Scene4060::drawCustomBackgroundComposite(Graphics::ManagedSurface &viewport
 }
 
 RunawayRoomScene::ActionResult Scene4060::dispatchCustomSceneAction(uint16 action) {
+	if (action == 491) {
+		_actionStarted = _now;
+		deferMuseumAction(492);
+		return kHandled;
+	}
+	if (action == 493) {
+		say(38, 1);
+		deferMuseumAction(460);
+		return kHandled;
+	}
+	if (action == 495) {
+		say(6, 1);
+		return kHandled;
+	}
 	if (museumChapter()) {
 		switch (action) {
 		case 302: // Descend the left stairs.
 		case 303: // Descend the right stairs.
 		case 305: // Ascend the left stairs.
-		case 306: // Ascend the right stairs.
-			_actionStarted = _now;
-			deferMuseumAction(action + (action <= 303 ? 181 : 180));
+		case 306: { // Ascend the right stairs.
+			if (_skippingExit) {
+				const bool upper = action >= 305;
+				const Common::Point ends[] = {{533, 848}, {1169, 643}, {69, 372}, {1290, 300}};
+				if (upper && _museum.willyInLab == 2)
+					_museum.willyInLab = 0;
+				changeFloor(upper, ends[action - (upper ? 303 : 302)]);
+				_facing = action == 303 ? 5 : 3;
+			} else {
+				_actionStarted = _now;
+				deferMuseumAction(action + (action <= 303 ? 181 : 180));
+			}
 			return kHandled;
+		}
 		case 307: // Look at Willy.
 			say(3, _museum.willyMet != 0);
 			return kHandled;
@@ -300,7 +325,9 @@ RunawayRoomScene::ActionResult Scene4060::dispatchCustomSceneAction(uint16 actio
 		case 312: // Open Clive's office door.
 		case 316: // Open the restoration laboratory door.
 			// RESOURCE.001 bank 64: reach for the handle, facing northwest.
-			if (_game == kRunawayMuseumDemo) {
+			if (_skippingExit) {
+				finishCustomAnimation(action);
+			} else if (_game == kRunawayMuseumDemo) {
 				deferMuseumAction(action);
 			} else {
 				beginActorAnimation(action, 64, 11, 6);
@@ -312,7 +339,7 @@ RunawayRoomScene::ActionResult Scene4060::dispatchCustomSceneAction(uint16 actio
 				if (_game == kRunawayMuseumDemo) {
 					deferMuseumAction(313);
 				} else {
-					say(6, 1);
+					deferMuseumAction(494);
 				}
 				_museum.basketSeen = 1;
 			} else if (_game == kRunawayMuseumDemo) {
@@ -329,8 +356,7 @@ RunawayRoomScene::ActionResult Scene4060::dispatchCustomSceneAction(uint16 actio
 			} else {
 				_coffeeTaken = true;
 				say(7, 2);
-				_inventory.add(19);
-				say(114, 0, true);
+				pickUp(19, 114, 0, true);
 			}
 			return kHandled;
 		case 317: // Look at the security door.
@@ -340,6 +366,8 @@ RunawayRoomScene::ActionResult Scene4060::dispatchCustomSceneAction(uint16 actio
 		case 318: { // Enter the code to open the analysis laboratory.
 			if (_museum.keypad != 4) {
 				say(13);
+			} else if (_skippingExit) {
+				finishCustomAnimation(472);
 			} else {
 				static const byte frames[] = {
 					0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
@@ -453,14 +481,26 @@ RunawayRoomScene::ActionResult Scene4060::dispatchCustomSceneAction(uint16 actio
 		return kHandled;
 	}
 	_coffeeTaken = true;
-	_inventory.add(19);
-	say(6);
+	pickUp(19, 6);
 	say(6, 1);
 	return kHandled;
 }
 
 void Scene4060::finishCustomAnimation(uint16 action) {
 	switch (action) {
+	case 490: // Look up before watching Willy leave the laboratory.
+		_lookingUp = true;
+		beginHeadMovement(491, RunawayHeadMovement::kUp, RunawayHeadMovement::kHold);
+		break;
+	case 492:
+		if (_camera.y)
+			deferMuseumAction(492);
+		else
+			returnHeadToCenter(493);
+		break;
+	case 494: // Inspect the basket after the first remark.
+		beginHeadMovement(495, RunawayHeadMovement::kDown);
+		break;
 	case 483:
 	case 484:
 	case 485:
@@ -488,15 +528,14 @@ void Scene4060::finishCustomAnimation(uint16 action) {
 		break;
 	case 313: // Collect the demo's coffee package after examining the basket.
 		_coffeeTaken = true;
-		_inventory.add(19);
-		say(6, 1);
+		pickUp(19, 6, 1);
 		break;
 	case 316: // Enter the restoration laboratory after opening the door.
 		leaveMuseumRoom(4050, Common::Point(382, 529), 3, true);
 		break;
 	case 470: // Open the unlocked security door.
 		beginRoomAnimation(471, 4, 13, nullptr, 0, false);
-		_audio.playEffectAt(32, Common::Point(1138, 200), 204);
+		_audio.playEffectAt(32, Common::Point(1138, 200), 80);
 		break;
 	case 471: // Keep the door open while Brian walks through it.
 		_actionAnimation.draw(_background, 12, 0, 0);
@@ -520,6 +559,7 @@ void Scene4060::finishCustomAnimation(uint16 action) {
 		startMuseumFilm(kMuseumExitFilm);
 		break;
 	case 460: // Willy approaches the security door.
+		_lookingUp = false;
 		_camera.y = 0;
 		beginRoomAnimationRange(461, 16, 216, 0, 178, false);
 		break;
@@ -527,7 +567,7 @@ void Scene4060::finishCustomAnimation(uint16 action) {
 		beginRoomAnimationRange(464, 4, 13, 0, 12, false);
 		const byte willy[] = {178};
 		setRoomAnimationOverlay(16, 216, willy, ARRAYSIZE(willy));
-		_audio.playEffect(32, 204);
+		_audio.playEffect(32, 80);
 		break;
 	}
 	case 464: { // Willy enters the analysis laboratory.
@@ -538,7 +578,7 @@ void Scene4060::finishCustomAnimation(uint16 action) {
 	}
 	case 465: // Close the security door behind Willy.
 		beginRoomAnimationRange(466, 4, 13, 12, 0, false);
-		_audio.playEffect(32, 204);
+		_audio.playEffect(32, 80);
 		break;
 	case 466: // React to Willy entering the code.
 		updateCamera();
@@ -554,7 +594,7 @@ void Scene4060::finishCustomAnimation(uint16 action) {
 		say(15, 5);
 		break;
 	case 462: // Hear Willy refill the coffee machine upstairs.
-		_audio.playEffectAt(47, Common::Point(202, 200), 230);
+		_audio.playEffectAt(47, Common::Point(202, 200), 90);
 		_actionStarted = _now;
 		deferMuseumAction(477);
 		break;
@@ -609,8 +649,7 @@ void Scene4060::finishCustomAnimation(uint16 action) {
 		break;
 	case 322: // Collect the cup of coffee.
 		_museum.coffeeMachine = 2;
-		_inventory.add(15);
-		say(12, 2);
+		pickUp(15, 12, 2);
 		break;
 	case 325: // Start the telephone conversation.
 		startMuseumFilm(kPhoneFilm);
@@ -644,7 +683,7 @@ void Scene4060::handleAnimationFrameHook() {
 		}
 		const byte frame = _actionFrames[_actionStep];
 		if (frame == 1 || frame == 3 || frame == 8 || frame == 10 || frame == 14 || frame == 17) {
-			_audio.playFootstep(1, _random.getRandomBit(), 191, 512);
+			_audio.playFootstep(1, _random.getRandomBit(), 75, 512);
 		}
 	}
 	if (_roomAction == 461 && _actionStep == 156) {
@@ -739,7 +778,12 @@ bool Scene4060::usesAlternateActor() const {
 }
 
 int Scene4060::sceneViewportYOffset() const {
-	return _upperFloor ? 0 : CLIP<int>(_position.y - 400, 200, _background.h - kRunawayViewportHeight);
+	return _upperFloor ? 0 : MAX(200, RunawayRoomScene::sceneViewportYOffset());
+}
+
+void Scene4060::setCameraY(int y) {
+	if (!_lookingUp && !_upperFloor && (!_roomAction || _roomAction < 461 || _roomAction > 466))
+		_camera.y = CLIP(y, 200, 600);
 }
 
 } // End of namespace Runaway

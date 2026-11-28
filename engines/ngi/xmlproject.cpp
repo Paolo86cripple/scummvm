@@ -19,31 +19,26 @@
  *
  */
 
-#include "common/algorithm.h"
 #include "common/archive.h"
 #include "common/compression/unzip.h"
 #include "common/config-manager.h"
 #include "common/debug-channels.h"
-#include "common/events.h"
 #include "common/file.h"
 #include "common/formats/xmlparser.h"
 
-#include "backends/keymapper/keymapper.h"
-#include "engines/util.h"
 #include "ngi/ngi.h"
+#include "ngi/objectnames.h"
+#include "ngi/gameloader.h"
 #include "ngi/behavior.h"
 #include "ngi/constants.h"
 #include "ngi/detection.h"
 #include "ngi/messages.h"
-#include "ngi/modal.h"
 #include "ngi/motion.h"
 #include "ngi/ngiarchive.h"
 #include "ngi/objects.h"
 #include "ngi/utils.h"
 #include "ngi/scene.h"
 #include "ngi/statics.h"
-#include "ngi/anihandler.h"
-#include "ngi/scenes.h"
 
 namespace NGI {
 
@@ -81,7 +76,84 @@ bool ObjectIdList::findId(const Common::String &symbol, uint32 &id) const {
 	return true;
 }
 
+Common::String ObjectIdList::findName(uint32 id) const {
+	// CIDList searches its symbol table in name order when IDs have aliases.
+	Common::String name;
+	for (const auto &entry : _ids) {
+		if (entry._value == id && (name.empty() || entry._key < name))
+			name = entry._key;
+	}
+	return name;
+}
+
 namespace {
+
+class XMLWalkParser : public Common::XMLParser {
+public:
+	explicit XMLWalkParser(GameVar &walkData) : _walkData(walkData) {}
+
+private:
+	GameVar &_walkData;
+	GameVar *_object = nullptr;
+
+	CUSTOM_XML_PARSER(XMLWalkParser) {
+		XML_KEY(DATA)
+		KEY_END()
+	} PARSER_END()
+
+	bool parserCallback_DATA(ParserNode *) { return true; }
+
+	bool handleUnknownKey(ParserNode *node) override {
+		const ParserNode *parent = getParentNode(node);
+		if (!parent)
+			return false;
+		node->layout = parent->layout;
+		node->ignore = parent->ignore;
+		if (node->ignore || node->depth == 1)
+			return true;
+
+		if (node->depth == 2 && node->name == "Test_walk") {
+			_object = _walkData.addSubVarAsInt(parent->name, 0);
+			return _object != nullptr;
+		}
+		if (node->depth == 3 && parent->name == "Test_walk") {
+			GameVar *direction = _object->addSubVarAsInt(node->name, 0);
+			if (!direction)
+				return false;
+			for (const auto &attr : node->values)
+				direction->setSubVarAsInt(attr._key, atoi(attr._value.c_str()));
+		}
+		node->ignore = true;
+		return true;
+	}
+};
+
+class XMLObjectStateParser : public Common::XMLParser {
+public:
+	explicit XMLObjectStateParser(GameVar &states) : _states(states) {}
+
+private:
+	GameVar &_states;
+	GameVar *_values = nullptr;
+	CUSTOM_XML_PARSER(XMLObjectStateParser) {
+		XML_KEY(OBJSTATES)
+		KEY_END()
+	} PARSER_END()
+
+	bool parserCallback_OBJSTATES(ParserNode *) { return true; }
+	bool handleUnknownKey(ParserNode *node) override {
+		node->layout = _XMLkeys;
+		if (node->depth == 1 && node->name == "OBJECT") {
+			GameVar *object = _states.addSubVarAsInt(node->values.getValOrDefault("title"), 0);
+			_values = object ? object->addSubVarAsInt("ENUMSTATES", 0) : nullptr;
+		} else if (node->depth == 2 && node->name == "STATE" && _values) {
+			_values->setSubVarAsInt(node->values.getValOrDefault("title"), atoi(node->values.getValOrDefault("num").c_str()));
+		} else {
+			node->ignore = true;
+		}
+		return true;
+	}
+};
 
 class XMLProjectParser : public Common::XMLParser {
 public:
@@ -218,13 +290,26 @@ public:
 		setAllowText();
 	}
 
+	~XMLSceneParser() override {
+		for (Interact *action : _actions)
+			delete action;
+	}
+
+	void registerInteractions() {
+		for (Interact *action : _actions)
+			getGameLoaderInteractionController()->addInteraction(action);
+		_actions.clear();
+	}
+
 private:
+	Common::Array<Interact *> _actions;
 	const GameProject &_project;
 	Scene &_scene;
 	const char *_locale;
 	uint _objectOrder = 0;
 	bool _hasInitialStatics = false;
 	int16 _initialStaticsId = 0;
+	Interact *_interaction = nullptr;
 	BehaviorAni *_behaviorAni = nullptr;
 	MctlItem *_motionItem = nullptr;
 	MctlGraph *_graph = nullptr;
@@ -255,6 +340,8 @@ private:
 			XML_PROP(putPrev, false)
 			XML_PROP(scrollX, false)
 			XML_PROP(scrollY, false)
+			XML_KEY(GUIMNGR)
+			KEY_END()
 			XML_KEY(MCTL_COMPOUND)
 				XML_KEY(MCTL_ITEM)
 					XML_PROP(ofsX, false)
@@ -306,6 +393,12 @@ private:
 				KEY_END()
 			KEY_END()
 			XML_KEY(ADDANI)
+				XML_PROP(static, false)
+				XML_PROP(x, false)
+				XML_PROP(y, false)
+				XML_PROP(z, false)
+				XML_PROP(flags, false)
+				XML_PROP(mirror, false)
 				XML_PROP(id, true)
 				XML_PROP(scene, true)
 				XML_PROP(copy, false)
@@ -352,6 +445,11 @@ private:
 				XML_KEY(COMMAND)
 					commandLayout = layout.top();
 					XML_PROP(cmd, true)
+					XML_PROP(interupt, false)
+					XML_PROP(scene, false)
+					XML_PROP(entr, false)
+					XML_PROP(needShow, false)
+					XML_PROP(reverse, false)
 					XML_PROP(wait, false)
 					XML_PROP(id, false)
 					XML_PROP(ani, false)
@@ -375,6 +473,7 @@ private:
 				KEY_END()
 			KEY_END()
 			XML_KEY(PICTURE)
+				XML_PROP(hitAlpha, false)
 				XML_PROP(filter, false)
 				XML_PROP(serializable, false)
 				XML_PROP(id, true)
@@ -386,6 +485,7 @@ private:
 				XML_PROP(locale, false)
 			KEY_END()
 			XML_KEY(OLDANI)
+				XML_PROP(filter, false)
 				XML_PROP(mirror, false)
 				XML_PROP(serializable, false)
 				XML_PROP(id, true)
@@ -397,6 +497,7 @@ private:
 				XML_PROP(locale, false)
 				XML_PROP(static, false)
 				XML_KEY(STATICS)
+					XML_PROP(delayRelative, false)
 					XML_PROP(id, true)
 					XML_PROP(title, false)
 					XML_PROP(x, false)
@@ -433,6 +534,22 @@ private:
 					KEY_END()
 				KEY_END()
 			KEY_END()
+			layout.top()->children["ANI"] = layout.top()->children["OLDANI"];
+		KEY_END()
+		XML_KEY(EXITMANAGER)
+		KEY_END()
+		XML_KEY(INTERACTIONS)
+		KEY_END()
+		XML_KEY(INVENTORY)
+			XML_PROP(x, false)
+			XML_PROP(y, false)
+			XML_PROP(w, false)
+			XML_PROP(h, false)
+			XML_PROP(interval, false)
+			XML_PROP(cursorOfs, false)
+			XML_PROP(mode, false)
+			XML_PROP(fitTo, false)
+			XML_PROP(waitscreen, false)
 		KEY_END()
 	} PARSER_END()
 
@@ -448,11 +565,30 @@ private:
 		return true;
 	}
 
+	bool parserCallback_EXITMANAGER(ParserNode *) { return true; }
+
+	bool parserCallback_INTERACTIONS(ParserNode *) { return true; }
+
+	bool parserCallback_INVENTORY(ParserNode *node) {
+		Common::Rect area(atoi(node->values.getValOrDefault("w", "1024").c_str()),
+			atoi(node->values.getValOrDefault("h", "100").c_str()));
+		area.translate(intProperty(*node, "x"), intProperty(*node, "y"));
+		getGameLoaderInventory()->setItemArea(_scene._sceneId, area, atoi(node->values.getValOrDefault("interval", "10").c_str()));
+		return true;
+	}
+
 	bool parserCallback_ADDANI(ParserNode *node) {
 		PicAniInfo ref;
 		if (!readId(node->values["id"], ref.objectId) || !readId(node->values["scene"], ref.sceneId))
 			return parserError("Unknown roaming animation or scene");
 		ref.copyId = atoi(node->values.getValOrDefault("copy").c_str());
+		ref.ox = atoi(node->values.getValOrDefault("x", "-1").c_str());
+		ref.oy = atoi(node->values.getValOrDefault("y", "-1").c_str());
+		ref.priority = atoi(node->values.getValOrDefault("z", "-1").c_str());
+		ref.objectFlags = atoi(node->values.getValOrDefault("flags", "-1").c_str());
+		ref.flags = node->values.contains("mirror") ? boolProperty(*node, "mirror") : -1;
+		if (node->values.contains("static") && !readId(node->values["static"], ref.staticsId))
+			return parserError("Unknown roaming static");
 		_scene._roamingObjects.push_back(ref);
 		return true;
 	}
@@ -469,6 +605,11 @@ private:
 
 	static int intProperty(const ParserNode &node, const char *key) {
 		return atoi(node.values.getValOrDefault(key).c_str());
+	}
+
+	bool parserCallback_GUIMNGR(ParserNode *) {
+		_scene._guiManager.reset(new GuiManager(_scene));
+		return true;
 	}
 
 	bool parserCallback_MCTL_COMPOUND(ParserNode *) {
@@ -569,7 +710,7 @@ private:
 
 		picture->_picture = new Texture();
 		const Common::String resource = Common::String::format("%08hu/%08hu",
-			static_cast<uint16>(_scene._sceneId), static_cast<uint16>(picture->_id));
+			getParentNode(node)->name == "INVENTORY" ? 0 : static_cast<uint16>(_scene._sceneId), static_cast<uint16>(picture->_id));
 		loadTexture(*picture->_picture, resource, isLocalized(*node));
 		picture->setOXY2();
 		_scene.addPicture(picture.release());
@@ -673,6 +814,26 @@ private:
 			cmd->_y = atoi(node->values.getValOrDefault("y", "-1").c_str());
 			cmd->_z = atoi(node->values.getValOrDefault("z", "-1").c_str());
 			cmd->_auxParam = node->values.contains("mirror") ? (int)boolProperty(*node, "mirror") : -1;
+		} else if (kind == "SETSCENE") {
+			cmd->_cmd = Command::kCmdSetScene;
+			if (!readId(node->values.getValOrDefault("scene"), cmd->_parentId))
+				return parserError("Unknown destination scene");
+			idProperty = "entr";
+		} else if (kind == "ADD_INV_ITEM" || kind == "REMOVE_INV_ITEM") {
+			cmd->_cmd = kind == "ADD_INV_ITEM" ? 56 : 57;
+			if (!readId(node->values.getValOrDefault("id"), cmd->_parentId))
+				return parserError("Unknown inventory item");
+		} else if (kind == "USER" && node->values.getValOrDefault("type") == "SET_LOGIC") {
+			cmd->_cmd = Command::kCmdSetLogic;
+			cmd->_messageName = node->values.getValOrDefault("title");
+			cmd->_messageNum = intProperty(*node, "state");
+		} else if (kind == "USER" && node->values.getValOrDefault("type") == "MOVE_TO_STATIC") {
+			cmd->_cmd = 19;
+			cmd->_auxParam = !node->values.contains("needShow") || boolProperty(*node, "needShow");
+			if (!readId(node->values.getValOrDefault("ani"), cmd->_parentId))
+				return parserError("Unknown object in MOVE_TO_STATIC");
+			if (!node->values.getValOrDefault("static").empty())
+				idProperty = "static";
 		} else if (kind == "USER" || kind == "12" || kind == "SET_STATIC" || kind == "25") {
 			cmd->_cmd = 63;
 			cmd->_messageName = node->values.getValOrDefault("type", kind);
@@ -717,7 +878,9 @@ private:
 				return parserError("Unknown " + Common::String(idProperty) + " in " + kind);
 			cmd->_messageNum = id;
 		}
-		if (getParentNode(node)->name == "QUEUE") {
+		if (getParentNode(node)->name == "INTERACTION") {
+			_interaction->_messageQueue->addCommandToEnd(cmd.release());
+		} else if (getParentNode(node)->name == "QUEUE") {
 			_scene._messageQueues.back()->addCommandToEnd(cmd.release());
 		} else {
 			Movement &movement = *_scene._aniObjects.back()->_movements.back();
@@ -764,6 +927,7 @@ private:
 		if (!readId(node->values["id"], pose->_staticsId))
 			return parserError("Unknown statics ID '" + node->values["id"] + "'");
 
+		pose->_delayRelative = intProperty(*node, "delayRelative");
 		pose->_staticsName = node->values.getValOrDefault("title");
 		// AniObject subtracts the anchor when drawing a pose. XML stores the texture offset.
 		pose->_someX = -strtod(node->values.getValOrDefault("x").c_str(), nullptr);
@@ -873,8 +1037,81 @@ private:
 	}
 
 	bool handleUnknownKey(ParserNode *node) override {
-		if (!getParentNode(node))
+		const ParserNode *parent = getParentNode(node);
+		if (!parent)
 			return false;
+		if (parent->name == "PICTURE" && node->name == "HITREGION" && node->values.getValOrDefault("type") == "rect") {
+			int16 id;
+			if (!readId(parent->values["id"], id))
+				return parserError("Unknown hit region owner");
+			PictureObject *picture = _scene.findPictureObjectById(id, 0);
+			const Dims size = picture->getFullSize();
+			picture->_hitRegion = Common::Rect(intProperty(*node, "left"), intProperty(*node, "top"),
+				size.x + intProperty(*node, "right"), size.y + intProperty(*node, "bottom"));
+			node->layout = _XMLkeys;
+			return true;
+		}
+		if (parent->name == "EXITMANAGER") {
+			node->layout = _XMLkeys;
+			int16 id;
+			if (node->name == "EXIT" && readId(node->values.getValOrDefault("vis_dst"), id)) {
+				if (PictureObject *object = _scene.findPictureObjectById(id, 0)) {
+					Exit exit;
+					exit.destination = object;
+					exit.angle = intProperty(*node, "angle");
+					exit.offset = Common::Point(intProperty(*node, "offsetX"), intProperty(*node, "offsetY"));
+					exit.state = atoi(node->values.getValOrDefault("state", "1").c_str());
+					_scene._exits.push_back(exit);
+				}
+			}
+			return true;
+		}
+		if (parent->name == "INTERACTIONS") {
+			node->layout = _XMLkeys;
+			_interaction = nullptr;
+			int16 sceneId;
+			if (node->name != "INTERACTION" || !readId(node->values.getValOrDefault("scene"), sceneId) || sceneId != _scene._sceneId)
+				return true;
+			Common::ScopedPtr<Interact> action(new Interact());
+			if (!readId(node->values.getValOrDefault("object"), action->_objectId))
+				return parserError("Unknown interaction object");
+			action->_sceneId = sceneId;
+			action->_actionName = node->values.getValOrDefault("id");
+			readId(node->values.getValOrDefault("hero"), action->_heroId);
+			readId(node->values.getValOrDefault("heroStatic"), action->_heroStaticId);
+			action->_heroOffsetX = intProperty(*node, "x");
+			action->_heroOffsetY = intProperty(*node, "y");
+			action->_heroMirror = boolProperty(*node, "heroMirror");
+			action->_field_28 = intProperty(*node, "ves");
+			const Common::String item = node->values.getValOrDefault("curor_obj_id");
+			if (item == "ANY_OBJECT")
+				action->_cursorObjectId = -2;
+			else if (!item.empty() && item != "0")
+				readId(item, action->_cursorObjectId);
+			action->_messageQueue = new MessageQueue();
+			_interaction = action.release();
+			_actions.push_back(_interaction);
+			return true;
+		}
+		if (parent->name == "INTERACTION") {
+			node->layout = _XMLkeys;
+			return !_interaction || node->name != "COMMAND" || parserCallback_COMMAND(node);
+		}
+		if (parent->name == "INVENTORY") {
+			node->layout = _XMLkeys;
+			if (node->name == "GUIMNGR")
+				return parserCallback_GUIMNGR(node);
+			if (node->name == "PICTURE")
+				return parserCallback_PICTURE(node);
+			if (node->name == "ITEM") {
+				InventoryPoolItem item = {};
+				readId(node->values.getValOrDefault("visSel"), item.pictureObjectSelected);
+				if (readId(node->values.getValOrDefault("id"), item.id) && readId(node->values.getValOrDefault("vis"), item.pictureObjectNormal))
+					getGameLoaderInventory()->addPoolItem(item);
+			}
+		}
+		if (node->depth == 2 && parent->name == "GUIMNGR" && _scene._guiManager)
+			_scene._guiManager->createElement(node->name, node->values, _project._objectIds);
 		// Scene nodes outside the supported object types are ignored for now.
 		node->ignore = true;
 		node->layout = _XMLkeys;
@@ -886,41 +1123,7 @@ private:
 
 } // End of anonymous namespace
 
-void Scene::drawAndroid(Graphics::ManagedSurface &target) const {
-	Common::Array<const GameObject *> visibleObjects;
-	for (const PictureObject *picture : _pictureObjects) {
-		if (picture->_flags & 4)
-			visibleObjects.push_back(picture);
-	}
-	for (const AniObject *animation : _renderableAnis) {
-		if (animation->_flags & 4)
-			visibleObjects.push_back(animation);
-	}
-
-	// The Android renderer draws higher z values first and preserves XML order at equal z.
-	Common::sort(visibleObjects.begin(), visibleObjects.end(), [](const GameObject *left, const GameObject *right) {
-		if (left->_z == right->_z)
-			return left->_cnum < right->_cnum;
-		return left->_z > right->_z;
-	});
-
-	for (const GameObject *object : visibleObjects) {
-		Common::Point position(object->_x - _x, object->_y - _y);
-		if (object->_objtype == kObjTypePictureObject) {
-			static_cast<const PictureObject *>(object)->_picture->blitTo(target, position);
-		} else {
-			const AniObject &animation = *static_cast<const AniObject *>(object);
-			const Phase *phase = animation._movement ? animation._movement->_curPhase : animation._statics;
-			Common::Point anchor = animation.getSomeXY();
-			const bool mirror = (animation._flags & 8) != 0;
-			if (mirror)
-				anchor.x = phase->getDimensions().x - anchor.x;
-			phase->blitTo(target, position - anchor, mirror);
-		}
-	}
-}
-
-const char *NGIEngine::getAndroidResourceLocale() const {
+const char *NGIEngine::getResourceLocale() const {
 	Common::Language language = Common::parseLanguage(ConfMan.get("language"));
 	if (language == Common::UNK_LANG)
 		language = Common::parseLanguageFromLocale(g_system->getSystemLanguage().c_str());
@@ -939,10 +1142,27 @@ void SceneTag::loadSceneXML(const GameProject &project) {
 	Common::ScopedPtr<Scene> scene(new Scene());
 	scene->_sceneId = _sceneId;
 	const Common::Path path = Common::Path("data/res").join(_tag);
-	XMLSceneParser parser(project, *scene, g_nmi->getAndroidResourceLocale());
+	XMLSceneParser parser(project, *scene, g_nmi->getResourceLocale());
 	if (!parser.loadStream(SearchMan.createReadStreamForMember(path), path.toString()) || !parser.parse()) {
 		warning("Could not load Full Pipe Android scene %s", _tag.c_str());
 		return;
+	}
+
+	if (g_nmi->isAndroidFullPipe() && (_sceneId == SC_1 || _sceneId == SC_2 || _sceneId == SC_3)) {
+		parser.close();
+		if (!parser.loadFile("data/exits.xml") || !parser.parse())
+			return;
+	}
+	if (_sceneId == SC_1) {
+		parser.close();
+		if (!parser.loadFile("data/interactions.xml") || !parser.parse())
+			return;
+		parser.registerInteractions();
+	}
+	if (_sceneId == SC_INV) {
+		parser.close();
+		if (!parser.loadFile("data/res/inventory.xml") || !parser.parse())
+			return;
 	}
 
 	debugC(1, kDebugXML, "Loaded Full Pipe Android scene %s with %u pictures and %u animations",
@@ -951,216 +1171,52 @@ void SceneTag::loadSceneXML(const GameProject &project) {
 	_scene = scene.release();
 }
 
-Common::Error NGIEngine::enterAndroidScene1() {
-	Scene *room = findScene(SC_1);
-	Scene *common = findScene(SC_COMMON);
-	if (!room || !common)
-		return Common::Error(Common::kNoGameDataFoundError, "Could not load the first Full Pipe Android room");
-	room->_commonQueueScene = common;
-	for (const PicAniInfo &ref : room->_roamingObjects) {
-		Scene *source = findScene(ref.sceneId);
-		AniObject *actor = source ? source->findAniObjectById(ref.objectId, ref.copyId) : nullptr;
-		if (!actor)
-			return Common::Error(Common::kNoGameDataFoundError, "Missing roaming animation for the first Android room");
-		if (!room->findAniObjectById(ref.objectId, ref.copyId))
-			room->_renderableAnis.push_back(actor);
+Common::Error GameLoader::loadXML(const Common::Path &projectPath, const SceneTag *&start, int &width, int &height) {
+	if (g_nmi->getPlatform() == Common::kPlatformAndroid) {
+		const auto &files = g_nmi->_gameDescription->desc.filesDescriptions;
+		const Common::FSNode gameDirectory(ConfMan.getPath("path"));
+		Common::ScopedPtr<Common::Archive> apk(Common::makeZipArchive(gameDirectory.getChild(files[0].fileName)));
+		Common::ScopedPtr<Common::Archive> obb(Common::makeZipArchive(gameDirectory.getChild(files[1].fileName)));
+		if (!apk || !obb)
+			return Common::Error(Common::kNoGameDataFoundError, "Could not open the Full Pipe APK and OBB archives");
+
+		SearchMan.add("ngi-android-obb", obb.release());
+		SearchMan.add("ngi-android-apk", apk.release());
 	}
-	_aniMan = room->findAniObjectById(room->_heroId, 0);
-	_aniMan2 = _aniMan;
-	if (!_aniMan)
-		return Common::Error(Common::kNoGameDataFoundError, "Missing hero for the first Android room");
 
-	clearGlobalMessageQueueList1();
-	clearMessageHandlers();
-	stopAllSounds(Sound::kSpeech);
-	stopAllSounds(Sound::kEffect);
-	if (room->_behaviorController)
-		room->_behaviorController->onShow(*room);
-	_currSoundListCount = 0;
-	if (room->_soundList)
-		_currSoundList1[_currSoundListCount++] = room->_soundList.get();
-	if (common->_soundList)
-		_currSoundList1[_currSoundListCount++] = common->_soundList.get();
-
-	_currentScene = room;
-	addMessageHandlerByIndex(global_messageHandler4, 0, 4);
-	addMessageHandler(sceneHandler01, 2);
-	// CStateManager::SetStartStates starts a new game with the egg uncracked.
-	scene01_initObjects(room, TrubaLeft, true);
-	for (const Entrance &entrance : room->_entrances) {
-		if (entrance._id == TrubaLeft && entrance._sceneId == room->_sceneId && runQueue(entrance._queueId, 0)) {
-			debugC(1, kDebugSceneLogic, "Entered Android scene %d through entrance %d, queue %d", room->_sceneId, entrance._id, entrance._queueId);
-			return Common::kNoError;
-		}
-	}
-	return Common::Error(Common::kNoGameDataFoundError, "Could not start the TrubaLeft entrance queue");
-}
-
-Common::Error NGIEngine::runAndroid() {
-	const auto &files = _gameDescription->desc.filesDescriptions;
-	const Common::FSNode gameDirectory(ConfMan.getPath("path"));
-	Common::ScopedPtr<Common::Archive> apk(Common::makeZipArchive(gameDirectory.getChild(files[0].fileName)));
-	Common::ScopedPtr<Common::Archive> obb(Common::makeZipArchive(gameDirectory.getChild(files[1].fileName)));
-	if (!apk || !obb)
-		return Common::Error(Common::kNoGameDataFoundError, "Could not open the Full Pipe APK and OBB archives");
-
-	SearchMan.add("ngi-android-obb", obb.release());
-	SearchMan.add("ngi-android-apk", apk.release());
-
-	GameProject project;
+	_gameProject.reset(new GameProject());
+	GameProject &project = *_gameProject;
 	XMLTextureSizeParser(project).loadSizes();
 	if (!project._objectIds.load("data/obj.h"))
 		return Common::Error(Common::kNoGameDataFoundError, "Could not read the Full Pipe Android object IDs");
 
-	const Common::Path projectPath("data/FullPipe.xml");
 	XMLProjectParser parser(project);
 	if (!parser.loadStream(SearchMan.createReadStreamForMember(projectPath), projectPath.toString()) || !parser.parse())
 		return Common::Error(Common::kNoGameDataFoundError, "Could not read the Full Pipe Android project");
 
-	const SceneTag *start = parser.startScene();
+	start = parser.startScene();
 	if (!start)
 		return Common::Error(Common::kNoGameDataFoundError, "Could not find the Full Pipe Android start scene");
 	debugC(1, kDebugXML, "Loaded Full Pipe Android project, start scene %s (%hu)",
 		start->_tag.c_str(), static_cast<uint16>(start->_sceneId));
-	Scene *startScene = project.findScene(start->_sceneId);
-	if (!startScene)
-		return Common::Error(Common::kNoGameDataFoundError, "Could not load the Full Pipe Android start scene");
-
-	const bool intro = start->_sceneId == SC_INTRO1;
-	Scene *intro2 = intro ? project.findScene(SC_INTRO2) : nullptr;
-	if (intro && !intro2)
-		return Common::Error(Common::kNoGameDataFoundError, "Could not load the second Full Pipe Android intro scene");
-	Scene *common = intro ? project.findScene(SC_COMMON) : nullptr;
-	if (intro && !common)
-		return Common::Error(Common::kNoGameDataFoundError, "Could not load the shared Full Pipe Android resources");
-
-	_isSaveAllowed = false;
-	initGraphics(parser.width(), parser.height(), nullptr);
-	const Graphics::PixelFormat format = _system->getScreenFormat();
-	if (format.isCLUT8())
-		return Common::kUnsupportedColorMode;
-
-	Common::Keymapper *mapper = _system->getEventManager()->getKeymapper();
-	mapper->disableAllGameKeymaps();
-	mapper->setGameKeymapState("ngi-default", true);
-	_gameProject = &project;
-	_currentScene = startScene;
-	if (startScene->_behaviorController)
-		startScene->_behaviorController->onShow(*startScene);
-	addMessageHandlerByIndex(global_messageHandler4, 0, 4);
-	if (intro) {
-		sceneIntro_initMan(*startScene);
-		addMessageHandler(sceneHandlerIntro, 2);
+	if (g_nmi->isAndroidFullPipe() && start->_sceneId == SC_INTRO1) {
+		XMLWalkParser walkParser(project._walkData);
+		if (!walkParser.loadFile("data/data.xml") || !walkParser.parse())
+			return Common::Error(Common::kNoGameDataFoundError, "Could not read the Full Pipe Android walking movements");
 	}
-	if (startScene->_soundList)
-		_currSoundList1[_currSoundListCount++] = startScene->_soundList.get();
-	if (intro2 && intro2->_soundList)
-		_currSoundList1[_currSoundListCount++] = intro2->_soundList.get();
-	if (common && common->_soundList)
-		_currSoundList1[_currSoundListCount++] = common->_soundList.get();
 
-	Graphics::ManagedSurface &frame = _backgroundSurface;
-	frame.create(parser.width(), parser.height(), format);
-	byte brightness = intro ? 0 : 255;
-	frame.clear(format.RGBToColor(0, 0, 0));
-	if (brightness)
-		_currentScene->drawAndroid(frame);
-	_system->copyRectToScreen(frame.getPixels(), frame.pitch, 0, 0, frame.w, frame.h);
-	_system->updateScreen();
-	debugC(1, kDebugDrawing, "Presented first Full Pipe Android frame for %s", start->_tag.c_str());
-
-	Common::Event event;
-	Common::EventManager *eventManager = _system->getEventManager();
-	Common::Error result = Common::kNoError;
-	uint32 lastUpdate = _system->getMillis();
-	while (!shouldQuit()) {
-		bool screenChanged = false;
-		while (eventManager->pollEvent(event)) {
-			if (event.type == Common::EVENT_SCREEN_CHANGED) {
-				screenChanged = true;
-			} else if (_modalObject) {
-				const bool back = (event.type == Common::EVENT_KEYUP &&
-						(event.kbd.keycode == Common::KEYCODE_ESCAPE || event.kbd.keycode == Common::KEYCODE_AC_BACK)) ||
-					(event.type == Common::EVENT_CUSTOM_ENGINE_ACTION_END && event.customType == kActionCloseDialog);
-				if (event.type == Common::EVENT_LBUTTONUP || back) {
-					Command cmd;
-					cmd._cmd = 17;
-					cmd._messageNum = back ? 37 : 30;
-					cmd._param = back ? kActionCloseDialog : 0;
-					_modalObject->handleMessage(&cmd);
-				}
-			}
-		}
-		if (shouldQuit())
-			break;
-
-		const uint32 now = _system->getMillis();
-		const uint32 elapsed = now - lastUpdate;
-		lastUpdate = now;
-		bool redraw = false;
-		Scene *scene = _currentScene;
-		if (_modalObject) {
-			if (!_modalObject->init(elapsed))
-				deleteModalObject();
-			redraw = true;
-		} else {
-			if (scene->_behaviorController)
-				redraw |= scene->_behaviorController->update(elapsed);
-			for (MessageQueue *queue : *_globalMessageQueueList)
-				redraw |= queue->updatePause(elapsed);
-			processMessages();
-			if (!_modalObject && scene == _currentScene)
-				redraw |= scene->update(elapsed);
-			if (!_modalObject && scene == _currentScene && scene->_sceneId == SC_INTRO1)
-				redraw |= sceneIntro_updateAndroid(elapsed, brightness);
-			processMessages();
-			redraw |= _modalObject != nullptr;
-		}
-
-		if (scene != _currentScene) {
-			stopAllSounds(Sound::kSpeech);
-			stopAllSounds(Sound::kEffect);
-			if (_currentScene->_behaviorController)
-				_currentScene->_behaviorController->onShow(*_currentScene);
-			debugC(2, kDebugDrawing, "Switched Android scene from %d to %d", scene->_sceneId, _currentScene->_sceneId);
-			redraw = true;
-		}
-		if (!_modalObject && _currentScene->_sceneId == SC_INTRO1 && !g_vars->sceneIntro_playing) {
-			result = enterAndroidScene1();
-			if (result.getCode() != Common::kNoError)
-				break;
-			lastUpdate = _system->getMillis();
-			brightness = 255;
-			redraw = true;
-		}
-		if (redraw) {
-			frame.clear(format.RGBToColor(0, 0, 0));
-			if (_modalObject) {
-				_modalObject->update();
-			} else {
-				_currentScene->drawAndroid(frame);
-				if (brightness < 255)
-					drawAlphaRectangle(0, 0, frame.w, frame.h, brightness);
-			}
-		}
-		if (redraw || screenChanged)
-			_system->copyRectToScreen(frame.getPixels(), frame.pitch, 0, 0, frame.w, frame.h);
-		_system->updateScreen();
-		_system->delayMillis(10);
-	}
-	deleteModalObject();
-	clearMessages();
-	clearGlobalMessageQueueList();
-	clearMessageHandlers();
-	while (_currSoundListCount)
-		_currSoundList1[--_currSoundListCount] = nullptr;
-	g_vars->sceneIntro_aniin1man = nullptr;
-	g_vars->scene01_picSc01Osk = nullptr;
-	g_vars->scene01_picSc01Osk2 = nullptr;
-	_aniMan = _aniMan2 = nullptr;
-	_currentScene = nullptr;
-	_gameProject = nullptr;
-	return result;
+	_gameVar = new GameVar();
+	GameVar *states = _gameVar->addSubVarAsInt("OBJSTATES", 0);
+	XMLObjectStateParser stateParser(*states);
+	if (!stateParser.loadFile("data/objstates.xml") || !stateParser.parse())
+		return Common::Error(Common::kNoGameDataFoundError, "Could not read the object states");
+	g_nmi->setState(sO_EggCracker, g_nmi->getStateValue(sO_EggCracker, sO_DidNotCrackEgg));
+	_gameVar->addSubVarAsInt("TASKS", 0);
+	_gameVar->addSubVarAsInt("VISITED", 0);
+	_gameVar->addSubVarAsInt("CHAPTERS", 0);
+	width = parser.width();
+	height = parser.height();
+	return Common::kNoError;
 }
 
 } // End of namespace NGI

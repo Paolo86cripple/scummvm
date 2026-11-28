@@ -575,6 +575,85 @@ bool NGIEngine::doSetScene(const Entrance &entrance) {
 	if (!scene)
 		return 0;
 
+	if (usesXMLProject()) {
+		_inventoryScene = nullptr;
+		Scene *common = findScene(SC_COMMON);
+		Scene *intro2 = isAndroidFullPipe() && scene->_sceneId == SC_INTRO1 ? findScene(SC_INTRO2) : nullptr;
+		if (isAndroidFullPipe() && scene->_sceneId == SC_INTRO1 && (!common || !intro2))
+			return false;
+		scene->_commonQueueScene = common == scene ? nullptr : common;
+		for (const PicAniInfo &ref : scene->_roamingObjects) {
+			Scene *source = findScene(ref.sceneId);
+			if (!source)
+				return false;
+			AniObject *actor = nullptr;
+			for (AniObject *owned : source->_aniObjects) {
+				if (owned->_id == ref.objectId && owned->_copyId == ref.copyId)
+					actor = owned;
+			}
+			if (!actor && ref.copyId) {
+				AniObject *original = source->findAniObjectById(ref.objectId, 0);
+				if (original) {
+					actor = new AniObject(original);
+					source->addAni(actor, false);
+					actor->_copyId = ref.copyId;
+				}
+			}
+			if (!actor)
+				return false;
+			if (!scene->findAniObjectById(ref.objectId, ref.copyId))
+				scene->_renderableAnis.push_back(actor);
+			if (ref.staticsId)
+				actor->_statics = actor->getStatic(ref.staticsId);
+			actor->setPos(ref.ox == -1 ? actor->_x : ref.ox, ref.oy == -1 ? actor->_y : ref.oy);
+			if (ref.priority != -1)
+				actor->_z = ref.priority;
+			if (ref.objectFlags != -1) {
+				actor->_objectFlags = ref.objectFlags;
+				actor->_flags = (actor->_flags & ~4) | ((ref.objectFlags & 1) << 2);
+			}
+			if (ref.flags != -1)
+				actor->_flags = (actor->_flags & ~8) | (ref.flags ? 8 : 0);
+		}
+		_aniMan = scene->findAniObjectById(scene->_heroId, 0);
+		_aniMan2 = _aniMan;
+		if (scene->_heroId && !_aniMan)
+			return false;
+
+		clearGlobalMessageQueueList1();
+		removeMessageHandler(2, -1);
+		stopAllSounds(Sound::kSpeech);
+		stopAllSounds(Sound::kEffect);
+		if (scene->_behaviorController)
+			scene->_behaviorController->onShow(*scene);
+		_currSoundListCount = 0;
+		if (scene->_soundList)
+			_currSoundList1[_currSoundListCount++] = scene->_soundList.get();
+		if (intro2 && intro2->_soundList)
+			_currSoundList1[_currSoundListCount++] = intro2->_soundList.get();
+		if (scene->_commonQueueScene && common->_soundList)
+			_currSoundList1[_currSoundListCount++] = common->_soundList.get();
+
+		if (_currentScene && _currentScene->_guiManager)
+			_currentScene->_guiManager->onHide();
+		_currentScene = scene;
+		if (_aniMan && scene->_motionController) {
+			scene->_motionController->attachObject(_aniMan);
+			scene->_motionController->activate();
+		}
+		if (common && !scene->_exits.empty())
+			scene->initExits(*common);
+		if (intro2) {
+			sceneIntro_initGui(*scene, *intro2, _backgroundSurface.w);
+			sceneIntro_initMan(*scene);
+			addMessageHandler(sceneHandlerIntro, 2);
+		} else if (isAndroidFullPipe() && scene->_sceneId == SC_1) {
+			scene01_initScene(scene, entrance._id);
+			addMessageHandler(sceneHandler01, 2);
+		}
+		return true;
+	}
+
 	sceneDim = scene->_pictureObjects.front()->getFullSize();
 	_sceneWidth = sceneDim.x;
 	_sceneHeight = sceneDim.y;

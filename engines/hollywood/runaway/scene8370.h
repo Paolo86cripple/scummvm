@@ -39,9 +39,11 @@ private:
 	void runCustomEntrySequence() override;
 	void resumeAmbientAudio(bool entering) override;
 	void advanceCustomGameplayLoop(uint32 delta) override;
+	void updateSatelliteDish();
 	void drawCustomBackgroundComposite(Graphics::ManagedSurface &viewport) override;
 	float actorHeight() const override;
 	int sceneViewportYOffset() const override;
+	bool shouldFollowCamera() const override { return !_lookingUp && Scene6370::shouldFollowCamera(); }
 	void setupActorDepth(RunawayActor::RenderParams &params) const override;
 	void findWalkPath(Common::Point target) override;
 	bool adjustCustomWalkTargetToFloorMask(Common::Point &target) const override;
@@ -49,11 +51,15 @@ private:
 	void handleAnimationFrameHook() override;
 	bool updateCustomSequence() override;
 
-	RunawayAnimation _sushi, _fire, _monitor;
+	RunawayAnimation _sushi, _fire, _dish;
+	uint32 _dishTick = 0;
+	byte _dishFrame = 0, _dishTarget = 0;
+	bool _dishMoving = false;
 	uint32 _sushiTick = 0, _heatUntil = 0;
 	uint _sushiStep = 70;
 	byte _sushiState = 1;
 	bool _sushiCalling = false, _sushiAnimating = false;
+	bool _lookingUp = false;
 	uint16 _upstairsScene = 8380;
 };
 

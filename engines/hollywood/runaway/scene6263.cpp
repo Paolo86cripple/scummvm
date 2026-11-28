@@ -28,7 +28,7 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{252, 492, 0, {301, 302}, {0, 1}, {233, 165}, 5}, // 1: Window.
+	{252, 492, 0, {301, 302}, {0, 1}, {233, 165}, 5, false, false, true}, // 1: Window.
 	{223, 483, 1, {303, 304}, {0, 0}, {300, 443}}, // 2: Boiler.
 	{287, 505, 1, {305, 306}, {0, 1}, {340, 448}}, // 3: Lever.
 	{287, 505, 1, {307, 308}, {0, 1}, {340, 448}}, // 4: Wheel.
@@ -115,7 +115,7 @@ void Scene6263::prepareCustomGameplayLoop() {
 	_boilerFrame = _town.boiler >= 2 ? 41 : 0;
 	_boilerTick = _now;
 	if (_town.boiler >= 2) {
-		_audio.playEffect(53, 178, 1, true);
+		_audio.playEffect(53, 70, 1, true);
 	}
 	if (!_entering) {
 		return;
@@ -198,7 +198,10 @@ RunawayRoomScene::ActionResult Scene6263::dispatchCustomSceneAction(uint16 actio
 		if (!_town.cabExited) {
 			say(22);
 		}
-		beginRoomAnimation(302, 25, 29, nullptr, 0, true, 60);
+		if (_skippingExit)
+			leaveTownRoom(6261);
+		else
+			beginRoomAnimation(302, 25, 29, nullptr, 0, true, 60);
 		break;
 	case 1302: // Switch to the exterior view to finish climbing out of the cab.
 		_town.cabExited = 1;
@@ -317,9 +320,9 @@ RunawayRoomScene::ActionResult Scene6263::dispatchCustomSceneAction(uint16 actio
 
 void Scene6263::handleAnimationFrameHook() {
 	if (_roomAction == 400 && _actionStep == 13) {
-		_audio.playEffect(23, 204);
+		_audio.playEffect(23, 80);
 	} else if (_roomAction == 302 && _actionStep == 10) {
-		_audio.playEffect(81, 204);
+		_audio.playEffect(81, 80);
 	} else if ((_roomAction == 306 && (_actionStep == 16 || _actionStep == 43)) ||
 			(_roomAction == 401 && _actionStep == 3)) {
 		_audio.playEffect(54);
@@ -333,12 +336,12 @@ void Scene6263::handleAnimationFrameHook() {
 		}
 	} else if (_roomAction == 313) {
 		if (_actionStep == 23) {
-			_audio.playEffect(52, 255, 0, true);
+			_audio.playEffect(52, 100, 0, true);
 		} else if (_actionStep == 35) {
 			_town.boiler = 2;
 			_boilerFrame = 0;
 			_boilerTick = _now;
-			_audio.playEffect(53, 178, 1, true);
+			_audio.playEffect(53, 70, 1, true);
 		} else if (_actionStep == 70) {
 			_audio.stopEffect(0);
 		}

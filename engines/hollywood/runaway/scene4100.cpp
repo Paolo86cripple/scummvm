@@ -42,7 +42,7 @@ const byte kFreezeBatteryFrames[] = {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{141, 468, 7, {301, 302}, {0, 1}, {43, 471}, 4}, // 1: Door.
+	{141, 468, 7, {301, 302}, {0, 1}, {43, 471}, 4, false, false, true}, // 1: Door.
 	{196, 451, 1, {303, 304}, {0, 0}, {220, 420}}, // 2: First aid kit.
 	{310, 457, 0, {305, 306}, {1, 1}, {337, 425}}, // 3: Glass display case.
 	{204, 448, 1, {307, 308}, {1, 1}, {270, 421}}, // 4: Button.
@@ -236,8 +236,12 @@ RunawayRoomScene::ActionResult Scene4100::dispatchCustomSceneAction(uint16 actio
 	}
 	switch (action) {
 	case 302: // Open the security door to return to the hall.
-		beginRoomAnimation(450, 21, 13, nullptr, 0, false);
-		_audio.playEffectAt(32, Common::Point(43, 200));
+		if (_skippingExit) {
+			finishCustomAnimation(451);
+		} else {
+			beginRoomAnimation(450, 21, 13, nullptr, 0, false);
+			_audio.playEffectAt(32, Common::Point(43, 200));
+		}
 		return kHandled;
 	case 305: // Look inside the thermal chamber.
 		say(4, !_museum.cabinetSeen ? 0 : _museum.maskTaken ? 2 : 1);
@@ -258,11 +262,10 @@ RunawayRoomScene::ActionResult Scene4100::dispatchCustomSceneAction(uint16 actio
 			say(9);
 		} else {
 			_audio.playMusic(23, false);
-			_audio.setMusicVolume(255);
+			_audio.setMusicVolume(100);
 			say(9, 1);
 			_museum.maskTaken = 1;
-			_inventory.add(11);
-			say(9, 2);
+			pickUp(11, 9, 2);
 			deferMuseumAction(432);
 		}
 		return kBackgroundChanged;
@@ -279,8 +282,7 @@ RunawayRoomScene::ActionResult Scene4100::dispatchCustomSceneAction(uint16 actio
 			say(12);
 		}
 		_museum.keySeen = _museum.keyTaken = 1;
-		_inventory.add(17);
-		say(13);
+		pickUp(17, 13);
 		say(13, 1);
 		say(13, 2);
 		return kBackgroundChanged;
@@ -324,8 +326,7 @@ RunawayRoomScene::ActionResult Scene4100::dispatchCustomSceneAction(uint16 actio
 		return kHandled;
 	case 329: // Take the ladle.
 		_museum.ladleTaken = 1;
-		_inventory.add(18);
-		say(113, 0, true);
+		pickUp(18, 113, 0, true);
 		return kBackgroundChanged;
 	case 330: // Put the battery directly in the liquid nitrogen.
 		say(27, _inventory.museum().frozenBattery);
@@ -376,8 +377,7 @@ void Scene4100::finishCustomAnimation(uint16 action) {
 			say(20, 4);
 			say(20, 5);
 			_inventory.museum().recorderBattery = 2;
-			_inventory.add(6);
-			say(20, 6);
+			pickUp(6, 20, 6);
 		} else {
 			beginRoomAnimation(345, 10, 7, nullptr, 0, false);
 		}
@@ -388,9 +388,7 @@ void Scene4100::finishCustomAnimation(uint16 action) {
 	case 325: // Retrieve the frozen battery from the ladle.
 		_inventory.museum().batteryInLadle = 0;
 		_inventory.museum().frozenBattery = 1;
-		_inventory.add(6);
-		say(23, 2);
-		say(23, 3);
+		pickUp(6, 23, 3, false, 2);
 		break;
 	case 308: // Try identifying Brian to the voice lock.
 		startComputerConversation();
@@ -472,16 +470,16 @@ void Scene4100::finishCustomAnimation(uint16 action) {
 
 void Scene4100::handleAnimationFrameHook() {
 	if ((_roomAction == 308 || _roomAction == 340) && _actionStep == 12) {
-		_audio.playEffect(34, 230);
+		_audio.playEffect(34, 90);
 	}
 	if ((_roomAction == 342 && _actionStep == 15) || (_roomAction == 344 && _actionStep == 4)) {
-		_audio.playEffect(37, 204);
+		_audio.playEffect(37, 80);
 	}
 	if (_roomAction == 325) {
 		if (_actionStep == 12) {
 			_audio.playEffect(42);
 		} else if (_actionStep == 20) {
-			_audio.playEffect(41, 255, 1);
+			_audio.playEffect(41, 100, 1);
 		} else if (_actionStep == 105) {
 			_audio.playEffect(43);
 		}
@@ -584,7 +582,7 @@ void Scene4100::animateChamber(bool open) {
 	}
 	_museum.chamberTime = 0;
 	beginRoomAnimationRange(open ? 431 : 430, _museum.maskTaken ? 33 : 32, 36, open ? 0 : 35, open ? 35 : 0, false);
-	_audio.playEffect(33, 191);
+	_audio.playEffect(33, 75);
 }
 
 void Scene4100::startComputerConversation() {

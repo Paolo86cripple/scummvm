@@ -27,7 +27,7 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{327, 441, 7, {301, 302}, {0, 1}, {247, 373}, 4}, // 1: Outside Of Train Car.
+	{327, 441, 7, {301, 302}, {0, 1}, {247, 373}, 4, false, false, true}, // 1: Outside Of Train Car.
 	{574, 434, 1, {303, 304}, {1, 0}, {618, 400}}, // 2: Barrels.
 	{801, 441, 3, {305, 306}, {0, 0}, {835, 467}}, // 3: Chain.
 	{517, 374, 0, {307, 308}, {0, 0}, {517, 353}}, // 4: Contraptions.
@@ -120,8 +120,12 @@ RunawayRoomScene::ActionResult Scene5110::dispatchCustomSceneAction(uint16 actio
 		visitDesertRoom(7, 1);
 		break;
 	case 302: // Leave the train car.
-		beginRoomAnimation(action, 6, 12, nullptr, 0, true, 60);
-		_actionFrames.insert_at(0, 0);
+		if (_skippingExit) {
+			leaveDesertRoom(5081);
+		} else {
+			beginRoomAnimation(action, 6, 12, nullptr, 0, true, 60);
+			_actionFrames.insert_at(0, 0);
+		}
 		break;
 	case 1302: // Finish climbing out of the train car.
 		leaveDesertRoom(5081);
@@ -153,9 +157,8 @@ RunawayRoomScene::ActionResult Scene5110::dispatchCustomSceneAction(uint16 actio
 				dispatchCustomSceneAction(311);
 			}
 			say(11);
-			_inventory.add(7);
+			pickUp(7, 11, 1);
 			_desert.screwTaken = 1;
-			say(11, 1);
 		}
 		break;
 	case 316: // Use the screw with the barrel.
@@ -203,9 +206,11 @@ RunawayRoomScene::ActionResult Scene5110::dispatchCustomSceneAction(uint16 actio
 	case 1319: // Collect the peanuts behind the door.
 		_desert.trainDoorOpen = 1;
 		say(18, 1);
-		_inventory.add(18);
-		say(18, 2);
+		deferDesertAction(419);
 		return kBackgroundChanged;
+	case 419: // Inspect the peanuts before putting them in the inventory.
+		pickUp(18, 18, 2);
+		break;
 	case 320: // Look at the bucket beneath the barrel.
 		say(19, _desert.bucket != 1);
 		break;
@@ -215,8 +220,7 @@ RunawayRoomScene::ActionResult Scene5110::dispatchCustomSceneAction(uint16 actio
 		} else {
 			_desert.bucket = 3;
 			items.bucket = 1;
-			_inventory.add(25);
-			say(20, 1);
+			pickUp(25, 20, 1);
 			return kBackgroundChanged;
 		}
 		break;
@@ -259,16 +263,16 @@ void Scene5110::runCustomEntrySequence() {
 
 void Scene5110::handleAnimationFrameHook() {
 	if (_roomAction == 400 && _actionStep == 10) {
-		_audio.playFootstep(3, _random.getRandomBit(), 230, 327);
+		_audio.playFootstep(3, _random.getRandomBit(), 90, 327);
 	} else if (_roomAction == 319 && _actionStep == 28) {
 		_audio.playEffectAt(53, Common::Point(632, 200));
 	} else if (_roomAction == 322 && _actionStep == 22) {
-		_audio.playEffectAt(38, Common::Point(512, 200), 204);
+		_audio.playEffectAt(38, Common::Point(512, 200), 80);
 	} else if (_roomAction == 317 && _actionStep == 10) {
-		_audio.playEffectAt(36, Common::Point(512, 200), 230);
+		_audio.playEffectAt(36, Common::Point(512, 200), 90);
 	} else if (_roomAction == 417) {
 		if (_actionStep == 10) {
-			_audio.playEffectAt(37, Common::Point(512, 200), 204);
+			_audio.playEffectAt(37, Common::Point(512, 200), 80);
 		} else if (_actionStep == 80) {
 			_desert.bucket = 2;
 			updateMaps();

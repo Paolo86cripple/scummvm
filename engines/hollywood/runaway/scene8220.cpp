@@ -29,17 +29,17 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{188, 599, 5, {301, 302}, {0, 3}, {188, 599}, 7}, // 1: Path.
-	{778, 512, 3, {303, 304}, {0, 1}, {778, 512}, 6}, // 2: Saloon.
-	{125, 441, 7, {305, 306}, {0, 1}, {79, 399}, 4}, // 3: Hotel.
-	{388, 284, 7, {307, 308}, {0, 1}, {388, 284}, 4}, // 4: Sheriff's office.
+	{188, 599, 5, {301, 302}, {0, 3}, {188, 599}, 7, false, false, true}, // 1: Path.
+	{778, 512, 3, {303, 304}, {0, 1}, {778, 512}, 6, false, false, true}, // 2: Saloon.
+	{125, 441, 7, {305, 306}, {0, 1}, {79, 399}, 4, false, false, true}, // 3: Hotel.
+	{388, 284, 7, {307, 308}, {0, 1}, {388, 284}, 4, false, false, true}, // 4: Sheriff's office.
 	{574, 242, 7, {309, 310}, {0, 1}, {526, 216}, 4}, // 5: Liquor store.
-	{647, 198, 0, {311, 312}, {0, 3}, {646, 195}, 4}, // 6: Bank.
-	{722, 192, 0, {313, 314}, {0, 1}, {722, 192}, 5}, // 7: Locomotive.
+	{647, 198, 0, {311, 312}, {0, 3}, {646, 195}, 4, false, false, true}, // 6: Bank.
+	{722, 192, 0, {313, 314}, {0, 1}, {722, 192}, 5, false, false, true}, // 7: Locomotive.
 	{293, 350, 7, {315, 316}, {1, 0}, {285, 340}}, // 8: Wagon.
 	{450, 345, 7, {318, 319}, {0, 1}, {404, 302}, 3}, // 9: Oscar.
 	{456, 271, 1, {320, 321}, {0, 0}, {472, 254}}, // 10: Car.
-	{722, 192, 0, {322, 323}, {0, 3}, {722, 192}, 5} // 11: North side of town.
+	{722, 192, 0, {322, 323}, {0, 3}, {722, 192}, 5, false, false, true} // 11: North side of town.
 };
 
 const RunawayResponse kResponses[] = {
@@ -98,20 +98,20 @@ void Scene8220::prepareCustomGameplayLoop() {
 }
 
 void Scene8220::resumeAmbientAudio(bool entering) {
-	resumeFinaleOutdoorAudio(false, 36, 51);
+	resumeFinaleOutdoorAudio(false, 36, 20);
 	if (entering && _entryScene == 8220 && (!_finale.streetVisited || !_random.getRandomNumber(5))) {
 		_audio.playMusic(20, false);
 		_finale.streetVisited = 1;
 	} else if (entering && _entryScene == 8223) {
 		_audio.playMusic(12 + _random.getRandomNumber(4), false);
 	}
-	_audio.setMusicVolume(255);
+	_audio.setMusicVolume(100);
 }
 
 void Scene8220::advanceCustomGameplayLoop(uint32 delta) {
 	if (!_departing) {
 		updateFinaleOutdoorAudio();
-		_audio.setMusicVolume(255);
+		_audio.setMusicVolume(100);
 	}
 	if (_finale.oscarAway) {
 		_oscar.update(_now, _random, _audio);
@@ -139,8 +139,8 @@ void Scene8220::runCustomEntrySequence() {
 		_arrivalPhase = kWaitingForCar;
 		_roomAction = 420;
 		_audio.playMusic(38, false);
-		_audio.setMusicVolume(255);
-		_audio.playEffect(67, 178);
+		_audio.setMusicVolume(100);
+		_audio.playEffect(67, 70);
 		return;
 	}
 
@@ -319,7 +319,7 @@ void Scene8220::leaveStreet(uint16 destination, bool advanceResearch) {
 	}
 	if (destination == 8350 && _audio.musicCue() == 20) {
 		_audio.playMusic(12 + _random.getRandomNumber(4), false);
-		_audio.setMusicVolume(255);
+		_audio.setMusicVolume(100);
 	}
 	leaveRoom(destination);
 }
@@ -382,7 +382,7 @@ RunawayRoomScene::ActionResult Scene8220::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 410: // Ask Oscar for the prisoners' car before leaving Douglasville.
 		_audio.playMusic(29, false);
-		_audio.setMusicVolume(255);
+		_audio.setMusicVolume(100);
 		say(14, 9);
 		deferAction(411);
 		break;
@@ -408,7 +408,7 @@ RunawayRoomScene::ActionResult Scene8220::dispatchCustomSceneAction(uint16 actio
 			car[i] = i < 30 ? 58 : i < 132 ? i + 29 : 0;
 			friends[i] = i < 69 ? 0 : i - 68;
 		}
-		_audio.playEffect(69, 178);
+		_audio.playEffect(69, 70);
 		beginRoomAnimation(414, 9, 161, car, ARRAYSIZE(car));
 		setRoomAnimationOverlay(10, 106, friends, ARRAYSIZE(friends));
 		break;

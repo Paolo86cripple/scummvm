@@ -680,6 +680,10 @@ static const WMEGameDescription gameDescriptions[] = {
 	WME_WINENTRY("carolreed11", "HD/1.1",
 		WME_ENTRY1s("data.dcp", "7ca1e654e293cb84312a56c6be4ada24", 853204303), Common::EN_ANY, ADGF_UNSTABLE, WME_1_9_3),
 
+	// Carol Reed 11 - Shades Of Black (HD) (MDNA Games) (Wildtangent) trac #17415
+	WME_WINENTRY("carolreed11", "HD",
+		WME_ENTRY1s("data.dcp", "9e6e31ffe94cd0049f0cc6dd6c369a71", 853204303), Common::EN_ANY, ADGF_UNSTABLE, WME_1_9_3),
+
 	// Carol Reed 11 - Shades Of Black (SD) (MDNA Games) (v1.1)
 	WME_WINENTRY("carolreed11", "SD/1.1",
 		WME_ENTRY1s("data.dcp", "47ab078a83a1ccc76a6446b2e8055857", 525450074), Common::EN_ANY, ADGF_UNSTABLE, WME_1_9_3),
@@ -711,6 +715,10 @@ static const WMEGameDescription gameDescriptions[] = {
 	// Carol Reed 12 - Profound Red (HD) (MDNA Games)
 	WME_WINENTRY("carolreed12", "HD",
 		WME_ENTRY1s("data.dcp", "edc1e69dc52ec2a65fa431a51c783c2e", 944403699), Common::EN_ANY, ADGF_UNSTABLE, WME_1_9_3),
+
+	// Carol Reed 12 - Profound Red (HD) (MDNA Games) (Wildtangent) trac #17415
+	WME_WINENTRY("carolreed12", "HD",
+		WME_ENTRY1s("data.dcp", "3b28d59b061e82d13d69194bafba0f6e", 944333700), Common::EN_ANY, ADGF_UNSTABLE, WME_1_9_3),
 
 	// Carol Reed 12 - Profound Red (SD) (MDNA Games)
 	WME_WINENTRY("carolreed12", "SD",
@@ -747,6 +755,10 @@ static const WMEGameDescription gameDescriptions[] = {
 	// Carol Reed 13 - The Birdwatcher (SD) (MDNA Games) (v1.2)
 	WME_WINENTRY("carolreed13", "SD/1.2",
 		WME_ENTRY1s("data.dcp", "d7b6aaa1643fec62645b176fe890fe1f", 774409229), Common::EN_ANY, ADGF_NO_FLAGS, WME_1_9_3),
+
+	// Carol Reed 13 - The Birdwatcher (HD) (MDNA Games) (Wildtangent) trac #17416
+	WME_WINENTRY("carolreed13", "HD",
+		WME_ENTRY1s("data.dcp", "122b477ccd2b36b65656a36af284bdda", 1267524545), Common::EN_ANY, ADGF_NO_FLAGS, WME_1_9_3),
 
 	// Carol Reed 13 - The Birdwatcher (HD) (Russian)
 	WME_WINENTRY("carolreed13", "HD",

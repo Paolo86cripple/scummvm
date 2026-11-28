@@ -27,8 +27,8 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{0, 599, 5, {301, 302}, {0, 3}, {-100, 599}, 7}, // 1: Path.
-	{402, 374, 1, {303, 304}, {0, 3}, {637, 237}, 5}, // 2: House.
+	{0, 599, 5, {301, 302}, {0, 3}, {-100, 599}, 7, false, false, true}, // 1: Path.
+	{402, 374, 1, {303, 304}, {0, 3}, {637, 237}, 5, false, false, true}, // 2: House.
 	{491, 495, 3, {305, 306}, {0, 0}, {715, 540}}, // 3: Well.
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
 	{0, 0, 0, {309, 310}, {0, 0}, {323, 544}} // 5: Skull.
@@ -98,11 +98,11 @@ void Scene8130::runCustomEntrySequence() {
 }
 
 void Scene8130::resumeAmbientAudio(bool entering) {
-	resumeFinaleOutdoorAudio(entering, 40, 77);
+	resumeFinaleOutdoorAudio(entering, 40, 30);
 }
 
 void Scene8130::advanceCustomGameplayLoop(uint32 delta) {
-	updateFinaleOutdoorAudio(51);
+	updateFinaleOutdoorAudio(20);
 	if (!_finale.oscarAway && !_departing) {
 		_oscar.update(_now, _random, _audio);
 	}
@@ -119,7 +119,7 @@ bool Scene8130::updateCustomSequence() {
 		++_departureFrame;
 		for (uint i = 0; i < ARRAYSIZE(footsteps); ++i) {
 			if (_departureFrame == footsteps[i]) {
-				_audio.playFootstep(2, _random.getRandomBit(), (65 + i * 5) * 255 / 100, 400 - i * 50);
+				_audio.playFootstep(2, _random.getRandomBit(), (65 + i * 5), 400 - i * 50);
 				break;
 			}
 		}

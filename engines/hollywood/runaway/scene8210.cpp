@@ -27,8 +27,8 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{430, 540, 4, {301, 302}, {0, 3}, {430, 599}, 6}, // 1: Door.
-	{430, 540, 4, {301, 302}, {0, 3}, {430, 599}, 7}, // 2: Door.
+	{430, 540, 4, {301, 302}, {0, 3}, {430, 599}, 6, false, false, true}, // 1: Door.
+	{430, 540, 4, {301, 302}, {0, 3}, {430, 599}, 7, false, false, true}, // 2: Door.
 	{294, 513, 0, {303, 304}, {1, 1}, {288, 471}}, // 3: Doctor's bag.
 	{449, 504, 0, {305, 306}, {0, 0}, {449, 467}}, // 4: Dead body.
 	{757, 508, 1, {307, 308}, {1, 0}, {794, 450}}, // 5: Bucket.
@@ -125,15 +125,14 @@ RunawayRoomScene::ActionResult Scene8210::dispatchCustomSceneAction(uint16 actio
 		holdRoomAnimation(410, 4, 28, 16);
 		break;
 	case 1410: // Continue searching through the medical tools.
-		_audio.playEffect(26, 204);
+		_audio.playEffect(26, 80);
 		_rummaging = true;
 		_rummageUntil = _now + 2000;
 		holdRoomAnimation(411, 4, 28, 16);
 		break;
 	case 1411: // Take the scalpel only after discovering the hard pods.
 		if (_finale.scalpelNeeded && !_inventory.contains(19)) {
-			_inventory.add(19);
-			say(3, 5);
+			pickUp(19, 3, 5);
 		} else {
 			say(3, 2);
 			holdRoomAnimation(412, 4, 28, 16);

@@ -29,8 +29,8 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{0, 453, 5, {301, 302}, {0, 3}, {0, 453}, 7}, // 1: Door.
-	{782, 408, 7, {303, 304}, {0, 1}, {625, 391}, 4}, // 2: Stairs.
+	{0, 453, 5, {301, 302}, {0, 3}, {0, 453}, 7, false, false, true}, // 1: Door.
+	{782, 408, 7, {303, 304}, {0, 1}, {625, 391}, 4, false, false, true}, // 2: Stairs.
 	{395, 402, 7, {305, 306}, {0, 3}, {346, 260}, 3}, // 3: Rutger.
 	{1286, 435, 0, {307, 308}, {0, 0}, {1286, 405}}, // 4: Watering can.
 	{742, 332, 5, {309, 310}, {0, 0}, {821, 340}}, // 5: Gardening shed.
@@ -192,9 +192,9 @@ void Scene8240::advanceCustomGameplayLoop(uint32 delta) {
 			} else {
 				++_rutgerStep;
 				if (_rutgerStep == 1 || _rutgerStep == 8 || _rutgerStep == 12) {
-					_audio.playEffect(23, 153);
+					_audio.playEffect(23, 60);
 				} else if (_rutgerStep == 4 || _rutgerStep == 10 || _rutgerStep == 16) {
-					_audio.playEffect(24, 153);
+					_audio.playEffect(24, 60);
 				}
 			}
 			break;
@@ -256,7 +256,10 @@ RunawayRoomScene::ActionResult Scene8240::dispatchCustomSceneAction(uint16 actio
 		leaveRoom(8181);
 		break;
 	case 304: // Climb the stairs to Saturn's workshop.
-		beginRoomAnimation(304, 5, 19, nullptr, 0, true, 60);
+		if (_skippingExit)
+			leaveRoom(8300);
+		else
+			beginRoomAnimation(304, 5, 19, nullptr, 0, true, 60);
 		break;
 	case 1304: // Enter the workshop after climbing the stairs.
 		leaveRoom(8300);
@@ -285,8 +288,7 @@ RunawayRoomScene::ActionResult Scene8240::dispatchCustomSceneAction(uint16 actio
 		walkTo(Common::Point(855, 347), 3, false, true);
 		break;
 	case 422: // Take the dried tobacco leaves.
-		_inventory.add(22);
-		say(8, 3);
+		pickUp(22, 8, 3);
 		deferAction(421);
 		break;
 	case 311: // Recognize the artichoke carved into the column.
@@ -388,19 +390,13 @@ RunawayRoomScene::ActionResult Scene8240::dispatchCustomSceneAction(uint16 actio
 		_sequence.start(commands, _text, _now, 'H');
 		break;
 	}
-	case 432: // Pull the pods off the branch.
-		say(20, 2);
-		deferAction(433);
-		break;
-	case 433: // Collect the pods and try opening them by hand.
-		_audio.playEffect(38);
-		_inventory.add(20);
-		say(20, 3);
+	case 432: // Pull off the pods and try opening them in the inventory.
+		_collectingPods = true;
+		_inventory.collectPods(sceneTextNumber());
 		deferAction(434);
 		break;
 	case 434: // The tough pods establish the need for the doctor's scalpel.
-		_audio.playEffect(41);
-		say(20, 4);
+		_collectingPods = false;
 		_finale.scalpelNeeded = 1;
 		_finale.rutgerPlantHint = 0;
 		break;
@@ -413,7 +409,7 @@ RunawayRoomScene::ActionResult Scene8240::dispatchCustomSceneAction(uint16 actio
 void Scene8240::handleAnimationFrameHook() {
 	Scene6240::handleAnimationFrameHook();
 	if (_roomAction == 414 && _actionStep == 37) {
-		_audio.playEffect(42, 230, 1);
+		_audio.playEffect(42, 90, 1);
 	}
 }
 

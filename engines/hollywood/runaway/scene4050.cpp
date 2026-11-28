@@ -46,7 +46,7 @@ const byte kGrindCoffee[] = {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{227, 503, 7, {301, 339}, {0, 1}, {192, 484}, 4}, // 1: Door.
+	{227, 503, 7, {301, 339}, {0, 1}, {192, 484}, 4, false, false, true}, // 1: Door.
 	{311, 493, 7, {302, 303}, {0, 0}, {291, 470}}, // 2: Shelves.
 	{382, 529, 1, {304, 305}, {0, 1}, {490, 508}, 3}, // 3: Susan.
 	{395, 529, 1, {306, 307}, {0, 0}, {406, 493}}, // 4: Electric lathe.
@@ -263,7 +263,7 @@ void Scene4050::updateSusanToolSound() {
 		(_susanFrame < 15 || (_susanFrame >= 29 && _susanFrame <= 39));
 	if (working) {
 		if (!_audio.effectPlaying(1)) {
-			_audio.playEffectAt(14, Common::Point(474, 200), 77, 1, true);
+			_audio.playEffectAt(14, Common::Point(474, 200), 30, 1, true);
 		}
 	} else {
 		_audio.stopEffect(1);
@@ -493,7 +493,9 @@ RunawayRoomScene::ActionResult Scene4050::dispatchCustomSceneAction(uint16 actio
 			return kHandled;
 		case 339: // Leave the laboratory.
 			// Alternate actor bank for the northwest-facing door handle gesture.
-			if (_game == kRunawayMuseumDemo) {
+			if (_skippingExit) {
+				finishCustomAnimation(action);
+			} else if (_game == kRunawayMuseumDemo) {
 				deferMuseumAction(339);
 			} else {
 				beginActorAnimation(339, 70, 11, 6);
@@ -515,9 +517,8 @@ RunawayRoomScene::ActionResult Scene4050::dispatchCustomSceneAction(uint16 actio
 		}
 		_museum.varnishSeen = 1;
 		_varnishTaken = true;
-		_inventory.add(9);
 		say(19);
-		say(19, 1);
+		pickUp(9, 19, 1);
 		return kHandled;
 	case 338: // Take the talcum powder.
 		if (!museumChapter() || !_museum.talcSeen) {
@@ -525,10 +526,7 @@ RunawayRoomScene::ActionResult Scene4050::dispatchCustomSceneAction(uint16 actio
 		}
 		_museum.talcSeen = 1;
 		_talcTaken = true;
-		_inventory.add(10);
-		if (museumChapter()) {
-			say(18, _random.getRandomNumber(2), true);
-		}
+		pickUp(10, museumChapter() ? 18 : 0xffff, _random.getRandomNumber(2), true);
 		return kBackgroundChanged;
 	default:
 		break;
@@ -544,9 +542,8 @@ void Scene4050::finishCustomAnimation(uint16 action) {
 		break;
 	case 326: // Leave the crucifix and collect the Mayan object.
 		_inventory.remove(7);
-		_inventory.add(8);
+		pickUp(8, 22, 1);
 		_museum.restoration = 1;
-		say(22, 1);
 		break;
 	case 328: // Ask Susan to say her name.
 		say(24);
@@ -567,7 +564,7 @@ void Scene4050::finishCustomAnimation(uint16 action) {
 		break;
 	case 331: // Susan drinks the coffee.
 		_inventory.remove(15);
-		_audio.playEffect(48, 204);
+		_audio.playEffect(48, 80);
 		beginRoomAnimationRange(454, 15, 170, 117, 143, false);
 		return;
 	case 454: // Finish the exchange with Susan.
@@ -589,7 +586,10 @@ void Scene4050::finishCustomAnimation(uint16 action) {
 		beginRoomAnimation(450, 23, 95, nullptr, 0, false);
 		return;
 	case 405: // Collect the restored crucifix.
-		_inventory.add(7);
+		pickUp(7);
+		deferMuseumAction(406);
+		return;
+	case 406:
 		startMuseumFilm(kCrucifixFilm);
 		return;
 	case 456: // Finish installing the ruby and approach Susan.
@@ -635,13 +635,13 @@ void Scene4050::handleAnimationFrameHook() {
 		playAnimationFootsteps(_actionStep, 1, fromLaser, ARRAYSIZE(fromLaser));
 	}
 	if ((_roomAction == 328 || _roomAction == 428) && (_actionStep == 4 || _actionStep == 2)) {
-		_audio.playEffect(37, 204);
+		_audio.playEffect(37, 80);
 	}
 	if (_roomAction == 333) {
 		if (_actionStep == 15) {
-			_audio.playEffectAt(44, Common::Point(474, 200), 179);
+			_audio.playEffectAt(44, Common::Point(474, 200), 70);
 		} else if (_actionStep == 21) {
-			_audio.playEffectAt(14, Common::Point(474, 200), 128, 0, true);
+			_audio.playEffectAt(14, Common::Point(474, 200), 50, 0, true);
 		} else if (_actionStep == 127) {
 			_audio.stopEffect(0);
 		}

@@ -27,7 +27,7 @@ namespace Hollywood {
 void RunawayRoomScene::resumeFinaleOutdoorAudio(bool entering, uint16 windCue, byte windVolume) {
 	_finaleAmbientTick = _now;
 	if (!_audio.effectPlaying(2)) {
-		_audio.playEffect(windCue, windVolume, 2, true);
+		_audio.playMusicEffect(windCue, windVolume, 2, true);
 	}
 	if (entering || !_audio.musicPlaying() || _audio.musicLooping()) {
 		_audio.playMusic(12 + _random.getRandomNumber(4), false);
@@ -68,19 +68,8 @@ bool RunawayRoomScene::sayFinaleInventory(const RunawayInventory::Reply &reply) 
 		say(302, 0, true);
 		return true;
 	}
-	if (reply.cue == 306) {
-		say(306, 0, true);
-		say(306, 1, true);
-		return true;
-	}
 	if (reply.cue == 309) {
 		say(309, _finale.recordings, true);
-		return true;
-	}
-	if (reply.cue == 313 && reply.variation < 6) {
-		say(313, reply.variation, true);
-		_audio.playEffect(reply.variation == 4 ? 40 : 41);
-		say(313, reply.variation + 1, true);
 		return true;
 	}
 	return false;
@@ -91,11 +80,11 @@ void RunawayRoomScene::resumeFinaleJailAudio(bool entering) {
 	if (entering || !_audio.musicPlaying()) {
 		_audio.playMusic(18, false);
 	}
-	_audio.setMusicVolume(191);
+	_audio.setMusicVolume(75);
 }
 
 void RunawayRoomScene::updateFinaleJailAudio() {
-	_audio.updateBackgroundMusic(_now, _random, 18, 1, 191);
+	_audio.updateBackgroundMusic(_now, _random, 18, 1, 75);
 }
 
 } // End of namespace Hollywood

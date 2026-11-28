@@ -27,16 +27,16 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{1443, 648, 1, {301, 302}, {0, 3}, {1374, 626}, 5}, // 1: Street.
-	{775, 466, 0, {303, 304}, {0, -1}, {1006, 656}, 4}, // 2: Stairs.
+	{1443, 648, 1, {301, 302}, {0, 3}, {1374, 626}, 5, false, false, true}, // 1: Street.
+	{775, 466, 0, {303, 304}, {0, -1}, {1006, 656}, 4, false, false, true}, // 2: Stairs.
 	{0, 0, 0, {305, 306}, {0, 0}, {828, 695}, 4, true}, // 3: Front desk.
 	{423, 664, 0, {307, 308}, {0, 0}, {424, 653}}, // 4: Fireplace.
 	{0, 0, 0, {309, 310}, {0, 0}, {424, 653}}, // 5: Rifles.
 	{467, 678, 1, {311, 312}, {0, 1}, {504, 645}}, // 6: Poker.
 	{757, 716, 0, {313, 314}, {0, 1}, {757, 716}}, // 7: Bell.
-	{920, 345, 7, {315, 316}, {0, 1}, {0, 0}, 4}, // 8: Sushi's work area.
+	{920, 345, 7, {315, 316}, {0, 1}, {0, 0}, 4, false, false, true}, // 8: Sushi's work area.
 	{1124, 348, 1, {317, 318}, {0, 1}, {1138, 336}}, // 9: Rifle.
-	{0, 0, 0, {319, 320}, {0, -1}, {965, 616}, 6}, // 10: Downstairs.
+	{0, 0, 0, {319, 320}, {0, -1}, {965, 616}, 6, false, false, true}, // 10: Downstairs.
 	{828, 710, 0, {321, 322}, {1, 0}, {828, 695}} // 11: Check-in book.
 };
 
@@ -87,7 +87,7 @@ int Scene8370::sceneViewportYOffset() const {
 }
 
 bool Scene8370::loadCustomResources() {
-	return _sushi.load(_archive, 4, 94) && _fire.load(_archive, 5, 20) && _monitor.load(_archive, 6, 97);
+	return _sushi.load(_archive, 4, 94) && _fire.load(_archive, 5, 20) && _dish.load(_archive, 6, 97);
 }
 
 bool Scene8370::applyCustomBackgroundPatches() {
@@ -121,10 +121,13 @@ void Scene8370::applyCustomHotspotState() {
 
 void Scene8370::prepareCustomGameplayLoop() {
 	_sushiTick = _now;
+	_dishTick = _now;
 }
 
 void Scene8370::resumeAmbientAudio(bool entering) {
-	_audio.playEffect(39, 77, 2, true);
+	_audio.playEffect(39, 30, 2, true);
+	if (_dishMoving)
+		_audio.playEffectAt(55, Common::Point(30, 200), 3, 1, true);
 	if (entering || !_audio.musicPlaying()) {
 		_audio.playMusic(12 + _random.getRandomNumber(4), false);
 	}
@@ -178,6 +181,7 @@ void Scene8370::runCustomEntrySequence() {
 
 void Scene8370::advanceCustomGameplayLoop(uint32 delta) {
 	updateOutdoorMusic(5);
+	updateSatelliteDish();
 	if (_sushiCalling || _sushiAnimating) {
 		_sushiTick = _now;
 		return;
@@ -222,8 +226,28 @@ void Scene8370::advanceCustomGameplayLoop(uint32 delta) {
 	}
 }
 
+void Scene8370::updateSatelliteDish() {
+	// Native 0x55dd50 uses an 80 ms timer and pauses at each end or the midpoint.
+	while (_now - _dishTick >= 80) {
+		_dishTick += 80;
+		if (_dishMoving) {
+			if (_dishFrame == _dishTarget) {
+				_dishMoving = false;
+				_audio.stopEffect(1);
+			} else {
+				_dishFrame += _dishFrame < _dishTarget ? 1 : -1;
+			}
+		} else if (!_random.getRandomNumber(99)) {
+			_dishTarget = _dishFrame == 47 ? (_random.getRandomBit() ? 0 : 96) : 47;
+			_dishFrame += _dishFrame < _dishTarget ? 1 : -1;
+			_dishMoving = true;
+			_audio.playEffectAt(55, Common::Point(30, 200), 3, 1, true);
+		}
+	}
+}
+
 void Scene8370::drawCustomBackgroundComposite(Graphics::ManagedSurface &viewport) {
-	_monitor.draw(viewport, (_now / 80) % 97, _camera.x, -_camera.y);
+	_dish.draw(viewport, _dishFrame, _camera.x, -_camera.y);
 	_fire.draw(viewport, (_now / 80) % 20, _camera.x, -_camera.y);
 	if (!_sushiAnimating || !drawingRoomAnimation()) {
 		const uint frame = _sushiCalling ? (speaker() ? speechFrame() % 6 : 0) : kSushiFrames[_sushiStep];
@@ -265,7 +289,8 @@ RunawayRoomScene::ActionResult Scene8370::dispatchCustomSceneAction(uint16 actio
 		leaveRoom(8222);
 		break;
 	case 304: // Climb the stairs to Sushi's work area.
-		walkTo(Common::Point(775, 466), 6, false, true);
+		if (!_skippingExit)
+			walkTo(Common::Point(775, 466), 6, false, true);
 		leaveRoom(8380);
 		break;
 	case 308: // Refuse to warm up in the hot weather.
@@ -313,8 +338,12 @@ RunawayRoomScene::ActionResult Scene8370::dispatchCustomSceneAction(uint16 actio
 		}
 		break;
 	case 320: // Cross to the stairs and descend to the lobby.
-		walkTo(Common::Point(702, 340), 3, false, true);
-		deferAction(415);
+		if (_skippingExit) {
+			changeFloor(false, Common::Point(1150, 648));
+		} else {
+			walkTo(Common::Point(702, 340), 3, false, true);
+			deferAction(415);
+		}
 		break;
 	case 323: // Heat the scalpel after discovering that it cannot cut the pods.
 		if (!_inventory.finale().heatNeeded) {
@@ -329,12 +358,27 @@ RunawayRoomScene::ActionResult Scene8370::dispatchCustomSceneAction(uint16 actio
 		}
 		break;
 	case 400: // Answer Sushi's invitation to come upstairs.
-		say(0, _upstairsScene == 8384 ? 3 : 1);
+		_lookingUp = true;
+		beginHeadMovement(430, RunawayHeadMovement::kUp, RunawayHeadMovement::kHold);
+		break;
+	case 430: // Pan towards Sushi while Brian keeps looking up.
+		_actionStarted = _now;
+		deferAction(431);
+		break;
+	case 431:
 		_sushiAnimating = true;
 		beginRoomAnimationRange(401, 4, 94, 6, 55, false);
 		break;
-	case 1401: // Follow Sushi after she returns to her computer.
+	case 1401: // Lower Brian's head after Sushi returns to her computer.
 		_sushiCalling = _sushiAnimating = false;
+		returnHeadToCenter(432);
+		break;
+	case 432:
+		say(0, _upstairsScene == 8384 ? 3 : 1);
+		deferAction(433);
+		break;
+	case 433: // Follow Sushi upstairs after answering her.
+		_lookingUp = false;
 		_finale.hotelVisited = 1;
 		walkTo(Common::Point(775, 466), 6, false, true);
 		leaveRoom(_upstairsScene);
@@ -353,8 +397,7 @@ RunawayRoomScene::ActionResult Scene8370::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 414: // Add the poker and remove it from the room.
 		_finale.pokerTaken = 1;
-		_inventory.add(21);
-		say(10, 1);
+		pickUp(21, 10, 1);
 		return kBackgroundChanged;
 	case 415: // Resume walking downstairs after the stair transition.
 		changeFloor(false, Common::Point(775, 466));
@@ -378,8 +421,7 @@ RunawayRoomScene::ActionResult Scene8370::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 420: // Remove the rifle from the room and keep it in the inventory.
 		_finale.rifle = 2;
-		_inventory.add(11);
-		say(15, 2);
+		pickUp(11, 15, 2);
 		return kBackgroundChanged;
 	default:
 		return kUnhandled;
@@ -388,6 +430,12 @@ RunawayRoomScene::ActionResult Scene8370::dispatchCustomSceneAction(uint16 actio
 }
 
 bool Scene8370::updateCustomSequence() {
+	if (_roomAction == 431) {
+		const uint ticks = (_now - _actionStarted) / 10;
+		_actionStarted += ticks * 10;
+		_camera.y = MAX<int>(100, _camera.y - ticks * 2);
+		return _camera.y > 100;
+	}
 	if (_heatUntil && _now < _heatUntil) {
 		_actionStarted = _now;
 		return true;

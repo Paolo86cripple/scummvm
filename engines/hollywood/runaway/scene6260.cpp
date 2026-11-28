@@ -27,13 +27,13 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{0, 510, 5, {301, 302}, {0, 3}, {0, 510}, 7}, // 1: Town.
-	{363, 395, 7, {303, 304}, {0, 1}, {273, 286}, 7}, // 2: Driver's cab.
+	{0, 510, 5, {301, 302}, {0, 3}, {0, 510}, 7, false, false, true}, // 1: Town.
+	{363, 395, 7, {303, 304}, {0, 1}, {273, 286}, 7, false, false, true}, // 2: Driver's cab.
 	{495, 433, 1, {305, 306}, {0, 1}, {582, 344}}, // 3: Smokestack.
 	{432, 411, 0, {307, 308}, {0, 0}, {435, 351}}, // 4: Water tank opening.
 	{413, 485, 7, {309, 310}, {1, 1}, {392, 465}}, // 5: Key.
 	{257, 430, 1, {311, 312}, {0, 0}, {257, 397}}, // 6: Whistle.
-	{1023, 437, 2, {315, 316}, {0, 3}, {1100, 400}, 5} // 7: Outskirts of town.
+	{1023, 437, 2, {315, 316}, {0, 3}, {1100, 400}, 5, false, false, true} // 7: Outskirts of town.
 };
 
 const RunawayResponse kResponses[] = {
@@ -97,7 +97,7 @@ void Scene6260::runCustomEntrySequence() {
 	} else if (_entryScene == 6262) {
 		// The steam shot is seen outside before returning to the cab.
 		_audio.playMusic(39, false);
-		_audio.setMusicVolume(255);
+		_audio.setMusicVolume(100);
 		beginRoomAnimation(402, 9, 45, nullptr, 0, true, 60);
 		_actionFrames.insert_at(0, 0);
 	} else {
@@ -140,7 +140,10 @@ RunawayRoomScene::ActionResult Scene6260::dispatchCustomSceneAction(uint16 actio
 		if (!_town.cabVisited) {
 			say(3);
 		}
-		beginRoomAnimation(304, 4, 131, nullptr, 0, true, 60);
+		if (_skippingExit)
+			leaveTownRoom(6263);
+		else
+			beginRoomAnimation(304, 4, 131, nullptr, 0, true, 60);
 		break;
 	case 1304: // Enter the driver's cab after climbing through the window.
 		leaveTownRoom(6263);
@@ -160,8 +163,7 @@ RunawayRoomScene::ActionResult Scene6260::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 410: // Collect the sheriff's key.
 		_town.locomotiveKey = 3;
-		_inventory.add(9);
-		say(9);
+		pickUp(9, 9);
 		return kBackgroundChanged;
 	case 313: // Fill the tank, one oil can at a time.
 		if (!_inventory.town().oilCanFull) {
@@ -238,12 +240,12 @@ void Scene6260::handleAnimationFrameHook() {
 	} else if (_roomAction == 401 && _actionStep == 32) {
 		_audio.playEffect(22);
 	} else if (_roomAction == 313 && _actionStep == 37) {
-		_audio.playEffect(21, 178);
+		_audio.playEffect(21, 70);
 	} else if (_roomAction == 402) {
 		if (_actionStep == 3) {
-			_audio.playEffect(56, 230);
+			_audio.playEffect(56, 90);
 		} else if (_actionStep == 17) {
-			_audio.playEffect(57, 255, 1);
+			_audio.playEffect(57, 100, 1);
 		}
 	}
 }

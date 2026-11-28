@@ -89,11 +89,14 @@ class Inventory : public InventoryData {
 	int _topOffset;
 	Scene *_scene;
 	BigPicture *_picture;
+	Common::Rect _itemArea;
+	int _itemInterval = 10;
 
  public:
 	Inventory();
 	~Inventory() override;
 
+	void addPoolItem(const InventoryPoolItem &item) { _itemsPool.push_back(item); }
 	bool loadPartial(MfcArchive &file);
 	bool savePartial(MfcArchive &file);
 	void addItem(int itemId, int count);
@@ -107,6 +110,7 @@ class Inventory : public InventoryData {
 	int getCountItemsWithId(int itemId);
 	int getItemFlags(int itemId);
 
+	void setItemArea(int16 sceneId, const Common::Rect &area, int interval);
 	void recalcItemPos();
 
 	Scene *getScene() { return _scene; }
@@ -114,6 +118,7 @@ class Inventory : public InventoryData {
 	void setIsLocked(bool val) { _isLocked = val; }
 	bool getIsInventoryOut() { return _isInventoryOut; }
 
+	int getCursorPictureId();
 	int getSelectedItemId() { return _selectedId < 0 ? 0 : _selectedId; }
 	int getItemAtPos(Common::Point *point);
 	void slideIn();

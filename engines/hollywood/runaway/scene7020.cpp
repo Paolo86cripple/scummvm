@@ -30,7 +30,7 @@ const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
 	{0, 0, 0, {301, 302}, {0, 0}, {1052, 627}, 3, true}, // 1: Gina.
 	{1500, 540, 0, {303, 304}, {0, 1}, {1554, 490}}, // 2: Statue.
-	{1500, 540, 0, {305, 306}, {0, 3}, {1554, 490}, 4}, // 3: Cave.
+	{1500, 540, 0, {305, 306}, {0, 3}, {1554, 490}, 4, false, false, true}, // 3: Cave.
 	{1132, 659, 7, {307, 308}, {0, 0}, {830, 674}}, // 4: Rope.
 	{609, 291, 0, {1, 309}, {0, 0}, {103, 507}, 6}, // 5: Lower part of the village.
 	{0, 0, 0, {1, 1}, {0, 0}, {0, 0}}, // 6: Piece of rope.
@@ -46,7 +46,7 @@ const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {320, 321}, {0, -1}, {360, 293}, 5}, // 16: Door at the back.
 	{0, 0, 0, {312, 322}, {-1, -1}, {424, 280}, 5}, // 17: Door.
 	{0, 0, 0, {323, 324}, {0, 0}, {1590, 536}}, // 18: Kiva.
-	{0, 785, 0, {325, 326}, {0, 1}, {0, 745}, 7} // 19: Unexplored area.
+	{0, 785, 0, {325, 326}, {0, 1}, {0, 745}, 7, false, false, true} // 19: Unexplored area.
 };
 
 const RunawayResponse kResponses[] = {
@@ -79,21 +79,21 @@ const RunawayItemAction kItemActions[] = {
 
 typedef RunawaySequence S;
 const S::Command kGinaStory[] = {
-	{S::kOpen, 2}, {S::kMusic, 17, 255, 1}, {S::kEffect, 30, 255},
+	{S::kOpen, 2}, {S::kMusic, 17, 100, 1}, {S::kEffect, 30, 100},
 	{S::kSpeech, 0, 5, 5, 0, 14}, {S::kPlay, 0, 240},
 	{S::kPauseEffect, 0, 1}, {S::kWaitSpeech}, {S::kPauseEffect, 0, 0},
 	{S::kSpeech, 0, 6, 6, 0, 14}, {S::kPlay, 241, 693}, {S::kWaitSpeech},
 	{S::kSpeech, 0, 7, 7, 0, 14}, {S::kPlay, 694, 870}, {S::kWaitSpeech},
-	{S::kMusic, 11, 255}, {S::kEnd}
+	{S::kMusic, 11, 100}, {S::kEnd}
 };
 
 const S::Command kDeparture[] = {
-	{S::kOpen, 4}, {S::kMusic, 16, 255}, {S::kStill, 0},
+	{S::kOpen, 4}, {S::kMusic, 16, 100}, {S::kStill, 0},
 	{S::kTalk, 16, 12, 1}, {S::kPlay, 12, 77}, {S::kEnd}
 };
 
 const S::Command kDepartureGog[] = {
-	{S::kOpen, 4}, {S::kMusic, 16, 255}, {S::kStill, 0},
+	{S::kOpen, 4}, {S::kMusic, 16, 100}, {S::kStill, 0},
 	{S::kTalk, 16, 12, 1}, {S::kPlay, 0, 65}, {S::kEnd}
 };
 
@@ -173,7 +173,7 @@ void Scene7020::prepareCustomGameplayLoop() {
 }
 
 void Scene7020::resumeAmbientAudio(bool entering) {
-	_audio.playEffect(12, 230, 1, true);
+	_audio.playEffect(12, 90, 1, true);
 }
 
 void Scene7020::runCustomEntrySequence() {
@@ -371,17 +371,19 @@ void Scene7020::advanceCustomGameplayLoop(uint32 delta) {
 void Scene7020::drawCustomBackgroundComposite(Graphics::ManagedSurface &viewport) {
 	if (_arrivalStage == 1) {
 		_ginaArrival.draw(viewport, 0, _camera.x, -_camera.y);
-	} else if (!_arrivalStage && _roomAction != 432) {
+	} else if (!_arrivalStage && (_roomAction != 432 || !drawingRoomAnimation())) {
 		const uint frame = _ginaPose == kTalking ? 138 + (speaker() == 1 ? speechFrame() : 0) : _ginaFrame;
 		_gina.draw(viewport, frame, _camera.x, -_camera.y);
 	}
-	if (!_arrivalStage && _position.y > 500 && _roomAction != 427) {
+	if (!_arrivalStage && _position.y > 500 &&
+			(_roomAction != 427 || !drawingRoomAnimation())) {
 		_rope.draw(viewport, _hopi.rope ? 31 : 1, _camera.x, -_camera.y);
 	}
 }
 
 void Scene7020::drawCustomForegroundComposite(Graphics::ManagedSurface &viewport) {
-	if (!_arrivalStage && _position.y <= 500 && _roomAction != 427) {
+	if (!_arrivalStage && _position.y <= 500 &&
+			(_roomAction != 427 || !drawingRoomAnimation())) {
 		_rope.draw(viewport, _hopi.rope ? 31 : 1, _camera.x, -_camera.y);
 	}
 }
@@ -409,6 +411,8 @@ void Scene7020::handleAnimationFrameHook() {
 			_audio.playEffect(26);
 		} else if (_actionStep == 52) {
 			say(16, 2, false, 1);
+		} else if (_actionStep == 57) {
+			_audio.setSpeechVolume(60);
 		}
 	}
 }
@@ -632,8 +636,7 @@ RunawayRoomScene::ActionResult Scene7020::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 430: // Pick up the rope for the splint.
 		_hopi.rope = 2;
-		_inventory.add(12);
-		say(14, 4);
+		pickUp(12, 14, 4);
 		return kBackgroundChanged;
 	case 431: // Tell Gina to keep still while Brian makes the splint.
 		say(16, 1);

@@ -27,7 +27,7 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{678, 442, 1, {301, 302}, {0, 3}, {706, 433}, 6}, // 1: Outside the trailer.
+	{678, 442, 1, {301, 302}, {0, 3}, {706, 433}, 6, false, false, true}, // 1: Outside the trailer.
 	{655, 445, 3, {303, 304}, {0, 1}, {761, 486}}, // 2: Garment to the right.
 	{417, 433, 1, {305, 306}, {1, 0}, {496, 406}}, // 3: Trunk.
 	{352, 403, 0, {307, 308}, {0, 0}, {346, 349}}, // 4: Bed.
@@ -100,7 +100,7 @@ void Scene8410::runCustomEntrySequence() {
 }
 
 void Scene8410::resumeAmbientAudio(bool entering) {
-	_audio.stopEffect(2);
+	_audio.playMusicEffect(42, 100, 2, true);
 	if (entering || !_audio.musicPlaying()) {
 		_audio.playMusic(12 + _random.getRandomNumber(4), false);
 	}
@@ -111,7 +111,7 @@ void Scene8410::startInsectRoute(uint route) {
 	_insectFrame = kInsectRoutes[route].first;
 	_insectMoving = true;
 	if (kInsectRoutes[route].sound) {
-		_audio.playEffect(kInsectRoutes[route].sound, 102, 1, true);
+		_audio.playEffect(kInsectRoutes[route].sound, 40, 1, true);
 	}
 }
 
@@ -243,8 +243,7 @@ RunawayRoomScene::ActionResult Scene8410::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 402: // Remove the garment from the room and add it to the inventory.
 		_finale.nunsHabit = 2;
-		_inventory.add(15);
-		say(3, 2);
+		pickUp(15, 3, 2);
 		return kBackgroundChanged;
 	default:
 		return kUnhandled;

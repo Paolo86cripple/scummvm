@@ -21,6 +21,8 @@
 
 #include "common/util.h"
 
+#include "math/vector2d.h"
+
 #include "engines/grim/debug.h"
 #include "engines/grim/grim.h"
 #include "engines/grim/sector.h"
@@ -322,12 +324,23 @@ float Sector::distanceToPoint(const Math::Vector3d &point) const {
 }
 
 bool Sector::isPointInSector(const Math::Vector3d &point) const {
+	const float defaultHeight = 0.005f;
+	const float edgeMargin = 1e-6f;
+
+	float height = _height;
+	if (height == 0.f)
+		height = defaultHeight;
+
 	// Calculate the distance of the point from the plane of the sector.
 	// Return false if it isn't within a margin.
-	if (_height < 9000.f) { // No need to check when height is 9999.
+	if (g_grim->getGameType() == GType_MONKEY4) {
+		float planeY = (_normal.dotProduct(_vertices[0]) - _normal.x() * point.x() - _normal.z() * point.z()) / _normal.y();
+		if (fabsf(point.y() - planeY) > height)
+			return false;
+	} else {
 		float dist = distanceToPoint(point);
 
-		if (fabsf(dist) > _height + 0.01) // Add an error margin
+		if (fabsf(dist) > height)
 			return false;
 	}
 
@@ -335,11 +348,47 @@ bool Sector::isPointInSector(const Math::Vector3d &point) const {
 	for (int i = 0; i < _numVertices; i++) {
 		Math::Vector3d edge = _vertices[i + 1] - _vertices[i];
 		Math::Vector3d delta = point - _vertices[i];
+		if (g_grim->getGameType() == GType_MONKEY4) {
+			edge.y() = 0;
+			delta.y() = 0;
+		}
 		Math::Vector3d cross = Math::Vector3d::crossProduct(edge, delta);
-		if (cross.dotProduct(_normal) < -0.000001f) // not "< 0.f" here, since the value could be something like -7.45058e-09 and it
+		if (g_grim->getGameType() == GType_MONKEY4) {
+			if (cross.y() / edge.getSquareMagnitude() > edgeMargin)
+				return false;
+		} else if (cross.dotProduct(_normal) < -edgeMargin) // not "< 0.f" here, since the value could be something like -7.45058e-09 and it
 			return false;                        // shuoldn't return. that was causing issue #610 (infinite loop in de.forklift_actor.dismount)
 	}
 	return true;
+}
+
+bool Sector::isPointOnFloor(const Math::Vector3d &point) const {
+	const float defaultHeight = 0.005f;
+	const float edgeMargin = 1e-5f;
+	float height = _height;
+	if (height == 0.f)
+		height = defaultHeight;
+	if (_normal.y() == 0.f)
+		return false;
+	if (fabsf(distanceToPoint(point) / _normal.y()) > height)
+		return false;
+
+	for (int i = 0; i < _numVertices; i++) {
+		Math::Vector3d edge = _vertices[i] - _vertices[i + 1];
+		Math::Vector3d delta = _vertices[i + 1] - point;
+		edge.y() = 0;
+		delta.y() = 0;
+		float side = Math::Vector3d::crossProduct(delta, edge).y() / edge.getSquareMagnitude();
+		if (side < -edgeMargin)
+			return false;
+	}
+	return true;
+}
+
+float Sector::getPlaneHeight(const Math::Vector3d &point) const {
+	if (_normal.y() == 0.f)
+		return _vertices[0].y();
+	return point.y() - distanceToPoint(point) / _normal.y();
 }
 
 Common::List<Math::Line3d> Sector::getBridgesTo(Sector *sector) const {
@@ -515,6 +564,70 @@ void Sector::getExitInfo(const Math::Vector3d &s, const Math::Vector3d &dirVec, 
 	if (!d)
 		d = 1.f;
 	result->exitPoint = start + (Math::Vector3d::dotProduct(_vertices[i] - start, edgeNormal) / d) * dir;
+}
+
+void Sector::getFloorExitInfo(const Math::Line3d &segment, struct ExitInfo *result) const {
+	const float vertexSnap = 1e-5f;
+	const Math::Vector3d start = segment.begin();
+	const Math::Vector3d step = segment.end() - start;
+	const Math::Vector2d floorStep(step.x(), step.z());
+	const float stepLength = floorStep.getMagnitude();
+	float exitFraction = -1.f;
+	bool exitAtStartVertex = false;
+	int snapVertex = -1;
+	Math::Angle angle;
+	for (int i = 0; i < _numVertices; i++) {
+		int prev = i - 1;
+		if (prev < 0)
+			prev = _numVertices - 1;
+		const Math::Vector3d edge = _vertices[prev] - _vertices[i];
+		float stepCrossEdge = step.x() * edge.z() - edge.x() * step.z();
+		if (stepCrossEdge == 0.f)
+			continue;
+		const Math::Vector3d fromVertex = start - _vertices[i];
+		const float fromCrossEdge = fromVertex.z() * edge.x() - fromVertex.x() * edge.z();
+		float stepFraction = fromCrossEdge / stepCrossEdge;
+		if (stepFraction < 0.f && fromCrossEdge > 0.f)
+			stepFraction = 0.f;
+		if (stepFraction < 0.f || stepFraction > 1.f)
+			continue;
+		float fromCrossStep = fromVertex.z() * step.x() - fromVertex.x() * step.z();
+		if (stepCrossEdge < 0.f) {
+			fromCrossStep = -fromCrossStep;
+			stepCrossEdge = -stepCrossEdge;
+		}
+		if (fromCrossStep < -vertexSnap * stepCrossEdge || fromCrossStep > (1.f + vertexSnap) * stepCrossEdge)
+			continue;
+		const bool atStartVertex = fromCrossStep < vertexSnap * stepCrossEdge;
+		if (stepFraction < exitFraction || (stepFraction == exitFraction && (exitAtStartVertex || !atStartVertex)))
+			continue;
+		exitFraction = stepFraction;
+		exitAtStartVertex = atStartVertex;
+		snapVertex = -1;
+		if (atStartVertex)
+			snapVertex = i;
+		else if (fromCrossStep > (1.f - vertexSnap) * stepCrossEdge)
+			snapVertex = prev;
+		result->edgeVertex = prev;
+		result->edgeDir = -edge;
+		const Math::Vector2d floorEdge(edge.x(), edge.z());
+		const float edgeLength = floorEdge.getMagnitude();
+		const float cosine = step.x() / stepLength * (edge.x() / edgeLength) + step.z() / stepLength * (edge.z() / edgeLength);
+		angle = Math::Angle::arcCosine(CLIP(cosine, -1.0f, 1.0f));
+	}
+	result->exitPoint = start;
+	if (exitFraction > 0.f) {
+		result->exitPoint.x() = step.x() * exitFraction + start.x();
+		result->exitPoint.z() = step.z() * exitFraction + start.z();
+	} else {
+		result->edgeVertex = -1;
+	}
+	if (snapVertex >= 0) {
+		result->exitPoint.x() = _vertices[snapVertex].x();
+		result->exitPoint.z() = _vertices[snapVertex].z();
+	}
+	result->exitPoint.y() = getPlaneHeight(result->exitPoint);
+	result->angleWithEdge = angle;
 }
 
 int Sector::getSortplane(int setup) {

@@ -27,8 +27,8 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{1379, 491, 0, {301, 302}, {0, 3}, {1379, 491}, 5}, // 1: Street.
-	{285, 501, 0, {303, 305}, {1, 0}, {258, 427}}, // 2: Cell.
+	{1379, 491, 0, {301, 302}, {0, 3}, {1379, 491}, 5, false, false, true}, // 1: Street.
+	{285, 501, 0, {303, 305}, {1, 0}, {258, 427}, 0, false, false, true}, // 2: Cell.
 	{1020, 483, 0, {315, 316}, {0, 1}, {1020, 480}}, // 3: Bag holding the thugs' stuff.
 	{0, 0, 0, {0, 0}, {0, 0}, {536, 425}},
 	{1020, 483, 0, {308, 309}, {0, 0}, {1020, 458}}, // 5: Desk.
@@ -291,9 +291,9 @@ void Scene8200::updateGangster(uint index) {
 	}
 	if (gangster.step != oldStep) {
 		if (!index && (gangster.step == 9 || gangster.step == 82 || gangster.step == 128 || gangster.step == 209)) {
-			_audio.playEffect(53, 178, 1);
+			_audio.playEffect(53, 70, 1);
 		} else if (index && (gangster.step == 124 || gangster.step == 246)) {
-			_audio.playEffect(54, 178, 1);
+			_audio.playEffect(54, 70, 1);
 		}
 	}
 }
@@ -417,7 +417,7 @@ RunawayRoomScene::ActionResult Scene8200::dispatchCustomSceneAction(uint16 actio
 		if (_finale.oscarAway) {
 			say(3);
 		} else {
-			if (findRunawayRoom(8210)) {
+			if (!_skippingExit && findRunawayRoom(8210)) {
 				walkTo(Common::Point(258, 445), 0, true);
 			}
 			leaveRoom(8210);
@@ -436,8 +436,7 @@ RunawayRoomScene::ActionResult Scene8200::dispatchCustomSceneAction(uint16 actio
 	case 416: // Collect the bag from the cabinet.
 		_facing = 4;
 		_finale.gangsterBag = 3;
-		_inventory.add(13);
-		say(21, 1);
+		pickUp(13, 21, 1);
 		return kBackgroundChanged;
 	case 317: // Use the MP3 recorder on Gustav and Feodor.
 		if (_finale.recordings & 2) {

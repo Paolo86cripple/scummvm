@@ -45,10 +45,13 @@ Scene *GameProject::findScene(int sceneId) {
 		if (tag._sceneId != sceneId)
 			continue;
 		if (!tag._scene) {
-			if (g_nmi->getPlatform() == Common::kPlatformAndroid)
+			if (g_nmi->usesXMLProject()) {
 				tag.loadSceneXML(*this);
-			else
+				if (tag._scene && tag._scene->_guiManager)
+					tag._scene->_guiManager->load(*this);
+			} else {
 				tag.loadScene();
+			}
 		}
 		return tag._scene;
 	}
@@ -112,7 +115,87 @@ void SceneTag::loadScene() {
 
 Scene::Scene() : _sceneId(0), _field_BC(0) {}
 
+void Exit::setState(int newState) {
+	state = newState;
+	releaseTime = -1;
+	if (!arrow)
+		return;
+	if (state == 1) {
+		arrow->_flags |= 4;
+		pressed->_flags &= ~4;
+		if (!arrow->_movement)
+			arrow->startMovement(movementId, 0, -1);
+	} else {
+		arrow->_flags &= ~4;
+		if (state == 2)
+			pressed->_flags |= 4;
+		else
+			pressed->_flags &= ~4;
+	}
+}
+
+void Scene::initExits(Scene &common) {
+	for (Exit &exit : _exits) {
+		if (!exit.arrow) {
+			AniObject *animation = common.findAniObjectById(23234, 0); // ANI_ARROW
+			PictureObject *picture = common.findPictureObjectById(23237, 0); // PIC_ARROW_RED
+			if (!animation || !picture) {
+				warning("Missing Full Pipe exit artwork");
+				continue;
+			}
+			exit.arrow = new AniObject(animation);
+			addAni(exit.arrow, true);
+			exit.arrow->_statics = exit.arrow->getStatic(animation->_statics->_staticsId);
+			exit.pressed = new PictureObject(picture);
+			addPicture(exit.pressed);
+			exit.movementId = 23236; // MOV_ARROW_UP
+			const Dims size = exit.destination->getFullSize();
+			Common::Rect area = exit.destination->_hitRegion;
+			if (area.isEmpty())
+				area = Common::Rect(size.x, size.y);
+			const Common::Point center = area.center() + exit.offset + Common::Point(exit.destination->_x, exit.destination->_y);
+			const Dims pressedSize = exit.pressed->getFullSize();
+			const Dims arrowSize = exit.arrow->getFullSize();
+			exit.arrow->setPos(center.x - arrowSize.x / 2, center.y - arrowSize.y / 2);
+			exit.pressed->setPos(center.x - pressedSize.x / 2, center.y - pressedSize.y / 2);
+			exit.arrow->_encodedRotation = exit.pressed->_angle = exit.angle;
+			exit.arrow->_objectFlags = exit.pressed->_objectFlags = 0;
+		}
+		exit.setState(exit.state);
+	}
+}
+
+void Scene::setExitState(int pictureId, int state) {
+	for (Exit &exit : _exits)
+		if (!pictureId || exit.destination->_id == pictureId)
+			exit.setState(state);
+}
+
+void Scene::updateExitInput(Common::Point pos, Common::EventType type) {
+	for (Exit &exit : _exits) {
+		if (!exit.arrow || !exit.state)
+			continue;
+		const bool hit = exit.destination->hit(pos.x + _x, pos.y + _y);
+		if (type == Common::EVENT_LBUTTONUP && exit.state == 2)
+			exit.releaseTime = 0;
+		else if (hit && (type == Common::EVENT_LBUTTONDOWN || type == Common::EVENT_MOUSEMOVE)) {
+			exit.setState(2);
+			if (type == Common::EVENT_LBUTTONDOWN)
+				g_nmi->playSound(0x5ac6, 0);
+		} else if (!hit && type == Common::EVENT_MOUSEMOVE && exit.state == 2)
+			exit.setState(1);
+	}
+}
+
+void Scene::onGuiEvent(const Common::String &id, const Common::String &event) {
+	if (_guiEventHandler)
+		_guiEventHandler(*this, id, event);
+}
+
 Scene::~Scene() {
+	if (_guiManager)
+		_guiManager->unload();
+
 	// _faObjlist is not used
 
 	for (uint i = 0; i < _messageQueues.size(); i++)
@@ -337,7 +420,7 @@ void Scene::stopAllSounds() {
 }
 
 PictureObject *Scene::findPictureObjectById(int objId, int flags) {
-	for (uint i = g_nmi->getPlatform() == Common::kPlatformAndroid ? 0 : 1; i < _pictureObjects.size(); i++) {
+	for (uint i = g_nmi->_gameVersion >= 201509 ? 0 : 1; i < _pictureObjects.size(); i++) {
 		if (_pictureObjects[i]->_id == objId && _pictureObjects[i]->_copyId == flags)
 			return _pictureObjects[i];
 	}
@@ -444,72 +527,58 @@ void Scene::initObjectCursors(const char *varname) {
 	}
 }
 
-#if 0
-bool Scene::compareObjPriority(const void *p1, const void *p2) {
-	if (((const GameObject *)p1)->_z > ((const GameObject *)p2)->_z)
-		return true;
-
-	if (((const GameObject *)p1)->_z == ((const GameObject *)p2)->_z)
-		if (((const GameObject *)p1)->_cnum > ((const GameObject *)p2)->_cnum)
-			return true;
-
-	return false;
-}
-
-void Scene::sortRenderables(Common::Array<AniObject *> &list, bool skipFirst) {
-	if (skipFirst) {
-		Common::Array<AniObject *>::iterator s = list.begin();
-
-		++s;
-
-		Common::sort(s, list.end(), Scene::compareObjPriority);
-	} else {
-		Common::sort(list.begin(), list.end(), Scene::compareObjPriority);
-	}
-}
-
-void Scene::sortRenderables(Common::Array<PictureObject *> &list, bool skipFirst) {
-	if (skipFirst) {
-		Common::Array<PictureObject *>::iterator s = list.begin();
-
-		++s;
-
-		Common::sort(s, list.end(), Scene::compareObjPriority);
-	} else {
-		Common::sort(list.begin(), list.end(), Scene::compareObjPriority);
-	}
-}
-#else
 template<typename T>
 void Scene::sortRenderables(Common::Array<T *> &list, uint startIndex) {
-	if (list.size() > startIndex) {
-		int lastIndex = list.size() - 1;
-		bool changed;
-		do {
-			changed = false;
-			T *refElement = list[startIndex];
-			for (int i = startIndex; i < lastIndex; i++) {
-				T *curElement = list[i + 1];
-				if (curElement->_z > refElement->_z) {
-					// Push refElement down the list
-					list.remove_at(i);
-					list.insert_at(i + 1, refElement);
-					changed = true;
-				} else
-					refElement = curElement;
-			}
-			lastIndex--;
-		} while (changed);
+	// The XML loader saves the declaration order across pictures and animations.
+	// Binary scenes retain their current list order at equal priority.
+	const bool xml = g_nmi->_gameVersion >= 201509;
+	for (uint i = startIndex + 1; i < list.size(); ++i) {
+		T *object = list[i];
+		uint j = i;
+		while (j > startIndex) {
+			T *previous = list[j - 1];
+			if (previous->_z > object->_z || (previous->_z == object->_z && (!xml || previous->_cnum <= object->_cnum)))
+				break;
+			list[j--] = previous;
+		}
+		list[j] = object;
 	}
 }
-#endif
 
-void Scene::render() {
+void Scene::render(bool clear) {
 	debugC(6, kDebugDrawing, ">>>>> Scene::render()");
-	updateScrolling();
+	if (clear)
+		g_nmi->_backgroundSurface.clear(0);
+	if (g_nmi->_gameVersion >= 201509) {
+		Common::Array<GameObject *> visibleObjects;
+		for (PictureObject *picture : _pictureObjects) {
+			if (picture->_flags & 4)
+				visibleObjects.push_back(picture);
+		}
+		for (AniObject *animation : _renderableAnis) {
+			if (animation->_flags & 4)
+				visibleObjects.push_back(animation);
+		}
 
-	// Clean previous stuff
-	g_nmi->_backgroundSurface.fillRect(Common::Rect(0, 0, 800, 600), 0);
+		sortRenderables(visibleObjects);
+
+		bool renderedGui = false;
+		for (GameObject *object : visibleObjects) {
+			if (!renderedGui && _guiManager && object->_z < 0) {
+				_guiManager->render(g_nmi->_backgroundSurface);
+				renderedGui = true;
+			}
+			if (object->_objtype == kObjTypePictureObject)
+				static_cast<PictureObject *>(object)->render(Common::Point(_x, _y));
+			else
+				static_cast<AniObject *>(object)->render(Common::Point(_x, _y));
+		}
+		if (_guiManager && !renderedGui)
+			_guiManager->render(g_nmi->_backgroundSurface);
+		return;
+	}
+
+	updateScrolling();
 
 	drawContent(60000, 0, true);
 
@@ -610,7 +679,7 @@ AniObject *Scene::findAniObjectAtPos(int x, int y) {
 	for (uint i = 0; i < _aniObjects.size(); i++) {
 		AniObject *p = _aniObjects[i];
 
-		if ((p->_objectFlags & 0x100) && (p->_flags & 4) &&
+		if ((p->_objectFlags & (g_nmi->usesXMLProject() ? 2 : 0x100)) && (p->_flags & 4) &&
 				p->hit(x, y) &&
 				(!res || res->_z > p->_z))
 			res = p;
@@ -624,7 +693,7 @@ PictureObject *Scene::findPictureObjectAtPos(int x, int y) {
 
 	for (uint i = 0; i < _pictureObjects.size(); i++) {
 		PictureObject *p = _pictureObjects[i];
-		if ((p->_objectFlags & 0x100) && (p->_flags & 4) &&
+		if ((p->_objectFlags & (g_nmi->usesXMLProject() ? 2 : 0x100)) && (p->_flags & 4) &&
 				p->hit(x, y) &&
 				(!res || res->_z >= p->_z))
 			res = p;
@@ -639,7 +708,7 @@ int Scene::getPictureObjectIdAtPos(int x, int y) {
 
 	for (uint i = 0; i < _pictureObjects.size(); i++) {
 		PictureObject *p = _pictureObjects[i];
-		if ((p->_objectFlags & 0x100) && (p->_flags & 4) &&
+		if ((p->_objectFlags & (g_nmi->usesXMLProject() ? 2 : 0x100)) && (p->_flags & 4) &&
 				p->hit(x, y) &&
 				(!res || resp->_z >= p->_z)) {
 			resp = p;
@@ -654,6 +723,27 @@ bool Scene::update(int counterdiff) {
 	debugC(6, kDebugDrawing, "Scene::update(%d)", counterdiff);
 
 	bool changed = false;
+	if (g_nmi->_gameVersion >= 201509) {
+		for (Exit &exit : _exits) {
+			if (!exit.arrow)
+				continue;
+			if (exit.releaseTime >= 0 && (exit.releaseTime += counterdiff) > 82)
+				exit.setState(1);
+			if (exit.state == 1 && !exit.arrow->_movement)
+				exit.arrow->startMovement(exit.movementId, 0, -1);
+			const int z = g_nmi->_aniMan ? g_nmi->_aniMan->_z + 1 : exit.destination->_z - 1;
+			exit.arrow->_z = exit.pressed->_z = z;
+		}
+		if (_behaviorController)
+			changed |= _behaviorController->update(counterdiff);
+		for (MessageQueue *queue : *g_nmi->_globalMessageQueueList)
+			changed |= queue->updatePause(counterdiff);
+		processMessages();
+		if (g_nmi->_modalObject || this != g_nmi->_currentScene)
+			return true;
+	}
+	if (_guiManager)
+		changed |= _guiManager->update(counterdiff);
 	for (uint i = 0; i < _renderableAnis.size(); i++)
 		changed |= _renderableAnis[i]->update(counterdiff);
 	return changed;
@@ -669,13 +759,7 @@ void Scene::drawContent(int minPri, int maxPri, bool drawBg) {
 
 	debugC(1, kDebugDrawing, "Scene::drawContent(>%d, <%d, %d)", minPri, maxPri, drawBg);
 
-#if 0
-	if (_pictureObjects.size() > 2) { // We need to z-sort them
-		sortRenderables(_pictureObjects, true);
-	}
-#else
 	sortRenderables(_pictureObjects, 1);
-#endif
 
 	if (minPri == -1 && _pictureObjects.size())
 		minPri = _pictureObjects.back()->_z - 1;

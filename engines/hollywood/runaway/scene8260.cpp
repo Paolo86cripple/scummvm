@@ -28,8 +28,8 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{0, 510, 5, {301, 302}, {0, 3}, {0, 510}, 7}, // 1: Town.
-	{363, 395, 7, {303, 304}, {0, 1}, {273, 286}, 7}, // 2: Driver's cab.
+	{0, 510, 5, {301, 302}, {0, 3}, {0, 510}, 7, false, false, true}, // 1: Town.
+	{363, 395, 7, {303, 304}, {0, 1}, {273, 286}, 7, false, false, true}, // 2: Driver's cab.
 	{495, 433, 1, {305, 306}, {0, 1}, {582, 344}}, // 3: Smokestack.
 	{432, 411, 0, {307, 308}, {0, 0}, {435, 351}}, // 4: Water tank opening.
 	{413, 485, 7, {309, 310}, {1, 1}, {392, 465}}, // 5: Object.
@@ -93,7 +93,7 @@ void Scene8260::runCustomEntrySequence() {
 }
 
 void Scene8260::resumeAmbientAudio(bool entering) {
-	resumeFinaleOutdoorAudio(entering, 36, 51);
+	resumeFinaleOutdoorAudio(entering, 36, 20);
 }
 
 void Scene8260::advanceCustomGameplayLoop(uint32 delta) {
@@ -120,7 +120,10 @@ RunawayRoomScene::ActionResult Scene8260::dispatchCustomSceneAction(uint16 actio
 		leaveRoom(8225);
 		break;
 	case 304: // Climb through the cab's broken window.
-		beginRoomAnimation(304, 4, 131, nullptr, 0, true, 60);
+		if (_skippingExit)
+			leaveRoom(8263);
+		else
+			beginRoomAnimation(304, 4, 131, nullptr, 0, true, 60);
 		break;
 	case 1304: // Enter the driver's cab after climbing through the window.
 		leaveRoom(8263);
@@ -142,8 +145,7 @@ RunawayRoomScene::ActionResult Scene8260::dispatchCustomSceneAction(uint16 actio
 	case 410: // Collect the sheriff's badge.
 		_facing = 4;
 		_finale.locomotiveBadge = 3;
-		_inventory.add(12);
-		say(15, 1);
+		pickUp(12, 15, 1);
 		return kBackgroundChanged;
 	case 316: // Leave through the outskirts to the town overview.
 		leaveRoom(8350);
@@ -170,9 +172,9 @@ void Scene8260::handleAnimationFrameHook() {
 		_audio.playEffect(20);
 	} else if (_roomAction == 402) {
 		if (_actionStep == 3) {
-			_audio.playEffect(31, 230);
+			_audio.playEffect(31, 90);
 		} else if (_actionStep == 17) {
-			_audio.playEffect(32, 255, 1);
+			_audio.playEffect(32, 100, 1);
 		}
 	}
 }

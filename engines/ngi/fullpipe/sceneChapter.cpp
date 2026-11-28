@@ -43,33 +43,11 @@ public:
 			return false;
 		close();
 
-		Common::File encoding, texts;
-		if (!encoding.open(directory.join("enc.dat")) || encoding.size() < 2 || (encoding.size() & 1) ||
-				!texts.open(directory.join("texts.xml")) || texts.readUint16LE() != 0xfeff)
+		TextContainer texts;
+		if (!texts.load(directory))
 			return false;
-
-		Common::HashMap<uint16, byte> codes;
-		for (int i = 128; encoding.pos() + 2 < encoding.size(); ++i) {
-			const uint16 c = encoding.readUint16LE();
-			if (!codes.contains(c))
-				codes[c] = i;
-		}
-		const uint16 first = encoding.readUint16LE();
-		const int base = codes.size() + 1 - 128 - first;
-		// The UTF-16 resource starts with a code page line and ends with </TEXTCONTAINER>.
-		const int64 size = texts.size();
-		while (texts.pos() + 2 <= size) {
-			if (texts.readUint16LE() == '\n')
-				break;
-		}
-		Common::String xml("<?xml version=\"1.0\"?><TEXTCONTAINER>");
-		while (texts.pos() + 2 <= size) {
-			const uint16 c = texts.readUint16LE();
-			xml += c < 128 ? (byte)c : codes.getValOrDefault(c, (byte)(base + c));
-		}
-		if (!loadBuffer((const byte *)xml.c_str(), xml.size()) || !parse())
-			return false;
-		close();
+		_title = texts.getText("STR_CHAPTER");
+		_text = texts.getText(_textId);
 		if (_title.empty() || _text.empty())
 			return false;
 		_title += Common::String::format("%d", _number);
@@ -102,16 +80,9 @@ private:
 			XML_PROP(fadeout_delay, false)
 			XML_PROP(sound_delay, false)
 		KEY_END()
-		XML_KEY(TEXTCONTAINER)
-			XML_KEY(TEXT)
-				XML_PROP(id, true)
-				XML_PROP(text, true)
-			KEY_END()
-		KEY_END()
 	} PARSER_END()
 
 	bool parserCallback_CHAPTERS(ParserNode *) { return true; }
-	bool parserCallback_TEXTCONTAINER(ParserNode *) { return true; }
 
 	bool parserCallback_CHAPTER(ParserNode *node) {
 		++_chapterIndex;
@@ -144,15 +115,6 @@ private:
 		return true;
 	}
 
-	bool parserCallback_TEXT(ParserNode *node) {
-		const Common::String &id = node->values["id"];
-		if (id == "STR_CHAPTER")
-			_title = node->values["text"];
-		if (id == _textId)
-			_text = node->values["text"];
-		return true;
-	}
-
 	bool handleUnknownKey(ParserNode *node) override {
 		if (!getParentNode(node))
 			return false;
@@ -175,7 +137,7 @@ public:
 	}
 
 	bool open() {
-		const Common::String locale = g_nmi->getAndroidResourceLocale();
+		const Common::String locale = g_nmi->getResourceLocale();
 		const Common::Path directory("data/res_" + locale);
 		const Common::Path fonts = directory.join("Fonts");
 		if (!_settings.load(directory)) {
@@ -239,7 +201,7 @@ public:
 
 	void update() override {
 		Graphics::ManagedSurface &frame = g_nmi->_backgroundSurface;
-		_scene.drawAndroid(frame);
+		_scene.render();
 		if (_fader.brightness() < 255)
 			g_nmi->drawAlphaRectangle(0, 0, frame.w, frame.h, _fader.brightness());
 		const BitmapFont &titleFont = _titleFont ? *_titleFont : _font;
@@ -275,11 +237,15 @@ private:
 } // End of anonymous namespace
 
 void sceneChapter_show(const char *chapterId) {
+	GameVar *shown = g_nmi->getGameLoaderGameVar()->getSubVarByName("CHAPTERS");
+	if (shown->getSubVarAsInt(chapterId))
+		return;
 	Scene *scene = g_nmi->findScene(SC_CHAPTER);
 	if (!scene)
 		return;
 	Common::ScopedPtr<ModalChapter> dialog(new ModalChapter(*scene, chapterId));
 	if (dialog->open()) {
+		shown->setSubVarAsInt(chapterId, 1);
 		dialog->_parentObj = g_nmi->_modalObject;
 		g_nmi->_modalObject = dialog.release();
 	}

@@ -28,12 +28,12 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{1123, 416, 3, {302, 301}, {0, 3}, {1123, 416}, 6}, // 1: Path.
+	{1123, 416, 3, {302, 301}, {0, 3}, {1123, 416}, 6, false, false, true}, // 1: Path.
 	{456, 405, 7, {0, 303}, {0, 1}, {0, 0}, 0, false, true}, // 2: Walk towards the cabin (native verb 0).
 	{573, 400, 7, {304, 305}, {0, 0}, {533, 379}}, // 3: Rocking Chair.
 	{644, 397, 1, {310, 311}, {0, 0}, {677, 372}}, // 4: Tires.
 	{456, 405, 7, {306, 307}, {0, 0}, {428, 336}}, // 5: Door.
-	{618, 386, 0, {308, 309}, {1, 1}, {623, 383}, 5}, // 6: Trap Door.
+	{618, 386, 0, {308, 309}, {1, 1}, {623, 383}, 5, false, false, true}, // 6: Trap Door.
 	{605, 399, 7, {312, 313}, {1, 1}, {576, 384}}, // 7: Bucket.
 };
 
@@ -138,8 +138,7 @@ RunawayRoomScene::ActionResult Scene5020::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 313: // Take the bucket.
 		_desert.bucketTaken = 1;
-		_inventory.add(25);
-		say(12);
+		pickUp(25, 12);
 		return kBackgroundChanged;
 	case 400: // Check that everyone is in position for the rescue.
 		say(50);
@@ -175,7 +174,7 @@ void Scene5020::runCustomEntrySequence() {
 	}
 	if (_entryScene == 5022) {
 		_audio.playMusic(22);
-		_audio.setMusicVolume(255);
+		_audio.setMusicVolume(100);
 		walkTo(Common::Point(618, 386), 0);
 		deferDesertAction(400);
 		return;
@@ -195,17 +194,17 @@ void Scene5020::startRescueFilm() {
 		{S::kPlay, 91, 92}, {S::kSpeech, 50, 1}, {S::kPlay, 93, 128}, {S::kWaitSpeech},
 		{S::kTalk, 50, 3, 1, 0, 25}, {S::kTalk, 50, 4, 1, 1},
 		// Check Lula's position at the machine gun.
-		{S::kEffect, 77, 255}, {S::kPlay, 162, 163}, {S::kSpeech, 50, 5},
+		{S::kEffect, 77, 100}, {S::kPlay, 162, 163}, {S::kSpeech, 50, 5},
 		{S::kPlay, 164, 253}, {S::kWaitSpeech}, {S::kTalk, 50, 6, 3, 0, 28}, {S::kTalk, 50, 7, 3, 1},
 		// Check Carla's helicopter, then give the signal.
 		{S::kStill, 254}, {S::kTalk, 50, 8, 5, 1}, {S::kTalk, 50, 9, 5, 0, 24}, {S::kTalk, 50, 10, 5, 1},
-		{S::kStill, 40}, {S::kTalk, 50, 11}, {S::kMusic, 23, 255, 1},
+		{S::kStill, 40}, {S::kTalk, 50, 11}, {S::kMusic, 23, 100, 1},
 		// The explosion draws the guards outside.
-		{S::kEffect, 78, 255}, {S::kPlay, 346, 374}, {S::kSpeech, 50, 12, 0, 0, 22},
+		{S::kEffect, 78, 100}, {S::kPlay, 346, 374}, {S::kSpeech, 50, 12, 0, 0, 22},
 		{S::kPlay, 375, 430}, {S::kWaitSpeech}, {S::kStill, 430},
 		{S::kTalk, 50, 13, 7, 0, 27}, {S::kTalk, 50, 14, 9, 0, 22},
 		// Gina escapes while Lula covers the retreat.
-		{S::kEffect, 79, 255}, {S::kPlay, 454, 499}, {S::kSpeech, 50, 17, 17, 0, 27}, {S::kSpeech, 50, 18, 19, 0, 22},
+		{S::kEffect, 79, 100}, {S::kPlay, 454, 499}, {S::kSpeech, 50, 17, 17, 0, 27}, {S::kSpeech, 50, 18, 19, 0, 22},
 		{S::kPlay, 500, 699}, {S::kSpeech, 50, 20, 0, 0, 22}, {S::kPlay, 700, 1173},
 		{S::kSpeech, 50, 21, 22}, {S::kPlay, 1174, 1379},
 		// Carla narrowly avoids the wrecked airplane during takeoff.

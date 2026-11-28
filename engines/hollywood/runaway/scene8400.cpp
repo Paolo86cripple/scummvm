@@ -33,9 +33,9 @@ const Common::Point kDoor(1104, 377);
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{2591, 229, 0, {301, 302}, {0, 0}, {2662, 186}, 5}, // 1: Path to the trailer.
+	{2591, 229, 0, {301, 302}, {0, 0}, {2662, 186}, 5, false, false, true}, // 1: Path to the trailer.
 	{0, 0, 0, {303, 304}, {0, 0}, {1063, 351}}, // 2: Trailer.
-	{1104, 377, 7, {305, 306}, {0, -1}, {1063, 351}}, // 3: Door.
+	{1104, 377, 7, {305, 306}, {0, -1}, {1063, 351}, 0, false, false, true}, // 3: Door.
 	{1138, 373, 0, {308, 309}, {1, 1}, {1138, 357}}, // 4: Tray.
 	{0, 0, 0, {310, 311}, {0, 0}, {0, 0}} // 5: Wooden bridge.
 };
@@ -132,7 +132,7 @@ void Scene8400::runCustomEntrySequence() {
 }
 
 void Scene8400::resumeAmbientAudio(bool entering) {
-	resumeFinaleOutdoorAudio(entering, 36, 51);
+	resumeFinaleOutdoorAudio(entering, 36, 20);
 }
 
 void Scene8400::panTo(int x, uint step, uint16 action) {
@@ -237,8 +237,12 @@ const char *Scene8400::actionCaptionVariant(byte id, bool look, byte item) const
 }
 
 void Scene8400::enterTrailer() {
-	walkTo(kDoor, 7, false, true);
-	beginRoomAnimation(307, 5, 37);
+	if (_skippingExit) {
+		leaveRoom(8410);
+	} else {
+		walkTo(kDoor, 7, false, true);
+		beginRoomAnimation(307, 5, 37);
+	}
 }
 
 void Scene8400::withdraw(uint16 action) {
@@ -249,33 +253,34 @@ void Scene8400::withdraw(uint16 action) {
 
 void Scene8400::handleAnimationFrameHook() {
 	if (_roomAction == 306 && _actionStep == 15) {
-		_audio.playEffect(50, 204);
+		_audio.playEffect(50, 80);
 	} else if (_roomAction == 316) {
 		if (_actionStep == 20) {
 			_audio.playEffect(52);
 		} else if (_actionStep == 39) {
-			_audio.playEffect(51, 255, 1);
+			_audio.playEffect(51, 100, 1);
 		} else if (_actionStep == 41 || _actionStep == 42) {
 			_doorFrame = _actionStep - 40;
 		}
 	} else if (_roomAction == 309 && _actionStep == 9) {
-		_audio.playEffect(47, 127);
+		_audio.playEffect(47, 50);
 	} else if (_roomAction == 307) {
 		if (_actionStep == 12 || _actionStep == 19 || _actionStep == 27 || _actionStep == 35) {
-			_audio.playFootstep(5, _random.getRandomBit(), 112, 1065);
+			const byte volume = CLIP<int>((int)(actorHeight() * 100 / 455), 0, 100);
+			_audio.playFootstep(5, _random.getRandomBit(), volume, 1065);
 		}
 	} else if (_roomAction == 410) {
 		if (_actionStep == 7 || _actionStep == 17) {
-			_audio.playFootstep(5, _random.getRandomBit(), 102, 1065);
+			_audio.playFootstep(5, _random.getRandomBit(), 40, 1065);
 		} else if (_actionStep == 25 || _actionStep == 33) {
-			_audio.playFootstep(2, _random.getRandomBit(), 102, 1065);
+			_audio.playFootstep(2, _random.getRandomBit(), 40, 1065);
 		}
 	} else if (_roomAction == 439) {
 		const uint gustav = 43 + _actionStep;
 		const uint feodor = _actionStep >= 5 ? 32 + _actionStep - 5 : 20;
 		if (gustav == 53 || gustav == 84 || gustav == 87 || gustav == 94 || gustav == 98 ||
 				feodor == 85 || feodor == 89 || feodor == 96 || feodor == 103 || feodor == 109 || feodor == 122) {
-			_audio.playFootstep(5, _random.getRandomBit(), 191);
+			_audio.playFootstep(5, _random.getRandomBit(), 75);
 		}
 	}
 }
@@ -289,8 +294,12 @@ RunawayRoomScene::ActionResult Scene8400::dispatchCustomSceneAction(uint16 actio
 		}
 		break;
 	case 302: // Walk back to the path toward Douglasville.
-		walkTo(kTrailEnd, 1, false, true);
-		deferAction(401);
+		if (_skippingExit) {
+			leaveRoom(8350);
+		} else {
+			walkTo(kTrailEnd, 1, false, true);
+			deferAction(401);
+		}
 		break;
 	case 401: // Continue beyond the right edge of the scene.
 		walkTo(kTrail, 1, true);
@@ -337,7 +346,10 @@ RunawayRoomScene::ActionResult Scene8400::dispatchCustomSceneAction(uint16 actio
 		_finale.trailerDoor = 1;
 		_doorFrame = 2;
 		updateMaps();
-		_facing = 0;
+		walkTo(_position, 0, true);
+		deferAction(406);
+		break;
+	case 406: // Comment after turning, then enter the trailer.
 		say(10, 1);
 		deferAction(307);
 		break;
@@ -361,8 +373,7 @@ RunawayRoomScene::ActionResult Scene8400::dispatchCustomSceneAction(uint16 actio
 	case 1403: // Put the brochure in the inventory.
 		if (!_finale.bankBrochureTaken) {
 			_finale.bankBrochureTaken = 1;
-			_inventory.add(14);
-			say(7, 2);
+			pickUp(14, 7, 2);
 		}
 		holdRoomAnimation(405, 14, 42, 22);
 		break;

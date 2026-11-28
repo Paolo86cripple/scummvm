@@ -789,7 +789,7 @@ GrPathDesc *getPreferredPath(AniObject *ani, Common::Array<PathDesc *> *items, s
 MovGraph::MovGraph() {
 	_selFunc = getPreferredPath;
 	_linkItemOffset = 0;
-	if (g_nmi->getPlatform() != Common::kPlatformAndroid)
+	if (g_nmi->_gameVersion < 201509)
 		insertMessageHandler(MovGraph::messageHandler, getMessageHandlersCount() - 1, 129);
 
 	_objtype = kObjTypeMovGraph;
@@ -1353,12 +1353,28 @@ double MovGraph::putToLink(Common::Point *point, MovGraphLink *link, int fuzzyMa
 	double dist1y = (double)(n1y - point->y);
 	double dist2x = (double)(n2x - n1x);
 	double dist2y = (double)(n1y - n2y);
-	double dist1 = sqrt(dist1x * dist1x + dist1y * dist1y);
-	double dist2 = (dist2y * dist1y + dist2x * dist1x) / link->_length / dist1;
+	const bool revisedGraph = g_nmi->_gameVersion >= 201509;
+	double length = link->_length;
+	double radiusSquared = dist1x * dist1x + dist1y * dist1y;
+	double dist1 = revisedGraph ? sqrtf(radiusSquared) : sqrt(radiusSquared);
+	double dot = dist2y * dist1y + dist2x * dist1x;
+	if (revisedGraph) {
+		// The XML length bounds the segment, but PutToLink normalizes by the node separation.
+		length = sqrtf(dist2x * dist2x + dist2y * dist2y);
+		dot = static_cast<float>(dot);
+		if (!length || !dist1)
+			return -1.0;
+	}
+	double dist2 = dot / length / dist1;
 	double distm = dist2 * dist1;
-	double res = sqrt(1.0 - dist2 * dist2) * dist1;
+	double sinSquared = 1.0 - dist2 * dist2;
+	double res = sqrt(revisedGraph ? fabs(sinSquared) : sinSquared) * dist1;
 
-	if (dist2 <= 0.0 || distm >= link->_length) {
+	// Android accepts the perpendicular through the source within one link length.
+	if (revisedGraph && dist2 == 0.0 && res <= link->_length)
+		return 0.0;
+
+	if (dist2 <= 0.0 || (revisedGraph ? distm > link->_length : distm >= link->_length)) {
 		if (fuzzyMatch) {
 			if (dist2 > 0.0) {
 				if (distm >= link->_length) {
@@ -1373,8 +1389,8 @@ double MovGraph::putToLink(Common::Point *point, MovGraphLink *link, int fuzzyMa
 			return -1.0;
 		}
 	} else {
-		point->x = n1x + (int)((double)(n2x - n1x) * distm / link->_length);
-		point->y = n1y + (int)((double)(n2y - n1y) * distm / link->_length);
+		point->x = n1x + (int)((double)(n2x - n1x) * distm / length);
+		point->y = n1y + (int)((double)(n2y - n1y) * distm / length);
 	}
 
 	return res;
@@ -1683,21 +1699,22 @@ int MctlGraph::getObjIndex(int objectId) {
 	return -1;
 }
 
-int MctlGraph::getDirByStatics(int idx, int staticsId) {
-	for (int i = 0; i < 4; i++)
-		if (_aniData[idx]._directions[i]._prevStaticId == staticsId || _aniData[idx]._directions[i]._nextStaticId == staticsId)
+int MctlGraph::getDirByStatics(int idx, int staticsId, bool mirror) {
+	for (int i = 0; i < 4; i++) {
+		const MctlAniSub &dir = _aniData[idx]._directions[i];
+		if (dir._walk[0]._mirror == mirror && (dir._prevStaticId == staticsId || dir._nextStaticId == staticsId))
 			return i;
-
+	}
 	return -1;
 }
 
-int MctlGraph::getDirByMovement(int idx, int movId) {
-	for (int i = 0; i < 4; i++)
-		if (_aniData[idx]._directions[i]._walk[0]._movementId == movId
-		 || _aniData[idx]._directions[i]._walk[1]._movementId == movId
-		 || _aniData[idx]._directions[i]._walk[2]._movementId == movId)
-			return i;
-
+int MctlGraph::getDirByMovement(int idx, int movId, bool mirror) {
+	for (int i = 0; i < 4; i++) {
+		for (const MG2I &walk : _aniData[idx]._directions[i]._walk) {
+			if (walk._movementId == movId && walk._mirror == mirror)
+				return i;
+		}
+	}
 	return -1;
 }
 
@@ -1722,141 +1739,80 @@ int MctlGraph::getDirByPoint(int index, AniObject *ani) {
 	return -1;
 }
 
+bool MG2I::setMovement(AniObject *ani, int id, const ObjectIdList *ids) {
+	_mirror = false;
+	_deltaX = _deltaY = 0;
+	if (ids && id) {
+		const Common::String name = ids->findName(id);
+		if (name.hasPrefix("r")) {
+			uint32 baseId;
+			if (!ids->findId(name.substr(1), baseId))
+				return false;
+			id = baseId;
+			_mirror = true;
+		}
+	}
+	_movementId = ids ? static_cast<int16>(id) : id;
+	_movement = ani->getMovement(_movementId);
+	if (!_movement)
+		return !ids || !id;
+
+	if (ids) {
+		if (!_movement->getPhase(1))
+			return false;
+		_movement->getCenterDisplacement(_deltaX, _deltaY);
+		if (_mirror)
+			_deltaX = -_deltaX;
+	} else {
+		const Common::Point delta = _movement->getMovementSize(0, -1);
+		_deltaX = delta.x;
+		_deltaY = delta.y;
+	}
+	return true;
+}
+
 bool MctlGraph::fillData(AniObject *obj, GmctlAni &item) {
-	debugC(4, kDebugPathfinding, "MovGraph::fillData(%d, ...)", obj->_id);
+	debugC(4, kDebugPathfinding, "MctlGraph::fillData(%d, ...)", obj->_id);
 
 	item._ani = obj;
 	item._objectId = obj->_id;
 
-	GameVar *var = g_nmi->getGameLoaderGameVar()->getSubVarByName(obj->_title);
-	if (!var)
+	const ObjectIdList *ids = nullptr;
+	GameVar *walkData;
+	if (g_nmi->_gameVersion >= 201509) {
+		ids = &g_nmi->_gameProject->_objectIds;
+		walkData = g_nmi->_gameProject->_walkData.getSubVarByName(ids->findName(static_cast<uint16>(obj->_id)));
+	} else {
+		GameVar *var = g_nmi->getGameLoaderGameVar()->getSubVarByName(obj->_title);
+		walkData = var ? var->getSubVarByName("Test_walk") : nullptr;
+	}
+	if (!walkData)
 		return false;
 
-	var = var->getSubVarByName("Test_walk");
-
-	if (!var)
-		return false;
-
-	GameVar *varD = nullptr;
-	Common::Point point;
-
-	for (int dir = 0; dir < 4; dir++) {
-		switch (dir) {
-		case 0:
-			varD = var->getSubVarByName("Right");
-			break;
-		case 1:
-			varD = var->getSubVarByName("Left");
-			break;
-		case 2:
-			varD = var->getSubVarByName("Up");
-			break;
-		case 3:
-			varD = var->getSubVarByName("Down");
-			break;
-		default:
-			break;
-		}
-
-		if (!varD)
+	static const char *const directions[] = { "Right", "Left", "Up", "Down" };
+	static const char *const walk[] = { "Start", "Go", "Stop" };
+	static const char *const turn[] = { "TurnR", "TurnL", "TurnU", "TurnD" };
+	static const char *const turnS[] = { "TurnSR", "TurnSL", "TurnSU", "TurnSD" };
+	for (uint dir = 0; dir < ARRAYSIZE(directions); ++dir) {
+		GameVar *var = walkData->getSubVarByName(directions[dir]);
+		if (!var)
 			return false;
 
-		for (int act = 0; act < 3; act++) {
-			int idx = 0;
-
-			switch(act) {
-			case 0:
-				idx = varD->getSubVarAsInt("Start");
-				break;
-			case 1:
-				idx = varD->getSubVarAsInt("Go");
-				break;
-			case 2:
-				idx = varD->getSubVarAsInt("Stop");
-				break;
-			default:
-				break;
-			}
-
-			item._directions[dir]._walk[act]._movementId = idx;
-
-			Movement *mov = obj->getMovement(idx);
-
-			item._directions[dir]._walk[act]._movement = mov;
-			if (mov) {
-				point = mov->getMovementSize(0, -1);
-				item._directions[dir]._walk[act]._deltaX = point.x;
-				item._directions[dir]._walk[act]._deltaY = point.y;
-			}
+		MctlAniSub &data = item._directions[dir];
+		for (uint i = 0; i < ARRAYSIZE(walk); ++i) {
+			if (!data._walk[i].setMovement(obj, var->getSubVarAsInt(walk[i]), ids))
+				return false;
 		}
-
-		for (int act = 0; act < 4; act++) {
-			int idx = 0;
-
-			switch(act) {
-			case 0:
-				idx = varD->getSubVarAsInt("TurnR");
-				break;
-			case 1:
-				idx = varD->getSubVarAsInt("TurnL");
-				break;
-			case 2:
-				idx = varD->getSubVarAsInt("TurnU");
-				break;
-			case 3:
-				idx = varD->getSubVarAsInt("TurnD");
-				break;
-			default:
-				break;
-			}
-
-			item._directions[dir]._turn[act]._movementId = idx;
-
-			Movement *mov = obj->getMovement(idx);
-
-			item._directions[dir]._turn[act]._movement = mov;
-			if (mov) {
-				point = mov->getMovementSize(0, -1);
-				item._directions[dir]._turn[act]._deltaX = point.x;
-				item._directions[dir]._turn[act]._deltaY = point.y;
-			}
+		for (uint i = 0; i < ARRAYSIZE(turn); ++i) {
+			if (!data._turn[i].setMovement(obj, var->getSubVarAsInt(turn[i]), ids) ||
+					!data._turnS[i].setMovement(obj, var->getSubVarAsInt(turnS[i]), ids))
+				return false;
 		}
-
-		for (int act = 0; act < 4; act++) {
-			int idx = 0;
-
-			switch(act) {
-			case 0:
-				idx = varD->getSubVarAsInt("TurnSR");
-				break;
-			case 1:
-				idx = varD->getSubVarAsInt("TurnSL");
-				break;
-			case 2:
-				idx = varD->getSubVarAsInt("TurnSU");
-				break;
-			case 3:
-				idx = varD->getSubVarAsInt("TurnSD");
-				break;
-			default:
-				break;
-			}
-
-			item._directions[dir]._turnS[act]._movementId = idx;
-
-			Movement *mov = obj->getMovement(idx);
-
-			item._directions[dir]._turnS[act]._movement = mov;
-			if (mov) {
-				point = mov->getMovementSize(0, -1);
-				item._directions[dir]._turnS[act]._deltaX = point.x;
-				item._directions[dir]._turnS[act]._deltaY = point.y;
-			}
-		}
-
-		item._directions[dir]._prevStaticId = item._directions[dir]._walk[0]._movement->_prevStatic->_staticsId;
-		item._directions[dir]._nextStaticId = item._directions[dir]._walk[0]._movement->_nextStatic->_staticsId;
-
+		Movement *start = data._walk[0]._movement;
+		if (!start)
+			return false;
+		data._prevStaticId = start->_prevStatic->_staticsId;
+		data._nextStaticId = start->_nextStatic->_staticsId;
 	}
 	return true;
 }
@@ -2014,6 +1970,7 @@ MessageQueue *MctlGraph::makeWholeQueue(GmctlMqStruct &mctlMQ) {
 				Command *ex = new Command(_aniData[mctlMQ.objectIndex]._objectId, 1, mg2i->_movementId, 0, 0, 0, 1, 0, 0, 0);
 
 				ex->_excFlags |= 2;
+				ex->_mirror = mg2i->_mirror;
 				ex->_param = _aniData[mctlMQ.objectIndex]._ani->_copyId;
 				ex->_wait = 1;
 				ex->_z = -1;
@@ -2191,11 +2148,12 @@ MessageQueue *MctlGraph::makeQueue(AniObject *obj, int xpos, int ypos, int fuzzy
 	obj->getPicAniInfo(picAniInfo);
 
 	int idxsub;
+	const bool mirror = g_nmi->_gameVersion >= 201509 && (obj->_flags & 8);
 
 	if (obj->_movement)
-		idxsub = getDirByMovement(idx, obj->_movement->_id);
+		idxsub = getDirByMovement(idx, obj->_movement->_id, mirror);
 	else
-		idxsub = getDirByStatics(idx, obj->_statics->_staticsId);
+		idxsub = getDirByStatics(idx, obj->_statics->_staticsId, mirror);
 
 	bool subMgm = false;
 
@@ -2361,7 +2319,7 @@ MessageQueue *MctlGraph::makeQueue(AniObject *obj, int xpos, int ypos, int fuzzy
 		mctlMQ1.destDir = getLinkDir(&tempLinkList, tempLinkList.size() - 1, nullptr, nullptr);
 	}
 
-	mctlMQ1.flags = fuzzyMatch != 0;
+	mctlMQ1.flags = fuzzyMatch != 0 || g_nmi->_gameVersion >= 201509;
 
 	if (_aniData[idx]._directions[idxsub]._prevStaticId != obj->_statics->_staticsId)
 		mctlMQ1.flags |= 2;
@@ -2518,7 +2476,10 @@ MessageQueue *MctlGraph::makeLineQueue(GmctlMqStruct *info) {
 	int a2 = 0;
 	int mgmLen;
 
-	point = _aniHandler.getNumCycles(_aniData[info->objectIndex]._directions[info->sourceDir]._walk[1]._movement, x, y, &mgmLen, &a2, info->flags & 1);
+	const MG2I *walk = _aniData[info->objectIndex]._directions[info->sourceDir]._walk;
+	point = _aniHandler.getNumCycles(walk[1]._movement, walk[1]._mirror ? -x : x, y, &mgmLen, &a2, info->flags & 1);
+	if (walk[1]._mirror)
+		point.x = -point.x;
 
 	int x1 = point.x;
 	int y1 = point.y;
@@ -2641,6 +2602,7 @@ MessageQueue *MctlGraph::makeLineQueue(GmctlMqStruct *info) {
 								  x2,
 								  y2,
 								  -1);
+		ex->_mirror = walk[0]._mirror;
 		ex->_parId = mq->_id;
 		ex->_param = _aniData[info->objectIndex]._ani->_copyId;
 	}
@@ -2663,6 +2625,7 @@ MessageQueue *MctlGraph::makeLineQueue(GmctlMqStruct *info) {
 								  x2,
 								  y2,
 								  par);
+		ex->_mirror = walk[1]._mirror;
 		ex->_parId = mq->_id;
 		ex->_param = _aniData[info->objectIndex]._ani->_copyId;
 		mq->addCommandToEnd(ex);
@@ -2677,6 +2640,7 @@ MessageQueue *MctlGraph::makeLineQueue(GmctlMqStruct *info) {
 								  x2,
 								  y2,
 								  -1);
+		ex->_mirror = walk[2]._mirror;
 		ex->_parId = mq->_id;
 		ex->_param = _aniData[info->objectIndex]._ani->_copyId;
 
@@ -2699,6 +2663,7 @@ MovGraphLink *MctlGraph::getHitLink(int x, int y, int idx, int fuzzyMatch) {
 	debugC(4, kDebugPathfinding, "MctlGraph::getHitLink(...)");
 
 	Common::Point point;
+	const double tolerance = g_nmi->_gameVersion >= 201509 ? 3.0 : 2.0;
 	MovGraphLink *res = nullptr;
 
 	for (LinkList::iterator i = _links.begin(); i != _links.end(); ++i) {
@@ -2711,7 +2676,7 @@ MovGraphLink *MctlGraph::getHitLink(int x, int y, int idx, int fuzzyMatch) {
 			point.y = y;
 			double dst = putToLink(&point, lnk, 0);
 
-			if (dst >= 0.0 && dst < 2.0)
+			if (dst >= 0.0 && dst < tolerance)
 				return lnk;
 		} else if (!(lnk->_flags & 0x20000000)) {
 			if (lnk->_movGraphReact->hitTest(x, y)) {
@@ -2734,7 +2699,8 @@ MovGraphLink *MctlGraph::getHitLink(int x, int y, int idx, int fuzzyMatch) {
 MovGraphLink *MctlGraph::getNearestLink(int x, int y) {
 	debugC(4, kDebugPathfinding, "MctlGraph::getNearestLink(...)");
 
-	double mindist = 1.0e20;
+	const bool revisedGraph = g_nmi->_gameVersion >= 201509;
+	double mindist = revisedGraph ? 70.0 : 1.0e20;
 	MovGraphLink *res = nullptr;
 
 	for (LinkList::iterator i = _links.begin(); i != _links.end(); ++i) {
@@ -2749,8 +2715,15 @@ MovGraphLink *MctlGraph::getNearestLink(int x, int y) {
 			double n2y = lnk->_graphDst->_y;
 			double n1dx = x - n1x;
 			double n1dy = n1y - y;
-			double dst1 = sqrt(n1dy * n1dy + n1dx * n1dx);
-			double coeff1 = ((n1y - n2y) * n1dy + (n2x - n1x) * n1dx) / lnk->_length / dst1;
+			double radiusSquared = n1dy * n1dy + n1dx * n1dx;
+			double dst1 = revisedGraph ? sqrtf(radiusSquared) : sqrt(radiusSquared);
+			double dot = (n1y - n2y) * n1dy + (n2x - n1x) * n1dx;
+			if (revisedGraph) {
+				dot = static_cast<float>(dot);
+				if (!dst1 || !lnk->_length)
+					continue;
+			}
+			double coeff1 = dot / lnk->_length / dst1;
 			double dst3 = coeff1 * dst1;
 			double dst2 = sqrt(1.0 - coeff1 * coeff1) * dst1;
 
@@ -2769,10 +2742,7 @@ MovGraphLink *MctlGraph::getNearestLink(int x, int y) {
 		}
 	}
 
-	if (mindist < 1.0e20)
-		return res;
-	else
-		return nullptr;
+	return res;
 }
 
 double MctlGraph::iterate(LinkOrNode *linkInfoSource, LinkOrNode *linkInfoDest, MovGraphLinkList *listObj) {
@@ -2962,14 +2932,14 @@ bool ReactParallel::load(MfcArchive &file) {
 void ReactParallel::create() {
 	_points.resize(4);
 
-	const bool android = g_nmi->getPlatform() == Common::kPlatformAndroid;
-	double angle = android ? atan2f(_y1 - _y2, _x1 - _x2) : atan2((double)(_y1 - _y2), (double)(_x1 - _x2));
+	const bool revisedGraph = g_nmi->_gameVersion >= 201509;
+	double angle = revisedGraph ? atan2f(_y1 - _y2, _x1 - _x2) : atan2((double)(_y1 - _y2), (double)(_x1 - _x2));
 	double at = angle + 1.570796; // pi/2
 	double sn = sin(at);
 	double cs = cos(at);
 	double lx = _left * cs, ly = _left * sn;
 	double rx = _right * cs, ry = _right * sn;
-	if (android) {
+	if (revisedGraph) {
 		// The XML engine truncates the offsets before adding them to each endpoint.
 		lx = (int)lx;
 		ly = (int)ly;
@@ -3068,7 +3038,7 @@ Common::Rect ReactPolygonal::getBBox() {
 
 
 bool MovGraphReact::hitTest(int x, int y) {
-	if (g_nmi->getPlatform() == Common::kPlatformAndroid) {
+	if (g_nmi->_gameVersion >= 201509) {
 		if (_points.size() <= 1)
 			return !_points.empty() && _points[0] == Common::Point(x, y);
 		bool inside = false;

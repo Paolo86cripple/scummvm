@@ -531,7 +531,7 @@ int global_messageHandler4(Command *cmd) {
 			break;
 		}
 		int parent = cmd->_parId;
-		if (g_nmi->getPlatform() == Common::kPlatformAndroid && !cmd->_wait)
+		if (g_nmi->_gameVersion >= 201509 && !cmd->_wait)
 			parent = 0;
 		MessageQueue *mq = new MessageQueue(source, parent, 0);
 
@@ -597,9 +597,9 @@ int global_messageHandler4(Command *cmd) {
 			ExCommand2 *cmd2 = static_cast<ExCommand2 *>(cmd);
 
 			if (cmd->_excFlags & 1) {
-				ani->startSliding(cmd->_messageNum, 0, cmd->_x, cmd->_y, cmd2->_points, flags);
+				ani->startSliding(cmd->_messageNum, 0, cmd->_x, cmd->_y, cmd2->_points, flags, cmd->_mirror);
 			} else {
-				ani->startSliding(cmd->_messageNum, cmd->_parId, cmd->_x, cmd->_y, cmd2->_points, flags);
+				ani->startSliding(cmd->_messageNum, cmd->_parId, cmd->_x, cmd->_y, cmd2->_points, flags, cmd->_mirror);
 			}
 		}
 		break;
@@ -633,6 +633,12 @@ int global_messageHandler4(Command *cmd) {
 		if (!ani)
 			break;
 
+		if (g_nmi->usesXMLProject()) {
+			if (cmd->_auxParam)
+				ani->_flags |= 4;
+			if (!cmd->_messageNum)
+				break;
+		}
 		MessageQueue *mq = ani->getMessageQueue();
 		MessageQueue *mq2 = ani->moveToStatic(cmd->_messageNum);
 
@@ -686,9 +692,9 @@ int global_messageHandler4(Command *cmd) {
 		if (cmd->_z >= 0)
 			ani->_z = cmd->_z;
 
-		if (g_nmi->getPlatform() == Common::kPlatformAndroid) {
+		if (g_nmi->_gameVersion >= 201509) {
 			const bool mirror = cmd->_auxParam < 0 ? (ani->_flags & 8) != 0 : cmd->_auxParam != 0;
-			ani->show1(cmd->_x == -1 ? ani->_x : cmd->_x, cmd->_y == -1 ? ani->_y : cmd->_y, cmd->_messageNum, 0);
+			ani->show1(cmd->_x == -1 ? ani->_x : cmd->_x, cmd->_y == -1 ? ani->_y : cmd->_y, cmd->_messageNum, (cmd->_excFlags & 1) ? 0 : cmd->_parId);
 			ani->_flags = (ani->_flags & ~8) | (mirror ? 8 : 0);
 		} else {
 			ani->show1(cmd->_x, cmd->_y, cmd->_messageNum, cmd->_parId);
@@ -749,8 +755,24 @@ int global_messageHandler4(Command *cmd) {
 		global_messageHandler_handleSound(cmd);
 		break;
 
+	case Command::kCmdSetScene:
+		g_nmi->_gameLoader->preloadScene(cmd->_parentId, cmd->_messageNum);
+		break;
+	case Command::kCmdSetLogic:
+		g_nmi->setState(cmd->_messageName, cmd->_messageNum);
+		break;
+	case 56:
+	case 57:
+		if (!g_nmi->usesXMLProject())
+			return 0;
+		if (cmd->_cmd == 56)
+			getGameLoaderInventory()->addItem(cmd->_parentId, 1);
+		else if (getGameLoaderInventory()->getCountItemsWithId(cmd->_parentId))
+			getGameLoaderInventory()->removeItem(cmd->_parentId, 1);
+		getGameLoaderInventory()->recalcItemPos();
+		break;
 	case 63:
-		if (g_nmi->getPlatform() != Common::kPlatformAndroid)
+		if (g_nmi->_gameVersion < 201509)
 			return 0;
 		warning("Android command %s not implemented", cmd->_messageName.c_str());
 		break;

@@ -39,12 +39,13 @@ private:
 	void drawCustomBackgroundComposite(Graphics::ManagedSurface &viewport) override;
 	void drawCustomForegroundComposite(Graphics::ManagedSurface &viewport) override;
 	void updateActor(uint elapsed, int scrollDirection, bool inventoryOpen) override;
+	void setCameraY(int y) override;
 	void setupActorDepth(RunawayActor::RenderParams &params) const override;
 	ActionResult dispatchCustomSceneAction(uint16 action) override;
 	bool shouldPlayGameplayClickPath() const override { return false; }
 	byte initialActorFacing() const override { return 5; }
 	float actorHeight() const override { return 12; }
-	float actorWalkSpeed() const override { return RunawayRoomScene::actorWalkSpeed() * 5; }
+	float actorWalkScale() const override { return RunawayRoomScene::actorWalkScale() * 5; }
 
 	void advanceRoute();
 

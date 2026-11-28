@@ -31,8 +31,8 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{0, 453, 5, {301, 302}, {0, 3}, {0, 453}, 7}, // 1: Door.
-	{782, 408, 7, {303, 304}, {0, 1}, {625, 391}, 4}, // 2: Stairs.
+	{0, 453, 5, {301, 302}, {0, 3}, {0, 453}, 7, false, false, true}, // 1: Door.
+	{782, 408, 7, {303, 304}, {0, 1}, {625, 391}, 4, false, false, true}, // 2: Stairs.
 	{504, 452, 1, {305, 306}, {1, 1}, {567, 418}}, // 3: Flower pot.
 	{1286, 435, 0, {307, 308}, {0, 0}, {1286, 405}}, // 4: Watering can.
 	{742, 332, 5, {309, 310}, {0, 0}, {821, 340}}, // 5: Small room.
@@ -205,7 +205,10 @@ RunawayRoomScene::ActionResult Scene6240::dispatchCustomSceneAction(uint16 actio
 		say(2, _town.kevinMet);
 		break;
 	case 304: // Climb the stairs to Kevin's room.
-		beginRoomAnimation(304, 5, 19);
+		if (_skippingExit)
+			leaveTownRoom(6300);
+		else
+			beginRoomAnimation(304, 5, 19);
 		break;
 	case 1304: // Enter Kevin's room after climbing the stairs.
 		leaveTownRoom(6300);
@@ -216,8 +219,7 @@ RunawayRoomScene::ActionResult Scene6240::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 406: // Collect the flower pot.
 		_town.flowerPotTaken = 1;
-		_inventory.add(21);
-		say(4, 1);
+		pickUp(21, 4, 1);
 		return kBackgroundChanged;
 	case 308: // Optionally collect the unused watering-can inventory item.
 		if (_town.wateringCanTaken) {
@@ -232,7 +234,7 @@ RunawayRoomScene::ActionResult Scene6240::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 408:
 		_town.wateringCanTaken = 1;
-		_inventory.add(16);
+		pickUp(16);
 		return kBackgroundChanged;
 	case 309: // Identify the gardening shed.
 	case 310: // Search the shed for useful items.
@@ -280,8 +282,7 @@ RunawayRoomScene::ActionResult Scene6240::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 421: // Collect the pruning shears.
 		_town.gardeningShed = 2;
-		_inventory.add(22);
-		say(8, 1);
+		pickUp(22, 8, 1);
 		if (_town.oscarTobacco == 1 && !_town.tobaccoLeavesTaken) {
 			say(8, 2);
 			deferTownAction(422);
@@ -291,8 +292,7 @@ RunawayRoomScene::ActionResult Scene6240::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 422: // Collect the tobacco leaves.
 		_town.tobaccoLeavesTaken = 1;
-		_inventory.add(27);
-		say(8, 3);
+		pickUp(27, 8, 3);
 		deferTownAction(423);
 		break;
 	case 423: // Step back out of the shed.
@@ -324,7 +324,7 @@ RunawayRoomScene::ActionResult Scene6240::dispatchCustomSceneAction(uint16 actio
 
 void Scene6240::handleAnimationFrameHook() {
 	if (_roomAction == 304 && (_actionStep == 11 || _actionStep == 18)) {
-		const byte volume = CLIP<int>((int)(actorHeight() * 255 / 455), 0, 255);
+		const byte volume = CLIP<int>((int)(actorHeight() * 100 / 455), 0, 100);
 		_audio.playFootstep(3, _random.getRandomBit(), volume, _position.x);
 	}
 }

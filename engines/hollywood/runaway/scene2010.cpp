@@ -37,8 +37,9 @@ const Graphics::PixelFormat kPictureFormat(4, 8, 8, 8, 0, 16, 8, 0, 0);
 
 } // End of anonymous namespace
 
-bool RunawayOpening::load(byte chapter) {
+bool RunawayOpening::load(byte chapter, bool titleMovie) {
 	_failed = false;
+	_titleMovie = titleMovie;
 	_chapterVariation = _narrationCue = 0;
 	_chapterOnly = chapter != 0;
 	_chapter = chapter ? chapter : 1;
@@ -174,15 +175,14 @@ void RunawayOpening::enter(Step step, uint32 now) {
 		_video.close();
 		_narrating = false;
 		_failed = !_text.loadStage("RESOURCE.003", "Runaway opening", 201);
-		_audio.playMusic(32);
-		_audio.setMusicVolume(204);
+		_audio.playMusicEffect(32, 80, 2, true);
 		break;
 	case kAccident:
 		startMovie("DATAVB04.001", 0, 250);
 		_audio.playEffect(27);
 		break;
 	case kAccidentTitle:
-		_audio.playEffect(28, 255, 1);
+		_audio.playEffect(28, 100, 1);
 		break;
 	case kAccidentEnd:
 		startMovie(nullptr, 261, 312);
@@ -191,11 +191,14 @@ void RunawayOpening::enter(Step step, uint32 now) {
 		_audio.stopEffect();
 		_video.close();
 		break;
+	case kFilmTitle:
+		startMovie("DATAVA01.001", 0, 87);
+		break;
 	case kFilm:
 		startMovie("DATAVB08.001", 0, 2565);
 		if (!_themeStarted) {
-			_audio.playMusic(17, false);
-			_audio.setMusicVolume(255);
+			_audio.playMusic(17, false, true);
+			_audio.setMusicVolume(100);
 			_themeStarted = true;
 		}
 		break;
@@ -322,6 +325,8 @@ void RunawayOpening::advance() {
 		enter(_chapter == 3 && _chapterVariation == 3 ? kChapterExpression : kChapter, _now);
 	} else if (_step == kChapterExpression) {
 		enter(kChapter, _now);
+	} else if (_step == kCityExit && !_titleMovie) {
+		enter(kFilm, _now);
 	} else {
 		enter((Step)(_step + 1), _now);
 	}
@@ -439,8 +444,9 @@ void RunawayOpening::update(uint32 now) {
 		const uint fadeTime = 74 * (_step == kTitle ? 40 : 20);
 		if (_step == kAccidentTitle) {
 			if (!(_events & 1) && elapsed >= fadeTime * 2 + 500) {
-				_audio.playMusic(17, false);
-				_audio.setMusicVolume(255);
+				_audio.playMusic(17, false, true);
+				_audio.setMusicVolume(100);
+				_audio.setEffectVolume(2, 40);
 				_themeStarted = true;
 				_events |= 1;
 			}
@@ -464,6 +470,7 @@ void RunawayOpening::update(uint32 now) {
 		}
 		break;
 	case kAccidentEnd:
+	case kFilmTitle:
 	case kApproach:
 	case kTurn:
 		if (updateMovie())
@@ -473,8 +480,8 @@ void RunawayOpening::update(uint32 now) {
 		const bool ended = updateMovie();
 		// Original frame callbacks (0x576d40), independent of rendering rate.
 		if (!(_events & 1) && _frame >= 2251) {
-			_audio.playMusic(30);
-			_audio.setMusicVolume(179);
+			_audio.setMusicVolume(70);
+			_audio.playMusicEffect(30, 70, 2, true);
 			_audio.playEffect(41);
 			_events |= 1;
 		}
@@ -494,7 +501,8 @@ void RunawayOpening::update(uint32 now) {
 		if (updateMovie()) {
 			advance();
 		} else if (!_events && _frame >= 2734) {
-			_audio.playEffect(43, 230);
+			_audio.setMusicVolume(85);
+			_audio.playEffect(43, 90);
 			_events = 1;
 		}
 		break;

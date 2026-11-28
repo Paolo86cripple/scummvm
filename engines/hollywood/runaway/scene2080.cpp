@@ -32,7 +32,7 @@ const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
 	{526, 441, 1, {301, 302}, {0, 1}, {595, 423}}, // 1: Wastebasket.
 	{587, 471, 1, {309, 310}, {0, 0}, {682, 439}}, // 2: Faucet.
-	{50, 586, 5, {308, 303}, {0, 2}, {0, 580}, 7}, // 3: Door.
+	{50, 586, 5, {308, 303}, {0, 2}, {0, 580}, 7, false, false, true}, // 3: Door.
 	{577, 466, 1, {305, 306}, {1, 1}, {647, 429}}, // 4: Bottle.
 	{442, 377, 0, {311, 312}, {0, 0}, {442, 377}}, // 5: Sign.
 	{490, 372, 0, {313, 314}, {0, 0}, {490, 372}}, // 6: Pipe.
@@ -150,8 +150,7 @@ RunawayRoomScene::ActionResult Scene2080::dispatchCustomSceneAction(uint16 actio
 		return kHandled;
 	case 306: // Take the alcohol bottle.
 		_hospital.alcohol = 1;
-		_inventory.add(12);
-		say(18, _random.getRandomNumber(2), true);
+		pickUp(12, 18, _random.getRandomNumber(2), true);
 		return kBackgroundChanged;
 	case 307: // Fill the glass at the faucet.
 		if (_inventory.water() == 1) {
@@ -172,6 +171,7 @@ RunawayRoomScene::ActionResult Scene2080::dispatchCustomSceneAction(uint16 actio
 	case 320: // Use the toilet.
 		say(action == 311 ? 6 : 15);
 		_roomAction = action;
+		_actionStage = 0;
 		return kHandled;
 	default:
 		return kUnhandled;
@@ -204,7 +204,7 @@ bool Scene2080::updateCustomSequence() {
 		_actionStep = (_now - _actionStarted) / 80;
 		if (!_actionStage) {
 			if (previous < 12 && _actionStep >= 12) {
-				_audio.playEffect(31);
+				_audio.playEffectAt(31, Common::Point(600, 200));
 			}
 			if (_actionStep >= 19) {
 				_actionStage = 1;
@@ -213,15 +213,14 @@ bool Scene2080::updateCustomSequence() {
 			}
 		} else if (_actionStage == 2) {
 			if (_hospital.markerTaken && previous < 2 && _actionStep >= 2) {
-				_audio.playEffect(30, 204);
+				_audio.playEffectAt(30, Common::Point(600, 200), 80);
 			}
 			const uint duration = _hospital.markerTaken ? 19 : 12;
 			if (_actionStep >= duration) {
 				_roomAction = 0;
 				if (!_hospital.markerTaken) {
 					_hospital.markerTaken = 1;
-					_inventory.add(11);
-					say(1, 1);
+					pickUp(11, 1, 1);
 				}
 			}
 		}
@@ -229,19 +228,22 @@ bool Scene2080::updateCustomSequence() {
 		const uint previous = _actionStep;
 		_actionStep = (_now - _actionStarted) / 80;
 		if (previous < 20 && _actionStep >= 20) {
-			_audio.playEffect(38, 204);
+			_audio.playEffectAt(38, Common::Point(600, 200), 80);
 		}
 		if (_actionStep >= ARRAYSIZE(kFillGlassFrames)) {
 			_roomAction = 0;
 			_inventory.setWater(1);
 			_inventory.remove(13);
-			_inventory.add(13);
-			say(4);
+			pickUp(13, 4);
 		}
-	} else if ((_roomAction == 311 || _roomAction == 320) && !speaking()) {
-		_facing = 4;
-		say(_roomAction == 311 ? 6 : 15, 1);
-		_roomAction = 0;
+	} else if ((_roomAction == 311 || _roomAction == 320) && !speaking() && !_walkPath.active()) {
+		if (!_actionStage) {
+			_actionStage = 1;
+			walkTo(_position, 4, true);
+		} else {
+			say(_roomAction == 311 ? 6 : 15, 1);
+			_roomAction = 0;
+		}
 	}
 	return true;
 }

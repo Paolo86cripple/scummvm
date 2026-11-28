@@ -22,9 +22,12 @@
 #ifndef NGI_SCENE_H
 #define NGI_SCENE_H
 
+#include "common/events.h"
+
 #include "common/ptr.h"
 #include "ngi/objects.h"
 #include "ngi/gfx.h"
+#include "ngi/guimanager.h"
 #include "ngi/interaction.h"
 
 namespace NGI {
@@ -33,6 +36,16 @@ class MessageQueue;
 class GameProject;
 class BehaviorController;
 class MctlCompound;
+
+struct Exit {
+	PictureObject *destination = nullptr;
+	AniObject *arrow = nullptr;
+	PictureObject *pressed = nullptr;
+	Common::Point offset;
+	int angle = 0, state = 1, releaseTime = -1;
+	int movementId = 0;
+	void setState(int newState);
+};
 
 class Scene : public Background {
  public:
@@ -43,7 +56,14 @@ class Scene : public Background {
 	Common::Array<AniObject *> _renderableAnis;
 	PicAniInfoList _roamingObjects;
 	Common::Array<Entrance> _entrances;
+	Common::Array<Exit> _exits;
+	void initExits(Scene &common);
+	void setExitState(int pictureId, int state);
+	void updateExitInput(Common::Point pos, Common::EventType type);
 	int16 _heroId = 0;
+	Common::ScopedPtr<GuiManager> _guiManager;
+	void (*_guiEventHandler)(Scene &, const Common::String &, const Common::String &) = nullptr;
+	void onGuiEvent(const Common::String &id, const Common::String &event);
 	Common::Array<MessageQueue *> _messageQueues;
 	// XML queue templates are cloned when run and can be shared between scenes.
 	Scene *_commonQueueScene = nullptr;
@@ -65,8 +85,7 @@ class Scene : public Background {
 
 	void initStaticANIObjects();
 	void init();
-	void render();
-	void drawAndroid(Graphics::ManagedSurface &target) const;
+	void render(bool clear = true);
 	void drawContent(int minPri, int maxPri, bool drawBG);
 	void updateScrolling();
 	void updateScrolling2();
@@ -99,14 +118,8 @@ class Scene : public Background {
 	void stopAllSounds();
 
   private:
-#if 0
-	static bool compareObjPriority(const void *p1, const void *p2);
-	void sortRenderables(Common::Array<AniObject *> &list, bool skipFirst = false);
-	void sortRenderables(Common::Array<PictureObject *> &list, bool skipFirst = false);
-#else
 	template<typename T>
 	void sortRenderables(Common::Array<T*> &list, uint startIndex = 0);
-#endif
 };
 
 class SceneTag : public CObject {

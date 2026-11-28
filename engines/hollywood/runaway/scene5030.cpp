@@ -212,6 +212,7 @@ bool Scene5030::restoreState(const RunawaySaveState &state, uint32 now, bool ent
 	_peeked = state.peeked;
 	_ice = (IceState)state.ice;
 	_hatchState = (HatchState)state.hatch;
+	_hatchExitKnown = state.desert.hatchSeen != 0;
 	for (uint i = 0; i < ARRAYSIZE(_pickedUp); ++i) {
 		_pickedUp[i] = state.pickedUp[i];
 		_examined[i] = state.examined[i];
@@ -223,7 +224,7 @@ bool Scene5030::restoreState(const RunawaySaveState &state, uint32 now, bool ent
 	_random.setSeed(state.randomSeed);
 	_now = _lastUpdate = _actionStarted = now;
 	_entering = entering;
-	_walkElapsed = _lastFootstep = _step = 0;
+	_step = 0;
 	_action = _afterSpeech = _afterWalk = kNone;
 	_pendingHotspot = _pendingItem = _pickupHotspot = 0;
 	_pendingVerb = kVerbWalk;
@@ -313,7 +314,15 @@ void Scene5030::walkTo(Common::Point target, bool scripted) {
 	} else {
 		_walkPath.findPath(RunawayWalkMap(kRoomWidth, kRoomHeight, _mask, _maps, &_walkRoutes), target);
 	}
-	_walkElapsed = _lastFootstep = 0;
+	startWalk(_action == kWalkingAction ? _actionFacing : _pendingHotspot ? kHotspots[_pendingHotspot].facing : 0xff);
+}
+
+void Scene5030::startWalk(byte facing) {
+	Common::Array<float> scales;
+	scales.push_back(RunawayActor::perspectiveHeight(_position) / 455);
+	for (uint i = 0; i < _walkPath.points().size(); ++i)
+		scales.push_back(RunawayActor::perspectiveHeight(_walkPath.points()[i]) / 455);
+	_walkPath.start(_facing, facing, scales);
 	if (!_walkPath.active())
 		arrive();
 }
@@ -340,6 +349,7 @@ void Scene5030::showSpeechRow() {
 void Scene5030::stopSpeech() {
 	_speech.stop();
 	_speechRow = _speechEnd = 0;
+	_inventorySpeechPose = 0;
 	_nextInventoryReply = RunawayInventory::Reply(0);
 }
 
@@ -416,8 +426,6 @@ Common::U32String Scene5030::actionCaption(byte id, RunawayVerb verb, byte item)
 void Scene5030::sayInventory(const RunawayInventory::Reply &reply) {
 	const RunawayInventory::Reply speech = reply.action == 1 || reply.action == 5 ? RunawayInventory::randomReply(_random) : reply;
 	stopSpeech();
-	if (speech.cue == 156 && !speech.variation)
-		_audio.playEffect(26, 166);
 	uint16 row, sample;
 	byte count;
 	if (!_text.getStaticSpeechCue(speech.cue, speech.variation, row, count, sample))
@@ -429,6 +437,7 @@ void Scene5030::sayInventory(const RunawayInventory::Reply &reply) {
 	_speechRow = row;
 	_speechEnd = row + MAX<uint>(1, count) - 1;
 	_speechSample = sample;
+	_inventorySpeechPose = RunawayInventory::speechPose(speech.cue, speech.variation);
 	_nextInventoryReply = _inventory.nextReply(speech);
 	showSpeechRow();
 }
@@ -473,9 +482,26 @@ void Scene5030::playWalkFootstep() {
 	const byte surface = _maps[1280 + _mask[_position.y * kRoomWidth + _position.x]];
 	const uint volume = CLIP<int>((int)(RunawayActor::perspectiveHeight(_position) * 100 / 455), 0, 100);
 	if (surface >= 1 && surface <= 7) {
-		_audio.playFootstep(surface, _random.getRandomBit(), volume * 255 / 100, _position.x);
+		_audio.playFootstep(surface, _random.getRandomBit(), volume, _position.x);
 	}
-	_lastFootstep = _walkElapsed;
+}
+
+bool Scene5030::canSkipExit(byte id) const {
+	return _game == kRunawayFullGame && id == 6 && _hatchState == kOpen && _hatchExitKnown;
+}
+
+void Scene5030::waitForExitClick(uint32 now) {
+	_idleHead.pause(now - _lastUpdate);
+	_idleBody.pause(now - _lastUpdate);
+	_now = _lastUpdate = now;
+}
+
+void Scene5030::skipExit(byte id) {
+	if (busy() || speaking() || !canSkipExit(id))
+		return;
+	cancelWalk();
+	_action = kEscape;
+	finishAction();
 }
 
 void Scene5030::click(Common::Point mouse, RunawayVerb verb, byte item) {
@@ -500,9 +526,8 @@ void Scene5030::click(Common::Point mouse, RunawayVerb verb, byte item) {
 		}
 		if (!approach) {
 			const Common::Point target = id == 8 && _coolerMoved ? Common::Point(1128, 406) : kHotspots[id].lookPosition;
-			_facing = runawayFacingTo(_position, target);
-			_walkPath.clear();
-			arrive(false);
+			_walkPath.setTarget(_position);
+			startWalk(runawayFacingTo(_position, target));
 			return;
 		}
 	}
@@ -515,14 +540,13 @@ void Scene5030::click(Common::Point mouse, RunawayVerb verb, byte item) {
 }
 
 void Scene5030::pickUp(byte hotspot, byte item, uint patch) {
-	if (!_inventory.add(item))
+	if (_inventory.contains(item))
 		return;
 	_pickedUp[hotspot] = true;
 	drawPatch(_pickupPatches[patch]);
-	if (hotspot == 14 || hotspot == 17)
-		sayCue(hotspot == 14 ? 26 : 31, 0);
-	else
-		sayInventory(RunawayInventory::Reply(18, _random.getRandomNumber(2)));
+	_inventory.beginPickup(item);
+	_pickupHotspot = hotspot;
+	startAction(kPickupInventory);
 }
 
 void Scene5030::useItem(byte item, byte hotspot) {
@@ -586,7 +610,30 @@ void Scene5030::useItem(byte item, byte hotspot) {
 	}
 }
 
-void Scene5030::examine(byte id) {
+void Scene5030::beginHeadMovement(Action next, RunawayHeadMovement::Direction direction, uint16 hold) {
+	if (_game != kRunawayFullGame) {
+		startAction(next);
+		return;
+	}
+	startAction(kHeadMovement);
+	_idleHead.reset(_now);
+	_idleBody.reset(_now);
+	_afterHeadMovement = next;
+	_headMovement.start(direction, hold, _now);
+}
+
+void Scene5030::examine(byte id, bool headMoved) {
+	if (_game == kRunawayFullGame && !headMoved) {
+		_headHotspot = id;
+		if (id == 5 || (id == 6 && _hatchState != kOpen) || id == 10 || id == 11) {
+			beginHeadMovement(kExamine);
+			return;
+		}
+		if (id == 8 && !_coolerMoved && _lidOpen) {
+			walkForAction(Common::Point(1062, 473), 1, kInspectCooler, true);
+			return;
+		}
+	}
 	const bool examined = _examined[id];
 	_examined[id] = true;
 	switch (id) {
@@ -678,12 +725,12 @@ void Scene5030::walkForAction(Common::Point target, byte facing, Action next, bo
 void Scene5030::setPosition(Common::Point position, byte facing) {
 	_position = position;
 	_walkPath.reset(position);
+	_cameraFollow.reset();
 	_facing = facing;
 }
 
-void Scene5030::arrive(bool faceHotspot) {
+void Scene5030::arrive() {
 	if (_action == kWalkingAction) {
-		_facing = _actionFacing;
 		startAction(_afterWalk);
 		return;
 	}
@@ -692,9 +739,6 @@ void Scene5030::arrive(bool faceHotspot) {
 	_committedCaption.clear();
 	if (!id)
 		return;
-	if (faceHotspot) {
-		_facing = kHotspots[id].facing;
-	}
 	if (item) {
 		useItem(item, id);
 	} else if (_pendingVerb == kVerbLook) {
@@ -751,6 +795,13 @@ void Scene5030::startAction(Action action) {
 	stopSpeech();
 	uint chunk = 0, frames = 0;
 	switch (action) {
+	case kExamine:
+		_action = kNone;
+		examine(_headHotspot, true);
+		break;
+	case kInspectCooler:
+		beginHeadMovement(kExamine);
+		break;
 	case kIntroLookAround:
 		waitForSpeech(0, 1, kIntroInventory);
 		break;
@@ -759,7 +810,13 @@ void Scene5030::startAction(Action action) {
 		sayCue(0, 2);
 		break;
 	case kIntroListen:
-		waitForSpeech(0, 3, kIntroWalkToDoor);
+		waitForSpeech(0, 3, kIntroLookLeft);
+		break;
+	case kIntroLookLeft:
+		beginHeadMovement(kIntroLookRight, RunawayHeadMovement::kLeft, 1);
+		break;
+	case kIntroLookRight:
+		beginHeadMovement(kIntroWalkToDoor, RunawayHeadMovement::kRight, 1);
 		break;
 	case kIntroWalkToDoor:
 		walkForAction(Common::Point(101, 507), 7, kIntroExamineDoor);
@@ -790,6 +847,12 @@ void Scene5030::startAction(Action action) {
 			break;
 		}
 		break;
+	case kPickupReply:
+		if (_pickupHotspot == 14 || _pickupHotspot == 17)
+			sayCue(_pickupHotspot == 14 ? 26 : 31, 0);
+		else
+			sayInventory(RunawayInventory::Reply(18, _random.getRandomNumber(2)));
+		break;
 	case kShirt:
 		_action = kNone;
 		sayCue(28, 0);
@@ -801,6 +864,9 @@ void Scene5030::startAction(Action action) {
 		walkForAction(Common::Point(1062, 473), 1, kFinishMelting);
 		break;
 	case kFinishMelting:
+		beginHeadMovement(kDescribeMeltedIce);
+		break;
+	case kDescribeMeltedIce:
 		_ice = kMelted;
 		_action = kNone;
 		sayCue(13, 5);
@@ -833,6 +899,9 @@ void Scene5030::startAction(Action action) {
 			error("Cannot load Runaway draining animation");
 		break;
 	case kFinishDraining:
+		beginHeadMovement(kDescribeDrainedCooler);
+		break;
+	case kDescribeDrainedCooler:
 		_action = kNone;
 		sayCue(19, 2);
 		break;
@@ -842,7 +911,7 @@ void Scene5030::startAction(Action action) {
 		break;
 	case kOpenHatch:
 		_audio.playMusic(20, false);
-		_audio.setMusicVolume(255);
+		_audio.setMusicVolume(100);
 		chunk = 36;
 		frames = 47;
 		applyPatch(24);
@@ -868,6 +937,9 @@ void Scene5030::startAction(Action action) {
 		frames = 69;
 		break;
 	case kPrepareStirringHelmet:
+		beginHeadMovement(kLookAtHelmet);
+		break;
+	case kLookAtHelmet:
 		_facing = 4;
 		waitForSpeech(37, 6, kStirHelmet);
 		break;
@@ -975,11 +1047,23 @@ void Scene5030::skipVideo() {
 }
 
 void Scene5030::updateAction() {
+	if (_action == kHeadMovement) {
+		_headMovement.update(_now, _random);
+		if (!_headMovement.active())
+			startAction(_afterHeadMovement);
+		return;
+	}
 	const uint previousStep = _step;
 	const uint32 elapsed = _now - _actionStarted;
 	if (_action == kWaitSpeech) {
 		if (!speaking())
 			startAction(_afterSpeech);
+	} else if (_action == kPickupInventory) {
+		if (!_inventory.pickingUp())
+			startAction(kPickupReply);
+	} else if (_action == kPickupReply) {
+		if (!speaking())
+			_action = kNone;
 	} else if (_action == kIntroInventory) {
 		if (!speaking())
 			startAction(kIntroListen);
@@ -1000,7 +1084,7 @@ void Scene5030::updateAction() {
 		// Both demo movies run at 24 fps. Dispatch callbacks on crossing a
 		// frame, including delayed updates, so each effect plays exactly once.
 		if (_action == kIntroVideo && previousStep < 353 && _step >= 353) {
-			_audio.playFootstep(3, _random.getRandomBit(), 255, 512);
+			_audio.playFootstep(3, _random.getRandomBit(), 100, 512);
 		}
 		if (_action == kCleanWindowVideo && previousStep < 56 && _step >= 56)
 			_audio.playEffect(22);
@@ -1019,7 +1103,7 @@ void Scene5030::updateAction() {
 		if (previousStep < 41 && _step >= 41)
 			_audio.playEffect(28);
 		if (previousStep < 44 && _step >= 44) {
-			_audio.playEffect(16, 204, 1);
+			_audio.playEffect(16, 80, 1);
 			applyPatch(11);
 		}
 		if (_step >= 82) {
@@ -1032,7 +1116,7 @@ void Scene5030::updateAction() {
 		case kIntro:
 			length = 19;
 			if (previousStep < 5 && _step >= 5) {
-				_audio.playFootstep(3, _random.getRandomBit(), 179, 512);
+				_audio.playFootstep(3, _random.getRandomBit(), 70, 512);
 			}
 			break;
 		case kOpenLid:
@@ -1040,7 +1124,7 @@ void Scene5030::updateAction() {
 			length = 33;
 			const uint start = _action == kOpenLid ? 18 : 11;
 			if (previousStep < start && _step >= start) {
-				_audio.playEffectAt(80, Common::Point(1238, 200), 153);
+				_audio.playEffectAt(80, Common::Point(1238, 200), 60);
 			}
 			if (previousStep < start + 4 && _step >= start + 4)
 				_audio.stopEffect();
@@ -1084,7 +1168,7 @@ void Scene5030::updateAction() {
 		case kEnterHatch:
 			length = 32;
 			if (previousStep < 24 && _step >= 24) {
-				_audio.playFootstep(3, _random.getRandomBit(), 230, 1238);
+				_audio.playFootstep(3, _random.getRandomBit(), 90, 1238);
 			}
 			break;
 		case kPeekDoor:
@@ -1099,7 +1183,7 @@ void Scene5030::updateAction() {
 		case kStirHelmet:
 			length = 90;
 			if (previousStep < 5 && _step >= 5)
-				_audio.playEffect(71, 191);
+				_audio.playEffect(71, 75);
 			if (previousStep < 81 && _step >= 81)
 				_audio.stopEffect();
 			break;
@@ -1116,13 +1200,23 @@ void Scene5030::update(uint32 now, int scrollDirection, bool inventoryOpen) {
 	const uint elapsed = MIN<uint>(100, now - _lastUpdate);
 	const uint32 pausedTime = now - _lastUpdate;
 	_lastUpdate = now;
-	_audio.updateBackgroundMusic(now, _random, 17, 3, 96, 30000);
+	_audio.updateBackgroundMusic(now, _random, 17, 3, 100, 30000);
 	if (_speechRow && !_audio.speechPlaying() && _speech.finished(now))
 		skipSpeech();
+	if (_inventory.handling()) {
+		const RunawayInventory::Reply line = _inventory.updateHandling(now, _audio, speaking());
+		if (line.cue)
+			sayInventory(line);
+		_actionStarted += pausedTime;
+		_idleHead.pause(pausedTime);
+		_idleBody.pause(pausedTime);
+		return;
+	}
 	if (inventoryOpen && !inventoryPresentation()) {
 		_actionStarted += pausedTime;
 		_idleHead.pause(pausedTime);
 		_idleBody.pause(pausedTime);
+		_headMovement.pause(pausedTime);
 		return;
 	}
 	updateAction();
@@ -1132,21 +1226,22 @@ void Scene5030::update(uint32 now, int scrollDirection, bool inventoryOpen) {
 		if (_idleBody.update(now, true, false, _facing, _actor, _random))
 			return;
 	}
+	uint cameraElapsed = elapsed;
 	if ((_action == kNone || _action == kWalkingAction) && _walkPath.active()) {
-		const uint previousWalkFrame = _walkElapsed / 60;
-		if (_walkPath.advance(elapsed * 0.18f, _position, _facing)) {
-			_walkElapsed += elapsed;
-			// Native walking repeats cels 1..12 at 60 ms, with contacts at
-			// 6 and 12. Cels 13..18 belong to stopping/turning, not the gait.
-			for (uint frame = previousWalkFrame + 1; frame <= _walkElapsed / 60; ++frame) {
-				if ((1 + frame % 12) % 6 == 0)
-					playWalkFootstep();
+		_cameraFollow.reset();
+		uint footsteps = 0;
+		while (cameraElapsed && _walkPath.active()) {
+			const uint step = MIN(cameraElapsed, _walkPath.timeToNextFrame());
+			const Common::Point previous = _position;
+			footsteps += _walkPath.advance(step, _position, _facing);
+			cameraElapsed -= step;
+			if (!scrollDirection && _position != previous) {
+				const int height = (int)RunawayActor::perspectiveHeight(_position);
+				setCameraX(RunawayCamera::followWalk(Common::Point(_cameraX, 0), previous, _position, height, _fastScrolling).x);
 			}
-			// The final standing cel (0) is also a contact. Suppress a
-			// duplicate when it immediately follows another footfall.
-			if (!_walkPath.active() && (!_lastFootstep || _walkElapsed - _lastFootstep > 60))
-				playWalkFootstep();
 		}
+		for (uint i = 0; i < footsteps; ++i)
+			playWalkFootstep();
 		if (!_walkPath.active()) {
 			debugC(1, kDebugScene, "Runaway demo: arrived at %d,%d", _position.x, _position.y);
 			arrive();
@@ -1159,15 +1254,19 @@ void Scene5030::update(uint32 now, int scrollDirection, bool inventoryOpen) {
 	const bool idle = !walking && !_speechRow && _action == kNone;
 	_idleHead.update(now, idle && !_idleBody.active(), _random);
 	const bool bodyIdle = _idleBody.update(now, idle, _idleHead.centered(), _facing, _actor, _random);
-	const int headFrame = walking ? -1 : _speechRow ? speechFrame() : idle ? _idleHead.frame() : -1;
+	const int headFrame = _headMovement.active() ? _headMovement.frame() : walking ? -1 :
+		_speechRow ? speechFrame() : idle ? _idleHead.frame() : -1;
 	if (!bodyIdle)
-		_actor.setFrame(_facing, walking ? 1 + (_walkElapsed / 60) % 12 : 0, headFrame);
-	if (scrollDirection)
-		_cameraX += scrollDirection * MAX<int>(1, elapsed / (_fastScrolling ? 2 : 4));
-	else if (walking || (_action != kNone && _action != kIntro))
-		_cameraX += CLIP<int>(_position.x - kScreenWidth / 2 - _cameraX,
-			-MIN<int>(_fastScrolling ? 8 : 4, elapsed), MIN<int>(_fastScrolling ? 8 : 4, elapsed));
-	setCameraX(_cameraX);
+		_actor.setFrame(_facing, walking ? _walkPath.frame() : 0, headFrame);
+	if (scrollDirection) {
+		_cameraFollow.reset();
+		setCameraX(_cameraX + scrollDirection * MAX<int>(1, elapsed / (_fastScrolling ? 2 : 4)));
+	} else if (!_fastScrolling && !walking && (_action == kNone || _action == kWaitSpeech)) {
+		const int height = (int)RunawayActor::perspectiveHeight(_position);
+		setCameraX(_cameraFollow.followIdle(Common::Point(_cameraX, 0), _position, height, cameraElapsed).x);
+	} else {
+		_cameraFollow.reset();
+	}
 }
 
 void Scene5030::draw() {

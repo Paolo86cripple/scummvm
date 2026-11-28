@@ -27,8 +27,8 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{339, 512, 7, {301, 302}, {0, 0}, {113, 540}}, // 1: Outside Of The Bus.
-	{666, 303, 0, {303, 304}, {0, 1}, {679, 290}, 5}, // 2: Back Of The Bus.
+	{339, 512, 7, {301, 302}, {0, 0}, {113, 540}, 0, false, false, true}, // 1: Outside Of The Bus.
+	{666, 303, 0, {303, 304}, {0, 1}, {679, 290}, 5, false, false, true}, // 2: Back Of The Bus.
 	{727, 436, 1, {305, 306}, {1, 1}, {800, 400}}, // 3: Right-Hand Shelf.
 	{649, 499, 4, {307, 308}, {0, 1}, {649, 500}}, // 4: Axle.
 	{113, 540, 5, {309, 310}, {-1, 1}, {71, 552}}, // 5: Pocket.
@@ -36,7 +36,7 @@ const RunawayHotspot kHotspots[] = {
 	{462, 448, 7, {313, 314}, {1, 1}, {424, 414}}, // 7: Item Under Bed.
 	{727, 436, 1, {315, 316}, {1, 0}, {800, 400}}, // 8: Middle Shelf.
 	{727, 436, 1, {317, 318}, {1, 0}, {800, 400}}, // 9: Left-Hand Shelf.
-	{666, 303, 0, {303, 304}, {0, 1}, {679, 290}, 4}, // 10: Back Of The Bus.
+	{666, 303, 0, {303, 304}, {0, 1}, {679, 290}, 4, false, false, true}, // 10: Back Of The Bus.
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}}, // 11: Door.
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}}, // 12: Pile Of Lipstick.
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}}, // 13: Makeshift Crank.
@@ -102,7 +102,7 @@ void Scene5170::resumeAmbientAudio(bool entering) {
 	if (_audio.musicCue() != 16 || !_audio.musicPlaying()) {
 		_audio.playMusic(16, false);
 	}
-	_audio.setMusicVolume(179);
+	_audio.setMusicVolume(70);
 }
 
 bool Scene5170::applyCustomBackgroundPatches() {
@@ -118,7 +118,7 @@ void Scene5170::advanceCustomGameplayLoop(uint32 delta) {
 		const bool opening = doorClosed();
 		_doorFrame += opening ? 1 : -1;
 		if (_doorFrame == (opening ? 5 : 11)) {
-			_audio.playEffect(opening ? 65 : 64, 255, 1);
+			_audio.playEffect(opening ? 65 : 64, 100, 1);
 		}
 		_doorMoving = _doorFrame != (opening ? 24 : 0);
 	}
@@ -205,17 +205,15 @@ RunawayRoomScene::ActionResult Scene5170::dispatchCustomSceneAction(uint16 actio
 	case 306: // Take lipstick from the shelf.
 		if (_desert.lipstickShelf < 2) {
 			say(5);
-			_inventory.add(10);
+			pickUp(10, 5, 1);
 			_desert.lipstickShelf = 2;
-			say(5, 1);
 		} else if (_desert.lipstickShelf == 2) {
 			if (!_inventory.desert().lipstick) {
 				say(5, 2);
 			} else {
 				say(5, 3);
-				_inventory.add(11);
+				pickUp(11, 5, 4);
 				_desert.lipstickShelf = 3;
-				say(5, 4);
 			}
 		} else {
 			say(5, 5);
@@ -253,21 +251,19 @@ RunawayRoomScene::ActionResult Scene5170::dispatchCustomSceneAction(uint16 actio
 			say(9, 2);
 		} else {
 			say(9);
-			_inventory.add(26);
 			_desert.keyTaken = 1;
 			if (_desert.fridgeSeen) {
-				say(9, 1);
+				pickUp(26, 9, 0xff, false, 1);
 			} else {
-				say(18, _random.getRandomNumber(2), true);
+				pickUp(26, 18, _random.getRandomNumber(2), true);
 			}
 			walkTo(Common::Point(340, 511), 3, true);
 		}
 		break;
 	case 312: // Take the sunglasses.
 		say(11);
-		_inventory.add(20);
+		pickUp(20, 11, 1);
 		_desert.glassesTaken = 1;
-		say(11, 1);
 		return kBackgroundChanged;
 	case 313: // Look at the object under the bed.
 		say(12, _desert.vacuum != 0);
@@ -279,9 +275,8 @@ RunawayRoomScene::ActionResult Scene5170::dispatchCustomSceneAction(uint16 actio
 		if (!_desert.vacuum) {
 			say(12);
 		}
-		_inventory.add(22);
+		pickUp(22, 13);
 		_desert.vacuum = 2;
-		say(13);
 		return kBackgroundChanged;
 	case 315: // Look at the necklaces.
 		say(14, _desert.necklacesSeen);

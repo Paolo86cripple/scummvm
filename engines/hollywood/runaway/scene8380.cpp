@@ -29,8 +29,8 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{866, 268, 0, {301, 302}, {0, 3}, {798, 250}, 7}, // 1: Stairs.
-	{1023, 318, 0, {303, 304}, {0, 1}, {1123, 300}, 6}, // 2: Other side.
+	{866, 268, 0, {301, 302}, {0, 3}, {798, 250}, 7, false, false, true}, // 1: Stairs.
+	{1023, 318, 0, {303, 304}, {0, 1}, {1123, 300}, 6, false, false, true}, // 2: Other side.
 	{520, 410, 7, {305, 306}, {0, 1}, {442, 338}, 3}, // 3: Sushi.
 	{553, 363, 0, {307, 308}, {0, 0}, {616, 346}}, // 4: Table.
 	{0, 0, 0, {319, 321}, {0, 0}, {641, 214}}, // 5: Machines.
@@ -142,7 +142,7 @@ void Scene8380::resumeAmbientAudio(bool entering) {
 	if (entering || !_audio.musicPlaying()) {
 		_audio.playMusic(21);
 	}
-	_audio.setMusicVolume(255);
+	_audio.setMusicVolume(100);
 }
 
 void Scene8380::runCustomEntrySequence() {
@@ -219,7 +219,7 @@ void Scene8380::advanceSushi() {
 	case kTyping:
 		if (_sushiStep < 36) {
 			if (++_sushiStep == 12) {
-				_audio.playEffect(44, 178, 1);
+				_audio.playEffect(44, 70, 1);
 			}
 		} else if (_waitingForSushi) {
 			_sushiState = _sushiGoal == kTalking ? kTurnToBrian : kUseMicrophone;
@@ -382,7 +382,7 @@ void Scene8380::deliverItem(uint16 action) {
 void Scene8380::receiveRecordings() {
 	if (_finale.recordings >= 3) {
 		_audio.playMusic(38, false);
-		_audio.setMusicVolume(255);
+		_audio.setMusicVolume(100);
 	}
 	exchange(83, 0, 0);
 	if (_finale.recordings < 3) {
@@ -468,8 +468,7 @@ RunawayRoomScene::ActionResult Scene8380::dispatchCustomSceneAction(uint16 actio
 	case 1412: // Start the recording task and remove the recorder from the desk.
 		_recorderOnDesk = false;
 		_finale.recordingPlan = 1;
-		_inventory.add(16);
-		say(80, 38);
+		pickUp(16, 80, 38);
 		return kBackgroundChanged;
 	case 420: // Sushi demonstrates her completed voice filter.
 		exchange(83, 5, 5);

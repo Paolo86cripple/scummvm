@@ -1,7 +1,6 @@
 MODULE := engines/ngi
 
 MODULE_OBJS = \
-	android.o \
 	anihandler.o \
 	behavior.o \
 	console.o \
@@ -9,6 +8,7 @@ MODULE_OBJS = \
 	font.o \
 	gameloader.o \
 	gfx.o \
+	guimanager.o \
 	init.o \
 	input.o \
 	interaction.o \
@@ -26,8 +26,10 @@ MODULE_OBJS = \
 	sound.o \
 	stateloader.o \
 	statesaver.o \
+	xmlproject.o \
 	statics.o \
 	utils.o \
+	fullpipe/sceneTutorial.o \
 	fullpipe/sceneChapter.o \
 	fullpipe/sceneIntro.o \
 	fullpipe/sceneIntroDemo.o \

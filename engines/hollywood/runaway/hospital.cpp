@@ -45,7 +45,7 @@ void RunawayRoomScene::updateHospital(uint elapsed) {
 	if (!updateCustomSequence()) {
 		updateRoomAnimation();
 	}
-	if (_sequence.active() || _transition.scene) {
+	if (_sequence.active() || _transition.scene || presentingPickup()) {
 		return;
 	}
 	updateHospitalAudio();
@@ -55,23 +55,6 @@ void RunawayRoomScene::updateHospital(uint elapsed) {
 }
 
 bool RunawayRoomScene::sayHospitalInventory(const RunawayInventory::Reply &reply) {
-	if (reply.cue == 68) {
-		if (!_hospital.attacked) {
-			say(68, 0, true);
-		} else if (!_inventory.contains(8)) {
-			say(68, 1, true);
-		} else {
-			say(68, 2, true);
-			say(68, 3, true);
-			_hospital.medicineRead = 1;
-		}
-		_audio.playEffect(35, 179);
-		return true;
-	}
-	if ((reply.cue == 69 && reply.variation == 0) || (reply.cue == 73 && reply.variation == 1) ||
-			(reply.cue == 72 && reply.variation == 2)) {
-		_audio.playEffect(reply.cue == 69 ? 36 : reply.cue == 73 ? 37 : 34, 179);
-	}
 	if (reply.cue != 54) {
 		return false;
 	}
@@ -120,9 +103,9 @@ void RunawayRoomScene::updateHospitalInventory() {
 		}
 		if (_actionStep == 2 || _actionStep == 4) {
 			// The item appears directly in the open inventory.
-			_audio.playEffect(1, 255, _audio.effectPlaying() ? 1 : 0);
+			_audio.playEffect(1, 100, _audio.effectPlaying() ? 1 : 0);
 		}
-		_audio.playEffect(32, 255, 1);
+		_audio.playEffect(32, 100, 1);
 		_actionStage = 4;
 		break;
 	case 4:
@@ -143,6 +126,8 @@ void RunawayRoomScene::updateHospitalInventory() {
 }
 
 byte RunawayRoomScene::inventoryFrame() const {
+	if (_inventory.handling())
+		return _inventory.handlingFrame();
 	if (!hospitalChapter() || _roomAction != 54) {
 		return 0xff;
 	}

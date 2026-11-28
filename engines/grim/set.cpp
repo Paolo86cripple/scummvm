@@ -921,7 +921,18 @@ void Set::setupCamera() {
 Sector *Set::findPointSector(const Math::Vector3d &p, Sector::SectorType type) {
 	for (int i = 0; i < _numSectors; i++) {
 		Sector *sector = _sectors[i];
-		if (sector && (sector->getType() & type) && sector->isVisible() && sector->isPointInSector(p))
+		if (sector && (type == Sector::NoneType || (sector->getType() & type)) && sector->isVisible() && sector->isPointInSector(p))
+			return sector;
+	}
+	return nullptr;
+}
+
+Sector *Set::findFloorSector(const Math::Vector3d &p, Sector::SectorType type, const Common::Array<const Sector *> &exclude) {
+	for (int i = 0; i < _numSectors; i++) {
+		Sector *sector = _sectors[i];
+		if (!sector || !(sector->getType() & type) || !sector->isVisible() || !sector->isPointOnFloor(p))
+			continue;
+		if (Common::find(exclude.begin(), exclude.end(), sector) == exclude.end())
 			return sector;
 	}
 	return nullptr;

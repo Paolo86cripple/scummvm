@@ -45,10 +45,10 @@ const byte kMariolaRestFrames[] = {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{1479, 599, 0, {301, 302}, {0, 1}, {1379, 587}, 6}, // 1: Path.
+	{1479, 599, 0, {301, 302}, {0, 1}, {1379, 587}, 6, false, false, true}, // 1: Path.
 	{349, 442, 7, {303, 304}, {0, 1}, {238, 424}, 3}, // 2: Lula.
 	{878, 477, 0, {305, 306}, {0, 0}, {866, 445}, 3}, // 3: Mariola.
-	{679, 448, 1, {307, 308}, {0, 1}, {710, 431}, 5}, // 4: Inside Of The Bus.
+	{679, 448, 1, {307, 308}, {0, 1}, {710, 431}, 5, false, false, true}, // 4: Inside Of The Bus.
 	{376, 445, 1, {309, 310}, {1, 1}, {413, 417}}, // 5: Trunk.
 	{878, 477, 0, {311, 312}, {1, 1}, {840, 466}}, // 6: Bottle.
 	{383, 446, 5, {313, 314}, {0, 0}, {298, 476}}, // 7: Chair.
@@ -263,7 +263,10 @@ RunawayRoomScene::ActionResult Scene5060::dispatchCustomSceneAction(uint16 actio
 		say(4, _desert.visited[9] != 0);
 		break;
 	case 308: // Enter the bus.
-		beginRoomAnimation(action, 5, 22);
+		if (_skippingExit)
+			leaveDesertRoom(5170);
+		else
+			beginRoomAnimation(action, 5, 22);
 		break;
 	case 1308: // Finish entering the bus.
 		leaveDesertRoom(5170);
@@ -279,9 +282,8 @@ RunawayRoomScene::ActionResult Scene5060::dispatchCustomSceneAction(uint16 actio
 		if (_desert.ballTaken) {
 			say(6, 3);
 		} else {
-			_inventory.add(15);
+			pickUp(15, 6, 1);
 			_desert.ballTaken = 1;
-			say(6, 1);
 			holdRoomAnimation(410, 10, 28, 14);
 		}
 		break;
@@ -319,8 +321,7 @@ RunawayRoomScene::ActionResult Scene5060::dispatchCustomSceneAction(uint16 actio
 		beginRoomAnimation(432, 7, 201, kMariolaRestFrames, ARRAYSIZE(kMariolaRestFrames), false);
 		if (_desert.mariolaHelped) {
 			_desert.tanningOil = 2;
-			_inventory.add(12);
-			say(8, 2);
+			pickUp(12, 8, 2);
 		}
 		return kBackgroundChanged;
 	case 1432: // Finish asking for the tanning oil.
@@ -443,10 +444,10 @@ Common::U32String Scene5060::hotspotName(byte id) const {
 }
 
 void Scene5060::resumeAmbientAudio(bool entering) {
-	if (entering || !_audio.musicPlaying()) {
-		_audio.playMusic(21);
+	_audio.stopMusic();
+	if (entering || !_audio.effectPlaying(2)) {
+		_audio.playMusicEffect(21, 100, 2, true);
 	}
-	_audio.setMusicVolume(255);
 }
 
 bool Scene5060::lulaDancing() const {
@@ -460,7 +461,7 @@ bool Scene5060::lulaDancing() const {
 
 void Scene5060::playLulaFootstep(uint frame) {
 	if (frame == 124 || frame == 128 || frame == 159 || frame == 181 || frame == 191) {
-		_audio.playFootstep(2, _random.getRandomBit(), 153, 160);
+		_audio.playFootstep(2, _random.getRandomBit(), 60, 160);
 	}
 }
 
@@ -508,9 +509,9 @@ void Scene5060::drawCustomForegroundComposite(Graphics::ManagedSurface &viewport
 void Scene5060::handleAnimationFrameHook() {
 	const byte frame = _actionFrames[_actionStep];
 	if (_roomAction == 308 && (frame == 8 || frame == 15 || frame == 21)) {
-		_audio.playFootstep(4, _random.getRandomBit(), 179, _position.x);
+		_audio.playFootstep(4, _random.getRandomBit(), 70, _position.x);
 	} else if (_roomAction == 400 && (frame == 14 || frame == 21 || frame == 25)) {
-		_audio.playFootstep(frame == 14 ? 4 : 2, _random.getRandomBit(), 179, 679);
+		_audio.playFootstep(frame == 14 ? 4 : 2, _random.getRandomBit(), 70, 679);
 	} else if (_roomAction == 404 || _roomAction == 419) {
 		playLulaFootstep(frame);
 	}
@@ -520,17 +521,17 @@ void Scene5060::handleAnimationFrameHook() {
 	}
 	if (_roomAction == 481) {
 		if (_actionStep == 3 || _actionStep == 12 || _actionStep == 17 || _actionStep == 25 || _actionStep == 29) {
-			_audio.playFootstep(4, _random.getRandomBit(), 153);
+			_audio.playFootstep(4, _random.getRandomBit(), 60);
 		}
 		if (_actionStep == 39) {
-			_audio.playFootstep(4, _random.getRandomBit(), 230);
+			_audio.playFootstep(4, _random.getRandomBit(), 90);
 		}
 	}
 	if (_roomAction == 419 && _actionStep == 28) {
-		_audio.playEffect(56, 217, 1, true);
+		_audio.playEffect(56, 85, 1, true);
 	}
 	if (_roomAction == 449 && (_actionStep == 6 || _actionStep == 11 || _actionStep == 51)) {
-		_audio.playFootstep(1, _random.getRandomBit(), 153);
+		_audio.playFootstep(1, _random.getRandomBit(), 60);
 	}
 	if (_roomAction == 449 && _actionStep == 57) {
 		_audio.playFootstep(1, _random.getRandomBit());

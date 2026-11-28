@@ -129,8 +129,8 @@ class NGIEngine : public ::Engine {
 protected:
 
 	Common::Error run() override;
-	Common::Error runAndroid();
-	Common::Error enterAndroidScene1();
+	Common::Error initGame();
+	bool handleGuiEvent(const Common::Event &event);
 
 public:
 	NGIEngine(OSystem *syst, const NGIGameDescription *gameDesc);
@@ -144,10 +144,13 @@ public:
 
 	// Detection related functions
 	const NGIGameDescription *_gameDescription;
+	const uint32 _gameVersion;
+	bool usesXMLProject() const { return _gameVersion >= 200502; }
+	bool isAndroidFullPipe() const;
 	uint32 getFeatures() const;
 	bool isDemo();
 	Common::Language getLanguage() const;
-	const char *getAndroidResourceLocale() const;
+	const char *getResourceLocale() const;
 	Common::Platform getPlatform() const;
 	const char *getGameId() const;
 	int getGameGID() const;
@@ -157,7 +160,7 @@ public:
 	Common::KeyCode _keyState;
 	uint16 _buttonState;
 
-	void updateEvents();
+	bool updateEvents();
 
 	Graphics::ManagedSurface _backgroundSurface;
 
@@ -265,7 +268,7 @@ public:
 	void initMap();
 	void updateMap(PreloadItem *pre);
 	void updateMapPiece(int mapId, int update);
-	void updateScreen();
+	Common::Error updateScreen(uint32 elapsed, byte &brightness, bool redraw);
 
 	void freeGameLoader();
 	void cleanup();
@@ -391,7 +394,7 @@ public:
 	Common::Error saveGameState(int slot, const Common::String &description, bool isAutosave = false) override;
 	Common::String getSaveStateName(int slot) const override;
 
-	bool canLoadGameStateCurrently(Common::U32String *msg = nullptr) override { return getPlatform() != Common::kPlatformAndroid; }
+	bool canLoadGameStateCurrently(Common::U32String *msg = nullptr) override { return !usesXMLProject(); }
 	bool canSaveGameStateCurrently(Common::U32String *msg = nullptr) override { return _isSaveAllowed; }
 	bool hasFeature(EngineFeature f) const override;
 

@@ -32,7 +32,7 @@ const RunawayHotspot kHotspots[] = {
 	{60, 599, 5, {305, 306}, {0, 0}, {0, 650}, 7}, // 3: Inside of the cave.
 	{356, 501, 7, {307, 308}, {1, 0}, {321, 470}}, // 4: Cross.
 	{664, 536, 1, {309, 310}, {1, 0}, {715, 477}}, // 5: Cross.
-	{467, 445, 1, {311, 312}, {0, 3}, {453, 424}, 5} // 6: Village.
+	{467, 445, 1, {311, 312}, {0, 3}, {453, 424}, 5, false, false, true} // 6: Village.
 };
 
 const RunawayResponse kResponses[] = {
@@ -182,6 +182,7 @@ RunawayRoomScene::ActionResult Scene7050::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 402: // Return from the close-up after Brian finishes speaking.
 		_showStatue = false;
+		returnHeadToCenter();
 		break;
 	case 303: // Identify the object on the stone as a tomahawk.
 		say(3, _hopi.tomahawk == kUnexamined ? 0 : 1);
@@ -202,8 +203,7 @@ RunawayRoomScene::ActionResult Scene7050::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 406: // Remove the tomahawk from the stone and reveal its pipe.
 		_hopi.tomahawk = kTaken;
-		_inventory.add(11);
-		say(4, 1);
+		pickUp(11, 4, 1);
 		return kBackgroundChanged;
 	case 307: { // Examine the left cross and compare it with the right one.
 		const byte variation = _hopi.rightCrossSeen ? (_hopi.leftCrossSeen ? 2 : 1) : 0;

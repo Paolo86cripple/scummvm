@@ -53,7 +53,7 @@ const byte kCanThrows[][2] = {{0, 19}, {21, 40}, {42, 71}, {72, 88}};
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{1279, 267, 0, {301, 302}, {0, 1}, {1449, 255}, 4}, // 1: Path.
+	{1279, 267, 0, {301, 302}, {0, 1}, {1449, 255}, 4, false, false, true}, // 1: Path.
 	{1259, 354, 7, {303, 304}, {1, 0}, {1101, 298}}, // 2: Barn Doors.
 	{0, 0, 0, {305, 306}, {1, 1}, {274, 484}}, // 3: Bottle.
 	{1279, 267, 4, {1, 302}, {0, 1}, {0, 0}, 4, true}, // 4: Window.
@@ -254,9 +254,8 @@ RunawayRoomScene::ActionResult Scene5100::dispatchCustomSceneAction(uint16 actio
 		deferDesertAction(406);
 		break;
 	case 406: // Collect the jar and attract Stud's attention.
-		_inventory.add(19);
+		pickUp(19, 11, 1);
 		_desert.peanutButter = 2;
-		say(11, 1);
 		say(12, 0, false, 1);
 		deferDesertAction(416);
 		return kBackgroundChanged;
@@ -308,9 +307,8 @@ RunawayRoomScene::ActionResult Scene5100::dispatchCustomSceneAction(uint16 actio
 		if (!_desert.footrestSeen) {
 			dispatchCustomSceneAction(313);
 		}
-		_inventory.add(21);
+		pickUp(21, 18, 0, true);
 		_desert.footrest = 2;
-		say(18, 0, true);
 		return kBackgroundChanged;
 	case 315: // Look at the left barrel.
 		say(21, _random.getRandomBit());
@@ -391,6 +389,9 @@ RunawayRoomScene::ActionResult Scene5100::dispatchCustomSceneAction(uint16 actio
 	case 1328: // Finish spiking Stud's beer.
 		_inventory.remove(9);
 		say(9, 2);
+		deferDesertAction(578);
+		break;
+	case 578: // Glance at Stud before retreating.
 		say(9, 3);
 		deferDesertAction(428);
 		break;
@@ -549,12 +550,12 @@ RunawayRoomScene::ActionResult Scene5100::dispatchCustomSceneAction(uint16 actio
 		break;
 	}
 	case 1450: // Stud follows Lula away from his beer.
-		_audio.playFootstep(2, _random.getRandomBit(), 255, 100);
+		_audio.playFootstep(2, _random.getRandomBit(), 100, 100);
 		_desert.guard = 1;
 		beginRoomAnimation(460, 17, 52, nullptr, 0, false);
 		return kBackgroundChanged;
 	case 1460: // Lula demonstrates her shooting on the first visit.
-		_audio.playFootstep(2, _random.getRandomBit(), 255, 100);
+		_audio.playFootstep(2, _random.getRandomBit(), 100, 100);
 		if (_desert.lulaDistractedGuard) {
 			deferDesertAction(490);
 		} else {
@@ -680,12 +681,7 @@ void Scene5100::applyCustomHotspotState() {
 
 void Scene5100::walkHangar(Common::Point target, byte facing) {
 	// Scripted entrances cross the floor that is blocked while the guard watches.
-	_walkPath.findPath(RunawayWalkMap(_background.w, _background.h, _mask, _originalMaps, &_walkRoutes), target);
-	_arrivalFacing = facing;
-	_walkElapsed = _lastFootstep = 0;
-	if (!_walkPath.active()) {
-		arrive();
-	}
+	walkTo(target, facing, false, true);
 }
 
 uint Scene5100::studFrame() const {
@@ -756,7 +752,7 @@ void Scene5100::handleAnimationFrameHook() {
 		{19, 512}, {30, 500}, {37, 400}, {44, 300}, {51, 200}
 	};
 	if (_roomAction == 328 && _actionStep == 21) {
-		_audio.playEffect(39, 204);
+		_audio.playEffect(39, 80);
 	}
 	if (_roomAction == 450) {
 		playAnimationFootsteps(_actionFrames[_actionStep], 2, lulaSteps, ARRAYSIZE(lulaSteps));
@@ -765,7 +761,7 @@ void Scene5100::handleAnimationFrameHook() {
 	}
 	if ((_roomAction == 329 || _roomAction == 458 || _roomAction == 498 || _roomAction == 610) &&
 			(_actionFrames[_actionStep] == 10 || _actionFrames[_actionStep] == 28)) {
-		const byte volume = CLIP<int>((int)(actorHeight() * 255 / 455), 0, 255);
+		const byte volume = CLIP<int>((int)(actorHeight() * 100 / 455), 0, 100);
 		_audio.playFootstep(2, _random.getRandomBit(), volume, _position.x);
 	}
 	if (_roomAction == 470 || _roomAction == 480 || _roomAction == 558) {
@@ -776,17 +772,17 @@ void Scene5100::handleAnimationFrameHook() {
 	}
 	if (_roomAction == 468) {
 		if (_actionStep == 37) {
-			_audio.playEffect(47, 230);
+			_audio.playEffect(47, 90);
 		}
 		if (_actionStep == 79) {
-			_audio.playEffect(42, 217);
+			_audio.playEffect(42, 85);
 		}
 		if (_actionStep == 100) {
 			_audio.playEffect(45);
 		}
 	}
 	if (_roomAction == 488 && _actionStep == 27) {
-		_audio.playEffect(48, 191);
+		_audio.playEffect(48, 75);
 	}
 }
 
@@ -868,7 +864,7 @@ void Scene5100::advanceCustomGameplayLoop(uint32 delta) {
 			_maps[256 + i] = canHotspot;
 		}
 	}
-	if (_desert.guard != 1 || _hangarIntroduction || _roomAction || _hospitalExit.scene || speaking() || _inventoryOpen) {
+	if (_desert.guard != 1 || _hangarIntroduction || _roomAction || _hospitalExit.scene || speaking() || _inventoryOpen || _headMovement.active()) {
 		return;
 	}
 	if (!_hangarSpeech.subtitle().empty()) {

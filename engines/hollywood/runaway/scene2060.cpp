@@ -29,7 +29,7 @@ namespace {
 // RESOURCE.B06; the storeroom reached across the ledge (native 0x4478e0).
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{419, 546, 7, {301, 302}, {1, 1}, {419, 544}, 4}, // 1: Window.
+	{419, 546, 7, {301, 302}, {1, 1}, {419, 544}, 4, false, false, true}, // 1: Window.
 	{419, 546, 7, {304, 305}, {0, 0}, {419, 544}}, // 2: Radiator.
 	{347, 563, 7, {306, 307}, {1, 1}, {284, 521}}, // 3: Box.
 	{347, 563, 7, {308, 309}, {0, 1}, {292, 521}}, // 4: Spray can.
@@ -138,7 +138,10 @@ RunawayRoomScene::ActionResult Scene2060::dispatchCustomSceneAction(uint16 actio
 		executeItemAction(13);
 		return kHandled;
 	case 302: // Climb back to Gina's room.
-		beginRoomAnimation(action, 4, 44);
+		if (_skippingExit)
+			finishCustomAnimation(action);
+		else
+			beginRoomAnimation(action, 4, 44);
 		return kHandled;
 	case 303: // Return to Gina's room without the climbing animation.
 		_transition.scene = 2022;
@@ -154,14 +157,12 @@ RunawayRoomScene::ActionResult Scene2060::dispatchCustomSceneAction(uint16 actio
 			say(3, 3);
 		} else {
 			say(3, 2);
-			_inventory.add(15);
-			say(64, 0, true);
+			pickUp(15, 64, 0, true);
 		}
 		return kHandled;
 	case 309: // Take the spray can.
 		_hospital.sprayTaken = 1;
-		_inventory.add(18);
-		say(18, _random.getRandomNumber(2), true);
+		pickUp(18, 18, _random.getRandomNumber(2), true);
 		return kBackgroundChanged;
 	case 310: // Look at the medical reference book.
 		say(5, _hospital.book != 0);
@@ -169,8 +170,7 @@ RunawayRoomScene::ActionResult Scene2060::dispatchCustomSceneAction(uint16 actio
 		return kHandled;
 	case 311: // Take the medical reference book.
 		_hospital.book = 2;
-		_inventory.add(19);
-		say(18, _random.getRandomNumber(2), true);
+		pickUp(19, 18, _random.getRandomNumber(2), true);
 		return kBackgroundChanged;
 	case 312: // Look at the blank medical chart.
 		say(6, _hospital.blankChart != 0);
@@ -178,8 +178,7 @@ RunawayRoomScene::ActionResult Scene2060::dispatchCustomSceneAction(uint16 actio
 		return kHandled;
 	case 313: // Take the blank medical chart.
 		_hospital.blankChart = 2;
-		_inventory.add(16);
-		say(65, 0, true);
+		pickUp(16, 65, 0, true);
 		return kBackgroundChanged;
 	case 314: // Look at the anatomical model.
 		say(7, _hospital.headTaken ? 2 : _random.getRandomBit());
@@ -191,14 +190,12 @@ RunawayRoomScene::ActionResult Scene2060::dispatchCustomSceneAction(uint16 actio
 		}
 		say(7, 3);
 		_hospital.headTaken = 1;
-		_inventory.add(17);
-		say(66, 0, true);
+		pickUp(17, 66, 0, true);
 		return kBackgroundChanged;
 	case 328: // Take the pillows.
 		say(15, 1);
 		_hospital.pillowsTaken = 1;
-		_inventory.add(14);
-		say(63, 0, true);
+		pickUp(14, 63, 0, true);
 		return kBackgroundChanged;
 	default:
 		return kUnhandled;
@@ -234,7 +231,7 @@ void Scene2060::finishCustomAnimation(uint16 action) {
 
 void Scene2060::handleAnimationFrameHook() {
 	if (_roomAction == 302 && (_actionStep == 23 || _actionStep == 36)) {
-		const byte volume = CLIP<int>((int)(actorHeight() * 255 / 455), 0, 255);
+		const byte volume = CLIP<int>((int)(actorHeight() * 100 / 455), 0, 100);
 		_audio.playFootstep(1, _random.getRandomBit(), volume, _position.x);
 	}
 }

@@ -25,10 +25,18 @@
 namespace Hollywood {
 namespace {
 
+const byte kSafeHandleFrames[] = {
+	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+	15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+	31, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 19, 18, 17,
+	16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
+	0
+};
+
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
 	{516, 314, 1, {301, 302}, {0, 0}, {564, 286}}, // 1: Statue.
-	{516, 314, 1, {305, 306}, {0, 1}, {564, 286}, 5}, // 2: Hole.
+	{516, 314, 1, {305, 306}, {0, 1}, {564, 286}, 5, false, false, true}, // 2: Hole.
 	{462, 312, 7, {303, 304}, {0, 1}, {0, 0}}, // 3: Safe.
 	{0, 0, 4, {307, 307}, {0, 0}, {512, 599}, 0, false, true}, // 4: Rubble.
 	{462, 312, 7, {308, 309}, {0, 1}, {512, 599}} // 5: Combination dial.
@@ -84,8 +92,13 @@ void Scene6250::runCustomEntrySequence() {
 }
 
 void Scene6250::drawCustomBackgroundComposite(Graphics::ManagedSurface &viewport) {
-	const uint frame = _safeAnimating && drawingRoomAnimation() ?
-		_actionFrames[MIN<uint>(_actionStep, _actionFrames.size() - 1)] : _safeFrame;
+	uint frame = _safeFrame;
+	if (drawingRoomAnimation()) {
+		if (_roomAction == 404)
+			frame = 112 + _actionFrames[_actionStep];
+		else if (_safeAnimating)
+			frame = _actionFrames[_actionStep];
+	}
 	_safeAnimation.draw(viewport, frame, 0, 0);
 }
 
@@ -120,13 +133,16 @@ bool Scene6250::adjustCustomWalkTargetToFloorMask(Common::Point &target) const {
 RunawayRoomScene::ActionResult Scene6250::dispatchCustomSceneAction(uint16 action) {
 	switch (action) {
 	case 304: // Try the handle of the locked safe.
-		beginRoomAnimation(404, 7, 33);
+		beginRoomAnimation(404, 7, 33, kSafeHandleFrames, ARRAYSIZE(kSafeHandleFrames), true, 60);
 		break;
 	case 1404: // The handle will not turn without the combination.
 		say(4);
 		break;
 	case 306: // Climb back through the hole to the bank.
-		beginRoomAnimation(406, 5, 61);
+		if (_skippingExit)
+			leaveTownRoom(6191);
+		else
+			beginRoomAnimation(406, 5, 61, nullptr, 0, true, 60);
 		break;
 	case 1406: // Return upstairs after climbing out of the basement.
 		leaveTownRoom(6191);
@@ -184,9 +200,8 @@ RunawayRoomScene::ActionResult Scene6250::dispatchCustomSceneAction(uint16 actio
 	case 1403: // Keep the map and read the route to the Hopi village.
 		_safeAnimating = false;
 		_town.safeOpened = 1;
-		_inventory.add(17);
+		pickUp(17, 9, 9);
 		_audio.playMusicEffect(39);
-		say(9, 9);
 		holdRoomAnimation(408, 10, 112, 64);
 		break;
 	case 1408: { // Show the map and read the route to the Hopi village.
@@ -216,9 +231,13 @@ void Scene6250::finishCustomFilm() {
 
 void Scene6250::handleAnimationFrameHook() {
 	if (_roomAction == 400 && _actionStep == 7) {
-		_audio.playEffect(45, 153);
+		_audio.playEffect(45, 60);
 	} else if (_roomAction == 402 && _actionStep == 24) {
 		_audio.playEffect(63);
+	} else if (_roomAction == 404 && _actionStep == 20) {
+		_audio.playEffectAt(47, Common::Point(439, 200));
+	} else if (_roomAction == 406 && _actionStep == 7) {
+		_audio.playEffectAt(51, Common::Point(512, 200), 60);
 	} else if (_roomAction == 407 && _actionStep == 23) {
 		_audio.playEffect(66);
 	}

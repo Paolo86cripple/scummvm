@@ -28,7 +28,7 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{0, 550, 0, {301, 302}, {0, 3}, {-100, 550}, 7}, // 1: Path.
+	{0, 550, 0, {301, 302}, {0, 3}, {-100, 550}, 7, false, false, true}, // 1: Path.
 	{95, 358, 7, {305, 306}, {0, 1}, {76, 335}}, // 2: Recipient.
 	{483, 318, 0, {303, 304}, {1, 1}, {483, 299}}, // 3: Hole that Gina fell into.
 	{656, 347, 1, {307, 308}, {0, 0}, {732, 337}}, // 4: Stone.
@@ -106,9 +106,10 @@ void Scene6080::runCustomEntrySequence() {
 		_position = Common::Point(844, 362);
 		_walkPath.reset(_position);
 		_facing = 7;
+		updateCamera();
 		_mineOscarPresent = true;
 		_audio.playMusic(39, false);
-		_audio.setMusicVolume(255);
+		_audio.setMusicVolume(100);
 		say(20, 0, false, 1);
 		say(20, 1);
 		say(20, 2, false, 1);
@@ -185,8 +186,7 @@ RunawayRoomScene::ActionResult Scene6080::dispatchCustomSceneAction(uint16 actio
 		break;
 	case 406: // Collect the oil can.
 		_town.oilCan = 2;
-		_inventory.add(23);
-		say(5);
+		pickUp(23, 5);
 		return kBackgroundChanged;
 	case 307: // Examine the rock blocking the mine.
 		say(6, _town.rockMoved ? 1 : _town.sushiMet ? 2 : 0);
@@ -268,18 +268,18 @@ void Scene6080::handleAnimationFrameHook() {
 		}
 		if (frame == 18 || frame == 26 || frame == 33 || frame == 44 || frame == 53 ||
 				frame == 62 || frame == 82 || frame == 93 || frame == 111 || frame == 118 || frame == 125) {
-			_audio.playFootstep(2, _random.getRandomBit(), 77, 610);
+			_audio.playFootstep(2, _random.getRandomBit(), 30, 610);
 		}
 	} else if (_roomAction == 412) {
 		if (_actionStep == 8 || _actionStep == 15 || _actionStep == 23 ||
 				_actionStep == 30 || _actionStep == 37 || _actionStep == 44) {
-			_audio.playFootstep(2, _random.getRandomBit(), 77, _position.x);
+			_audio.playFootstep(2, _random.getRandomBit(), 30, _position.x);
 		}
 	} else if (_roomAction == 404) {
 		static const byte footsteps[] = {10, 18, 25, 31, 37, 44, 50, 55, 62, 68, 74, 80, 87, 93, 99, 105, 112, 118, 124};
 		for (uint i = 0; i < ARRAYSIZE(footsteps); ++i) {
 			if (_actionStep == footsteps[i]) {
-				_audio.playFootstep(2, _random.getRandomBit(), MIN<uint>(100, 20 + i * 5) * 255 / 100, 610 - i * 20);
+				_audio.playFootstep(2, _random.getRandomBit(), MIN<uint>(100, 20 + i * 5), 610 - i * 20);
 				break;
 			}
 		}

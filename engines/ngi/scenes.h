@@ -51,18 +51,23 @@ private:
 };
 
 int defaultUpdateCursor();
+void sceneTutorial_check();
+void sceneNotebook_show();
 void sceneChapter_show(const char *chapterId);
 
 int sceneIntro_updateCursor();
 void sceneIntro_initScene(Scene *sc);
 void sceneIntro_initMan(Scene &scene);
 bool sceneIntro_updateAndroid(uint32 elapsed, byte &brightness);
+void sceneIntro_end();
+void sceneIntro_initGui(Scene &first, Scene &second, int width);
 int sceneHandlerIntro(Command *cmd);
 
 int sceneIntroDemo_updateCursor();
 void sceneIntroDemo_initScene(Scene *sc);
 int sceneHandlerIntroDemo(Command *cmd);
 
+bool scene01_click(Common::Point pos);
 void scene01_fixEntrance();
 void scene01_initScene(Scene *sc, int entrance);
 void scene01_initObjects(Scene *sc, int entrance, bool eggUncracked);

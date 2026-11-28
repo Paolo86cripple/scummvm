@@ -52,6 +52,9 @@ public:
 	virtual void resume() = 0;
 	const Transition &transition() const { return _transition; }
 	virtual void click(Common::Point mouse, RunawayVerb verb, byte item) = 0;
+	virtual bool canSkipExit(byte hotspot) const { return false; }
+	virtual void skipExit(byte hotspot) {}
+	virtual void waitForExitClick(uint32 now) {}
 	virtual void update(uint32 now, int scrollDirection, bool inventoryOpen) = 0;
 	virtual void draw() = 0;
 	virtual void setCameraX(int x) = 0;
@@ -113,6 +116,9 @@ public:
 	void start(uint32 now) override;
 	void resume() override;
 	void click(Common::Point mouse, RunawayVerb verb, byte item) override;
+	bool canSkipExit(byte id) const override;
+	void skipExit(byte id) override;
+	void waitForExitClick(uint32 now) override;
 	void update(uint32 now, int scrollDirection, bool inventoryOpen) override;
 	void draw() override;
 	void setCameraX(int x) override;
@@ -127,8 +133,8 @@ public:
 	const Common::U32String &committedCaption() const override { return _caption; }
 	const Common::U32String &subtitle() const override;
 	byte subtitleColor() const override { return _sequence.active() ? _sequence.subtitleColor() : _speech.subtitleColor(); }
-	bool busy() const override { return _sequence.active() || _pendingHotspot != 0 || _transition.scene || _hospitalExit.scene || _arrivalFacing != 0xff || _roomAction || _conversation || _reviewingDesertPlan || speaking(); }
-	bool inventoryPresentation() const override { return _reviewingDesertPlan; }
+	bool busy() const override { return _sequence.active() || _inventory.handling() || presentingPickup() || _headMovement.active() || _pendingHotspot != 0 || _transition.scene || _hospitalExit.scene || _arrivalFacing != 0xff || _roomAction || _conversation || _reviewingDesertPlan || speaking(); }
+	bool inventoryPresentation() const override { return _reviewingDesertPlan || presentingPickup(); }
 	byte inventoryFrame() const override;
 	byte inventorySpeechPose() const override { return _lineIndex < _lines.size() ? _lines[_lineIndex].inventoryPose : 0; }
 	bool speaking() const override { return _sequence.active() ? !_sequence.subtitle().empty() : !_speech.subtitle().empty(); }
@@ -150,7 +156,7 @@ protected:
 	enum ObjectState { kUnexamined, kIdentified, kTaken };
 	enum ActionResult { kUnhandled, kHandled, kBackgroundChanged };
 	struct AnimationFootstep {
-		constexpr AnimationFootstep(byte frameNumber, int16 position, byte loudness = 255) :
+		constexpr AnimationFootstep(byte frameNumber, int16 position, byte loudness = 100) :
 			frame(frameNumber), x(position), volume(loudness) {}
 		byte frame;
 		int16 x;
@@ -188,6 +194,7 @@ protected:
 	virtual void setupActorDepth(RunawayActor::RenderParams &params) const {}
 	virtual bool drawCustomComposite(Graphics::ManagedSurface &viewport) { return false; }
 	virtual bool shouldDrawActor() const { return true; }
+	virtual bool shouldFollowCamera() const { return shouldDrawActor() && (!drawingRoomAnimation() || !_actionHidesActor); }
 	virtual bool roomAnimationInForeground() const { return false; }
 	virtual bool shouldUpdateActor() const { return true; }
 	virtual bool shouldPlayGameplayClickPath() const { return true; }
@@ -213,15 +220,25 @@ protected:
 	void updateMaps();
 	void walkTo(Common::Point target, byte facing = 0xff, bool scripted = false, bool reserved = false);
 	void arrive();
-	void execute(uint16 action);
+	void execute(uint16 action, bool headMoved = false);
+	bool beginActionHeadMovement(uint16 action);
+	void beginHeadMovement(uint16 nextAction, RunawayHeadMovement::Direction direction, uint16 hold = 2);
+	void returnHeadToCenter(uint16 nextAction = 0);
 	void executeItemAction(uint16 action);
 	const RunawayItemAction *restoredItemAction(byte item, byte hotspot) const;
 	void useItem(byte item, byte hotspot);
 	void say(uint16 cue, byte variation = 0, bool global = false, byte speaker = 0, byte color = 0);
 	void say(const SceneTextStore &text, const SceneSpeechCue &speech, bool global, byte speaker = 0, byte color = 0);
 	void showLine();
+	void advanceLine();
+	void pickUp(byte item, uint16 cue = 0xffff, byte variation = 0, bool global = false, byte before = 0xff, uint16 effect = 0);
+	void addInventoryItem(byte item);
+	bool presentingPickup() const { return _lineIndex < _lines.size() && _lines[_lineIndex].inventory; }
 	void changeFloor(bool upper, Common::Point position);
 	void updateCamera();
+	void followCamera(Common::Point camera);
+	// Most rooms lock the vertical view, including during scripted pans.
+	virtual void setCameraY(int y) {}
 	void beginRoomAnimation(uint16 action, uint chunk, uint frames, const byte *order = nullptr, uint count = 0, bool hideActor = true, uint frameDuration = 80);
 	void beginActorAnimation(uint16 action, uint bank, uint frames, uint count = 0, uint frameDuration = 60);
 	void beginAnimation(uint16 action, uint frames, const byte *order, uint count, bool hideActor, uint frameDuration);
@@ -233,7 +250,7 @@ protected:
 	void updateRoomAnimation();
 	void playAnimationFootsteps(uint frame, byte surface, const AnimationFootstep *steps, uint count);
 	virtual float actorHeight() const { return 455; }
-	virtual float actorWalkSpeed() const { return 0.18f * actorHeight() / 455; }
+	virtual float actorWalkScale() const { return actorHeight() / 455; }
 	virtual const RunawayHotspot *hotspot(byte id) const;
 	Common::U32String hotspotName(byte id) const override;
 	virtual const char *actionCaptionVariant(byte id, bool look, byte item) const { return nullptr; }
@@ -311,6 +328,8 @@ protected:
 	Common::RandomSource _random;
 	RunawaySpeech _speech;
 	RunawayIdleHead _idleHead;
+	RunawayHeadMovement _headMovement;
+	uint16 _afterHeadMovement = 0;
 	RunawayIdleBody _idleBody;
 	ChunkArchive _archive;
 	SceneTextStore _text;
@@ -322,12 +341,17 @@ protected:
 	Common::Array<byte> _walkRoutes;
 	Common::Array<Common::Rect> _foreground[5];
 	RunawayWalkPath _walkPath;
+	RunawayCamera _cameraFollow;
 	struct SpeechLine {
 		Common::U32String text;
-		uint16 sample;
-		bool global;
-		byte speaker, color;
+		uint16 sample = 0;
+		bool global = false;
+		byte speaker = 0, color = 11;
 		byte inventoryPose = 0;
+		bool inventory = false;
+		byte pickup = 0;
+		bool animatePickup = true;
+		uint16 pickupEffect = 0;
 	};
 	Common::Array<SpeechLine> _lines;
 	// Local animation speaker IDs map to the original font palette.
@@ -339,14 +363,14 @@ protected:
 	uint16 _room = 0, _pendingAction = 0;
 	byte _facing = 3, _pendingHotspot = 0, _pendingItem = 0;
 	byte _arrivalFacing = 0xff;
-	uint32 _now = 0, _lastUpdate = 0, _walkElapsed = 0;
+	uint32 _now = 0, _lastUpdate = 0;
 	bool _upperFloor = true, _antialias = true, _fastScrolling = true;
 	bool _inventoryOpen = false;
+	bool _skippingExit = false;
 	ObjectState _books = kUnexamined, _recorder = kUnexamined;
 	bool _moneyIdentified = false, _safeOpen = false;
 	bool _varnishTaken = false, _talcTaken = false, _coffeeTaken = false;
 	byte _keyCount = 0;
-	uint32 _lastFootstep = 0;
 	RunawaySaveState::Hospital _hospital;
 	RunawaySaveState::Museum _museum;
 	RunawaySaveState::Desert _desert;

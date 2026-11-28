@@ -33,6 +33,7 @@
 #include "graphics/managed_surface.h"
 
 #include "image/png.h"
+#include "graphics/transform_struct.h"
 
 namespace NGI {
 
@@ -104,6 +105,9 @@ PictureObject::PictureObject() {
 
 PictureObject::PictureObject(PictureObject *src) : GameObject(src) {
 	_picture = src->_picture;
+	_ownsTexture = false;
+	_hitRegion = src->_hitRegion;
+	_angle = src->_angle;
 	_ox2 = _x;
 	_oy2 = _y;
 	_pictureObject2List = src->_pictureObject2List;
@@ -111,7 +115,8 @@ PictureObject::PictureObject(PictureObject *src) : GameObject(src) {
 }
 
 PictureObject::~PictureObject() {
-	delete _picture;
+	if (_ownsTexture)
+		delete _picture;
 }
 
 bool PictureObject::load(MfcArchive &file, bool bigPicture) {
@@ -142,7 +147,12 @@ bool PictureObject::load(MfcArchive &file, bool bigPicture) {
 	return true;
 }
 
-void PictureObject::render() {
+void PictureObject::render(Common::Point scroll) {
+	if (g_nmi->_gameVersion >= 201509) {
+		_picture->blitTo(g_nmi->_backgroundSurface, Common::Point(_x, _y) - scroll, false, _angle);
+		return;
+	}
+
 	if (_flags & 1)
 		_picture->render(_x, _y, 2, 0);
 	else
@@ -199,6 +209,8 @@ bool PictureObject::isPointInside(int x, int y) {
 }
 
 bool PictureObject::hit(int x, int y) {
+	if (!_hitRegion.isEmpty())
+		return _hitRegion.contains(x - _x, y - _y);
 	int oldx = _picture->_x;
 	int oldy = _picture->_y;
 
@@ -446,10 +458,17 @@ void Texture::loadPNG(const Common::Path &path, const Dims &sizeHint) {
 	debugC(2, kDebugLoading, "Loaded scene texture %s (%d x %d)", path.toString().c_str(), _width, _height);
 }
 
-void Texture::blitTo(Graphics::ManagedSurface &target, const Common::Point &position, bool mirror) const {
+void Texture::blitTo(Graphics::ManagedSurface &target, const Common::Point &position, bool mirror, int angle) const {
 	if (!_bitmap || !_bitmap->_surface)
 		return;
-	if (mirror)
+	if (angle) {
+		const Graphics::ManagedSurface &surface = *_bitmap->_surface;
+		Graphics::TransformStruct transform;
+		transform._angle = angle;
+		transform._hotspot = Common::Point(surface.w / 2, surface.h / 2);
+		Common::ScopedPtr<Graphics::ManagedSurface> rotated(surface.rotoscale(transform));
+		target.blitFrom(*rotated, position + transform._hotspot - Common::Point(rotated->w / 2, rotated->h / 2));
+	} else if (mirror)
 		target.simpleBlitFrom(*_bitmap->_surface, position, Graphics::FLIP_H, true);
 	else
 		target.blitFrom(*_bitmap->_surface, position);
@@ -706,6 +725,15 @@ bool Texture::isPointInside(int x, int y) {
 bool Texture::hit(int x, int y) {
 	if (x < _x || y < _y || x >= _x + _width || y >= _y + _height)
 		return false;
+
+	if (g_nmi->usesXMLProject()) {
+		if (!_bitmap || !_bitmap->_surface)
+			return false;
+		const Graphics::ManagedSurface &surface = *_bitmap->_surface;
+		const uint32 color = surface.getPixel(x - _x, y - _y);
+		return (!surface.hasTransparentColor() || color != surface.getTransparentColor()) &&
+			(!surface.format.aBits() || ((color >> surface.format.aShift) & surface.format.aMax()));
+	}
 
 	if (!_bitmap)
 		init();

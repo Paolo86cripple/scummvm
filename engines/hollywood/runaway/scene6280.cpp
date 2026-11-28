@@ -27,7 +27,7 @@ namespace {
 
 const RunawayHotspot kHotspots[] = {
 	{0, 0, 0, {0, 0}, {0, 0}, {0, 0}},
-	{1023, 500, 3, {301, 302}, {0, 3}, {1023, 0}, 5}, // 1: Outside the crater.
+	{1023, 500, 3, {301, 302}, {0, 3}, {1023, 0}, 5, false, false, true}, // 1: Outside the crater.
 	{662, 546, 7, {303, 304}, {0, 1}, {597, 512}}, // 2: Joshua's helmet.
 	{662, 546, 7, {305, 306}, {0, 0}, {597, 512}} // 3: Black mark.
 };
@@ -80,7 +80,7 @@ void Scene6280::resumeAmbientAudio(bool entering) {
 	if (_audio.musicCue() != 30 || !_audio.musicPlaying()) {
 		_audio.playMusic(30);
 	}
-	_audio.playMusicEffect(38, 128, 1, true);
+	_audio.playMusicEffect(38, 50, 1, true);
 }
 
 void Scene6280::runCustomEntrySequence() {
@@ -116,8 +116,7 @@ RunawayRoomScene::ActionResult Scene6280::dispatchCustomSceneAction(uint16 actio
 		_audio.playMusicEffect(39);
 		_facing = 4;
 		_town.helmetTaken = 1;
-		_inventory.add(13);
-		say(3, 1);
+		pickUp(13, 3, 1);
 		return kBackgroundChanged;
 	case 400: // First descent to the crater floor.
 		say(0);
